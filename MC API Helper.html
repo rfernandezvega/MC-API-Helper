@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Marketing Cloud API Helper</title>
+<style>
+  body {
+    margin: 0;
+    background-color: #f0f6fc;
+    font-family: Arial, sans-serif;
+  }
+
+  /* --- LAYOUT PRINCIPAL CON CSS GRID --- */
+  .app-container {
+    display: grid;
+    grid-template-columns: 260px 1fr 320px; /* Izquierda | Centro | Derecha */
+    gap: 20px;
+    padding: 20px;
+    min-height: 100vh;
+    box-sizing: border-box;
+  }
+
+  #macros-sidebar, #main-content, #log-sidebar {
+    background-color: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+
+  /* --- 1. MENÚ DE MACROS (IZQUIERDA) --- */
+  #selected-client-display {
+	  text-align: center;
+	  color: #558ac7;
+	  font-style: italic;
+	  font-size: 1.1em;
+	  margin-top: -5px; /* Ajusta el espacio respecto al título "Cliente" */
+	  padding-bottom: 15px; /* Añade espacio antes de la línea divisoria */
+	  border-bottom: 2px solid #f0f6fc; /* Línea divisoria igual a la de los títulos */
+	}
+  
+  #macros-sidebar {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  #macros-sidebar h2 {
+    color: #69a3db;
+    margin-top: 0;
+    text-align: center;
+    border-bottom: 2px solid #f0f6fc;
+    padding-bottom: 10px;
+  }
+  
+  #macros-sidebar h3 {
+    color: #558ac7;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+  }
+  
+  #macros-sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  #macros-sidebar .macro-item {
+    display: block;
+    padding: 10px 12px;
+    margin-bottom: 5px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    color: #333;
+    text-decoration: none;
+    transition: background-color 0.2s, color 0.2s;
+  }
+  
+  #macros-sidebar .macro-item:hover {
+    background-color: #69a3db;
+    color: #fff;
+    cursor: pointer;
+  }
+
+
+  /* --- 2. CONTENIDO PRINCIPAL (CENTRO) --- */
+  #main-content {
+      display: flex;
+      flex-direction: column;
+  }
+
+  .main-menu-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
+  }
+
+  .menu-button {
+    background-color: #69a3db;
+    color: #fff;
+    border: none;
+    border-radius: 15px;
+    padding: 20px;
+    cursor: pointer;
+    font-size: 1.2em;
+    width: 200px;
+    height: 150px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    transition: background-color 0.3s;
+  }
+
+  .menu-button:hover {
+    background-color: #558ac7;
+  }
+  
+  .back-button {
+    background-color: #6c757d;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 15px;
+    cursor: pointer;
+    margin-bottom: 20px;
+    align-self: flex-start;
+  }
+
+  .section {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+  }
+  
+  .section h2 {
+    color: #69a3db;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+
+  /* --- 3. VENTANA DE LOG (DERECHA) --- */
+  #log-sidebar {
+    position: sticky;
+    top: 20px;
+    height: calc(100vh - 40px);
+    display: flex;
+    flex-direction: column;
+  }
+  
+  #log-sidebar h2 {
+    color: #69a3db;
+    margin-top: 0;
+    text-align: center;
+    border-bottom: 2px solid #f0f6fc;
+    padding-bottom: 10px;
+    flex-shrink: 0;
+  }
+
+  .log-block {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+  
+  .log-block h4 {
+    margin: 0 0 8px 0;
+    color: #558ac7;
+  }
+  
+  .log-block pre {
+    flex-grow: 1;
+    background-color: #e9ecef;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 0;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-size: 0.85em;
+  }
+
+  /* --- ESTILOS GENERALES (SE MANTIENEN) --- */
+   #configuracion-section .config-block { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+  #configuracion-section h3 { color: #558ac7; margin-top: 0; }
+  #configuracion-section .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
+  #configuracion-section label { font-weight: bold; margin-bottom: 5px; color: #333; }
+  #configuracion-section input[type="text"],
+  #configuracion-section input[type="password"],
+  #configuracion-section select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+  #configuracion-section input[disabled] { background-color: #e9ecef; cursor: not-allowed; }
+  
+  #configuracion-section .checkbox-group { flex-direction: row; align-items: center; justify-content: flex-start; }
+  #configuracion-section .checkbox-group label { font-weight: bold; margin-bottom: 0; margin-right: 8px; }
+  #configuracion-section .checkbox-group input[type="checkbox"] { width: auto; }
+  
+  .client-management { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+  .client-management input, .client-management select { flex-grow: 1; }
+  .client-management button { background-color: #69a3db; color: #fff; border: none; border-radius: 5px; padding: 10px 15px; cursor: pointer; }
+  .client-management .delete-btn { background-color: #dc3545; }
+  .info-text { font-size: 0.9em; color: #6c757d; text-align: center; margin-top: 20px; }
+
+  .table-container { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; overflow-x: auto; margin-top: 20px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #b9d4e7; padding: 8px; text-align: center; }
+  th { background-color: #69a3db; color: #fff; position: sticky; top: 0; }
+  tr.selected { background-color: #c5dce6; }
+  .control-buttons { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-left: 15px; }
+  .control-buttons button { width: 100px; background-color: #69a3db; color: #fff; border: none; border-radius: 5px; padding: 8px; cursor: pointer; }
+  .editable { outline: none; border-bottom: 1px dashed #ccc; }
+  #selectedValues { background-color: #f8f9fa; border-radius: 10px; padding: 20px; margin-top: 20px; }
+  #selectedValues h2 { color: #69a3db; }
+
+  /* --- MEDIA QUERY PARA RESPONSIVE --- */
+  @media (max-width: 1024px) {
+    .app-container {
+      grid-template-columns: 1fr;
+    }
+    #log-sidebar {
+      position: relative;
+      top: 0;
+      height: auto;
+      max-height: 500px;
+    }
+  }
+
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  
+  <!-- COLUMNA IZQUIERDA: MACROS -->
+  <aside id="macros-sidebar">
+	<div>
+	  <h2>Cliente</h2>
+	  <p id="selected-client-display">Ninguno seleccionado</p>
+	</div>
+    <h2>Macros</h2>
+    
+    <h3>Administración</h3>
+    <ul>
+      <li><a class="macro-item" data-macro="getToken">Recuperar Token</a></li>
+    </ul>
+
+    <h3>Data Extensions</h3>
+    <ul>
+      <li><a class="macro-item" data-macro="createDE">Crear Data Extension</a></li>
+      <li><a class="macro-item" data-macro="upsertRows">Crear/Actualizar Registros</a></li>
+      <li><a class="macro-item" data-macro="createDEAndRows">Crear Data Extension y Registros</a></li>
+    </ul>
+
+    <h3>Campos</h3>
+    <ul>
+      <li><a class="macro-item" data-macro="getFieldIds">Recuperar Ids</a></li>
+      <li><a class="macro-item" data-macro="deleteField">Borrar campo</a></li>
+      <li><a class="macro-item" data-macro="createFields">Crear campos</a></li>
+      <li><a class="macro-item" data-macro="getFields">Recuperar campos</a></li>
+    </ul>
+  </aside>
+
+  <!-- COLUMNA CENTRAL: CONTENIDO PRINCIPAL -->
+  <main id="main-content">
+    <!-- Menú Principal -->
+    <div id="main-menu" class="main-menu-container" style="display: flex;">
+      <button class="menu-button" onclick="showSection('notas-section')">Notas</button>
+      <button class="menu-button" onclick="showSection('configuracion-section')">Configuración</button>
+      <button class="menu-button" onclick="showSection('campos-section')">Campos</button>
+    </div>
+
+    <!-- Sección de Notas -->
+    <div id="notas-section" class="section">
+      <button class="back-button">← Atrás</button>
+      <h2>Notas Importantes</h2>
+      <div class="content">
+        <h3>Errores comunes:</h3>
+        <ul>
+          <li>Si la DE es Sendable, el campo que utilicéis como SubscriberKey tiene que tener el check de obligatorio marcado.</li>
+          <li>Si queremos crear una DE en una BU hija, es necesario indicar la BU y el identificador de la carpeta. Si no se indica la carpeta, la añade en Data Extensions.</li>
+          <li>La aplicación se debe crear en la BU Root. De no hacerlo, aunque se de permisos para otra BU devuelve un error.</li>
+          <li>Si ya está creada una DE con un nombre concreto y le volvéis a dar a crear, os va a devolver un error porque la DE ya existe.</li>
+          <li>Si da error intentando crear la DE en una BU hija, aseguraos de que la aplicación es accesible desde esa BU. Para eso se dan "licencias" desde la propia aplicación.</li>
+          <li>Para la creación de registros mucho cuidado con el formato de los campos de fecha. Podéis consultar los formatos válidos <a href="https://help.salesforce.com/articleView?id=admin_supported_date_time_format.htm&type=5" target="_blank">aquí</a>. El formato debería ser YYYY/DD/MM.</li>
+          <li>Los decimales deben ir con punto a la hora de crear registros.</li>
+          <li>A la hora de pasar un enlace a un campo de texto que contenga un "&", es necesario transformarlo a "&amp;" o dará un error de Bad Request.</li>
+        </ul>
+        <h3>Comentarios adicionales:</h3>
+        <ul>
+          <li>La configuración de la plantilla tiene las credenciales de la instancia de pruebas. Revisad la BU en la que se está creando la DE porque puede haberlo modificado otra persona.</li>
+          <li>No dejéis nunca en la plantilla credenciales de una instancia de cliente.</li>
+          <li>Pulsando el botón MC API > Restablecer credenciales de instancia de pruebas dejaréis las credenciales de pruebas.</li>
+          <li>Tenéis capado todos los campos que no tenéis que tocar, pero si clonais la plantilla podréis tocarlos.</li>
+          <li>Aunque en la pestaña de configuración aparece un ejemplo, la aplicación que se debe crear es del tipo API Integration y dentro de esta Server to Server.</li>
+          <li>Si la app creada solo se va a utilizar para la creación de Data Extensions, solo es necesario dar los permisos correspondientes al uso de Data Extensions (Read Write Data Extension).</li>
+          <li>Para crear una Data Extension, además de la configuración, en la pestaña de Campos solo es necesario informar las siguientes columnas: Campo MC, Tipo Campo, Longitud, PK y Obligatorio.</li>
+          <li>La parte de Salesforce solo es para cuando vamos a construir el automatismo de Contactables y ya tenemos esto documentado en un documento de diseño. De esta forma, en la columna Query ya tendremos lo que hay que copiar y pegar en la query para obtener la transformación de las etiquetas.</li>
+        </ul>
+      </div>
+    </div>
+    
+    <!-- Sección de Configuración -->
+    <div id="configuracion-section" class="section">
+        <button class="back-button">← Atrás</button>
+        <h2>Configuración General</h2>
+        <div class="client-management">
+            <input type="text" id="clientName" placeholder="Nombre del Cliente">
+            <select id="savedConfigs"></select>
+            <button id="saveConfig">Guardar</button>
+            <button id="deleteConfig" class="delete-btn">Borrar</button>
+        </div>
+        <div class="config-block">
+            <h3>Configuración Base DE</h3>
+            <div class="form-group"><label for="businessUnit">Business Unit (MID)</label><input type="text" id="businessUnit"></div>
+            <div class="form-group"><label for="deName">Nombre Data Extension</label><input type="text" id="deName"></div>
+            <div class="form-group"><label for="deDescription">Descripción</label><input type="text" id="deDescription"></div>
+            <div class="form-group"><label for="deExternalKey">External Key</label><input type="text" id="deExternalKey" disabled></div>
+            <div class="form-group"><label for="deFolder">Carpeta</label><input type="text" id="deFolder"></div>
+        </div>
+        <div class="config-block">
+            <h3>Configuración</h3>
+            <div class="form-group checkbox-group">
+                <label for="isSendable">Sendable DE:</label>
+                <input type="checkbox" id="isSendable">
+            </div>
+            <div class="form-group"><label for="subscriberKeyField">Campo SubscriberKey</label><input type="text" id="subscriberKeyField"></div>
+            <div class="form-group"><label for="subscriberKeyType">Tipo Campo SubscriberKey</label><input type="text" id="subscriberKeyType"></div>
+        </div>
+        <div class="config-block">
+            <h3>Datos Aplicación</h3>
+            <div class="form-group"><label for="authUri">Auth URI</label><input type="text" id="authUri"></div>
+            <div class="form-group"><label for="clientId">Client ID</label><input type="text" id="clientId"></div>
+            <div class="form-group"><label for="clientSecret">Client Secret</label><input type="password" id="clientSecret"></div>
+            <div class="form-group"><label for="token">Token</label><input type="text" id="token" disabled></div>
+            <div class="form-group"><label for="soapUri">SOAP URI</label><input type="text" id="soapUri"></div>
+        </div>
+        <div class="config-block">
+            <h3>Campos Recuperación/Borrado/Creación</h3>
+            <div class="form-group"><label for="recExternalKey">External Key</label><input type="text" id="recExternalKey"></div>
+            <div class="form-group"><label for="recObjectId">Campo - Object Id</label><input type="text" id="recObjectId" disabled></div>
+            <div class="form-group"><label for="deleteFieldName">Nombre del campo a eliminar</label><input type="text" id="deleteFieldName"></div>
+            <div class="form-group"><label for="deleteFieldId">Id del campo a eliminar</label><input type="text" id="deleteFieldId"></div>
+        </div>
+        <p class="info-text">
+            La configuración se guardará localmente en tu navegador. No se almacena en ningún servidor externo. Al borrarla, se eliminará permanentemente de tu equipo.
+        </p>
+    </div>
+
+    <!-- Sección de Campos -->
+    <div id="campos-section" class="section">
+        <button class="back-button">← Atrás</button>
+        <h2>Campos de la Data Extension</h2>
+        <div class="table-container">
+          <table id="myTable">
+            <thead>
+              <tr><th>Campo MC</th><th>Tipo Campo</th><th>Longitud</th><th>Default</th><th>PK</th><th>Obligatorio</th></tr>
+            </thead>
+            <tbody>
+            <tr><td class="editable" contenteditable="true">NombreCompleto</td><td class="editable" contenteditable="true">Text</td><td class="editable" contenteditable="true">100</td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td></tr>
+            <tr><td class="editable" contenteditable="true">SincronizarMC</td><td class="editable" contenteditable="true">Boolean</td><td class="editable" contenteditable="true"></td><td><input type="checkbox"></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
+            <tr><td class="editable" contenteditable="true">FechaNacimiento</td><td class="editable" contenteditable="true">Date</td><td class="editable" contenteditable="true"></td><td><input type="checkbox"></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
+            <tr><td class="editable" contenteditable="true">Recibo</td><td class="editable" contenteditable="true">Decimal</td><td class="editable" contenteditable="true">1,1</td><td><input type="checkbox" checked></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
+            <tr><td class="editable" contenteditable="true">Telefono</td><td class="editable" contenteditable="true">Phone</td><td class="editable" contenteditable="true"></td><td><input type="checkbox"></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
+            <tr><td class="editable" contenteditable="true">Email</td><td class="editable" contenteditable="true">EmailAddress</td><td class="editable" contenteditable="true">254</td><td><input type="checkbox"></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
+            <tr><td class="editable" contenteditable="true">Locale</td><td class="editable" contenteditable="true">Locale</td><td class="editable" contenteditable="true"></td><td><input type="checkbox"></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
+            <tr><td class="editable" contenteditable="true">Numero</td><td class="editable" contenteditable="true">Number</td><td class="editable" contenteditable="true"></td><td><input type="checkbox"></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
+          </tbody>
+          </table>
+          <div class="control-buttons">
+            <button id="moveUp">Subir</button>
+            <button id="moveDown">Bajar</button>
+          </div>
+        </div>
+        <div id="selectedValues">
+          <h2>Valores de la fila seleccionada:</h2>
+          <ul></ul>
+        </div>
+    </div>
+  </main>
+
+  <!-- COLUMNA DERECHA: LOG -->
+  <aside id="log-sidebar">
+    <h2>Log de Eventos</h2>
+    <div class="log-block">
+      <h4>Llamada</h4>
+      <pre><code id="log-request">Esperando acciones...</code></pre>
+    </div>
+    <div class="log-block">
+      <h4>Respuesta</h4>
+      <pre><code id="log-response"></code></pre>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // --- DECLARACIÓN DE ELEMENTOS DEL DOM ---
+    const logRequestEl = document.getElementById('log-request');
+    const logResponseEl = document.getElementById('log-response');
+    const mainMenu = document.getElementById('main-menu');
+    const sections = document.querySelectorAll('#main-content > .section');
+    const deNameInput = document.getElementById('deName');
+    const deExternalKeyInput = document.getElementById('deExternalKey');
+    const authUriInput = document.getElementById('authUri');
+    const soapUriInput = document.getElementById('soapUri');
+    const clientNameInput = document.getElementById('clientName');
+    const saveConfigBtn = document.getElementById('saveConfig');
+    const deleteConfigBtn = document.getElementById('deleteConfig');
+    const savedConfigsSelect = document.getElementById('savedConfigs');
+    const selectedClientDisplay = document.getElementById('selected-client-display');
+    const tokenField = document.getElementById('token');
+
+    // --- FUNCIÓN PARA PINTAR EN EL LOG ---
+    function logEvent(requestData, responseData) {
+        logRequestEl.textContent = (typeof requestData === 'object') ? JSON.stringify(requestData, null, 2) : requestData;
+        logResponseEl.textContent = (typeof responseData === 'object') ? JSON.stringify(responseData, null, 2) : responseData;
+    }
+
+    // --- LÓGICA DE NAVEGACIÓN (CORREGIDA) ---
+    // Se define la función en el objeto window para que sea accesible desde el HTML (onclick).
+    window.showSection = function(sectionId) {
+        mainMenu.style.display = 'none';
+        sections.forEach(s => s.style.display = 'none');
+        const sectionToShow = document.getElementById(sectionId);
+        if (sectionToShow) {
+            sectionToShow.style.display = 'flex';
+        }
+    };
+
+    document.querySelectorAll('.back-button').forEach(button => {
+        button.addEventListener('click', () => {
+            sections.forEach(s => s.style.display = 'none');
+            mainMenu.style.display = 'flex';
+        });
+    });
+
+    // ==========================================================
+    // --- API / MACRO FUNCTIONS ---
+    // ==========================================================
+    
+    /**
+     * Realiza la llamada a la API para recuperar un token de OAuth de Marketing Cloud.
+     */
+    async function macroGetToken() {
+        const config = getFormValues();
+
+        if (!config.authUri || !config.clientId || !config.clientSecret || !config.businessUnit) {
+            alert("Por favor, complete los campos Auth URI, Client ID, Client Secret y Business Unit (MID) en la configuración.");
+            logEvent({ error: "Faltan datos de configuración" }, "Operación cancelada.");
+            return;
+        }
+
+        const payload = {
+            "client_id": config.clientId,
+            "client_secret": config.clientSecret,
+            "grant_type": "client_credentials",
+            "account_id": config.businessUnit
+        };
+        const requestDetails = {
+            endpoint: config.authUri,
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: payload
+        };
+
+        logEvent(requestDetails, "Recuperando token...");
+
+        try {
+            const response = await fetch(config.authUri, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const responseData = await response.json();
+
+            if (!response.ok) {
+                logEvent(requestDetails, responseData);
+                throw new Error(`Error de la API: ${response.status} - ${responseData.error_description || 'Error desconocido'}`);
+            }
+
+            logEvent(requestDetails, responseData);
+            
+            tokenField.value = responseData.access_token;
+            alert("Token recuperado y actualizado en el formulario.");
+
+            const currentClientName = clientNameInput.value.trim();
+            if (currentClientName) {
+                let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
+                configs[currentClientName] = getFormValues();
+                localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
+                console.log(`Configuración para "${currentClientName}" actualizada con el nuevo token.`);
+            }
+
+        } catch (error) {
+            console.error("Error al recuperar el token:", error);
+            logResponseEl.textContent = `Error: ${error.message}\n\nRevisa la consola (F12) para más detalles.`;
+        }
+    }
+    
+    // --- ENRUTADOR DE MACROS ---
+    document.querySelectorAll('.macro-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const macroType = e.target.getAttribute('data-macro');
+
+            switch (macroType) {
+                case 'getToken':
+                    macroGetToken();
+                    break;
+                
+                default:
+                    const macroName = e.target.textContent.trim();
+                    const requestInfo = {
+                        macro_ejecutada: macroName,
+                        timestamp: new Date().toISOString(),
+                        configuracion_actual: getFormValues()
+                    };
+                    const responseInfo = {
+                        status: "Pendiente",
+                        mensaje: `La función para "${macroName}" aún no ha sido implementada.`
+                    };
+                    logEvent(requestInfo, responseInfo);
+                    break;
+            }
+        });
+    });
+
+
+    // --- LÓGICA DE CONFIGURACIÓN ---
+    deNameInput.addEventListener('input', () => {
+        deExternalKeyInput.value = deNameInput.value.replace(/\s+/g, '_') + '_CK';
+    });
+    
+    const formatUriOnBlur = (inputElement, suffix) => {
+        let currentValue = inputElement.value.trim();
+        if (!currentValue) return;
+        let baseValue = currentValue.split(suffix).join('').replace(/\/+$/, '');
+        inputElement.value = baseValue + suffix;
+    };
+    authUriInput.addEventListener('blur', () => formatUriOnBlur(authUriInput, '/v2/token'));
+    soapUriInput.addEventListener('blur', () => formatUriOnBlur(soapUriInput, '/Service.asmx'));
+
+    const getFormValues = () => {
+        const config = {};
+        document.querySelectorAll('#configuracion-section input:not([type="checkbox"]), #configuracion-section select').forEach(input => {
+             if (input.id && !['clientName', 'savedConfigs'].includes(input.id)) {
+                 config[input.id] = input.value;
+             }
+        });
+        document.querySelectorAll('#configuracion-section input[type="checkbox"]').forEach(input => {
+             if (input.id) {
+                config[input.id] = input.checked;
+             }
+        });
+        return config;
+    };
+    
+    const setFormValues = (config) => {
+        document.querySelectorAll('#configuracion-section input:not([type="checkbox"]), #configuracion-section select').forEach(el => {
+            if(el.id && !['clientName', 'savedConfigs'].includes(el.id)) {
+                el.value = '';
+            }
+        });
+        document.querySelectorAll('#configuracion-section input[type="checkbox"]').forEach(el => {
+            el.checked = false;
+        });
+        for (const key in config) {
+            const element = document.getElementById(key);
+            if (element) {
+                if (element.type === 'checkbox') {
+                    element.checked = config[key];
+                } else {
+                    element.value = config[key];
+                }
+            }
+        }
+    };
+    
+    const loadConfigsIntoSelect = () => {
+        const currentValue = savedConfigsSelect.value;
+        savedConfigsSelect.innerHTML = '<option value="">Seleccionar configuración...</option>';
+        const configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
+        for (const name in configs) {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            savedConfigsSelect.appendChild(option);
+        }
+        savedConfigsSelect.value = currentValue;
+    };
+    
+    saveConfigBtn.addEventListener('click', () => {
+        const clientName = clientNameInput.value.trim();
+        if (!clientName) { 
+            alert('Por favor, introduce un nombre para el cliente.'); 
+            return; 
+        }
+        let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
+        configs[clientName] = getFormValues();
+        localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
+        
+        alert(`Configuración para "${clientName}" guardada.`);
+        selectedClientDisplay.textContent = clientName;
+        loadConfigsIntoSelect();
+        savedConfigsSelect.value = clientName;
+    });
+    
+    deleteConfigBtn.addEventListener('click', () => {
+        const clientName = savedConfigsSelect.value;
+        if (!clientName) { 
+            alert('Por favor, selecciona una configuración para borrar.'); 
+            return; 
+        }
+        if (confirm(`¿Estás seguro de que quieres borrar la configuración para "${clientName}"?`)) {
+            let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
+            delete configs[clientName];
+            localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
+            
+            alert(`Configuración para "${clientName}" borrada.`);
+            selectedClientDisplay.textContent = 'Ninguno seleccionado';
+            setFormValues({}); 
+            clientNameInput.value = '';
+            loadConfigsIntoSelect();
+        }
+    });
+
+    savedConfigsSelect.addEventListener('change', () => {
+        const clientName = savedConfigsSelect.value;
+        const configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
+        if (configs[clientName]) {
+            setFormValues(configs[clientName]);
+            clientNameInput.value = clientName;
+            selectedClientDisplay.textContent = clientName;
+        } else {
+            setFormValues({}); 
+            clientNameInput.value = '';
+            selectedClientDisplay.textContent = 'Ninguno seleccionado';
+        }
+    });
+
+    loadConfigsIntoSelect();
+
+    // --- LÓGICA DE LA TABLA DE CAMPOS ---
+    let selectedRow = null;
+    const tableRows = document.querySelectorAll('#myTable tbody tr');
+    function deselectAllRows() { tableRows.forEach(row => row.classList.remove('selected')); }
+    tableRows.forEach(row => {
+      row.addEventListener('click', () => {
+        deselectAllRows();
+        row.classList.add('selected');
+        selectedRow = row;
+        displaySelectedValues(row);
+      });
+    });
+    document.getElementById('moveUp').addEventListener('click', () => {
+      if (selectedRow && selectedRow.previousElementSibling) {
+        selectedRow.parentNode.insertBefore(selectedRow, selectedRow.previousElementSibling);
+      }
+    });
+    document.getElementById('moveDown').addEventListener('click', () => {
+      if (selectedRow && selectedRow.nextElementSibling) {
+        selectedRow.parentNode.insertBefore(selectedRow.nextElementSibling, selectedRow);
+      }
+    });
+    function displaySelectedValues(row) {
+      const ul = document.querySelector('#selectedValues ul');
+      ul.innerHTML = '';
+      if (row) {
+        const cells = row.querySelectorAll('td');
+        const headers = document.querySelectorAll('#myTable th');
+        cells.forEach((cell, index) => {
+          const li = document.createElement('li');
+          const headerText = headers[index] ? headers[index].textContent + ':' : '';
+          if (cell.querySelector('input[type="checkbox"]')) {
+            const value = cell.querySelector('input[type="checkbox"]').checked ? 'True' : 'False';
+            li.textContent = `${headerText} ${value}`;
+          } else {
+            li.textContent = `${headerText} ${cell.textContent}`;
+          }
+          ul.appendChild(li);
+        });
+      }
+    }
+});
+</script>
+
+</body>
+</html>
