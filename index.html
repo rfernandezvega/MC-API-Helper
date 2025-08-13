@@ -22,6 +22,14 @@
         <h3 class="collapsible-header">Administración</h3>
         <ul class="collapsible-content">
           <li><a class="macro-item" data-macro="getToken">Recuperar Token</a></li>
+          <li><a class="macro-item" data-macro="validateEmail">Validar Email</a></li>
+        </ul>
+    </div>
+
+    <div class="collapsible-group">
+        <h3 class="collapsible-header">Análisis y Búsqueda</h3>
+        <ul class="collapsible-content">
+          <li><a class="macro-item" data-macro="searchDE">Buscar Data Extension</a></li>
         </ul>
     </div>
 
@@ -69,6 +77,9 @@
         <h3>Funcionalidades</h3>
         <div class="menu-buttons-container">
           <button class="menu-button" onclick="viewCalendar()">Calendario</button>
+          <button class="menu-button" onclick="showSection('busqueda-de-section')">Búsqueda de Data Extension</button>
+          <button class="menu-button" onclick="showSection('email-validator-section')">Validador de Email</button>
+          <button class="menu-button" onclick="showSection('data-source-finder-section')">Buscador de Orígenes</button>
         </div>
       </div>
     </div>
@@ -108,7 +119,7 @@
             <li><strong>Seleccionar Cliente:</strong> Asegúrate de que el cliente correcto esté seleccionado en el menú lateral izquierdo.</li>
             <li><strong>Introducir External Key:</strong> Ve a <em>Gestión de Campos</em> e introduce la External Key de la Data Extension que quieres modificar.</li>
             <li><strong>Recuperar Campos:</strong> Pulsa "Recuperar campos" para cargar su estructura en la tabla de la sección <em>Campos</em> y "Recuperar Ids" para poblar la lista de campos a eliminar.</li>
-            <li><strong>Modificar y Guardar:</strong> Añade, edita o elimina filas en la tabla de <em>Campos</em>. Cuando termines, pulsa "Crear campos" para aplicar los cambios (esta acción actualiza los campos existentes y añade los nuevos).</li>
+            <li><strong>Modificar y Guardar:</strong> Añade, edita o elimina filas en la tabla de <em>Campos</em>. Cuando termines, pulsa "Crear campos" para aplicar los cambios (esta acción actualiza los existentes y añade los nuevos).</li>
             <li><strong>Eliminar un Campo:</strong> En <em>Gestión de Campos</em>, pulsa "Recuperar Ids", selecciona el campo a borrar de la lista y pulsa "Borrar campo".</li>
           </ol>
         </div>
@@ -127,7 +138,7 @@
         <div id="comentarios-adicionales" class="tab-content">
             <ul>
               <li><strong>Almacenamiento Local:</strong> Toda la configuración de tus clientes se guarda en el almacenamiento local de tu navegador. No se envía a ningún servidor externo. Si borras la caché de tu navegador o cambias de equipo, perderás esta información.</li>
-              <li><strong>Permisos de la Aplicación API:</strong> Para un funcionamiento completo, la aplicación API en Marketing Cloud necesita permisos de Lectura y Escritura para Data Extensions (<code>Data > Data Extensions > Read & Write</code>) y de Lectura para Automatizaciones (<code>Automations > Read</code>).</li>
+              <li><strong>Permisos de la Aplicación API:</strong> Para un funcionamiento completo, la aplicación API en Marketing Cloud necesita permisos de Lectura y Escritura para Data Extensions (<code>Data > Data Extensions > Read & Write</code>), de Lectura para Automatizaciones (<code>Automations > Read</code>) y de Lectura para Email (<code>Email > Read</code>).</li>
               <li><strong>Creación vs. Actualización de Campos:</strong> La macro "Crear campos" es en realidad un "upsert". Esto significa que si un campo con el mismo nombre ya existe, actualizará sus propiedades. Si no existe, lo creará.</li>
               <li><strong>Tipos de Campo:</strong> Asegúrate de que los tipos de campo coinciden con los soportados por Marketing Cloud (Text, Number, Date, Boolean, EmailAddress, Phone, Locale, Decimal).</li>
               <li><strong>Longitud en Decimales:</strong> Para campos de tipo "Decimal", la longitud debe especificarse como "total,decimales". Por ejemplo, <code>18,2</code> para un campo que admite hasta 18 dígitos, con 2 de ellos siendo decimales.</li>
@@ -211,6 +222,90 @@
             <div class="form-group"><label for="subscriberKeyType">Tipo Campo SubscriberKey</label><input type="text" id="subscriberKeyType" disabled></div>
         </div>
     </div>
+    
+    <!-- Sección de Búsqueda de DE -->
+    <div id="busqueda-de-section" class="section config-section-container">
+        <button class="back-button">← Atrás</button>
+        <h2>Búsqueda de Data Extension</h2>
+        <div class="config-block">
+            <h3>Parámetros de Búsqueda</h3>
+            <div class="form-group">
+              <label for="deSearchProperty">Buscar por:</label>
+              <select id="deSearchProperty">
+                <option value="Name">Nombre</option>
+                <option value="CustomerKey">External Key</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="deSearchValue">Valor:</label>
+              <input type="text" id="deSearchValue" placeholder="Ingresa el valor de búsqueda" maxlength="128">
+            </div>
+            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+               <button id="searchDEBtn" class="action-button">Buscar</button>
+            </div>
+        </div>
+        <div class="config-block">
+            <h3>Resultados</h3>
+            <pre id="de-search-results">Los resultados de la búsqueda aparecerán aquí.</pre>
+        </div>
+    </div>
+
+    <!-- Sección de Validador de Email -->
+    <div id="email-validator-section" class="section config-section-container">
+        <button class="back-button">← Atrás</button>
+        <h2>Validador de Email</h2>
+        <div class="config-block">
+            <h3>Parámetros de Validación</h3>
+            <div class="form-group">
+              <label for="emailToValidate">Email a validar:</label>
+              <input type="text" id="emailToValidate" placeholder="Introduce la dirección de email">
+            </div>
+            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+               <button id="validateEmailBtn" class="action-button">Validar Email</button>
+            </div>
+        </div>
+        <div class="config-block">
+            <h3>Resultado de la Validación</h3>
+            <pre id="email-validation-results">El resultado de la validación aparecerá aquí.</pre>
+        </div>
+    </div>
+    
+    <!-- Sección de Buscador de Orígenes de Datos (NUEVA) -->
+    <div id="data-source-finder-section" class="section config-section-container">
+        <button class="back-button">← Atrás</button>
+        <h2>Buscador de Orígenes de Datos</h2>
+        <div class="config-block">
+            <h3>Parámetros de Búsqueda</h3>
+            <div class="form-group">
+              <label for="deNameToFind">Nombre de la Data Extension:</label>
+              <input type="text" id="deNameToFind" placeholder="Introduce el nombre exacto de la DE">
+            </div>
+            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+               <button id="findDataSourcesBtn" class="action-button">Buscar Orígenes</button>
+            </div>
+        </div>
+        <div class="config-block" style="flex-grow: 1; display: flex; flex-direction: column;">
+            <h3>Actividades Encontradas</h3>
+            <div class="table-container" style="flex-grow: 1; overflow-y: auto;">
+                 <table id="data-sources-table">
+                    <thead>
+                        <tr>
+                            <th>Actividad</th>
+                            <th>Tipo</th>
+                            <th>Automatización</th>
+                            <th>Paso</th>
+                            <th>Acción</th>
+                            <th>Descripción / Query</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-sources-tbody">
+                        <!-- Los resultados se insertarán aquí -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Sección de Configuración de Gestión de Campos -->
     <div id="configuracion-campos-section" class="section config-section-container">

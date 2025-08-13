@@ -57,6 +57,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelPasteBtn = document.getElementById('cancel-paste-btn');
     const delimiterSelect = document.getElementById('delimiter-select');
     const customDelimiterInput = document.getElementById('custom-delimiter-input');
+    
+    // Búsqueda de Data Extension
+    const searchDEBtn = document.getElementById('searchDEBtn');
+    const deSearchProperty = document.getElementById('deSearchProperty');
+    const deSearchValue = document.getElementById('deSearchValue');
+    const deSearchResults = document.getElementById('de-search-results');
+
+    // Validador de Email
+    const validateEmailBtn = document.getElementById('validateEmailBtn');
+    const emailToValidateInput = document.getElementById('emailToValidate');
+    const emailValidationResults = document.getElementById('email-validation-results');
+
+    // Buscador de Orígenes de Datos
+    const findDataSourcesBtn = document.getElementById('findDataSourcesBtn');
+    const deNameToFindInput = document.getElementById('deNameToFind');
+    const dataSourcesTbody = document.getElementById('data-sources-tbody');
+
 
     // Pestañas de Documentación y Menú Colapsable
     const tabButtons = document.querySelectorAll('.tab-button');
@@ -542,6 +559,345 @@ document.addEventListener('DOMContentLoaded', function() {
             unblockUI();
         }
     }
+    
+    // ==========================================================
+    // --- 5. LÓGICA DE BÚSQUEDA Y VALIDACIÓN (NUEVAS) ---
+    // ==========================================================
+
+    async function getFolderPath(folderId, config) {
+        if (!folderId || isNaN(parseInt(folderId))) {
+            return ''; 
+        }
+
+        const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${config.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${config.token}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataFolder</ObjectType><Properties>ID</Properties><Properties>Name</Properties><Properties>ParentFolder.ID</Properties><Properties>ParentFolder.Name</Properties><Filter xsi:type="SimpleFilterPart"><Property>ID</Property><SimpleOperator>equals</SimpleOperator><Value>${folderId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+        const requestDetails = { step: `GetFolderPath (ID: ${folderId})`, endpoint: config.soapUri, payload: soapPayload };
+        logApiCall(requestDetails);
+
+        const response = await fetch(config.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload });
+        const responseText = await response.text();
+        logApiResponse({ body: responseText });
+
+        const folderInfo = await parseFolderResponse(responseText);
+        if (folderInfo.error) {
+            throw new Error(`Error buscando carpeta ${folderId}: ${folderInfo.error}`);
+        }
+        
+        const parentPath = await getFolderPath(folderInfo.parentId, config);
+        
+        return parentPath ? `${parentPath} > ${folderInfo.name}` : folderInfo.name;
+    }
+
+    function parseFolderResponse(xmlString) {
+        return new Promise(resolve => {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+            const resultNode = xmlDoc.querySelector("Results");
+            if (xmlDoc.querySelector("OverallStatus")?.textContent !== 'OK') {
+                const statusMessage = xmlDoc.querySelector("StatusMessage")?.textContent || 'Error desconocido al buscar la carpeta.';
+                resolve({ error: statusMessage });
+                return;
+            }
+            if (!resultNode) {
+                resolve({ name: '', parentId: null });
+                return;
+            }
+            const name = resultNode.querySelector("Name")?.textContent;
+            const parentId = resultNode.querySelector("ParentFolder > ID")?.textContent;
+            resolve({ name, parentId });
+        });
+    }
+
+    function parseDESearchResponse(xmlString) {
+        return new Promise(resolve => {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+            if (xmlDoc.querySelector("OverallStatus")?.textContent !== 'OK') {
+                const statusMessage = xmlDoc.querySelector("StatusMessage")?.textContent || 'Error desconocido.';
+                resolve({ error: statusMessage });
+                return;
+            }
+            const resultNode = xmlDoc.querySelector("Results");
+            if (!resultNode) {
+                resolve({ error: "No se encontró la Data Extension con los criterios especificados." });
+                return;
+            }
+            const categoryId = resultNode.querySelector("CategoryID")?.textContent;
+            const deName = resultNode.querySelector("Name")?.textContent;
+            resolve({ categoryId, deName });
+        });
+    }
+
+    async function macroSearchDE() {
+        blockUI();
+        deSearchResults.textContent = 'Buscando...';
+        try {
+            const property = deSearchProperty.value;
+            const value = deSearchValue.value.trim();
+            if (!value) {
+                throw new Error("El campo 'Valor' no puede estar vacío.");
+            }
+
+            logMessage(`Iniciando búsqueda de DE por ${property}: ${value}`);
+            await macroGetToken(true);
+            const config = { ...getFullClientConfig(), token: tokenField.value, soapUri: soapUriInput.value };
+            
+            if (!config.soapUri || !config.token) {
+                throw new Error("No se pudo obtener un token o la SOAP URI. Revisa la configuración.");
+            }
+
+            const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${config.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${config.token}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>ObjectID</Properties><Properties>CustomerKey</Properties><Properties>Name</Properties><Properties>IsSendable</Properties><Properties>CategoryID</Properties><Properties>SendableSubscriberField.Name</Properties><Filter xsi:type="SimpleFilterPart"><Property>${property}</Property><SimpleOperator>equals</SimpleOperator><Value>${value}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+            const requestDetails = { step: 'SearchDE', endpoint: config.soapUri, payload: soapPayload };
+            logApiCall(requestDetails);
+            
+            const response = await fetch(config.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload });
+            const responseText = await response.text();
+            logApiResponse({ body: responseText });
+
+            const deInfo = await parseDESearchResponse(responseText);
+            if (deInfo.error) {
+                throw new Error(deInfo.error);
+            }
+            
+            if (!deInfo.categoryId || parseInt(deInfo.categoryId) === 0) {
+                 const finalPath = `Data Extensions > ${deInfo.deName}`;
+                 deSearchResults.textContent = finalPath;
+                 logMessage('Búsqueda finalizada. La DE se encuentra en la carpeta raíz.');
+                 return;
+            }
+
+            logMessage(`DE encontrada. ID de Carpeta: ${deInfo.categoryId}. Recuperando ruta completa...`);
+            const folderPath = await getFolderPath(deInfo.categoryId, config);
+
+            const finalPath = `${folderPath} > ${deInfo.deName}`;
+            deSearchResults.textContent = finalPath;
+            logMessage('Ruta completa de la DE encontrada con éxito.');
+
+        } catch (error) {
+            console.error("Error en macroSearchDE:", error);
+            logMessage(`Error al buscar la DE: ${error.message}`);
+            deSearchResults.textContent = `Error: ${error.message}`;
+        } finally {
+            unblockUI();
+        }
+    }
+
+    async function macroValidateEmail() {
+        blockUI();
+        emailValidationResults.textContent = 'Validando...';
+        try {
+            const emailToValidate = emailToValidateInput.value.trim();
+            if (!emailToValidate) {
+                throw new Error("Por favor, introduce una dirección de email para validar.");
+            }
+
+            logMessage(`Iniciando validación para el email: ${emailToValidate}`);
+            await macroGetToken(true);
+            const config = getFullClientConfig();
+            const token = tokenField.value;
+            const restUri = config.restUri;
+
+            if (!restUri || !token) {
+                throw new Error("La REST URI o el Token no están disponibles. Revisa la configuración.");
+            }
+
+            const validateUrl = `${restUri}address/v1/validateEmail`;
+            const payload = {
+                "email": emailToValidate,
+                "validators": ["SyntaxValidator", "MXValidator", "ListDetectiveValidator"]
+            };
+
+            const requestDetails = {
+                endpoint: validateUrl,
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                body: payload
+            };
+
+            logApiCall(requestDetails);
+            logApiResponse('');
+
+            const response = await fetch(validateUrl, {
+                method: 'POST',
+                headers: requestDetails.headers,
+                body: JSON.stringify(payload)
+            });
+
+            const responseData = await response.json();
+            logApiResponse({ status: response.status, statusText: response.statusText, body: responseData });
+
+            if (!response.ok) {
+                const errorMessage = responseData.message || `Error de la API: ${response.status}`;
+                throw new Error(errorMessage);
+            }
+
+            if (responseData.valid) {
+                emailValidationResults.textContent = `El email "${responseData.email}" es VÁLIDO.`;
+                logMessage("Validación de email completada: Válido.");
+            } else {
+                emailValidationResults.textContent = `El email "${responseData.email}" es INVÁLIDO.\nRazón: ${responseData.failedValidation}`;
+                logMessage(`Validación de email completada: Inválido (${responseData.failedValidation}).`);
+            }
+
+        } catch (error) {
+            console.error("Error en macroValidateEmail:", error);
+            logMessage(`Error al validar el email: ${error.message}`);
+            emailValidationResults.textContent = `Error: ${error.message}`;
+        } finally {
+            unblockUI();
+        }
+    }
+    
+    // ==========================================================
+    // --- 6. LÓGICA DEL BUSCADOR DE ORÍGENES DE DATOS (NUEVA) ---
+    // ==========================================================
+
+    async function macroFindDataSources() {
+        blockUI();
+        dataSourcesTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
+        const deName = deNameToFindInput.value.trim();
+        if (!deName) {
+            alert('Por favor, introduce el nombre de la Data Extension.');
+            dataSourcesTbody.innerHTML = '<tr><td colspan="6">Búsqueda cancelada.</td></tr>';
+            unblockUI();
+            return;
+        }
+
+        try {
+            logMessage(`Iniciando búsqueda de orígenes para la DE: "${deName}"`);
+            await macroGetToken(true);
+            const config = { ...getFullClientConfig(), token: tokenField.value, soapUri: soapUriInput.value, restUri: restUriInput.value };
+            if (!config.soapUri || !config.restUri || !config.token) {
+                throw new Error("Token o URIs no disponibles. Revisa la configuración.");
+            }
+            
+            // Primero, obtenemos el ObjectID de la DE para una búsqueda de Imports más eficiente.
+            const deDetails = await getDeObjectId(deName, config);
+            logMessage(`ObjectID de la DE encontrada: ${deDetails.ObjectID}`);
+
+            // Ejecutar búsquedas en paralelo
+            const [imports, queries] = await Promise.all([
+                findImportsForDE(deDetails.ObjectID, config),
+                findQueriesForDE(deName, config)
+            ]);
+
+            const allSources = [...imports, ...queries].sort((a,b) => a.name.localeCompare(b.name));
+
+            renderDataSourcesTable(allSources);
+            logMessage(`Búsqueda completada. Se encontraron ${allSources.length} actividades.`);
+
+        } catch(error) {
+            console.error("Error en macroFindDataSources:", error);
+            logMessage(`Error al buscar orígenes de datos: ${error.message}`);
+            dataSourcesTbody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${error.message}</td></tr>`;
+        } finally {
+            unblockUI();
+        }
+    }
+    
+    async function getDeObjectId(deName, config) {
+        logMessage("Recuperando ObjectID de la Data Extension...");
+        const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${config.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${config.token}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>ObjectID</Properties><Filter xsi:type="SimpleFilterPart"><Property>Name</Property><SimpleOperator>equals</SimpleOperator><Value>${deName}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+        const response = await fetch(config.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload });
+        const responseText = await response.text();
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(responseText, "application/xml");
+        const objectIDNode = xmlDoc.querySelector("Results > ObjectID");
+        if (!objectIDNode) throw new Error(`No se encontró una Data Extension con el nombre "${deName}".`);
+        return { ObjectID: objectIDNode.textContent };
+    }
+
+
+    async function findImportsForDE(deObjectId, config) {
+        logMessage("Buscando Actividades de Importación...");
+        const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${config.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${config.token}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>ImportDefinition</ObjectType><Properties>Name</Properties><Properties>Description</Properties><Properties>CustomerKey</Properties><Filter xsi:type="SimpleFilterPart"><Property>DestinationObject.ObjectID</Property><SimpleOperator>equals</SimpleOperator><Value>${deObjectId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+        const response = await fetch(config.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload });
+        const responseText = await response.text();
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(responseText, "application/xml");
+        const resultsNodes = xmlDoc.querySelectorAll("Results");
+        const imports = [];
+        resultsNodes.forEach(node => {
+            imports.push({
+                name: node.querySelector("Name")?.textContent || '',
+                type: 'Import',
+                description: node.querySelector("Description")?.textContent || ''
+            });
+        });
+        logMessage(`Encontrados ${imports.length} imports.`);
+        return imports;
+    }
+
+    async function findQueriesForDE(deName, config) {
+        logMessage("Buscando Actividades de Query...");
+        const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${config.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${config.token}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>QueryDefinition</ObjectType><Properties>Name</Properties><Properties>Description</Properties><Properties>QueryText</Properties><Properties>TargetUpdateType</Properties><Properties>ObjectID</Properties><Filter xsi:type="SimpleFilterPart"><Property>DataExtensionTarget.Name</Property><SimpleOperator>equals</SimpleOperator><Value>${deName}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+        const response = await fetch(config.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload });
+        const responseText = await response.text();
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(responseText, "application/xml");
+        const resultsNodes = xmlDoc.querySelectorAll("Results");
+        const queries = [];
+        resultsNodes.forEach(node => {
+            queries.push({
+                name: node.querySelector("Name")?.textContent || '',
+                type: 'Query',
+                description: node.querySelector("QueryText")?.textContent || '',
+                action: node.querySelector("TargetUpdateType")?.textContent || '',
+                objectID: node.querySelector("ObjectID")?.textContent || '',
+            });
+        });
+        logMessage(`Encontradas ${queries.length} queries. Buscando sus automatizaciones...`);
+        const queriesWithAutomation = await Promise.all(queries.map(q => findAutomationForQuery(q, config)));
+        return queriesWithAutomation;
+    }
+
+    async function findAutomationForQuery(query, config) {
+        const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${config.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${config.token}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>Activity</ObjectType><Properties>Program.ObjectID</Properties><Filter xsi:type="SimpleFilterPart"><Property>Definition.ObjectID</Property><SimpleOperator>equals</SimpleOperator><Value>${query.objectID}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+        const response = await fetch(config.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload });
+        const responseText = await response.text();
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(responseText, "application/xml");
+        const programIdNode = xmlDoc.querySelector("Program > ObjectID");
+        if (!programIdNode) {
+            return { ...query, automationName: '---', step: '---' };
+        }
+        const automationId = programIdNode.textContent;
+        const restUrl = `${config.restUri}automation/v1/automations/${automationId}`;
+        const autoResponse = await fetch(restUrl, { headers: { "Authorization": `Bearer ${config.token}` } });
+        const autoData = await autoResponse.json();
+        
+        let step = 'N/A';
+        autoData.steps?.forEach(s => {
+            s.activities?.forEach(a => {
+                if(a.activityObjectId === query.objectID) {
+                    step = s.step;
+                }
+            });
+        });
+        
+        return { ...query, automationName: autoData.name, step: step };
+    }
+
+    function renderDataSourcesTable(sources) {
+        dataSourcesTbody.innerHTML = '';
+        if (sources.length === 0) {
+            dataSourcesTbody.innerHTML = '<tr><td colspan="6">No se encontraron orígenes de datos para esta Data Extension.</td></tr>';
+            return;
+        }
+
+        sources.forEach(source => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${source.name || '---'}</td>
+                <td>${source.type || '---'}</td>
+                <td>${source.automationName || '---'}</td>
+                <td>${source.step || '---'}</td>
+                <td>${source.action || '---'}</td>
+                <td style="white-space: pre-wrap; word-break: break-all; max-width: 400px; font-size: 0.9em;">${source.description || '---'}</td>
+            `;
+            dataSourcesTbody.appendChild(row);
+        });
+    }
+
 
     const observer = new MutationObserver(updateSubscriberKeyFieldOptions);
     const observerConfig = { childList: true, subtree: true, characterData: true };
@@ -886,6 +1242,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 case 'createFields': macroCreateFields(); break;
                 case 'getFields': macroGetFields(); break;
                 case 'createDE': macroCreateDE(); break;
+                case 'searchDE': macroSearchDE(); break;
+                case 'validateEmail': macroValidateEmail(); break;
                 default:
                     logMessage(`Función no implementada: ${macroType}`);
                     break;
@@ -940,6 +1298,9 @@ document.addEventListener('DOMContentLoaded', function() {
     createDummyFieldsBtn.addEventListener('click', createDummyFields);
     clearFieldsBtn.addEventListener('click', clearFieldsTable);
     addFieldBtn.addEventListener('click', () => addNewField(true));
+    searchDEBtn.addEventListener('click', macroSearchDE);
+    validateEmailBtn.addEventListener('click', macroValidateEmail);
+    findDataSourcesBtn.addEventListener('click', macroFindDataSources);
     fieldsTableBody.addEventListener('click', (e) => {
         const deleteButton = e.target.closest('.delete-row-btn');
         const targetRow = e.target.closest('tr');
@@ -1077,4 +1438,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     initializeApp();
-});
+})
