@@ -45,7 +45,8 @@
       <div class="menu-group">
         <h3>General</h3>
         <div class="menu-buttons-container">
-          <button class="menu-button" onclick="showSection('notas-section')">Notas</button>
+          <!-- Modificado para llamar a la nueva sección -->
+          <button class="menu-button" onclick="showSection('documentacion-section')">Documentación</button>
           <button class="menu-button" onclick="showSection('configuracion-apis-section')">Configuración de APIs</button>
         </div>
       </div>
@@ -61,37 +62,70 @@
 
     </div>
 
-    <!-- Sección de Notas -->
-    <div id="notas-section" class="section">
-      <button class="back-button">← Atrás</button>
-      <h2>Notas Importantes</h2>
-      <div class="content">
-        <h3>Errores comunes:</h3>
-        <ul>
-          <li>Si la DE es Sendable, el campo que utilicéis como SubscriberKey tiene que tener el check de obligatorio marcado.</li>
-          <li>Si queremos crear una DE en una BU hija, es necesario indicar la BU y el identificador de la carpeta. Si no se indica la carpeta, la añade en Data Extensions.</li>
-          <li>La aplicación se debe crear en la BU Root. De no hacerlo, aunque se de permisos para otra BU devuelve un error.</li>
-          <li>Si ya está creada una DE con un nombre concreto y le volvéis a dar a crear, os va a devolver un error porque la DE ya existe.</li>
-          <li>Si da error intentando crear la DE en una BU hija, aseguraos de que la aplicación es accesible desde esa BU. Para eso se dan "licencias" desde la propia aplicación.</li>
-          <li>Para la creación de registros mucho cuidado con el formato de los campos de fecha. Podéis consultar los formatos válidos <a href="https://help.salesforce.com/articleView?id=admin_supported_date_time_format.htm&type=5" target="_blank">aquí</a>. El formato debería ser YYYY/DD/MM.</li>
-          <li>Los decimales deben ir con punto a la hora de crear registros.</li>
-          <li>A la hora de pasar un enlace a un campo de texto que contenga un "&", es necesario transformarlo a "&amp;" o dará un error de Bad Request.</li>
-        </ul>
-        <h3>Comentarios adicionales:</h3>
-        <ul>
-          <li>La configuración de la plantilla tiene las credenciales de la instancia de pruebas. Revisad la BU en la que se está creando la DE porque puede haberlo modificado otra persona.</li>
-          <li>No dejéis nunca en la plantilla credenciales de una instancia de cliente.</li>
-          <li>Pulsando el botón MC API > Restablecer credenciales de instancia de pruebas dejaréis las credenciales de pruebas.</li>
-          <li>Tenéis capado todos los campos que no tenéis que tocar, pero si clonais la plantilla podréis tocarlos.</li>
-          <li>Aunque en la pestaña de configuración aparece un ejemplo, la aplicación que se debe crear es del tipo API Integration y dentro de esta Server to Server.</li>
-          <li>Si la app creada solo se va a utilizar para la creación de Data Extensions, solo es necesario dar los permisos correspondientes al uso de Data Extensions (Read Write Data Extension).</li>
-          <li>Para crear una Data Extension, además de la configuración, en la pestaña de Campos solo es necesario informar las siguientes columnas: Campo MC, Tipo Campo, Longitud, PK y Obligatorio.</li>
-          <li>La parte de Salesforce solo es para cuando vamos a construir el automatismo de Contactables y ya tenemos esto documentado en un documento de diseño. De esta forma, en la columna Query ya tendremos lo que hay que copiar y pegar en la query para obtener la transformación de las etiquetas.</li>
-        </ul>
+    <!-- SECCIÓN DE DOCUMENTACIÓN (REDISEÑADA) -->
+    <div id="documentacion-section" class="section">
+      <div class="section-header">
+        <button class="back-button">← Atrás</button>
+      </div>
+      <h2>Documentación</h2>
+      
+      <div class="tabs-container">
+        <div class="tab-buttons">
+          <button class="tab-button active" data-tab="guia-rapida">Guía Rápida</button>
+          <button class="tab-button" data-tab="errores-comunes">Errores Comunes</button>
+          <button class="tab-button" data-tab="comentarios-adicionales">Comentarios Adicionales</button>
+        </div>
+        
+        <div id="guia-rapida" class="tab-content active">
+          <h3>Flujo de Trabajo Principal</h3>
+          <ol>
+            <li><strong>Configurar un Cliente:</strong> Ve a <em>Configuración de APIs</em>. Introduce un nombre para tu proyecto o cliente, rellena los datos de la aplicación de Marketing Cloud (MID, Auth URI, Client ID, etc.) y pulsa "Guardar". La configuración se guardará localmente.</li>
+            <li><strong>Recuperar Token:</strong> (Opcional) Puedes pulsar "Recuperar Token" en el menú de la izquierda para comprobar que tus credenciales son correctas. La aplicación lo hará automáticamente cuando ejecutes otras macros.</li>
+            <li><strong>Configurar la Data Extension:</strong> Ve a <em>Configuración de Data Extension</em>. Define el nombre, descripción y carpeta. Si la DE es "Sendable", marca la casilla correspondiente.</li>
+            <li><strong>Añadir Campos:</strong> Ve a la sección de <em>Campos</em>.
+                <ul>
+                    <li>Usa <b>"Añadir Fila"</b> para añadir campos manualmente.</li>
+                    <li>Usa <b>"Importar..."</b> para pegar una lista de campos desde Excel o un CSV.</li>
+                    <li>Define qué campos son Primary Key (PK) u obligatorios.</li>
+                </ul>
+            </li>
+            <li><strong>Vincular Subscriber Key:</strong> Si tu DE es "Sendable", vuelve a <em>Configuración de Data Extension</em> y selecciona el campo que actuará como Subscriber Key en el menú desplegable.</li>
+            <li><strong>Crear la Data Extension:</strong> Pulsa "Crear Data Extension" en el menú de la izquierda.</li>
+          </ol>
+          <h3>Gestión de Campos Existentes</h3>
+           <ol>
+            <li><strong>Seleccionar Cliente:</strong> Asegúrate de que el cliente correcto esté seleccionado en el menú lateral izquierdo.</li>
+            <li><strong>Introducir External Key:</strong> Ve a <em>Gestión de Campos</em> e introduce la External Key de la Data Extension que quieres modificar.</li>
+            <li><strong>Recuperar Campos:</strong> Pulsa "Recuperar campos" para cargar su estructura en la tabla de la sección <em>Campos</em> y "Recuperar Ids" para poblar la lista de campos a eliminar.</li>
+            <li><strong>Modificar y Guardar:</strong> Añade, edita o elimina filas en la tabla de <em>Campos</em>. Cuando termines, pulsa "Crear campos" para aplicar los cambios (esta acción actualiza los campos existentes y añade los nuevos).</li>
+            <li><strong>Eliminar un Campo:</strong> En <em>Gestión de Campos</em>, pulsa "Recuperar Ids", selecciona el campo a borrar de la lista y pulsa "Borrar campo".</li>
+          </ol>
+        </div>
+        
+        <div id="errores-comunes" class="tab-content">
+            <ul>
+                <li><strong>Error de autenticación:</strong> Revisa que el MID, Client ID y Client Secret sean correctos. Asegúrate de que la aplicación API creada en Marketing Cloud es de tipo "Server-to-Server".</li>
+                <li><strong>La DE se crea en la carpeta raíz:</strong> Si quieres crear la DE en una carpeta específica, debes proporcionar el <strong>ID de la Carpeta</strong> (un número), no su nombre. Puedes encontrarlo en la URL al navegar a esa carpeta en Marketing Cloud.</li>
+                <li><strong>DE Sendable sin Subscriber Key:</strong> Si marcas una DE como "Sendable", es <strong>obligatorio</strong> seleccionar un campo que actúe como Subscriber Key y que este campo esté marcado como "Obligatorio" en la tabla de campos.</li>
+                <li><strong>Error "DE ya existe":</strong> Si intentas crear una DE con una External Key que ya existe en la Business Unit, la API devolverá un error.</li>
+                <li><strong>Acceso a Business Units Hijas:</strong> La aplicación API debe crearse en la BU padre (Enterprise) y se le deben dar permisos explícitos para acceder a las BUs hijas que necesites.</li>
+                <li><strong>Error "Bad Request" con enlaces:</strong> Si pegas una URL en un campo de texto que contiene un "&", la API SOAP puede fallar. Reemplaza "&" por "&amp;amp;" para solucionarlo.</li>
+            </ul>
+        </div>
+
+        <div id="comentarios-adicionales" class="tab-content">
+            <ul>
+              <li><strong>Almacenamiento Local:</strong> Toda la configuración de tus clientes se guarda en el almacenamiento local de tu navegador. No se envía a ningún servidor externo. Si borras la caché de tu navegador o cambias de equipo, perderás esta información.</li>
+              <li><strong>Permisos de la Aplicación API:</strong> Para un funcionamiento completo, la aplicación API en Marketing Cloud necesita permisos de Lectura y Escritura para Data Extensions (`Data > Data Extensions > Read & Write`).</li>
+              <li><strong>Creación vs. Actualización de Campos:</strong> La macro "Crear campos" es en realidad un "upsert". Esto significa que si un campo con el mismo nombre ya existe, actualizará sus propiedades. Si no existe, lo creará.</li>
+              <li><strong>Tipos de Campo:</strong> Asegúrate de que los tipos de campo coinciden con los soportados por Marketing Cloud (Text, Number, Date, Boolean, EmailAddress, Phone, Locale, Decimal).</li>
+              <li><strong>Longitud en Decimales:</strong> Para campos de tipo "Decimal", la longitud debe especificarse como "total,decimales". Por ejemplo, `18,2` para un campo que admite hasta 18 dígitos, con 2 de ellos siendo decimales.</li>
+            </ul>
+        </div>
       </div>
     </div>
     
-    <!-- Sección de Configuración de APIs (Antes parte de Configuración) -->
+    <!-- Sección de Configuración de APIs -->
     <div id="configuracion-apis-section" class="section config-section-container">
         <button class="back-button">← Atrás</button>
         <h2>Configuración de APIs</h2>
@@ -112,11 +146,11 @@
             <div class="form-group"><label for="restUri">REST URI</label><input type="text" id="restUri" disabled></div>
         </div>
         <p class="info-text">
-            La configuración se guardará localmente en tu navegador. No se almacena en ningún servidor externo. Al borrarla, se eliminará permanentemente de tu equipo.
+            La configuración se guardará localmente en tu navegador. No se almacena en ningún servidor externo.
         </p>
     </div>
 
-    <!-- Sección de Configuración de Data Extension (Nueva) -->
+    <!-- Sección de Configuración de Data Extension -->
     <div id="configuracion-de-section" class="section config-section-container">
         <button class="back-button">← Atrás</button>
         <h2>Configuración de Data Extension</h2>
@@ -143,7 +177,7 @@
         </div>
     </div>
 
-    <!-- Sección de Configuración de Gestión de Campos (Nueva) -->
+    <!-- Sección de Configuración de Gestión de Campos -->
     <div id="configuracion-campos-section" class="section config-section-container">
         <button class="back-button">← Atrás</button>
         <h2>Gestión de Campos de Data Extension</h2>
@@ -151,7 +185,7 @@
         <div class="config-block">
             <h3>Parámetros</h3>
             <p class="info-text" style="text-align: left; margin-top: 0; margin-bottom: 15px;">
-                Introduce la External Key de la DE y pulsa "Recuperar Ids" o "Recuperar Campos" en el menú de la izquierda para poblar la lista de campos.
+                Introduce la External Key de la DE y pulsa "Recuperar Ids" o "Recuperar Campos" en el menú de la izquierda para poblar la lista.
             </p>
             <div class="form-group">
                 <label for="recExternalKey">External Key de la DE</label>
@@ -171,6 +205,7 @@
         <div class="section-header">
             <button class="back-button">← Atrás</button>
             <div class="header-actions">
+                <button id="importFieldsBtn" class="action-button">Importar...</button>
                 <button id="createDummyFieldsBtn" class="action-button">Crear Campos Dummy</button>
                 <button id="addFieldBtn" class="action-button">Añadir Fila</button>
                 <button id="clearFieldsBtn" class="action-button delete-btn">Limpiar Campos</button>
@@ -199,7 +234,6 @@
       <h2>Log de Eventos</h2>
       <button id="toggleLogBtn" title="Colapsar Log"></button>
     </div>
-    <!-- ESTRUCTURA DE LOG CORREGIDA -->
     <div id="log-message-block" class="log-block">
       <h4>Mensajes</h4>
       <pre><code id="log-messages">Esperando acciones...</code></pre>
@@ -215,6 +249,32 @@
   </aside>
 
 </div>
+
+<!-- MODAL DE IMPORTACIÓN -->
+<div id="import-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Importar Campos desde Portapapeles</h3>
+        <p>Pega aquí los datos de tu Excel o CSV. Las columnas deben ser: <b>Nombre</b>, <b>Tipo</b> y <b>Longitud</b>.</p>
+        
+        <div class="delimiter-selector">
+            <label for="delimiter-select">Separador:</label>
+            <select id="delimiter-select">
+                <option value="tab" selected>Tabulador (Excel)</option>
+                <option value="comma">Coma (,)</option>
+                <option value="semicolon">Punto y coma (;)</option>
+                <option value="other">Otro...</option>
+            </select>
+            <input type="text" id="custom-delimiter-input" class="hidden" maxlength="1" placeholder="Ej: |">
+        </div>
+        
+        <textarea id="paste-data-area" rows="10" placeholder="Ciudad	Text	50&#10;Email	EmailAddress	254"></textarea>
+        <div class="modal-actions">
+            <button id="process-paste-btn" class="action-button">Añadir Campos</button>
+            <button id="cancel-paste-btn" class="action-button delete-btn">Cancelar</button>
+        </div>
+    </div>
+</div>
+
 <script src="ui.js"></script>
 </body>
 </html>

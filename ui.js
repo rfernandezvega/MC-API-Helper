@@ -47,7 +47,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Sección Gestión de Campos
     const recExternalKeyInput = document.getElementById('recExternalKey');
-    const targetFieldSelect = document.getElementById('targetFieldSelect'); 
+    const targetFieldSelect = document.getElementById('targetFieldSelect');
+
+    // Modal de Importación
+    const importFieldsBtn = document.getElementById('importFieldsBtn');
+    const importModal = document.getElementById('import-modal');
+    const pasteDataArea = document.getElementById('paste-data-area');
+    const processPasteBtn = document.getElementById('process-paste-btn');
+    const cancelPasteBtn = document.getElementById('cancel-paste-btn');
+    const delimiterSelect = document.getElementById('delimiter-select');
+    const customDelimiterInput = document.getElementById('custom-delimiter-input');
+
+    // Pestañas de Documentación (NUEVO)
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+
 
     // ==========================================================
     // --- 2. GESTIÓN DE ESTADO Y CONFIGURACIÓN ---
@@ -180,6 +194,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!silent) {
                 logMessage("Token recuperado con éxito.");
                 logApiResponse(responseData);
+                alert("Token recuperado y actualizado en el formulario.");
             }
         } catch (error) {
             if (!silent) {
@@ -333,44 +348,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    function buildFieldXml(fieldData) {
-        const { name, type, length, defaultValue, isPrimaryKey, isRequired } = fieldData;
-        const customerKey = name;
-        let fieldXml = '';
-        const commonNodes = `<CustomerKey>${customerKey}</CustomerKey><Name>${name}</Name><IsRequired>${isRequired}</IsRequired><IsPrimaryKey>${isPrimaryKey}</IsPrimaryKey>`;
-        const defaultValueNode = defaultValue ? `<DefaultValue>${defaultValue}</DefaultValue>` : '';
-        switch (type.toLowerCase()) {
-            case 'text':
-                fieldXml = `<Field>${commonNodes}<FieldType>Text</FieldType>${length ? `<MaxLength>${length}</MaxLength>` : ''}${defaultValueNode}</Field>`;
-                break;
-            case 'number':
-                fieldXml = `<Field>${commonNodes}<FieldType>Number</FieldType>${defaultValueNode}</Field>`;
-                break;
-            case 'date':
-                fieldXml = `<Field>${commonNodes}<FieldType>Date</FieldType>${defaultValueNode}</Field>`;
-                break;
-            case 'boolean':
-                fieldXml = `<Field>${commonNodes}<FieldType>Boolean</FieldType>${defaultValueNode}</Field>`;
-                break;
-            case 'emailaddress':
-                fieldXml = `<Field>${commonNodes}<FieldType>EmailAddress</FieldType></Field>`;
-                break;
-            case 'phone':
-                 fieldXml = `<Field>${commonNodes}<FieldType>Phone</FieldType></Field>`;
-                break;
-            case 'locale':
-                fieldXml = `<Field>${commonNodes}<FieldType>Locale</FieldType></Field>`;
-                break;
-            case 'decimal':
-                const [maxLength, scale] = (length || ',').split(',').map(s => s.trim());
-                fieldXml = `<Field>${commonNodes}<FieldType>Decimal</FieldType>${maxLength ? `<MaxLength>${maxLength}</MaxLength>` : ''}${scale ? `<Scale>${scale}</Scale>` : ''}${defaultValueNode}</Field>`;
-                break;
-            default:
-                return '';
-        }
-        return fieldXml.replace(/\s+/g, ' ').trim();
-    }
-
     async function macroCreateFields() {
         blockUI();
         try {
@@ -754,6 +731,98 @@ document.addEventListener('DOMContentLoaded', function() {
       if (selectedRow && selectedRow.nextElementSibling) {
         selectedRow.parentNode.insertBefore(selectedRow.nextElementSibling, selectedRow);
       }
+    });
+
+    // Lógica del Modal de Importación
+    function closeImportModal() {
+        importModal.style.display = 'none';
+        pasteDataArea.value = '';
+        delimiterSelect.value = 'tab';
+        customDelimiterInput.classList.add('hidden');
+        customDelimiterInput.value = '';
+    }
+
+    importFieldsBtn.addEventListener('click', () => {
+        importModal.style.display = 'flex';
+        pasteDataArea.focus();
+    });
+
+    cancelPasteBtn.addEventListener('click', closeImportModal);
+    importModal.addEventListener('click', (e) => {
+        if (e.target === importModal) {
+            closeImportModal();
+        }
+    });
+
+    delimiterSelect.addEventListener('change', () => {
+        if(delimiterSelect.value === 'other') {
+            customDelimiterInput.classList.remove('hidden');
+            customDelimiterInput.focus();
+        } else {
+            customDelimiterInput.classList.add('hidden');
+        }
+    });
+
+    processPasteBtn.addEventListener('click', () => {
+        const text = pasteDataArea.value.trim();
+        if (!text) return;
+
+        let delimiter = '';
+        const selectedDelimiter = delimiterSelect.value;
+
+        if (selectedDelimiter === 'tab') delimiter = '\t';
+        else if (selectedDelimiter === 'comma') delimiter = ',';
+        else if (selectedDelimiter === 'semicolon') delimiter = ';';
+        else if (selectedDelimiter === 'other') {
+            delimiter = customDelimiterInput.value;
+            if (!delimiter) {
+                alert('Por favor, introduce un carácter en el campo "Otro" como separador.');
+                return;
+            }
+        }
+
+        const newFields = [];
+        const lines = text.split('\n');
+
+        lines.forEach(line => {
+            if (!line.trim()) return;
+            const columns = line.split(delimiter);
+            const [name, type, length] = columns.map(c => c.trim());
+
+            if (name && type) {
+                newFields.push({ mc: name, type, len: length || '' });
+            }
+        });
+
+        if (newFields.length > 0) {
+            observer.disconnect();
+            const firstRow = fieldsTableBody.querySelector('tr');
+            if(firstRow && firstRow.textContent.trim() === '×'){
+                firstRow.remove();
+            }
+
+            newFields.forEach(fieldData => {
+                fieldsTableBody.appendChild(createTableRow(fieldData));
+            });
+            updateSubscriberKeyFieldOptions();
+            observer.observe(fieldsTableBody, observerConfig);
+            logMessage(`${newFields.length} campos importados a la tabla.`);
+        }
+        
+        closeImportModal();
+    });
+    
+    // Lógica de las Pestañas de Documentación
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const tabId = button.getAttribute('data-tab');
+
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            button.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        });
     });
 
     function initializeApp() {

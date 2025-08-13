@@ -18,13 +18,12 @@ body {
   transition: grid-template-columns 0.35s ease-in-out, opacity 0.2s ease-in-out;
 }
 
-/* AÑADIDO: Estilo para bloquear la UI durante operaciones */
 .app-container.is-updating {
-  pointer-events: none; /* Deshabilita toda interacción con el ratón */
-  opacity: 0.6; /* Feedback visual de que algo está pasando */
+  pointer-events: none;
+  opacity: 0.6;
 }
 .app-container.is-updating body {
-    cursor: wait; /* Cambia el cursor global a espera */
+    cursor: wait;
 }
 
 #macros-sidebar, #main-content, #log-sidebar {
@@ -138,7 +137,7 @@ body {
 /* --- Estilos de la Sección de Campos --- */
 .section-header { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 20px; }
 .section-header .back-button { margin-bottom: 0; }
-.header-actions { display: flex; gap: 10px; }
+.header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .action-button { background-color: #69a3db; color: #fff; border: none; border-radius: 5px; padding: 10px 15px; cursor: pointer; transition: background-color 0.2s; }
 .action-button:hover { background-color: #558ac7; }
 .action-button.delete-btn { background-color: #6c757d; }
@@ -251,7 +250,6 @@ td input[type="text"].cell-input {
   min-height: 0;
 }
 
-/* El bloque de mensajes toma menos espacio inicial */
 #log-message-block {
   flex: 0 1 25%;
 }
@@ -301,8 +299,128 @@ td input[type="text"].cell-input {
 }
 
 /* ==========================================================
-   4. RESPONSIVE
+   4. RESPONSIVE Y ESTILOS DE COMPONENTES
    ========================================================== */
+
+/* --- Estilos para Pestañas (NUEVO) --- */
+.tabs-container {
+  width: 100%;
+}
+.tab-buttons {
+  display: flex;
+  border-bottom: 2px solid #e0e7ef;
+  margin-bottom: 20px;
+}
+.tab-button {
+  padding: 10px 20px;
+  cursor: pointer;
+  background-color: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 1em;
+  color: #558ac7;
+  transition: all 0.2s ease-in-out;
+}
+.tab-button.active {
+  border-bottom-color: #69a3db;
+  font-weight: bold;
+}
+.tab-button:hover {
+  background-color: #f8f9fa;
+}
+.tab-content {
+  display: none;
+  padding: 0 10px;
+  line-height: 1.6;
+}
+.tab-content.active {
+  display: block;
+}
+.tab-content h3 {
+  color: #558ac7;
+  margin-top: 0;
+}
+.tab-content ul, .tab-content ol {
+  padding-left: 20px;
+}
+.tab-content li {
+  margin-bottom: 10px;
+}
+
+/* --- Estilos para Modal de Importación --- */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.5);
+  justify-content: center;
+  align-items: center;
+}
+.modal-content {
+  background-color: #fefefe;
+  padding: 20px;
+  border: 1px solid #888;
+  border-radius: 10px;
+  width: 80%;
+  max-width: 500px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+.modal-content h3 {
+  margin-top: 0;
+  color: #558ac7;
+}
+.modal-content p {
+  font-size: 0.9em;
+  line-height: 1.4;
+  margin-bottom: 15px;
+}
+.modal-content textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-family: monospace;
+  margin-bottom: 15px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.delimiter-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+.delimiter-selector label {
+    font-weight: bold;
+    color: #333;
+}
+.delimiter-selector select {
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+.delimiter-selector input {
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    width: 40px;
+    text-align: center;
+}
+.hidden {
+    display: none;
+}
 
 @media (max-width: 1024px) {
   .app-container {
