@@ -10,9 +10,11 @@
   
   <!-- COLUMNA IZQUIERDA: MACROS -->
   <aside id="macros-sidebar">
-	<div>
+	<div class="sidebar-client-selector">
 	  <h2>Cliente</h2>
-	  <p id="selected-client-display">Ninguno seleccionado</p>
+      <select id="sidebarClientSelect">
+        <option value="">Ninguno seleccionado</option>
+      </select>
 	</div>
     <h2>Macros</h2>
     
@@ -40,10 +42,25 @@
   <!-- COLUMNA CENTRAL: CONTENIDO PRINCIPAL -->
   <main id="main-content">
     <!-- Menú Principal -->
-    <div id="main-menu" class="main-menu-container" style="display: flex;">
-      <button class="menu-button" onclick="showSection('notas-section')">Notas</button>
-      <button class="menu-button" onclick="showSection('configuracion-section')">Configuración</button>
-      <button class="menu-button" onclick="showSection('campos-section')">Campos</button>
+        <div id="main-menu" class="main-menu-container" style="display: flex;">
+      
+      <div class="menu-group">
+        <h3>General</h3>
+        <div class="menu-buttons-container">
+          <button class="menu-button" onclick="showSection('notas-section')">Notas</button>
+          <button class="menu-button" onclick="showSection('configuracion-apis-section')">Configuración de APIs</button>
+        </div>
+      </div>
+      
+      <div class="menu-group">
+        <h3>Data Extensions</h3>
+        <div class="menu-buttons-container">
+          <button class="menu-button" onclick="showSection('configuracion-de-section')">Configuración de Data Extension</button>
+          <button class="menu-button" onclick="showSection('campos-section')">Campos</button>
+          <button class="menu-button" onclick="showSection('configuracion-campos-section')">Gestión de Campos</button>
+        </div>
+      </div>
+
     </div>
 
     <!-- Sección de Notas -->
@@ -76,10 +93,10 @@
       </div>
     </div>
     
-    <!-- Sección de Configuración -->
-    <div id="configuracion-section" class="section">
+    <!-- Sección de Configuración de APIs (Antes parte de Configuración) -->
+    <div id="configuracion-apis-section" class="section config-section-container">
         <button class="back-button">← Atrás</button>
-        <h2>Configuración General</h2>
+        <h2>Configuración de APIs</h2>
         <div class="client-management">
             <input type="text" id="clientName" placeholder="Nombre del Cliente">
             <select id="savedConfigs"></select>
@@ -87,40 +104,70 @@
             <button id="deleteConfig" class="delete-btn">Borrar</button>
         </div>
         <div class="config-block">
-            <h3>Configuración Base DE</h3>
+            <h3>Datos Aplicación</h3>
             <div class="form-group"><label for="businessUnit">Business Unit (MID)</label><input type="text" id="businessUnit"></div>
+            <div class="form-group"><label for="authUri">Auth URI</label><input type="text" id="authUri"></div>
+            <div class="form-group"><label for="clientId">Client ID</label><input type="text" id="clientId"></div>
+            <div class="form-group"><label for="clientSecret">Client Secret</label><input type="text" id="clientSecret"></div>
+            <div class="form-group"><label for="token">Token</label><input type="text" id="token" disabled></div>
+            <div class="form-group"><label for="soapUri">SOAP URI</label><input type="text" id="soapUri" disabled></div>
+            <div class="form-group"><label for="restUri">REST URI</label><input type="text" id="restUri" disabled></div>
+        </div>
+        <p class="info-text">
+            La configuración se guardará localmente en tu navegador. No se almacena en ningún servidor externo. Al borrarla, se eliminará permanentemente de tu equipo.
+        </p>
+    </div>
+
+        <!-- Sección de Configuración de Data Extension (Nueva) -->
+    <div id="configuracion-de-section" class="section config-section-container">
+        <button class="back-button">← Atrás</button>
+        <h2>Configuración de Data Extension</h2>
+        <div class="config-block">
+            <h3>Configuración Base DE</h3>
             <div class="form-group"><label for="deName">Nombre Data Extension</label><input type="text" id="deName"></div>
             <div class="form-group"><label for="deDescription">Descripción</label><input type="text" id="deDescription"></div>
             <div class="form-group"><label for="deExternalKey">External Key</label><input type="text" id="deExternalKey" disabled></div>
             <div class="form-group"><label for="deFolder">Carpeta</label><input type="text" id="deFolder"></div>
         </div>
         <div class="config-block">
-            <h3>Configuración</h3>
+            <h3>Configuración Sendable</h3>
             <div class="form-group checkbox-group">
                 <label for="isSendable">Sendable DE:</label>
                 <input type="checkbox" id="isSendable">
             </div>
-            <div class="form-group"><label for="subscriberKeyField">Campo SubscriberKey</label><input type="text" id="subscriberKeyField"></div>
-            <div class="form-group"><label for="subscriberKeyType">Tipo Campo SubscriberKey</label><input type="text" id="subscriberKeyType"></div>
+            <!-- CAMBIO: input a select, y deshabilitado -->
+            <div class="form-group">
+                <label for="subscriberKeyField">Campo SubscriberKey</label>
+                <select id="subscriberKeyField" disabled>
+                    <option value="">-- Primero defina campos en la sección 'Campos' --</option>
+                </select>
+            </div>
+            <!-- CAMBIO: deshabilitado -->
+            <div class="form-group"><label for="subscriberKeyType">Tipo Campo SubscriberKey</label><input type="text" id="subscriberKeyType" disabled></div>
+        </div>
+    </div>
+
+    <!-- Sección de Configuración de Gestión de Campos (Nueva) -->
+    <div id="configuracion-campos-section" class="section config-section-container">
+        <button class="back-button">← Atrás</button>
+        <h2>Configuración Recuperación/Borrado/Creación de Campos</h2>
+        <div class="config-block">
+            <div class="form-group">
+                <label for="fieldActionSelect">Acción a Realizar</label>
+                <select id="fieldActionSelect">
+                    <option value="recuperar">Recuperar</option>
+                    <option value="borrar">Borrar</option>
+                    <option value="crear">Crear</option>
+                </select>
+            </div>
         </div>
         <div class="config-block">
-            <h3>Datos Aplicación</h3>
-            <div class="form-group"><label for="authUri">Auth URI</label><input type="text" id="authUri"></div>
-            <div class="form-group"><label for="clientId">Client ID</label><input type="text" id="clientId"></div>
-            <div class="form-group"><label for="clientSecret">Client Secret</label><input type="password" id="clientSecret"></div>
-            <div class="form-group"><label for="token">Token</label><input type="text" id="token" disabled></div>
-            <div class="form-group"><label for="soapUri">SOAP URI</label><input type="text" id="soapUri"></div>
-        </div>
-        <div class="config-block">
-            <h3>Campos Recuperación/Borrado/Creación</h3>
-            <div class="form-group"><label for="recExternalKey">External Key</label><input type="text" id="recExternalKey"></div>
+            <h3>Parámetros</h3>
+            <div class="form-group"><label for="recExternalKey">External Key de la DE</label><input type="text" id="recExternalKey" disabled></div>
+            <div class="form-group"><label for="deleteFieldName">Nombre del campo a eliminar</label><input type="text" id="deleteFieldName" disabled></div>
+            <div class="form-group"><label for="deleteFieldId">Id del campo a eliminar</label><input type="text" id="deleteFieldId" disabled></div>
             <div class="form-group"><label for="recObjectId">Campo - Object Id</label><input type="text" id="recObjectId" disabled></div>
-            <div class="form-group"><label for="deleteFieldName">Nombre del campo a eliminar</label><input type="text" id="deleteFieldName"></div>
-            <div class="form-group"><label for="deleteFieldId">Id del campo a eliminar</label><input type="text" id="deleteFieldId"></div>
         </div>
-        <p class="info-text">
-            La configuración se guardará localmente en tu navegador. No se almacena en ningún servidor externo. Al borrarla, se eliminará permanentemente de tu equipo.
-        </p>
     </div>
 
     <!-- Sección de Campos -->

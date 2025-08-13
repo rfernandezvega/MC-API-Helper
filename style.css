@@ -7,7 +7,7 @@
   /* --- LAYOUT PRINCIPAL CON CSS GRID --- */
   .app-container {
     display: grid;
-    grid-template-columns: 260px 1fr 320px; /* Izquierda | Centro | Derecha */
+    grid-template-columns: 220px 1fr 360px; /* Izquierda | Centro | Derecha */
     gap: 20px;
     padding: 20px;
     min-height: 100vh;
@@ -82,24 +82,24 @@
       flex-direction: column;
   }
 
-  .main-menu-container {
+ .main-menu-container {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 20px;
+    flex-direction: column; /* Apila los grupos verticalmente */
+    align-items: center;   /* Centra los grupos */
+    gap: 30px;             /* Espacio entre los bloques General y Data Extensions */
     width: 100%;
   }
 
-  .menu-button {
+ .menu-button {
     background-color: #69a3db;
     color: #fff;
     border: none;
-    border-radius: 15px;
-    padding: 20px;
+    border-radius: 10px; 
+    padding: 15px;      
     cursor: pointer;
-    font-size: 1.2em;
-    width: 200px;
-    height: 150px;
+    font-size: 1.1em;   
+    width: 180px;      
+    height: 100px;      
     display: flex;
     justify-content: center;
     align-items: center;
@@ -111,6 +111,31 @@
     background-color: #558ac7;
   }
   
+ .menu-group {
+  width: 90%;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+.menu-group h3 {
+  color: #558ac7;
+  margin-top: 0;
+  margin-bottom: 20px;
+  text-align: center;
+  border-bottom: 2px solid #e0e7ef;
+  padding-bottom: 10px;
+}
+
+.menu-buttons-container {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
   .back-button {
     background-color: #6c757d;
     color: #fff;
@@ -175,22 +200,22 @@
     overflow-y: auto;
     white-space: pre-wrap;
     word-break: break-all;
-    font-size: 0.85em;
+    font-size: 0.8em;
   }
 
   /* --- ESTILOS GENERALES (SE MANTIENEN) --- */
-   #configuracion-section .config-block { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
-  #configuracion-section h3 { color: #558ac7; margin-top: 0; }
-  #configuracion-section .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
-  #configuracion-section label { font-weight: bold; margin-bottom: 5px; color: #333; }
-  #configuracion-section input[type="text"],
-  #configuracion-section input[type="password"],
-  #configuracion-section select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-  #configuracion-section input[disabled] { background-color: #e9ecef; cursor: not-allowed; }
+  .config-section-container .config-block { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+  .config-section-container h3 { color: #558ac7; margin-top: 0; }
+  .config-section-container .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
+  .config-section-container label { font-weight: bold; margin-bottom: 5px; color: #333; }
+  .config-section-container input[type="text"],
+  .config-section-container input[type="password"],
+  .config-section-container select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+  .config-section-container input[disabled] { background-color: #e9ecef; cursor: not-allowed; }
   
-  #configuracion-section .checkbox-group { flex-direction: row; align-items: center; justify-content: flex-start; }
-  #configuracion-section .checkbox-group label { font-weight: bold; margin-bottom: 0; margin-right: 8px; }
-  #configuracion-section .checkbox-group input[type="checkbox"] { width: auto; }
+  .config-section-container .checkbox-group { flex-direction: row; align-items: center; justify-content: flex-start; }
+  .config-section-container .checkbox-group label { font-weight: bold; margin-bottom: 0; margin-right: 8px; }
+  .config-section-container .checkbox-group input[type="checkbox"] { width: auto; }
   
   .client-management { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
   .client-management input, .client-management select { flex-grow: 1; }
@@ -221,3 +246,19 @@
       max-height: 500px;
     }
   }
+
+  /* --- Estilos para el selector de cliente en la barra lateral --- */
+.sidebar-client-selector {
+  padding-bottom: 15px;
+  border-bottom: 2px solid #f0f6fc;
+  margin-bottom: 10px;
+}
+
+#sidebarClientSelect {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  margin-top: 5px; /* Espacio respecto al título "Cliente" */
+}
