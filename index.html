@@ -148,23 +148,23 @@
     <!-- Sección de Configuración de Gestión de Campos (Nueva) -->
     <div id="configuracion-campos-section" class="section config-section-container">
         <button class="back-button">← Atrás</button>
-        <h2>Configuración Recuperación/Borrado/Creación de Campos</h2>
-        <div class="config-block">
-            <div class="form-group">
-                <label for="fieldActionSelect">Acción a Realizar</label>
-                <select id="fieldActionSelect">
-                    <option value="recuperar">Recuperar</option>
-                    <option value="borrar">Borrar</option>
-                    <option value="crear">Crear</option>
-                </select>
-            </div>
-        </div>
+        <h2>Gestión de Campos de Data Extension</h2>
+        
         <div class="config-block">
             <h3>Parámetros</h3>
-            <div class="form-group"><label for="recExternalKey">External Key de la DE</label><input type="text" id="recExternalKey" disabled></div>
-            <div class="form-group"><label for="deleteFieldName">Nombre del campo a eliminar</label><input type="text" id="deleteFieldName" disabled></div>
-            <div class="form-group"><label for="deleteFieldId">Id del campo a eliminar</label><input type="text" id="deleteFieldId" disabled></div>
-            <div class="form-group"><label for="recObjectId">Campo - Object Id</label><input type="text" id="recObjectId" disabled></div>
+            <p class="info-text" style="text-align: left; margin-top: 0; margin-bottom: 15px;">
+                Introduce la External Key de la DE y pulsa "Recuperar Ids" en el menú de la izquierda para poblar la lista de campos.
+            </p>
+            <div class="form-group">
+                <label for="recExternalKey">External Key de la DE</label>
+                <input type="text" id="recExternalKey">
+            </div>
+            <div class="form-group">
+                <label for="targetFieldSelect">Campo a eliminar</label>
+                <select id="targetFieldSelect" disabled>
+                    <option value="">-- Pulsa "Recuperar Ids" para poblar la lista --</option>
+                </select>
+            </div>
         </div>
     </div>
 

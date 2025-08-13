@@ -40,10 +40,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let selectedRow = null;
 
     // Sección Gestión de Campos
-    const fieldActionSelect = document.getElementById('fieldActionSelect');
     const recExternalKeyInput = document.getElementById('recExternalKey');
-    const deleteFieldNameInput = document.getElementById('deleteFieldName');
-
+    const targetFieldSelect = document.getElementById('targetFieldSelect'); 
 
     // ==========================================================
     // --- 2. GESTIÓN DE ESTADO Y CONFIGURACIÓN ---
@@ -54,29 +52,22 @@ document.addEventListener('DOMContentLoaded', function() {
         logResponseEl.textContent = (typeof responseData === 'object') ? JSON.stringify(responseData, null, 2) : responseData;
     }
 
-    // --- Funciones para Configuración de APIs y Cliente ---
-
+    // --- Funciones para Configuración de APIs y Cliente (Guardado Simple) ---
     const getApiConfigValues = () => {
         const config = {};
         apiConfigSection.querySelectorAll('input:not([type="checkbox"]), select').forEach(input => {
-             if (input.id && !['clientName', 'savedConfigs'].includes(input.id)) {
-                 config[input.id] = input.value;
-             }
+             if (input.id && !['clientName', 'savedConfigs'].includes(input.id)) config[input.id] = input.value;
         });
         return config;
     };
     
     const setApiConfigValues = (config) => {
         apiConfigSection.querySelectorAll('input:not([type="checkbox"]), select').forEach(el => {
-            if(el.id && !['clientName', 'savedConfigs'].includes(el.id)) {
-                el.value = '';
-            }
+            if(el.id && !['clientName', 'savedConfigs'].includes(el.id)) el.value = '';
         });
         for (const key in config) {
             const element = document.getElementById(key);
-            if (element) {
-                element.value = config[key];
-            }
+            if (element) element.value = config[key];
         }
     };
 
@@ -85,7 +76,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const currentValue = sidebarClientSelect.value || savedConfigsSelect.value;
         savedConfigsSelect.innerHTML = '<option value="">Seleccionar configuración...</option>';
         sidebarClientSelect.innerHTML = '<option value="">Ninguno seleccionado</option>';
-
         for (const name in configs) {
             const option1 = new Option(name, name);
             const option2 = new Option(name, name);
@@ -99,23 +89,17 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadAndSyncClientConfig(clientName) {
         const configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
         const configToLoad = configs[clientName] || {};
-        
         setApiConfigValues(configToLoad);
         clientNameInput.value = clientName;
         savedConfigsSelect.value = clientName;
         sidebarClientSelect.value = clientName;
     }
 
-    // --- Funciones para Configuración de Data Extension ---
-
+    // --- Funciones para Configuración de Data Extension (Guardado Automático) ---
     function saveDeConfigState() {
         const config = {};
-        deConfigSection.querySelectorAll('input:not([type="checkbox"]), select').forEach(el => {
-            config[el.id] = el.value;
-        });
-        deConfigSection.querySelectorAll('input[type="checkbox"]').forEach(el => {
-            config[el.id] = el.checked;
-        });
+        deConfigSection.querySelectorAll('input:not([type="checkbox"]), select').forEach(el => config[el.id] = el.value);
+        deConfigSection.querySelectorAll('input[type="checkbox"]').forEach(el => config[el.id] = el.checked);
         localStorage.setItem('mcDeConfig', JSON.stringify(config));
     }
 
@@ -125,11 +109,7 @@ document.addEventListener('DOMContentLoaded', function() {
             for (const key in savedConfig) {
                 const element = document.getElementById(key);
                 if (element) {
-                    if (element.type === 'checkbox') {
-                        element.checked = savedConfig[key];
-                    } else {
-                        element.value = savedConfig[key];
-                    }
+                    element.type === 'checkbox' ? (element.checked = savedConfig[key]) : (element.value = savedConfig[key]);
                 }
             }
         }
@@ -140,100 +120,184 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- 3. LÓGICA DE LA APLICACIÓN Y UI ---
     // ==========================================================
     
-    // --- Lógica de Navegación y Macros ---
-
     window.showSection = function(sectionId) {
         mainMenu.style.display = 'none';
         sections.forEach(s => s.style.display = 'none');
         const sectionToShow = document.getElementById(sectionId);
-        if (sectionToShow) {
-            sectionToShow.style.display = 'flex';
-        }
+        if (sectionToShow) sectionToShow.style.display = 'flex';
     };
 
-    async function macroGetToken() {
+    async function macroGetToken(silent = false) {
         const config = getApiConfigValues();
         if (!config.authUri || !config.clientId || !config.clientSecret || !config.businessUnit) {
-            alert("Por favor, complete los campos Auth URI, Client ID, Client Secret y Business Unit (MID) en la configuración.");
+            if (!silent) alert("Por favor, complete los campos Auth URI, Client ID, Client Secret y Business Unit (MID) en la configuración.");
             logEvent({ error: "Faltan datos de configuración" }, "Operación cancelada.");
-            return;
+            return Promise.reject(new Error("Faltan datos de configuración"));
         }
-
-        const payload = {
-            "client_id": config.clientId,
-            "client_secret": config.clientSecret,
-            "grant_type": "client_credentials",
-            "account_id": config.businessUnit
-        };
+        const payload = { "client_id": config.clientId, "client_secret": config.clientSecret, "grant_type": "client_credentials", "account_id": config.businessUnit };
         const requestDetails = { endpoint: config.authUri, method: "POST", headers: { "Content-Type": "application/json" }, body: payload };
-        logEvent(requestDetails, "Recuperando token...");
-
+        if (!silent) logEvent(requestDetails, "Recuperando token...");
         try {
-            const response = await fetch(config.authUri, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            const response = await fetch(config.authUri, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             const responseData = await response.json();
-
-            if (!response.ok) {
-                logEvent(requestDetails, responseData);
-                throw new Error(`Error de la API: ${response.status} - ${responseData.error_description || 'Error desconocido'}`);
-            }
-
-            logEvent(requestDetails, responseData);
-            
+            if (!response.ok) throw new Error(`Error de la API: ${response.status} - ${responseData.error_description || 'Error desconocido'}`);
             tokenField.value = responseData.access_token || '';
             soapUriInput.value = responseData.soap_instance_url ? responseData.soap_instance_url + 'Service.asmx' : '';
             restUriInput.value = responseData.rest_instance_url || '';
-            
             const currentClientName = clientNameInput.value.trim();
             if (currentClientName) {
                 let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
                 configs[currentClientName] = getApiConfigValues();
                 localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
-                console.log(`Configuración para "${currentClientName}" actualizada con el nuevo token y URIs.`);
             }
-            alert("Token recuperado y actualizado en el formulario.");
+            if (!silent) {
+                logEvent(requestDetails, responseData);
+                alert("Token recuperado y actualizado en el formulario.");
+            }
         } catch (error) {
+            if (!silent) {
+                logEvent(requestDetails, { message: error.message });
+                logResponseEl.textContent = `Error: ${error.message}\n\nRevisa la consola (F12).`;
+            }
             console.error("Error al recuperar el token:", error);
-            logResponseEl.textContent = `Error: ${error.message}\n\nRevisa la consola (F12) para más detalles.`;
+            return Promise.reject(error);
         }
     }
 
-    // --- Lógica de la Sección de Campos ---
+    function parseSoapFields(xmlString) {
+        const fields = [];
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+        const resultsNodes = xmlDoc.querySelectorAll("Results");
+        resultsNodes.forEach(node => {
+            const nameNode = node.querySelector("Name");
+            const objectIdNode = node.querySelector("ObjectID");
+            if (nameNode && objectIdNode) fields.push({ name: nameNode.textContent, objectId: objectIdNode.textContent });
+        });
+        return fields;
+    }
+
+    async function macroGetFieldIds() {
+        const externalKey = recExternalKeyInput.value.trim();
+        if (!externalKey) {
+            alert('Por favor, introduce un valor en el campo "External Key de la DE".');
+            return logEvent({ error: "Falta External Key" }, "Operación cancelada.");
+        }
+        logEvent({ info: `Buscando campos para la DE con Key: ${externalKey}` }, "Actualizando token...");
+        targetFieldSelect.disabled = true;
+        targetFieldSelect.innerHTML = `<option>Recuperando...</option>`;
+        try {
+            await macroGetToken(true);
+            const token = tokenField.value;
+            const soapUri = soapUriInput.value;
+            if (!token || !soapUri) throw new Error('No se pudo obtener un token o la SOAP URI no está configurada.');
+            const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${token}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtensionField</ObjectType><Properties>Name</Properties><Properties>ObjectID</Properties><Filter xsi:type="SimpleFilterPart"><Property>DataExtension.CustomerKey</Property><SimpleOperator>equals</SimpleOperator><Value>${externalKey}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+            const requestDetails = { endpoint: soapUri, method: "POST", headers: { 'Content-Type': 'text/xml' }, payload: soapPayload.trim() };
+            logEvent(requestDetails, "Enviando petición SOAP...");
+            const response = await fetch(soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: requestDetails.payload });
+            const responseText = await response.text();
+            logEvent(requestDetails, { status: response.status, statusText: response.statusText, body: responseText });
+            const fields = parseSoapFields(responseText);
+            targetFieldSelect.innerHTML = ''; 
+            if (fields.length > 0) {
+                targetFieldSelect.appendChild(new Option('-- Seleccione un campo --', ''));
+                fields.forEach(field => targetFieldSelect.appendChild(new Option(field.name, field.objectId)));
+                targetFieldSelect.disabled = false;
+                alert(`${fields.length} campos recuperados y cargados en la lista.`);
+            } else {
+                targetFieldSelect.appendChild(new Option('No se encontraron campos', ''));
+                alert('La llamada fue exitosa pero no se encontraron campos para la External Key proporcionada.');
+            }
+        } catch (error) {
+            console.error("Error en macroGetFieldIds:", error);
+            logEvent({ error: "Error de ejecución" }, { message: `Error: ${error.message}.` });
+            targetFieldSelect.innerHTML = `<option>Error al recuperar campos</option>`;
+        }
+    }
+
+    async function macroDeleteField() {
+        const externalKey = recExternalKeyInput.value.trim();
+        const fieldObjectId = targetFieldSelect.value;
+        const selectedFieldName = targetFieldSelect.selectedOptions[0]?.text;
+
+        if (!externalKey) {
+            alert('Por favor, introduce la External Key de la Data Extension.');
+            return logEvent({ error: "Falta External Key" }, "Operación cancelada.");
+        }
+        if (!fieldObjectId) {
+            alert('Por favor, primero recupera los campos y luego selecciona uno de la lista para eliminar.');
+            return logEvent({ error: "No se ha seleccionado ningún campo" }, "Operación cancelada.");
+        }
+
+        logEvent({ info: `Iniciando borrado del campo "${selectedFieldName}"...` }, "Actualizando token...");
+
+        try {
+            await macroGetToken(true); // Refresca el token silenciosamente
+            const token = tokenField.value;
+            const soapUri = soapUriInput.value;
+            if (!token || !soapUri) throw new Error('No se pudo obtener un token o la SOAP URI no está configurada.');
+
+            const soapPayload = `
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+    <s:Header>
+        <fueloauth xmlns="http://exacttarget.com">${token}</fueloauth>
+        <a:Action s:mustUnderstand="1">Delete</a:Action>
+        <a:To s:mustUnderstand="1">${soapUri}</a:To>
+    </s:Header>
+    <s:Body xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <DeleteRequest xmlns="http://exacttarget.com/wsdl/partnerAPI">
+            <Objects xsi:type="DataExtension">
+                <CustomerKey>${externalKey}</CustomerKey>
+                <Fields>
+                    <Field>
+                        <ObjectID>${fieldObjectId}</ObjectID>
+                    </Field>
+                </Fields>
+            </Objects>
+        </DeleteRequest>
+    </s:Body>
+</s:Envelope>`;
+
+            const requestDetails = { endpoint: soapUri, method: "POST", headers: { 'Content-Type': 'text/xml' }, payload: soapPayload.trim() };
+            logEvent(requestDetails, "Enviando petición SOAP de borrado...");
+
+            const response = await fetch(soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: requestDetails.payload });
+            const responseText = await response.text();
+            logEvent(requestDetails, { status: response.status, statusText: response.statusText, body: responseText });
+
+            if (responseText.includes('<OverallStatus>OK</OverallStatus>')) {
+                alert(`Campo "${selectedFieldName}" eliminado con éxito. Refrescando lista de campos...`);
+                await macroGetFieldIds();
+            } else {
+                const errorMatch = responseText.match(/<StatusMessage>(.*?)<\/StatusMessage>/);
+                const errorMessage = errorMatch ? errorMatch[1] : 'Error desconocido. Revisa el log de respuesta.';
+                throw new Error(errorMessage);
+            }
+        } catch (error) {
+            console.error("Error en macroDeleteField:", error);
+            alert(`Error al eliminar el campo: ${error.message}`);
+            logEvent({ error: "Error de ejecución" }, { message: `Error: ${error.message}.` });
+        }
+    }
     
-        function createTableRow(data = {}) {
+    // --- Lógica de la Sección de Campos ---
+    function createTableRow(data = {}) {
         const row = document.createElement('tr');
-        const fieldData = {
-            mc: data.mc || '', type: data.type || '', len: data.len || '',
-            def: data.def || false, pk: data.pk || false, req: data.req || false
-        };
-        // Primero creamos las celdas de datos
-        row.innerHTML = `
-            <td class="editable" contenteditable="true">${fieldData.mc}</td>
-            <td class="editable" contenteditable="true">${fieldData.type}</td>
-            <td class="editable" contenteditable="true">${fieldData.len}</td>
-            <td><input type="checkbox" ${fieldData.def ? 'checked' : ''}></td>
-            <td><input type="checkbox" ${fieldData.pk ? 'checked' : ''}></td>
-            <td><input type="checkbox" ${fieldData.req ? 'checked' : ''}></td>
-        `;
-        
-        // Luego, creamos y añadimos el botón de borrado por separado
+        const fieldData = { mc: data.mc || '', type: data.type || '', len: data.len || '', def: data.def || false, pk: data.pk || false, req: data.req || false };
+        row.innerHTML = `<td class="editable" contenteditable="true">${fieldData.mc}</td><td class="editable" contenteditable="true">${fieldData.type}</td><td class="editable" contenteditable="true">${fieldData.len}</td><td><input type="checkbox" ${fieldData.def ? 'checked' : ''}></td><td><input type="checkbox" ${fieldData.pk ? 'checked' : ''}></td><td><input type="checkbox" ${fieldData.req ? 'checked' : ''}></td>`;
         const deleteButton = document.createElement('button');
         deleteButton.className = 'delete-row-btn';
         deleteButton.title = 'Eliminar fila';
         deleteButton.innerHTML = '×';
-        row.appendChild(deleteButton); // Se añade el botón directamente a la fila
-
+        row.appendChild(deleteButton);
         return row;
     }
 
     function clearFieldsTable() {
         fieldsTableBody.innerHTML = '';
         selectedRow = null;
-        logSelectedRowData(null); // Limpia la vista de valores seleccionados
-        addNewField(); // Añade una fila en blanco después de limpiar
+        logSelectedRowData(null);
+        addNewField();
     }
 
     function createDummyFields() {
@@ -251,50 +315,29 @@ document.addEventListener('DOMContentLoaded', function() {
         fieldsTableBody.appendChild(createTableRow());
     }
 
-        /**
-     * Recoge los datos de la fila seleccionada y los muestra en el log de eventos.
-     * @param {HTMLElement|null} row - La fila (tr) seleccionada, o null si no hay ninguna.
-     */
     function logSelectedRowData(row) {
-        if (!row) {
-            logEvent('Fila deseleccionada.', '');
-            return;
-        }
-
+        if (!row) return logEvent('Fila deseleccionada.', '');
         const rowData = {};
         const headers = document.querySelectorAll('#myTable th');
         const cells = row.querySelectorAll('td');
-
         cells.forEach((cell, index) => {
-            // Asegurarse de que el índice no se salga de los headers (evita la columna "Acciones")
             if (headers[index] && headers[index].textContent !== 'Acciones') {
                 const headerText = headers[index].textContent;
-                let value;
-
-                if (cell.querySelector('input[type="checkbox"]')) {
-                    value = cell.querySelector('input[type="checkbox"]').checked;
-                } else {
-                    value = cell.textContent;
-                }
-                rowData[headerText] = value;
+                const checkbox = cell.querySelector('input[type="checkbox"]');
+                rowData[headerText] = checkbox ? checkbox.checked : cell.textContent;
             }
         });
-
         logEvent(rowData, 'Fila seleccionada en la tabla.');
     }
-
-    // --- Lógica de otras secciones ---
 
     function updateSubscriberKeyFieldOptions() {
         const currentSelection = subscriberKeyFieldSelect.value;
         subscriberKeyFieldSelect.innerHTML = ''; 
         const rows = fieldsTableBody.querySelectorAll('tr');
-
         if (rows.length === 0) {
             subscriberKeyFieldSelect.innerHTML = '<option value="">-- Primero defina campos --</option>';
             return;
         }
-
         subscriberKeyFieldSelect.innerHTML = '<option value="">-- Seleccione un campo --</option>';
         rows.forEach(row => {
             const fieldName = row.cells[0].textContent.trim();
@@ -316,28 +359,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function handleFieldActionChange() {
-        const action = fieldActionSelect.value;
-        recExternalKeyInput.disabled = true;
-        deleteFieldNameInput.disabled = true;
-
-        switch (action) {
-            case 'recuperar': case 'crear':
-                recExternalKeyInput.disabled = false;
-                break;
-            case 'borrar':
-                recExternalKeyInput.disabled = false;
-                deleteFieldNameInput.disabled = false;
-                break;
-        }
-    }
-
-
     // ==========================================================
     // --- 4. REGISTRO DE EVENT LISTENERS ---
     // ==========================================================
 
-    // Navegación y Macros
     document.querySelectorAll('.back-button').forEach(button => {
         button.addEventListener('click', () => {
             mainMenu.style.display = 'flex';
@@ -349,8 +374,14 @@ document.addEventListener('DOMContentLoaded', function() {
         item.addEventListener('click', (e) => {
             e.preventDefault();
             const macroType = e.target.getAttribute('data-macro');
-            if (macroType === 'getToken') macroGetToken();
-            else logEvent({ macro_ejecutada: e.target.textContent.trim() }, { status: "Pendiente", mensaje: `Función no implementada.` });
+            switch (macroType) {
+                case 'getToken': macroGetToken(); break;
+                case 'getFieldIds': macroGetFieldIds(); break;
+                case 'deleteField': macroDeleteField(); break;
+                default:
+                    logEvent({ macro_ejecutada: e.target.textContent.trim() }, { status: "Pendiente", mensaje: `Función no implementada.` });
+                    break;
+            }
         });
     });
 
@@ -359,7 +390,6 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('logCollapsedState', isCollapsed);
     });
 
-    // Configuración de APIs y Cliente
     saveConfigBtn.addEventListener('click', () => {
         const clientName = clientNameInput.value.trim();
         if (!clientName) return alert('Por favor, introduce un nombre para el cliente.'); 
@@ -392,19 +422,18 @@ document.addEventListener('DOMContentLoaded', function() {
         authUriInput.value = authUriInput.value.split('/v2/token').join('').replace(/\/+$/, '') + '/v2/token';
     });
 
-    // Configuración de Data Extension
     deNameInput.addEventListener('input', () => {
         deExternalKeyInput.value = deNameInput.value.replace(/\s+/g, '_') + '_CK';
     });
     deConfigSection.addEventListener('input', saveDeConfigState);
     deConfigSection.addEventListener('change', saveDeConfigState);
+
     isSendableCheckbox.addEventListener('change', handleSendableChange);
     subscriberKeyFieldSelect.addEventListener('change', () => {
         const selectedOption = subscriberKeyFieldSelect.options[subscriberKeyFieldSelect.selectedIndex];
         subscriberKeyTypeInput.value = (selectedOption && selectedOption.dataset.type) ? selectedOption.dataset.type : '';
     });
 
-    // Sección Campos de la DE
     createDummyFieldsBtn.addEventListener('click', createDummyFields);
     clearFieldsBtn.addEventListener('click', clearFieldsTable);
     addFieldBtn.addEventListener('click', addNewField);
@@ -412,18 +441,14 @@ document.addEventListener('DOMContentLoaded', function() {
     fieldsTableBody.addEventListener('click', (e) => {
         const deleteButton = e.target.closest('.delete-row-btn');
         const targetRow = e.target.closest('tr');
-
         if (deleteButton) {
-            // --- Lógica para borrar la fila ---
             const rowToDelete = deleteButton.closest('tr');
             if (rowToDelete === selectedRow) {
                 selectedRow = null;
-                logSelectedRowData(null); // Limpiar vista de detalles
+                logSelectedRowData(null);
             }
             rowToDelete.remove();
-
         } else if (targetRow) {
-            // --- Lógica existente para seleccionar la fila ---
             if (targetRow !== selectedRow) {
                 document.querySelectorAll('#myTable tbody tr').forEach(r => r.classList.remove('selected'));
                 targetRow.classList.add('selected');
@@ -447,9 +472,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const observer = new MutationObserver(updateSubscriberKeyFieldOptions);
     observer.observe(fieldsTableBody, { childList: true, subtree: true, characterData: true });
 
-    // Sección Gestión de Campos
-    fieldActionSelect.addEventListener('change', handleFieldActionChange);
-
     // ==========================================================
     // --- 5. INICIALIZACIÓN ---
     // ==========================================================
@@ -463,7 +485,6 @@ document.addEventListener('DOMContentLoaded', function() {
     loadConfigsIntoSelect();
     loadDeConfigState();
     handleSendableChange();
-    handleFieldActionChange();
     initializeLogState();
     clearFieldsTable();
 });
