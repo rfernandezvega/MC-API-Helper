@@ -1,0 +1,223 @@
+  body {
+    margin: 0;
+    background-color: #f0f6fc;
+    font-family: Arial, sans-serif;
+  }
+
+  /* --- LAYOUT PRINCIPAL CON CSS GRID --- */
+  .app-container {
+    display: grid;
+    grid-template-columns: 260px 1fr 320px; /* Izquierda | Centro | Derecha */
+    gap: 20px;
+    padding: 20px;
+    min-height: 100vh;
+    box-sizing: border-box;
+  }
+
+  #macros-sidebar, #main-content, #log-sidebar {
+    background-color: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+
+  /* --- 1. MENÚ DE MACROS (IZQUIERDA) --- */
+  #selected-client-display {
+	  text-align: center;
+	  color: #558ac7;
+	  font-style: italic;
+	  font-size: 1.1em;
+	  margin-top: -5px; /* Ajusta el espacio respecto al título "Cliente" */
+	  padding-bottom: 15px; /* Añade espacio antes de la línea divisoria */
+	  border-bottom: 2px solid #f0f6fc; /* Línea divisoria igual a la de los títulos */
+	}
+  
+  #macros-sidebar {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  #macros-sidebar h2 {
+    color: #69a3db;
+    margin-top: 0;
+    text-align: center;
+    border-bottom: 2px solid #f0f6fc;
+    padding-bottom: 10px;
+  }
+  
+  #macros-sidebar h3 {
+    color: #558ac7;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+  }
+  
+  #macros-sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  #macros-sidebar .macro-item {
+    display: block;
+    padding: 10px 12px;
+    margin-bottom: 5px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    color: #333;
+    text-decoration: none;
+    transition: background-color 0.2s, color 0.2s;
+  }
+  
+  #macros-sidebar .macro-item:hover {
+    background-color: #69a3db;
+    color: #fff;
+    cursor: pointer;
+  }
+
+
+  /* --- 2. CONTENIDO PRINCIPAL (CENTRO) --- */
+  #main-content {
+      display: flex;
+      flex-direction: column;
+  }
+
+  .main-menu-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
+  }
+
+  .menu-button {
+    background-color: #69a3db;
+    color: #fff;
+    border: none;
+    border-radius: 15px;
+    padding: 20px;
+    cursor: pointer;
+    font-size: 1.2em;
+    width: 200px;
+    height: 150px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    transition: background-color 0.3s;
+  }
+
+  .menu-button:hover {
+    background-color: #558ac7;
+  }
+  
+  .back-button {
+    background-color: #6c757d;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 15px;
+    cursor: pointer;
+    margin-bottom: 20px;
+    align-self: flex-start;
+  }
+
+  .section {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+  }
+  
+  .section h2 {
+    color: #69a3db;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+
+  /* --- 3. VENTANA DE LOG (DERECHA) --- */
+  #log-sidebar {
+    position: sticky;
+    top: 20px;
+    height: calc(100vh - 40px);
+    display: flex;
+    flex-direction: column;
+  }
+  
+  #log-sidebar h2 {
+    color: #69a3db;
+    margin-top: 0;
+    text-align: center;
+    border-bottom: 2px solid #f0f6fc;
+    padding-bottom: 10px;
+    flex-shrink: 0;
+  }
+
+  .log-block {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+  
+  .log-block h4 {
+    margin: 0 0 8px 0;
+    color: #558ac7;
+  }
+  
+  .log-block pre {
+    flex-grow: 1;
+    background-color: #e9ecef;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 0;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-size: 0.85em;
+  }
+
+  /* --- ESTILOS GENERALES (SE MANTIENEN) --- */
+   #configuracion-section .config-block { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+  #configuracion-section h3 { color: #558ac7; margin-top: 0; }
+  #configuracion-section .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
+  #configuracion-section label { font-weight: bold; margin-bottom: 5px; color: #333; }
+  #configuracion-section input[type="text"],
+  #configuracion-section input[type="password"],
+  #configuracion-section select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+  #configuracion-section input[disabled] { background-color: #e9ecef; cursor: not-allowed; }
+  
+  #configuracion-section .checkbox-group { flex-direction: row; align-items: center; justify-content: flex-start; }
+  #configuracion-section .checkbox-group label { font-weight: bold; margin-bottom: 0; margin-right: 8px; }
+  #configuracion-section .checkbox-group input[type="checkbox"] { width: auto; }
+  
+  .client-management { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+  .client-management input, .client-management select { flex-grow: 1; }
+  .client-management button { background-color: #69a3db; color: #fff; border: none; border-radius: 5px; padding: 10px 15px; cursor: pointer; }
+  .client-management .delete-btn { background-color: #dc3545; }
+  .info-text { font-size: 0.9em; color: #6c757d; text-align: center; margin-top: 20px; }
+
+  .table-container { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; overflow-x: auto; margin-top: 20px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #b9d4e7; padding: 8px; text-align: center; }
+  th { background-color: #69a3db; color: #fff; position: sticky; top: 0; }
+  tr.selected { background-color: #c5dce6; }
+  .control-buttons { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-left: 15px; }
+  .control-buttons button { width: 100px; background-color: #69a3db; color: #fff; border: none; border-radius: 5px; padding: 8px; cursor: pointer; }
+  .editable { outline: none; border-bottom: 1px dashed #ccc; }
+  #selectedValues { background-color: #f8f9fa; border-radius: 10px; padding: 20px; margin-top: 20px; }
+  #selectedValues h2 { color: #69a3db; }
+
+  /* --- MEDIA QUERY PARA RESPONSIVE --- */
+  @media (max-width: 1024px) {
+    .app-container {
+      grid-template-columns: 1fr;
+    }
+    #log-sidebar {
+      position: relative;
+      top: 0;
+      height: auto;
+      max-height: 500px;
+    }
+  }
