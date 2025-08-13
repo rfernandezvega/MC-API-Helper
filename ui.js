@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const soapUriInput = document.getElementById('soapUri');
     const restUriInput = document.getElementById('restUri'); 
     const businessUnitInput = document.getElementById('businessUnit');
+    const getTokenBtn = document.getElementById('getTokenBtn');
 
     // Configuración Data Extension
     const deConfigSection = document.getElementById('configuracion-de-section');
@@ -37,10 +38,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const isSendableCheckbox = document.getElementById('isSendable');
     const subscriberKeyFieldSelect = document.getElementById('subscriberKeyField');
     const subscriberKeyTypeInput = document.getElementById('subscriberKeyType');
+    const createDEBtn = document.getElementById('createDE');
     
     // Sección Campos de la DE
     const fieldsTableBody = document.querySelector('#myTable tbody');
     const createDummyFieldsBtn = document.getElementById('createDummyFieldsBtn');
+    const createFieldsBtn = document.getElementById('createFieldsBtn');
     const clearFieldsBtn = document.getElementById('clearFieldsBtn');
     const addFieldBtn = document.getElementById('addFieldBtn');
     let selectedRow = null;
@@ -48,6 +51,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Sección Gestión de Campos
     const recExternalKeyInput = document.getElementById('recExternalKey');
     const targetFieldSelect = document.getElementById('targetFieldSelect');
+    const getFieldsBtn = document.getElementById('getFields');
+    const deleteFieldBtn = document.getElementById('deleteField');
 
     // Modal de Importación
     const importFieldsBtn = document.getElementById('importFieldsBtn');
@@ -296,41 +301,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    async function macroGetFieldIds() {
-        blockUI();
-        try {
-            const externalKey = recExternalKeyInput.value.trim();
-            if (!externalKey) {
-                alert('Por favor, introduce un valor en el campo "External Key de la DE".');
-                return logMessage("Operación cancelada: Falta External Key de la DE.");
-            }
-            logMessage(`Buscando IDs de campos para la DE: ${externalKey}`);
-            targetFieldSelect.disabled = true;
-            targetFieldSelect.innerHTML = `<option>Recuperando IDs...</option>`;
-            await macroGetToken(true);
-            const token = tokenField.value;
-            const soapUri = soapUriInput.value;
-            if (!token || !soapUri) throw new Error('No se pudo obtener un token o la SOAP URI no está configurada.');
-            const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${token}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtensionField</ObjectType><Properties>Name</Properties><Properties>ObjectID</Properties><Filter xsi:type="SimpleFilterPart"><Property>DataExtension.CustomerKey</Property><SimpleOperator>equals</SimpleOperator><Value>${externalKey}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-            const requestDetails = { endpoint: soapUri, method: "POST", headers: { 'Content-Type': 'text/xml' }, payload: soapPayload.trim() };
-            logApiCall(requestDetails);
-            logApiResponse('');
-            const response = await fetch(soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: requestDetails.payload });
-            const responseText = await response.text();
-            logApiResponse({ status: response.status, statusText: response.statusText, body: responseText });
-            const fields = await parseSoapFieldsAsync(responseText);
-            populateDeletionPicklist(fields);
-            logMessage(`${fields.length} IDs de campos recuperados.`);
-        } catch (error) {
-            console.error("Error en macroGetFieldIds:", error);
-            logMessage(`Error al recuperar IDs de campos: ${error.message}`);
-            targetFieldSelect.innerHTML = `<option>Error al recuperar IDs</option>`;
-        } finally {
-            targetFieldSelect.disabled = false;
-            unblockUI();
-        }
-    }
-
     async function macroDeleteField() {
         blockUI();
         try {
@@ -354,8 +324,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const responseText = await response.text();
             logApiResponse({ status: response.status, statusText: response.statusText, body: responseText });
             if (responseText.includes('<OverallStatus>OK</OverallStatus>')) {
-                logMessage(`Campo "${selectedFieldName}" eliminado con éxito. Refrescando lista...`);
-                macroGetFieldIds();
+                logMessage(`Campo "${selectedFieldName}" eliminado con éxito. Refrescando campos y lista...`);
+                macroGetFields();
             } else {
                 const errorMatch = responseText.match(/<StatusMessage>(.*?)<\/StatusMessage>/);
                 const errorMessage = errorMatch ? errorMatch[1] : 'Error desconocido.';
@@ -1232,25 +1202,25 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     document.querySelectorAll('.macro-item').forEach(item => {
+        logMessage(`Listener agregado`);
         item.addEventListener('click', (e) => {
             e.preventDefault();
             const macroType = e.target.getAttribute('data-macro');
             switch (macroType) {
-                case 'getToken': macroGetToken(); break;
-                case 'getFieldIds': macroGetFieldIds(); break;
-                case 'deleteField': macroDeleteField(); break;
-                case 'createFields': macroCreateFields(); break;
-                case 'getFields': macroGetFields(); break;
-                case 'createDE': macroCreateDE(); break;
-                case 'searchDE': macroSearchDE(); break;
-                case 'validateEmail': macroValidateEmail(); break;
-                default:
-                    logMessage(`Función no implementada: ${macroType}`);
-                    break;
+                case 'docu': showSection('documentacion-section'); break;
+                case 'configuracionAPIs': showSection('configuracion-apis-section'); break;
+                case 'configuracionDE': showSection('configuracion-de-section'); break;
+                case 'campos': showSection('campos-section'); break;
+                case 'gestionCampos': showSection('configuracion-campos-section'); break;
+                case 'calendario': viewCalendar(); break;
+                case 'busquedaDE': showSection('busqueda-de-section'); break;
+                case 'validadorEmail': showSection('email-validator-section'); break;
+                case 'buscadorOrigenes': showSection('data-source-finder-section'); break;
+                default: logMessage(`Función no implementada: ${macroType}`); break;
             }
         });
     });
-    
+
     toggleLogBtn.addEventListener('click', () => {
         const isCollapsed = appContainer.classList.toggle('log-collapsed');
         localStorage.setItem('logCollapsedState', isCollapsed);
@@ -1296,6 +1266,13 @@ document.addEventListener('DOMContentLoaded', function() {
         subscriberKeyTypeInput.value = (selectedOption && selectedOption.dataset.type) ? selectedOption.dataset.type : '';
     });
     createDummyFieldsBtn.addEventListener('click', createDummyFields);
+    createFieldsBtn.addEventListener('click', macroCreateFields);
+    getTokenBtn.addEventListener('click', async () => {
+        await macroGetToken(false);
+    });
+    deleteFieldBtn.addEventListener('click', macroDeleteField); 
+    createDEBtn.addEventListener('click', macroCreateDE);
+    getFieldsBtn.addEventListener('click', macroGetFields);
     clearFieldsBtn.addEventListener('click', clearFieldsTable);
     addFieldBtn.addEventListener('click', () => addNewField(true));
     searchDEBtn.addEventListener('click', macroSearchDE);

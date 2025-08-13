@@ -19,36 +19,32 @@
     <h2>Funcionalidades</h2>
     
     <div class="collapsible-group">
-        <h3 class="collapsible-header">Administración</h3>
+        <h3 class="collapsible-header">General</h3>
         <ul class="collapsible-content">
-          <li><a class="macro-item" data-macro="getToken">Recuperar Token</a></li>
-          <li><a class="macro-item" data-macro="validateEmail">Validar Email</a></li>
-        </ul>
-    </div>
-
-    <div class="collapsible-group">
-        <h3 class="collapsible-header">Análisis y Búsqueda</h3>
-        <ul class="collapsible-content">
-          <li><a class="macro-item" data-macro="searchDE">Buscar Data Extension</a></li>
+          <li><a class="macro-item" data-macro="docu">Documentación</a></li>
+          <li><a class="macro-item" data-macro="configuracionAPIs">Configuración de APIs</a></li>
         </ul>
     </div>
 
     <div class="collapsible-group">
         <h3 class="collapsible-header">Data Extensions</h3>
         <ul class="collapsible-content">
-          <li><a class="macro-item" data-macro="createDE">Crear Data Extension</a></li>
+          <li><a class="macro-item" data-macro="configuracionDE">Configuración de Data Extension</a></li>
+          <li><a class="macro-item" data-macro="campos">Campos</a></li>
+          <li><a class="macro-item" data-macro="gestionCampos">Gestión de Campos</a></li>
         </ul>
     </div>
-    
+
     <div class="collapsible-group">
-        <h3 class="collapsible-header">Campos</h3>
+        <h3 class="collapsible-header">Funcionalidades</h3>
         <ul class="collapsible-content">
-          <li><a class="macro-item" data-macro="getFieldIds">Recuperar Ids</a></li>
-          <li><a class="macro-item" data-macro="deleteField">Borrar campo</a></li>
-          <li><a class="macro-item" data-macro="createFields">Crear campos</a></li>
-          <li><a class="macro-item" data-macro="getFields">Recuperar campos</a></li>
+          <li><a class="macro-item" data-macro="calendario">Calendario</a></li>
+          <li><a class="macro-item" data-macro="busquedaDE">Búsqueda de Data Extension</a></li>
+          <li><a class="macro-item" data-macro="validadorEmail">Validador de Email</a></li>
+          <li><a class="macro-item" data-macro="buscadorOrigenes">Buscador de Orígenes</a></li>
         </ul>
     </div>
+
   </aside>
 
   <!-- COLUMNA CENTRAL: CONTENIDO PRINCIPAL -->
@@ -57,31 +53,17 @@
     <div id="main-menu" class="main-menu-container" style="display: flex;">
       
       <div class="menu-group">
-        <h3>General</h3>
+        <h3>Panel principal</h3>
         <div class="menu-buttons-container">
-          <button class="menu-button" onclick="showSection('documentacion-section')">Documentación</button>
-          <button class="menu-button" onclick="showSection('configuracion-apis-section')">Configuración de APIs</button>
+          <p class="info-text">
+            Selecciona alguna de las funcionalidades del panel izquierdo.
+         </p>
+         <p class="info-text">
+            Para que funcione, recuerda haber seleccionado un cliente que tendrás que haber configurado previamente en "Configuración de APIs"
+         </p>
         </div>
       </div>
       
-      <div class="menu-group">
-        <h3>Data Extensions</h3>
-        <div class="menu-buttons-container">
-          <button class="menu-button" onclick="showSection('configuracion-de-section')">Configuración de Data Extension</button>
-          <button class="menu-button" onclick="showSection('campos-section')">Campos</button>
-          <button class="menu-button" onclick="showSection('configuracion-campos-section')">Gestión de Campos</button>
-        </div>
-      </div>
-
-      <div class="menu-group">
-        <h3>Funcionalidades</h3>
-        <div class="menu-buttons-container">
-          <button class="menu-button" onclick="viewCalendar()">Calendario</button>
-          <button class="menu-button" onclick="showSection('busqueda-de-section')">Búsqueda de Data Extension</button>
-          <button class="menu-button" onclick="showSection('email-validator-section')">Validador de Email</button>
-          <button class="menu-button" onclick="showSection('data-source-finder-section')">Buscador de Orígenes</button>
-        </div>
-      </div>
     </div>
 
     <!-- SECCIÓN DE DOCUMENTACIÓN -->
@@ -173,7 +155,12 @@
 
     <!-- Sección de Configuración de APIs -->
     <div id="configuracion-apis-section" class="section config-section-container">
-        <button class="back-button">← Atrás</button>
+         <div class="section-header">
+            <button class="back-button">← Atrás</button>
+            <div class="header-actions">
+                <button id="getTokenBtn" class="action-button">Recuperar Token</button>
+            </div>
+        </div>
         <h2>Configuración de APIs</h2>
         <div class="client-management">
             <input type="text" id="clientName" placeholder="Nombre del Cliente">
@@ -198,7 +185,12 @@
 
     <!-- Sección de Configuración de Data Extension -->
     <div id="configuracion-de-section" class="section config-section-container">
-        <button class="back-button">← Atrás</button>
+        <div class="section-header">
+            <button class="back-button">← Atrás</button>
+            <div class="header-actions">
+                <button id="createDE" class="action-button">Crear Data Extension</button>
+            </div>
+        </div>
         <h2>Configuración de Data Extension</h2>
         <div class="config-block">
             <h3>Configuración Base DE</h3>
@@ -309,7 +301,14 @@
 
     <!-- Sección de Configuración de Gestión de Campos -->
     <div id="configuracion-campos-section" class="section config-section-container">
-        <button class="back-button">← Atrás</button>
+        <div class="section-header">
+            <button class="back-button">← Atrás</button>
+            <div class="header-actions">
+                <button id="getFields" class="action-button">Recuperar campos</button>
+                <button id="deleteField" class="action-button">Borrar campo</button>
+            </div>
+        </div>
+
         <h2>Gestión de Campos de Data Extension</h2>
         
         <div class="config-block">
@@ -336,8 +335,9 @@
             <button class="back-button">← Atrás</button>
             <div class="header-actions">
                 <button id="importFieldsBtn" class="action-button">Importar...</button>
-                <button id="createDummyFieldsBtn" class="action-button">Crear Campos Dummy</button>
                 <button id="addFieldBtn" class="action-button">Añadir Fila</button>
+                <button id="createFieldsBtn" class="action-button">Crear campos</button>
+                <button id="createDummyFieldsBtn" class="action-button">Crear Campos Dummy</button>                
                 <button id="clearFieldsBtn" class="action-button delete-btn">Limpiar Campos</button>
             </div>
         </div>

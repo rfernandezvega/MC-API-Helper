@@ -7,6 +7,7 @@ function createWindow() {
   const mainWindow = new BrowserWindow({
     width: 1300,  // Un poco más ancho para que quepa todo bien
     height: 850,
+    icon: path.join(__dirname, 'icon.ico'),
     webPreferences: {
       // Importante: estas opciones son por seguridad y buenas prácticas
       nodeIntegration: false, // No expone Node.js al frontend
