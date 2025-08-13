@@ -1,0 +1,12 @@
+# Ignorar las dependencias de Node
+/node_modules
+
+# Ignorar la carpeta de compilación/distribución
+/dist
+
+# Ficheros de sistema operativo
+.DS_Store
+Thumbs.db
+
+# Ficheros de log
+npm-debug.log*
