@@ -18,6 +18,15 @@ body {
   transition: grid-template-columns 0.35s ease-in-out, opacity 0.2s ease-in-out;
 }
 
+/* AÑADIDO: Estilo para bloquear la UI durante operaciones */
+.app-container.is-updating {
+  pointer-events: none; /* Deshabilita toda interacción con el ratón */
+  opacity: 0.6; /* Feedback visual de que algo está pasando */
+}
+.app-container.is-updating body {
+    cursor: wait; /* Cambia el cursor global a espera */
+}
+
 #macros-sidebar, #main-content, #log-sidebar {
   background-color: #fff;
   border-radius: 10px;
@@ -239,8 +248,16 @@ td input[type="text"].cell-input {
   margin-top: 15px;
   display: flex;
   flex-direction: column;
-  flex: 1;
   min-height: 0;
+}
+
+/* El bloque de mensajes toma menos espacio inicial */
+#log-message-block {
+  flex: 0 1 25%;
+}
+#log-request-block,
+#log-response-block {
+  flex: 1 1 37.5%;
 }
 
 .log-block h4 {
@@ -258,6 +275,7 @@ td input[type="text"].cell-input {
   white-space: pre-wrap;
   word-break: break-all;
   font-size: 0.8em;
+  height: 100%;
 }
 
 /* --- Lógica de Colapso para el Log (con Flechas) --- */
@@ -283,18 +301,8 @@ td input[type="text"].cell-input {
 }
 
 /* ==========================================================
-   4. RESPONSIVE & ESTADOS
+   4. RESPONSIVE
    ========================================================== */
-
-/* --- AÑADIDO: Estilo para bloquear la UI durante operaciones --- */
-.app-container.is-updating {
-  pointer-events: none; /* Deshabilita toda interacción con el ratón */
-  opacity: 0.6; /* Feedback visual de que algo está pasando */
-}
-.app-container.is-updating body {
-    cursor: wait; /* Cambia el cursor global a espera */
-}
-
 
 @media (max-width: 1024px) {
   .app-container {
