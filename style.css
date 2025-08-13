@@ -15,7 +15,7 @@ body {
   padding: 20px;
   min-height: 100vh;
   box-sizing: border-box;
-  transition: grid-template-columns 0.35s ease-in-out;
+  transition: grid-template-columns 0.35s ease-in-out, opacity 0.2s ease-in-out;
 }
 
 #macros-sidebar, #main-content, #log-sidebar {
@@ -143,18 +143,24 @@ tr.selected { background-color: #c5dce6; }
 .control-buttons button { width: 100px; background-color: #69a3db; color: #fff; border: none; border-radius: 5px; padding: 8px; cursor: pointer; }
 .editable { outline: none; border-bottom: 1px dashed #ccc; }
 
-/* Hacer que cada fila sea un contenedor de posicionamiento */
+td input[type="text"].cell-input {
+  width: 95%;
+  box-sizing: border-box; 
+  text-align: center;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 4px;
+}
+
 #myTable tbody tr {
   position: relative;
 }
 
-/* Estilo para el botón de borrar en cada fila */
 .delete-row-btn {
   position: absolute;
   right: -35px;
   top: 50%;
   transform: translateY(-50%);
-  
   background-color: #fce8e6;
   border: 1px solid #f6ccc7;
   color: #c5221f;
@@ -165,13 +171,10 @@ tr.selected { background-color: #c5dce6; }
   font-weight: bold;
   cursor: pointer;
   transition: all 0.2s;
-
-  /* El botón está oculto por defecto */
   opacity: 0;
   pointer-events: none;
 }
 
-/* Mostrar el botón solo cuando su fila contenedora tiene la clase .selected */
 #myTable tbody tr.selected .delete-row-btn {
   opacity: 1;
   pointer-events: auto;
@@ -216,10 +219,9 @@ tr.selected { background-color: #c5dce6; }
   cursor: pointer;
   padding: 0;
   flex-shrink: 0;
-  position: relative; /* Necesario para posicionar la flecha */
+  position: relative;
 }
 
-/* Crea la flecha usando bordes */
 #toggleLogBtn::after {
   content: '';
   display: inline-block;
@@ -259,26 +261,19 @@ tr.selected { background-color: #c5dce6; }
 }
 
 /* --- Lógica de Colapso para el Log (con Flechas) --- */
-
-/* Flecha Derecha (para colapsar) */
 #toggleLogBtn::after {
   transform: rotate(-45deg);
 }
 #toggleLogBtn:hover::after {
   border-color: #dc3545;
 }
-
-/* Estado Colapsado */
 .app-container.log-collapsed {
   grid-template-columns: 220px 1fr 65px;
 }
-
 .app-container.log-collapsed .log-header h2,
 .app-container.log-collapsed .log-block {
   display: none;
 }
-
-/* Flecha Izquierda (cuando está colapsado) */
 .app-container.log-collapsed #toggleLogBtn::after {
   transform: rotate(135deg);
   left: 10px;
@@ -287,10 +282,19 @@ tr.selected { background-color: #c5dce6; }
   border-color: #28a745;
 }
 
-
 /* ==========================================================
-   4. RESPONSIVE
+   4. RESPONSIVE & ESTADOS
    ========================================================== */
+
+/* --- AÑADIDO: Estilo para bloquear la UI durante operaciones --- */
+.app-container.is-updating {
+  pointer-events: none; /* Deshabilita toda interacción con el ratón */
+  opacity: 0.6; /* Feedback visual de que algo está pasando */
+}
+.app-container.is-updating body {
+    cursor: wait; /* Cambia el cursor global a espera */
+}
+
 
 @media (max-width: 1024px) {
   .app-container {
