@@ -1,253 +1,56 @@
-  body {
-    margin: 0;
-    background-color: #f0f6fc;
-    font-family: Arial, sans-serif;
-  }
+/* ==========================================================
+   GLOBAL & LAYOUT
+   ========================================================== */
 
-  /* --- LAYOUT PRINCIPAL CON CSS GRID --- */
-  .app-container {
-    display: grid;
-    grid-template-columns: 220px 1fr 360px; /* Izquierda | Centro | Derecha */
-    gap: 20px;
-    padding: 20px;
-    min-height: 100vh;
-    box-sizing: border-box;
-  }
-
-  #macros-sidebar, #main-content, #log-sidebar {
-    background-color: #fff;
-    border-radius: 10px;
-    padding: 20px;
-    box-sizing: border-box;
-  }
-
-  /* --- 1. MENÚ DE MACROS (IZQUIERDA) --- */
-  #selected-client-display {
-	  text-align: center;
-	  color: #558ac7;
-	  font-style: italic;
-	  font-size: 1.1em;
-	  margin-top: -5px; /* Ajusta el espacio respecto al título "Cliente" */
-	  padding-bottom: 15px; /* Añade espacio antes de la línea divisoria */
-	  border-bottom: 2px solid #f0f6fc; /* Línea divisoria igual a la de los títulos */
-	}
-  
-  #macros-sidebar {
-    display: flex;
-    flex-direction: column;
-  }
-  
-  #macros-sidebar h2 {
-    color: #69a3db;
-    margin-top: 0;
-    text-align: center;
-    border-bottom: 2px solid #f0f6fc;
-    padding-bottom: 10px;
-  }
-  
-  #macros-sidebar h3 {
-    color: #558ac7;
-    margin-top: 20px;
-    margin-bottom: 10px;
-    font-size: 1.1em;
-  }
-  
-  #macros-sidebar ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  #macros-sidebar .macro-item {
-    display: block;
-    padding: 10px 12px;
-    margin-bottom: 5px;
-    background-color: #f8f9fa;
-    border-radius: 5px;
-    color: #333;
-    text-decoration: none;
-    transition: background-color 0.2s, color 0.2s;
-  }
-  
-  #macros-sidebar .macro-item:hover {
-    background-color: #69a3db;
-    color: #fff;
-    cursor: pointer;
-  }
-
-
-  /* --- 2. CONTENIDO PRINCIPAL (CENTRO) --- */
-  #main-content {
-      display: flex;
-      flex-direction: column;
-  }
-
- .main-menu-container {
-    display: flex;
-    flex-direction: column; /* Apila los grupos verticalmente */
-    align-items: center;   /* Centra los grupos */
-    gap: 30px;             /* Espacio entre los bloques General y Data Extensions */
-    width: 100%;
-  }
-
- .menu-button {
-    background-color: #69a3db;
-    color: #fff;
-    border: none;
-    border-radius: 10px; 
-    padding: 15px;      
-    cursor: pointer;
-    font-size: 1.1em;   
-    width: 180px;      
-    height: 100px;      
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    transition: background-color 0.3s;
-  }
-
-  .menu-button:hover {
-    background-color: #558ac7;
-  }
-  
- .menu-group {
-  width: 90%;
-  background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+body {
+  margin: 0;
+  background-color: #f0f6fc;
+  font-family: Arial, sans-serif;
 }
 
-.menu-group h3 {
-  color: #558ac7;
+.app-container {
+  display: grid;
+  /* La 3ra columna se encogerá/expandirá con la animación */
+  grid-template-columns: 220px 1fr 360px; 
+  gap: 20px;
+  padding: 20px;
+  min-height: 100vh;
+  box-sizing: border-box;
+  transition: grid-template-columns 0.35s ease-in-out;
+}
+
+#macros-sidebar, #main-content, #log-sidebar {
+  background-color: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-sizing: border-box;
+  overflow: hidden; 
+}
+
+/* ==========================================================
+   1. BARRA LATERAL IZQUIERDA (MACROS & CLIENTE)
+   ========================================================== */
+
+#macros-sidebar {
+  display: flex;
+  flex-direction: column;
+}
+
+#macros-sidebar h2 {
+  color: #69a3db;
   margin-top: 0;
-  margin-bottom: 20px;
   text-align: center;
-  border-bottom: 2px solid #e0e7ef;
+  border-bottom: 2px solid #f0f6fc;
   padding-bottom: 10px;
 }
 
-.menu-buttons-container {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 20px;
+#macros-sidebar h3 {
+  color: #558ac7;
+  margin-top: 20px;
+  margin-bottom: 10px;
+  font-size: 1.1em;
 }
 
-  .back-button {
-    background-color: #6c757d;
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    padding: 10px 15px;
-    cursor: pointer;
-    margin-bottom: 20px;
-    align-self: flex-start;
-  }
-
-  .section {
-    display: none;
-    width: 100%;
-    flex-direction: column;
-  }
-  
-  .section h2 {
-    color: #69a3db;
-    text-align: center;
-    margin-bottom: 20px;
-  }
-  
-
-  /* --- 3. VENTANA DE LOG (DERECHA) --- */
-  #log-sidebar {
-    position: sticky;
-    top: 20px;
-    height: calc(100vh - 40px);
-    display: flex;
-    flex-direction: column;
-  }
-  
-  #log-sidebar h2 {
-    color: #69a3db;
-    margin-top: 0;
-    text-align: center;
-    border-bottom: 2px solid #f0f6fc;
-    padding-bottom: 10px;
-    flex-shrink: 0;
-  }
-
-  .log-block {
-    margin-top: 15px;
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-  }
-  
-  .log-block h4 {
-    margin: 0 0 8px 0;
-    color: #558ac7;
-  }
-  
-  .log-block pre {
-    flex-grow: 1;
-    background-color: #e9ecef;
-    padding: 10px;
-    border-radius: 5px;
-    margin: 0;
-    overflow-y: auto;
-    white-space: pre-wrap;
-    word-break: break-all;
-    font-size: 0.8em;
-  }
-
-  /* --- ESTILOS GENERALES (SE MANTIENEN) --- */
-  .config-section-container .config-block { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
-  .config-section-container h3 { color: #558ac7; margin-top: 0; }
-  .config-section-container .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
-  .config-section-container label { font-weight: bold; margin-bottom: 5px; color: #333; }
-  .config-section-container input[type="text"],
-  .config-section-container input[type="password"],
-  .config-section-container select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-  .config-section-container input[disabled] { background-color: #e9ecef; cursor: not-allowed; }
-  
-  .config-section-container .checkbox-group { flex-direction: row; align-items: center; justify-content: flex-start; }
-  .config-section-container .checkbox-group label { font-weight: bold; margin-bottom: 0; margin-right: 8px; }
-  .config-section-container .checkbox-group input[type="checkbox"] { width: auto; }
-  
-  .client-management { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
-  .client-management input, .client-management select { flex-grow: 1; }
-  .client-management button { background-color: #69a3db; color: #fff; border: none; border-radius: 5px; padding: 10px 15px; cursor: pointer; }
-  .client-management .delete-btn { background-color: #dc3545; }
-  .info-text { font-size: 0.9em; color: #6c757d; text-align: center; margin-top: 20px; }
-
-  .table-container { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; overflow-x: auto; margin-top: 20px; }
-  table { border-collapse: collapse; width: 100%; }
-  th, td { border: 1px solid #b9d4e7; padding: 8px; text-align: center; }
-  th { background-color: #69a3db; color: #fff; position: sticky; top: 0; }
-  tr.selected { background-color: #c5dce6; }
-  .control-buttons { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-left: 15px; }
-  .control-buttons button { width: 100px; background-color: #69a3db; color: #fff; border: none; border-radius: 5px; padding: 8px; cursor: pointer; }
-  .editable { outline: none; border-bottom: 1px dashed #ccc; }
-  #selectedValues { background-color: #f8f9fa; border-radius: 10px; padding: 20px; margin-top: 20px; }
-  #selectedValues h2 { color: #69a3db; }
-
-  /* --- MEDIA QUERY PARA RESPONSIVE --- */
-  @media (max-width: 1024px) {
-    .app-container {
-      grid-template-columns: 1fr;
-    }
-    #log-sidebar {
-      position: relative;
-      top: 0;
-      height: auto;
-      max-height: 500px;
-    }
-  }
-
-  /* --- Estilos para el selector de cliente en la barra lateral --- */
 .sidebar-client-selector {
   padding-bottom: 15px;
   border-bottom: 2px solid #f0f6fc;
@@ -260,5 +63,219 @@
   border: 1px solid #ccc;
   border-radius: 4px;
   box-sizing: border-box;
-  margin-top: 5px; /* Espacio respecto al título "Cliente" */
+  margin-top: 5px;
+}
+
+#macros-sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#macros-sidebar .macro-item {
+  display: block;
+  padding: 10px 12px;
+  margin-bottom: 5px;
+  background-color: #f8f9fa;
+  border-radius: 5px;
+  color: #333;
+  text-decoration: none;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+#macros-sidebar .macro-item:hover {
+  background-color: #69a3db;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* ==========================================================
+   2. CONTENIDO PRINCIPAL (CENTRO)
+   ========================================================== */
+
+#main-content {
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Estilos del Menú Principal --- */
+.main-menu-container { display: flex; flex-direction: column; align-items: center; gap: 30px; width: 100%;}
+.menu-group { width: 90%; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+.menu-group h3 { color: #558ac7; margin-top: 0; margin-bottom: 20px; text-align: center; border-bottom: 2px solid #e0e7ef; padding-bottom: 10px; }
+.menu-buttons-container { display: flex; justify-content: center; flex-wrap: wrap; gap: 20px; }
+.menu-button { background-color: #69a3db; color: #fff; border: none; border-radius: 10px;  padding: 15px; cursor: pointer; font-size: 1.1em; width: 180px; height: 100px; display: flex; justify-content: center; align-items: center; text-align: center; transition: background-color 0.3s; }
+.menu-button:hover { background-color: #558ac7; }
+
+/* --- Estilos de las Secciones Interiores --- */
+.section { display: none; width: 100%; flex-direction: column; }
+.section h2 { color: #69a3db; text-align: center; margin-top: 0; margin-bottom: 20px; }
+.back-button { background-color: #6c757d; color: #fff; border: none; border-radius: 5px; padding: 10px 15px; cursor: pointer; align-self: flex-start; }
+
+/* --- Estilos para Secciones con Formularios --- */
+.config-section-container .config-block {  background-color: #f8f9fa;  border: 1px solid #e9ecef;  border-radius: 8px;  padding: 20px;  margin-bottom: 20px;  }
+.config-section-container h3 { color: #558ac7; margin-top: 0; }
+.config-section-container .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
+.config-section-container label { font-weight: bold; margin-bottom: 5px; color: #333; }
+.config-section-container input[type="text"], .config-section-container input[type="password"], .config-section-container select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+.config-section-container input[disabled] { background-color: #e9ecef; cursor: not-allowed; }
+.config-section-container .checkbox-group { flex-direction: row; align-items: center; justify-content: flex-start; }
+.config-section-container .checkbox-group label { font-weight: bold; margin-bottom: 0; margin-right: 8px; }
+.config-section-container .checkbox-group input[type="checkbox"] { width: auto; }
+.client-management { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+.client-management input, .client-management select { flex-grow: 1; }
+.client-management button { background-color: #69a3db; color: #fff; border: none;  border-radius: 5px;  padding: 10px 15px;  cursor: pointer; }
+.client-management .delete-btn { background-color: #dc3545; }
+.info-text { font-size: 0.9em; color: #6c757d; text-align: center; margin-top: 20px; }
+
+/* --- Estilos de la Sección de Campos --- */
+.section-header { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 20px; }
+.section-header .back-button { margin-bottom: 0; }
+.header-actions { display: flex; gap: 10px; }
+.action-button { background-color: #69a3db; color: #fff; border: none; border-radius: 5px; padding: 10px 15px; cursor: pointer; transition: background-color 0.2s; }
+.action-button:hover { background-color: #558ac7; }
+.action-button.delete-btn { background-color: #6c757d; }
+.action-button.delete-btn:hover { background-color: #5a6268; }
+.table-container { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; overflow-x: auto; margin-top: 20px; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #b9d4e7; padding: 8px; text-align: center; }
+th { background-color: #69a3db; color: #fff; position: sticky; top: 0; z-index: 2; }
+tr.selected { background-color: #c5dce6; }
+.control-buttons { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-left: 15px; }
+.control-buttons button { width: 100px; background-color: #69a3db; color: #fff; border: none; border-radius: 5px; padding: 8px; cursor: pointer; }
+#addFieldBtn { margin-bottom: 15px; }
+.editable { outline: none; border-bottom: 1px dashed #ccc; }
+#selectedValues { background-color: #f8f9fa; border-radius: 10px; padding: 20px; margin-top: 20px; }
+#selectedValues h2 { color: #69a3db; }
+
+/* ==========================================================
+   3. BARRA LATERAL DERECHA (LOG)
+   ========================================================== */
+
+#log-sidebar {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 40px);
+}
+
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #f0f6fc;
+}
+
+.log-header h2 {
+  padding-bottom: 10px;
+  margin-bottom: 0;
+  border-bottom: none; 
+}
+
+#toggleLogBtn {
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  position: relative; /* Necesario para posicionar la flecha */
+}
+
+/* Crea la flecha usando bordes */
+#toggleLogBtn::after {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-bottom: 2px solid #6c757d;
+  border-right: 2px solid #6c757d;
+  transition: transform 0.3s, border-color 0.2s;
+  position: absolute;
+  top: 8px;
+  left: 6px;
+}
+
+.log-block {
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.log-block h4 {
+  margin: 0 0 8px 0;
+  color: #558ac7;
+}
+
+.log-block pre {
+  flex-grow: 1;
+  background-color: #e9ecef;
+  padding: 10px;
+  border-radius: 5px;
+  margin: 0;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 0.8em;
+}
+
+/* --- Lógica de Colapso para el Log (con Flechas) --- */
+
+/* Flecha Derecha (para colapsar) */
+#toggleLogBtn::after {
+  transform: rotate(-45deg); /* Apunta a la derecha */
+}
+#toggleLogBtn:hover::after {
+  border-color: #dc3545; /* Rojo al pasar el ratón */
+}
+
+/* Estado Colapsado */
+.app-container.log-collapsed {
+  grid-template-columns: 220px 1fr 65px;
+}
+
+.app-container.log-collapsed .log-header h2,
+.app-container.log-collapsed .log-block {
+  display: none;
+}
+
+/* Flecha Izquierda (cuando está colapsado) */
+.app-container.log-collapsed #toggleLogBtn::after {
+  transform: rotate(135deg); /* Apunta a la izquierda */
+  left: 10px; /* Ajuste para centrar la flecha */
+}
+.app-container.log-collapsed #toggleLogBtn:hover::after {
+  border-color: #28a745; /* Verde al pasar el ratón */
+}
+
+
+/* ==========================================================
+   4. RESPONSIVE
+   ========================================================== */
+
+@media (max-width: 1024px) {
+  .app-container {
+    grid-template-columns: 1fr;
+  }
+  
+  #log-sidebar {
+    height: auto;
+    max-height: 500px;
+  }
+
+  .app-container.log-collapsed {
+    /* Anulamos el colapso en pantallas pequeñas */
+    grid-template-columns: 1fr;
+  }
+
+  .app-container.log-collapsed .log-header h2,
+  .app-container.log-collapsed .log-block {
+    display: flex; /* O 'block' según corresponda */
+  }
+
+  #toggleLogBtn {
+    display: none;
+  }
 }

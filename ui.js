@@ -4,15 +4,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- 1. DECLARACIÓN DE ELEMENTOS DEL DOM ---
     // ==========================================================
     
-    // Log
+    // Generales
+    const appContainer = document.querySelector('.app-container');
     const logRequestEl = document.getElementById('log-request');
     const logResponseEl = document.getElementById('log-response');
-
-    // Navegación
     const mainMenu = document.getElementById('main-menu');
     const sections = document.querySelectorAll('#main-content > .section');
-    
-    // Configuración General y de Cliente (API)
+    const toggleLogBtn = document.getElementById('toggleLogBtn');
+
+    // Configuración Cliente y API
     const clientNameInput = document.getElementById('clientName');
     const saveConfigBtn = document.getElementById('saveConfig');
     const deleteConfigBtn = document.getElementById('deleteConfig');
@@ -32,11 +32,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const subscriberKeyFieldSelect = document.getElementById('subscriberKeyField');
     const subscriberKeyTypeInput = document.getElementById('subscriberKeyType');
     
-    // Campos de la Data Extension (Tabla)
+    // Sección Campos de la DE
     const fieldsTableBody = document.querySelector('#myTable tbody');
+    const createDummyFieldsBtn = document.getElementById('createDummyFieldsBtn');
+    const clearFieldsBtn = document.getElementById('clearFieldsBtn');
+    const addFieldBtn = document.getElementById('addFieldBtn');
     let selectedRow = null;
 
-    // Gestión de Campos (Recuperar/Borrar/Crear)
+    // Sección Gestión de Campos
     const fieldActionSelect = document.getElementById('fieldActionSelect');
     const recExternalKeyInput = document.getElementById('recExternalKey');
     const deleteFieldNameInput = document.getElementById('deleteFieldName');
@@ -46,18 +49,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- 2. GESTIÓN DE ESTADO Y CONFIGURACIÓN ---
     // ==========================================================
 
-    /**
-     * Pinta la información de la llamada y respuesta en el Log.
-     */
     function logEvent(requestData, responseData) {
         logRequestEl.textContent = (typeof requestData === 'object') ? JSON.stringify(requestData, null, 2) : requestData;
         logResponseEl.textContent = (typeof responseData === 'object') ? JSON.stringify(responseData, null, 2) : responseData;
     }
 
-    /**
-     * Obtiene los valores SÓLO de la sección de configuración de APIs.
-     * @returns {object} Un objeto con la configuración de la API.
-     */
+    // --- Funciones para Configuración de APIs y Cliente ---
+
     const getApiConfigValues = () => {
         const config = {};
         apiConfigSection.querySelectorAll('input:not([type="checkbox"]), select').forEach(input => {
@@ -68,19 +66,12 @@ document.addEventListener('DOMContentLoaded', function() {
         return config;
     };
     
-    /**
-     * Establece los valores SÓLO en la sección de configuración de APIs.
-     * @param {object} config - El objeto de configuración para rellenar el formulario.
-     */
     const setApiConfigValues = (config) => {
-        // Limpiar solo los campos de la sección de API
         apiConfigSection.querySelectorAll('input:not([type="checkbox"]), select').forEach(el => {
             if(el.id && !['clientName', 'savedConfigs'].includes(el.id)) {
                 el.value = '';
             }
         });
-
-        // Rellenar con los nuevos valores
         for (const key in config) {
             const element = document.getElementById(key);
             if (element) {
@@ -89,39 +80,34 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    /**
-     * Carga la lista de clientes guardados en el menú desplegable.
-     */
-        const loadConfigsIntoSelect = () => {
+    const loadConfigsIntoSelect = () => {
         const configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
-        const currentValue = savedConfigsSelect.value;
-
-        // Limpiar y preparar ambas listas
+        const currentValue = sidebarClientSelect.value || savedConfigsSelect.value;
         savedConfigsSelect.innerHTML = '<option value="">Seleccionar configuración...</option>';
         sidebarClientSelect.innerHTML = '<option value="">Ninguno seleccionado</option>';
 
-        // Llenar ambas listas con las mismas opciones
         for (const name in configs) {
-            const option1 = document.createElement('option');
-            option1.value = name;
-            option1.textContent = name;
+            const option1 = new Option(name, name);
+            const option2 = new Option(name, name);
             savedConfigsSelect.appendChild(option1);
-
-            const option2 = document.createElement('option');
-            option2.value = name;
-            option2.textContent = name;
             sidebarClientSelect.appendChild(option2);
         }
-
-        // Restaurar la selección previa en ambas
         savedConfigsSelect.value = currentValue;
         sidebarClientSelect.value = currentValue;
     };
 
-    /**
-     * Guarda el estado del formulario de Configuración de Data Extension en localStorage.
-     * Se activa con cada cambio en esa sección.
-     */
+    function loadAndSyncClientConfig(clientName) {
+        const configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
+        const configToLoad = configs[clientName] || {};
+        
+        setApiConfigValues(configToLoad);
+        clientNameInput.value = clientName;
+        savedConfigsSelect.value = clientName;
+        sidebarClientSelect.value = clientName;
+    }
+
+    // --- Funciones para Configuración de Data Extension ---
+
     function saveDeConfigState() {
         const config = {};
         deConfigSection.querySelectorAll('input:not([type="checkbox"]), select').forEach(el => {
@@ -133,9 +119,6 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('mcDeConfig', JSON.stringify(config));
     }
 
-    /**
-     * Carga el último estado guardado del formulario de Configuración de Data Extension.
-     */
     function loadDeConfigState() {
         const savedConfig = JSON.parse(localStorage.getItem('mcDeConfig'));
         if (savedConfig) {
@@ -152,34 +135,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-        /**
-     * Carga la configuración de un cliente, actualiza el formulario y sincroniza AMBAS listas desplegables.
-     * @param {string} clientName - El nombre del cliente a cargar.
-     */
-    function loadAndSyncClientConfig(clientName) {
-        const configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
-        
-        if (configs[clientName]) {
-            setApiConfigValues(configs[clientName]);
-            clientNameInput.value = clientName;
-        } else {
-            setApiConfigValues({});
-            clientNameInput.value = '';
-        }
-
-        // Sincronizar el valor en ambas listas desplegables
-        savedConfigsSelect.value = clientName;
-        sidebarClientSelect.value = clientName;
-    }
 
     // ==========================================================
     // --- 3. LÓGICA DE LA APLICACIÓN Y UI ---
     // ==========================================================
+    
+    // --- Lógica de Navegación y Macros ---
 
-    /**
-     * Muestra una sección específica y oculta las demás.
-     * @param {string} sectionId - El ID de la sección a mostrar.
-     */
     window.showSection = function(sectionId) {
         mainMenu.style.display = 'none';
         sections.forEach(s => s.style.display = 'none');
@@ -189,13 +151,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    /**
-     * Realiza la llamada a la API para recuperar un token de OAuth y las URIs de instancia.
-     * Actualiza el formulario y guarda la configuración de forma silenciosa.
-     */
     async function macroGetToken() {
-        const config = getApiConfigValues(); // Obtiene solo la config de API
-
+        const config = getApiConfigValues();
         if (!config.authUri || !config.clientId || !config.clientSecret || !config.businessUnit) {
             alert("Por favor, complete los campos Auth URI, Client ID, Client Secret y Business Unit (MID) en la configuración.");
             logEvent({ error: "Faltan datos de configuración" }, "Operación cancelada.");
@@ -233,11 +190,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const currentClientName = clientNameInput.value.trim();
             if (currentClientName) {
                 let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
-                configs[currentClientName] = getApiConfigValues(); // Vuelve a leer para guardar el token, etc.
+                configs[currentClientName] = getApiConfigValues();
                 localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
                 console.log(`Configuración para "${currentClientName}" actualizada con el nuevo token y URIs.`);
             }
-
             alert("Token recuperado y actualizado en el formulario.");
         } catch (error) {
             console.error("Error al recuperar el token:", error);
@@ -245,67 +201,44 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    /**
-     * Actualiza la lista de selección del campo SubscriberKey con los datos de la tabla de campos.
-     */
-    function updateSubscriberKeyFieldOptions() {
-        const currentSelection = subscriberKeyFieldSelect.value;
-        subscriberKeyFieldSelect.innerHTML = ''; 
-
-        const rows = fieldsTableBody.querySelectorAll('tr');
-
-        if (rows.length === 0) {
-            subscriberKeyFieldSelect.innerHTML = '<option value="">-- Primero defina campos --</option>';
-            return;
-        }
-
-        subscriberKeyFieldSelect.innerHTML = '<option value="">-- Seleccione un campo --</option>';
-
-        rows.forEach(row => {
-            const fieldName = row.cells[0].textContent.trim();
-            const fieldType = row.cells[1].textContent.trim();
-            if (fieldName) {
-                const option = document.createElement('option');
-                option.value = fieldName;
-                option.textContent = fieldName;
-                option.dataset.type = fieldType; 
-                subscriberKeyFieldSelect.appendChild(option);
-            }
-        });
-
-        subscriberKeyFieldSelect.value = currentSelection; 
+    // --- Lógica de la Sección de Campos ---
+    
+    function createTableRow(data = {}) {
+        const row = document.createElement('tr');
+        const fieldData = {
+            mc: data.mc || '', type: data.type || '', len: data.len || '',
+            def: data.def || false, pk: data.pk || false, req: data.req || false
+        };
+        row.innerHTML = `
+            <td class="editable" contenteditable="true">${fieldData.mc}</td>
+            <td class="editable" contenteditable="true">${fieldData.type}</td>
+            <td class="editable" contenteditable="true">${fieldData.len}</td>
+            <td><input type="checkbox" ${fieldData.def ? 'checked' : ''}></td>
+            <td><input type="checkbox" ${fieldData.pk ? 'checked' : ''}></td>
+            <td><input type="checkbox" ${fieldData.req ? 'checked' : ''}></td>
+        `;
+        return row;
     }
 
-    /**
-     * Controla la habilitación de los campos de SubscriberKey basado en el checkbox 'isSendable'.
-     */
-    function handleSendableChange() {
-        const isChecked = isSendableCheckbox.checked;
-        subscriberKeyFieldSelect.disabled = !isChecked;
-        if (!isChecked) {
-            subscriberKeyFieldSelect.value = '';
-            subscriberKeyTypeInput.value = '';
-        }
+    function clearFieldsTable() {
+        fieldsTableBody.innerHTML = '';
+        selectedRow = null;
+        displaySelectedValues(null);
     }
 
-    /**
-     * Gestiona qué campos están habilitados en la sección de gestión de campos.
-     */
-    function handleFieldActionChange() {
-        const action = fieldActionSelect.value;
-        recExternalKeyInput.disabled = true;
-        deleteFieldNameInput.disabled = true;
+    function createDummyFields() {
+        clearFieldsTable();
+        const dummyData = [
+            { mc: 'NombreCompleto', type: 'Text', len: '100', pk: true, req: true }, { mc: 'SincronizarMC', type: 'Boolean' },
+            { mc: 'FechaNacimiento', type: 'Date' }, { mc: 'Recibo', type: 'Decimal', len: '18,2', def: true },
+            { mc: 'Telefono', type: 'Phone' }, { mc: 'Email', type: 'EmailAddress', len: '254' },
+            { mc: 'Locale', type: 'Locale' }, { mc: 'Numero', type: 'Number' }
+        ];
+        dummyData.forEach(field => fieldsTableBody.appendChild(createTableRow(field)));
+    }
 
-        switch (action) {
-            case 'recuperar':
-            case 'crear':
-                recExternalKeyInput.disabled = false;
-                break;
-            case 'borrar':
-                recExternalKeyInput.disabled = false;
-                deleteFieldNameInput.disabled = false;
-                break;
-        }
+    function addNewField() {
+        fieldsTableBody.appendChild(createTableRow());
     }
 
     function displaySelectedValues(row) {
@@ -328,117 +261,144 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // --- Lógica de otras secciones ---
+
+    function updateSubscriberKeyFieldOptions() {
+        const currentSelection = subscriberKeyFieldSelect.value;
+        subscriberKeyFieldSelect.innerHTML = ''; 
+        const rows = fieldsTableBody.querySelectorAll('tr');
+
+        if (rows.length === 0) {
+            subscriberKeyFieldSelect.innerHTML = '<option value="">-- Primero defina campos --</option>';
+            return;
+        }
+
+        subscriberKeyFieldSelect.innerHTML = '<option value="">-- Seleccione un campo --</option>';
+        rows.forEach(row => {
+            const fieldName = row.cells[0].textContent.trim();
+            if (fieldName) {
+                const option = new Option(fieldName, fieldName);
+                option.dataset.type = row.cells[1].textContent.trim();
+                subscriberKeyFieldSelect.appendChild(option);
+            }
+        });
+        subscriberKeyFieldSelect.value = currentSelection; 
+    }
+
+    function handleSendableChange() {
+        const isChecked = isSendableCheckbox.checked;
+        subscriberKeyFieldSelect.disabled = !isChecked;
+        if (!isChecked) {
+            subscriberKeyFieldSelect.value = '';
+            subscriberKeyTypeInput.value = '';
+        }
+    }
+
+    function handleFieldActionChange() {
+        const action = fieldActionSelect.value;
+        recExternalKeyInput.disabled = true;
+        deleteFieldNameInput.disabled = true;
+
+        switch (action) {
+            case 'recuperar': case 'crear':
+                recExternalKeyInput.disabled = false;
+                break;
+            case 'borrar':
+                recExternalKeyInput.disabled = false;
+                deleteFieldNameInput.disabled = false;
+                break;
+        }
+    }
+
+
     // ==========================================================
     // --- 4. REGISTRO DE EVENT LISTENERS ---
     // ==========================================================
 
-    // Navegación
+    // Navegación y Macros
     document.querySelectorAll('.back-button').forEach(button => {
         button.addEventListener('click', () => {
-            sections.forEach(s => s.style.display = 'none');
             mainMenu.style.display = 'flex';
+            sections.forEach(s => s.style.display = 'none');
         });
     });
 
-    // Enrutador de Macros
     document.querySelectorAll('.macro-item').forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
             const macroType = e.target.getAttribute('data-macro');
-
-            if (macroType === 'getToken') {
-                macroGetToken();
-            } else {
-                const macroName = e.target.textContent.trim();
-                logEvent({ macro_ejecutada: macroName }, { status: "Pendiente", mensaje: `Función para "${macroName}" no implementada.` });
-            }
+            if (macroType === 'getToken') macroGetToken();
+            else logEvent({ macro_ejecutada: e.target.textContent.trim() }, { status: "Pendiente", mensaje: `Función no implementada.` });
         });
     });
 
-    // Configuración Cliente (API)
-        saveConfigBtn.addEventListener('click', () => {
+    toggleLogBtn.addEventListener('click', () => {
+        const isCollapsed = appContainer.classList.toggle('log-collapsed');
+        localStorage.setItem('logCollapsedState', isCollapsed);
+    });
+
+    // Configuración de APIs y Cliente
+    saveConfigBtn.addEventListener('click', () => {
         const clientName = clientNameInput.value.trim();
-        if (!clientName) { 
-            alert('Por favor, introduce un nombre para el cliente.'); 
-            return; 
-        }
+        if (!clientName) return alert('Por favor, introduce un nombre para el cliente.'); 
         let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
         configs[clientName] = getApiConfigValues();
         localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
-        
         alert(`Configuración para "${clientName}" guardada.`);
-        
-        loadConfigsIntoSelect(); // Actualiza las opciones en ambas listas
-        
-        // Selecciona el nuevo cliente en ambas listas
-        savedConfigsSelect.value = clientName;
-        sidebarClientSelect.value = clientName;
+        loadConfigsIntoSelect();
+        loadAndSyncClientConfig(clientName);
     });
 
-        deleteConfigBtn.addEventListener('click', () => {
+    deleteConfigBtn.addEventListener('click', () => {
         const clientName = savedConfigsSelect.value;
-        if (!clientName) { 
-            alert('Por favor, selecciona una configuración para borrar.'); 
-            return; 
-        }
+        if (!clientName) return alert('Por favor, selecciona una configuración para borrar.'); 
         if (confirm(`¿Estás seguro de que quieres borrar la configuración para "${clientName}"?`)) {
             let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
             delete configs[clientName];
             localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
-            
             alert(`Configuración para "${clientName}" borrada.`);
-            
-            loadAndSyncClientConfig(''); // Limpia formulario y sincroniza listas a "ninguno seleccionado"
-            loadConfigsIntoSelect(); // Refresca las opciones en las listas
+            loadConfigsIntoSelect();
+            loadAndSyncClientConfig('');
         }
     });
 
-    // Listener para la lista en la sección de configuración
-    savedConfigsSelect.addEventListener('change', (e) => {
-        loadAndSyncClientConfig(e.target.value);
-    });
-
-    // Listener para la nueva lista en la barra lateral
-    sidebarClientSelect.addEventListener('change', (e) => {
-        loadAndSyncClientConfig(e.target.value);
-    });
+    savedConfigsSelect.addEventListener('change', (e) => loadAndSyncClientConfig(e.target.value));
+    sidebarClientSelect.addEventListener('change', (e) => loadAndSyncClientConfig(e.target.value));
     
     authUriInput.addEventListener('blur', () => {
-        let currentValue = authUriInput.value.trim();
-        if (!currentValue) return;
-        let baseValue = currentValue.split('/v2/token').join('').replace(/\/+$/, '');
-        authUriInput.value = baseValue + '/v2/token';
+        if (!authUriInput.value.trim()) return;
+        authUriInput.value = authUriInput.value.split('/v2/token').join('').replace(/\/+$/, '') + '/v2/token';
     });
 
-    // Configuración de Data Extension (Guardado automático)
+    // Configuración de Data Extension
     deNameInput.addEventListener('input', () => {
         deExternalKeyInput.value = deNameInput.value.replace(/\s+/g, '_') + '_CK';
     });
     deConfigSection.addEventListener('input', saveDeConfigState);
     deConfigSection.addEventListener('change', saveDeConfigState);
-
-    // Lógica Sendable
     isSendableCheckbox.addEventListener('change', handleSendableChange);
     subscriberKeyFieldSelect.addEventListener('change', () => {
         const selectedOption = subscriberKeyFieldSelect.options[subscriberKeyFieldSelect.selectedIndex];
         subscriberKeyTypeInput.value = (selectedOption && selectedOption.dataset.type) ? selectedOption.dataset.type : '';
     });
-    const observer = new MutationObserver(updateSubscriberKeyFieldOptions);
-    observer.observe(fieldsTableBody, { childList: true, subtree: true, characterData: true });
 
-    // Gestión de Campos (Recuperar/Borrar/Crear)
-    fieldActionSelect.addEventListener('change', handleFieldActionChange);
+    // Sección Campos de la DE
+    createDummyFieldsBtn.addEventListener('click', createDummyFields);
+    clearFieldsBtn.addEventListener('click', clearFieldsTable);
+    addFieldBtn.addEventListener('click', addNewField);
 
-    // Tabla de Campos
     fieldsTableBody.addEventListener('click', (e) => {
-        if (e.target.closest('tr')) {
-            const row = e.target.closest('tr');
-            document.querySelectorAll('#myTable tbody tr').forEach(r => r.classList.remove('selected'));
-            row.classList.add('selected');
-            selectedRow = row;
-            displaySelectedValues(row);
+        const targetRow = e.target.closest('tr');
+        if (targetRow) {
+            if (targetRow !== selectedRow) {
+                document.querySelectorAll('#myTable tbody tr').forEach(r => r.classList.remove('selected'));
+                targetRow.classList.add('selected');
+                selectedRow = targetRow;
+            }
+            displaySelectedValues(targetRow);
         }
     });
+
     document.getElementById('moveUp').addEventListener('click', () => {
       if (selectedRow && selectedRow.previousElementSibling) {
         selectedRow.parentNode.insertBefore(selectedRow, selectedRow.previousElementSibling);
@@ -450,14 +410,25 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
 
+    const observer = new MutationObserver(updateSubscriberKeyFieldOptions);
+    observer.observe(fieldsTableBody, { childList: true, subtree: true, characterData: true });
+
+    // Sección Gestión de Campos
+    fieldActionSelect.addEventListener('change', handleFieldActionChange);
 
     // ==========================================================
     // --- 5. INICIALIZACIÓN ---
     // ==========================================================
 
-    loadConfigsIntoSelect();              // Cargar lista de clientes de API
-    loadDeConfigState();                  // Cargar el último estado del formulario de DE
-    updateSubscriberKeyFieldOptions();    // Llenar el select de campos SK por primera vez
-    handleSendableChange();               // Ajustar visibilidad inicial de campos SK
-    handleFieldActionChange();            // Establecer el estado inicial de la sección de gestión de campos
+    function initializeLogState() {
+        if (localStorage.getItem('logCollapsedState') === 'true') {
+            appContainer.classList.add('log-collapsed');
+        }
+    }
+
+    loadConfigsIntoSelect();
+    loadDeConfigState();
+    handleSendableChange();
+    handleFieldActionChange();
+    initializeLogState();
 });

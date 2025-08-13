@@ -42,7 +42,7 @@
   <!-- COLUMNA CENTRAL: CONTENIDO PRINCIPAL -->
   <main id="main-content">
     <!-- Menú Principal -->
-        <div id="main-menu" class="main-menu-container" style="display: flex;">
+    <div id="main-menu" class="main-menu-container" style="display: flex;">
       
       <div class="menu-group">
         <h3>General</h3>
@@ -118,7 +118,7 @@
         </p>
     </div>
 
-        <!-- Sección de Configuración de Data Extension (Nueva) -->
+    <!-- Sección de Configuración de Data Extension (Nueva) -->
     <div id="configuracion-de-section" class="section config-section-container">
         <button class="back-button">← Atrás</button>
         <h2>Configuración de Data Extension</h2>
@@ -135,14 +135,12 @@
                 <label for="isSendable">Sendable DE:</label>
                 <input type="checkbox" id="isSendable">
             </div>
-            <!-- CAMBIO: input a select, y deshabilitado -->
             <div class="form-group">
                 <label for="subscriberKeyField">Campo SubscriberKey</label>
                 <select id="subscriberKeyField" disabled>
                     <option value="">-- Primero defina campos en la sección 'Campos' --</option>
                 </select>
             </div>
-            <!-- CAMBIO: deshabilitado -->
             <div class="form-group"><label for="subscriberKeyType">Tipo Campo SubscriberKey</label><input type="text" id="subscriberKeyType" disabled></div>
         </div>
     </div>
@@ -172,25 +170,25 @@
 
     <!-- Sección de Campos -->
     <div id="campos-section" class="section">
-        <button class="back-button">← Atrás</button>
+        <div class="section-header">
+            <button class="back-button">← Atrás</button>
+            <div class="header-actions">
+                <button id="createDummyFieldsBtn" class="action-button">Crear Campos Dummy</button>
+                <button id="clearFieldsBtn" class="action-button delete-btn">Limpiar Campos</button>
+            </div>
+        </div>
+        
         <h2>Campos de la Data Extension</h2>
         <div class="table-container">
           <table id="myTable">
             <thead>
               <tr><th>Campo MC</th><th>Tipo Campo</th><th>Longitud</th><th>Default</th><th>PK</th><th>Obligatorio</th></tr>
             </thead>
-            <tbody>
-            <tr><td class="editable" contenteditable="true">NombreCompleto</td><td class="editable" contenteditable="true">Text</td><td class="editable" contenteditable="true">100</td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td></tr>
-            <tr><td class="editable" contenteditable="true">SincronizarMC</td><td class="editable" contenteditable="true">Boolean</td><td class="editable" contenteditable="true"></td><td><input type="checkbox"></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
-            <tr><td class="editable" contenteditable="true">FechaNacimiento</td><td class="editable" contenteditable="true">Date</td><td class="editable" contenteditable="true"></td><td><input type="checkbox"></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
-            <tr><td class="editable" contenteditable="true">Recibo</td><td class="editable" contenteditable="true">Decimal</td><td class="editable" contenteditable="true">1,1</td><td><input type="checkbox" checked></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
-            <tr><td class="editable" contenteditable="true">Telefono</td><td class="editable" contenteditable="true">Phone</td><td class="editable" contenteditable="true"></td><td><input type="checkbox"></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
-            <tr><td class="editable" contenteditable="true">Email</td><td class="editable" contenteditable="true">EmailAddress</td><td class="editable" contenteditable="true">254</td><td><input type="checkbox"></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
-            <tr><td class="editable" contenteditable="true">Locale</td><td class="editable" contenteditable="true">Locale</td><td class="editable" contenteditable="true"></td><td><input type="checkbox"></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
-            <tr><td class="editable" contenteditable="true">Numero</td><td class="editable" contenteditable="true">Number</td><td class="editable" contenteditable="true"></td><td><input type="checkbox"></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
-          </tbody>
+            <!-- El cuerpo de la tabla empieza vacío -->
+            <tbody></tbody>
           </table>
           <div class="control-buttons">
+            <button id="addFieldBtn" class="action-button">Añadir Fila</button>
             <button id="moveUp">Subir</button>
             <button id="moveDown">Bajar</button>
           </div>
@@ -200,11 +198,14 @@
           <ul></ul>
         </div>
     </div>
-  </main>
+  </main> 
 
   <!-- COLUMNA DERECHA: LOG -->
   <aside id="log-sidebar">
-    <h2>Log de Eventos</h2>
+    <div class="log-header">
+      <h2>Log de Eventos</h2>
+      <button id="toggleLogBtn" title="Colapsar Log"></button>
+    </div>
     <div class="log-block">
       <h4>Llamada</h4>
       <pre><code id="log-request">Esperando acciones...</code></pre>
