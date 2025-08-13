@@ -474,7 +474,7 @@ td input[type="text"].cell-input {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    flex-grow: 1; /* Ocupa el espacio disponible */
+    flex-grow: 1;
 }
 .calendar-main-view {
     flex: 3;
@@ -486,6 +486,11 @@ td input[type="text"].cell-input {
     border-left: 1px solid #eee;
     padding-left: 20px;
     overflow-y: auto;
+    /* --- MEJORA DE USABILIDAD --- */
+    position: sticky;
+    top: 0;
+    align-self: flex-start; /* Necesario para que sticky funcione en un contenedor flex */
+    height: calc(100vh - 120px); /* Ajustar altura para que no ocupe más de la ventana */
 }
 .calendar-grid {
     display: grid;
@@ -561,5 +566,10 @@ td input[type="text"].cell-input {
   }
   .calendar-container {
     flex-direction: column;
+  }
+  .calendar-sidebar {
+    position: static; /* Desactiva el modo sticky en pantallas pequeñas */
+    height: auto;
+    max-height: 300px; /* Limita la altura en móvil */
   }
 }

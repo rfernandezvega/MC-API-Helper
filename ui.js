@@ -644,7 +644,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- 4. LÓGICA DEL CALENDARIO (REDISEÑADO) ---
     // ==========================================================
 
-    function macroViewCalendar() {
+    window.viewCalendar = function(){
         showSection('calendario-section');
         populateCalendarYearSelect();
         const savedAutomationsRaw = localStorage.getItem('calendarAutomations');
@@ -886,7 +886,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 case 'createFields': macroCreateFields(); break;
                 case 'getFields': macroGetFields(); break;
                 case 'createDE': macroCreateDE(); break;
-                case 'viewCalendar': macroViewCalendar(); break;
                 default:
                     logMessage(`Función no implementada: ${macroType}`);
                     break;
