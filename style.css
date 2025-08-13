@@ -10,7 +10,6 @@ body {
 
 .app-container {
   display: grid;
-  /* La 3ra columna se encogerá/expandirá con la animación */
   grid-template-columns: 220px 1fr 360px; 
   gap: 20px;
   padding: 20px;
@@ -135,17 +134,55 @@ body {
 .action-button:hover { background-color: #558ac7; }
 .action-button.delete-btn { background-color: #6c757d; }
 .action-button.delete-btn:hover { background-color: #5a6268; }
-.table-container { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; overflow-x: auto; margin-top: 20px; }
+.table-container { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; overflow-x: auto; margin-top: 20px; padding-right: 40px; }
 table { border-collapse: collapse; width: 100%; }
 th, td { border: 1px solid #b9d4e7; padding: 8px; text-align: center; }
 th { background-color: #69a3db; color: #fff; position: sticky; top: 0; z-index: 2; }
 tr.selected { background-color: #c5dce6; }
 .control-buttons { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-left: 15px; }
 .control-buttons button { width: 100px; background-color: #69a3db; color: #fff; border: none; border-radius: 5px; padding: 8px; cursor: pointer; }
-#addFieldBtn { margin-bottom: 15px; }
 .editable { outline: none; border-bottom: 1px dashed #ccc; }
-#selectedValues { background-color: #f8f9fa; border-radius: 10px; padding: 20px; margin-top: 20px; }
-#selectedValues h2 { color: #69a3db; }
+
+/* Hacer que cada fila sea un contenedor de posicionamiento */
+#myTable tbody tr {
+  position: relative;
+}
+
+/* Estilo para el botón de borrar en cada fila */
+.delete-row-btn {
+  position: absolute;
+  right: -35px;
+  top: 50%;
+  transform: translateY(-50%);
+  
+  background-color: #fce8e6;
+  border: 1px solid #f6ccc7;
+  color: #c5221f;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  line-height: 22px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  /* El botón está oculto por defecto */
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Mostrar el botón solo cuando su fila contenedora tiene la clase .selected */
+#myTable tbody tr.selected .delete-row-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.delete-row-btn:hover {
+  background-color: #dc3545;
+  color: #fff;
+  border-color: #c5221f;
+  transform: translateY(-50%) scale(1.1);
+}
 
 /* ==========================================================
    3. BARRA LATERAL DERECHA (LOG)
@@ -225,10 +262,10 @@ tr.selected { background-color: #c5dce6; }
 
 /* Flecha Derecha (para colapsar) */
 #toggleLogBtn::after {
-  transform: rotate(-45deg); /* Apunta a la derecha */
+  transform: rotate(-45deg);
 }
 #toggleLogBtn:hover::after {
-  border-color: #dc3545; /* Rojo al pasar el ratón */
+  border-color: #dc3545;
 }
 
 /* Estado Colapsado */
@@ -243,11 +280,11 @@ tr.selected { background-color: #c5dce6; }
 
 /* Flecha Izquierda (cuando está colapsado) */
 .app-container.log-collapsed #toggleLogBtn::after {
-  transform: rotate(135deg); /* Apunta a la izquierda */
-  left: 10px; /* Ajuste para centrar la flecha */
+  transform: rotate(135deg);
+  left: 10px;
 }
 .app-container.log-collapsed #toggleLogBtn:hover::after {
-  border-color: #28a745; /* Verde al pasar el ratón */
+  border-color: #28a745;
 }
 
 
@@ -266,13 +303,12 @@ tr.selected { background-color: #c5dce6; }
   }
 
   .app-container.log-collapsed {
-    /* Anulamos el colapso en pantallas pequeñas */
     grid-template-columns: 1fr;
   }
 
   .app-container.log-collapsed .log-header h2,
   .app-container.log-collapsed .log-block {
-    display: flex; /* O 'block' según corresponda */
+    display: flex;
   }
 
   #toggleLogBtn {

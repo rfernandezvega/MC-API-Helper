@@ -203,12 +203,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Lógica de la Sección de Campos ---
     
-    function createTableRow(data = {}) {
+        function createTableRow(data = {}) {
         const row = document.createElement('tr');
         const fieldData = {
             mc: data.mc || '', type: data.type || '', len: data.len || '',
             def: data.def || false, pk: data.pk || false, req: data.req || false
         };
+        // Primero creamos las celdas de datos
         row.innerHTML = `
             <td class="editable" contenteditable="true">${fieldData.mc}</td>
             <td class="editable" contenteditable="true">${fieldData.type}</td>
@@ -217,13 +218,22 @@ document.addEventListener('DOMContentLoaded', function() {
             <td><input type="checkbox" ${fieldData.pk ? 'checked' : ''}></td>
             <td><input type="checkbox" ${fieldData.req ? 'checked' : ''}></td>
         `;
+        
+        // Luego, creamos y añadimos el botón de borrado por separado
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'delete-row-btn';
+        deleteButton.title = 'Eliminar fila';
+        deleteButton.innerHTML = '×';
+        row.appendChild(deleteButton); // Se añade el botón directamente a la fila
+
         return row;
     }
 
     function clearFieldsTable() {
         fieldsTableBody.innerHTML = '';
         selectedRow = null;
-        displaySelectedValues(null);
+        logSelectedRowData(null); // Limpia la vista de valores seleccionados
+        addNewField(); // Añade una fila en blanco después de limpiar
     }
 
     function createDummyFields() {
@@ -241,24 +251,36 @@ document.addEventListener('DOMContentLoaded', function() {
         fieldsTableBody.appendChild(createTableRow());
     }
 
-    function displaySelectedValues(row) {
-        const ul = document.querySelector('#selectedValues ul');
-        ul.innerHTML = '';
-        if (row) {
-            const cells = row.querySelectorAll('td');
-            const headers = document.querySelectorAll('#myTable th');
-            cells.forEach((cell, index) => {
-                const li = document.createElement('li');
-                const headerText = headers[index] ? headers[index].textContent + ':' : '';
-                if (cell.querySelector('input[type="checkbox"]')) {
-                    const value = cell.querySelector('input[type="checkbox"]').checked ? 'True' : 'False';
-                    li.textContent = `${headerText} ${value}`;
-                } else {
-                    li.textContent = `${headerText} ${cell.textContent}`;
-                }
-                ul.appendChild(li);
-            });
+        /**
+     * Recoge los datos de la fila seleccionada y los muestra en el log de eventos.
+     * @param {HTMLElement|null} row - La fila (tr) seleccionada, o null si no hay ninguna.
+     */
+    function logSelectedRowData(row) {
+        if (!row) {
+            logEvent('Fila deseleccionada.', '');
+            return;
         }
+
+        const rowData = {};
+        const headers = document.querySelectorAll('#myTable th');
+        const cells = row.querySelectorAll('td');
+
+        cells.forEach((cell, index) => {
+            // Asegurarse de que el índice no se salga de los headers (evita la columna "Acciones")
+            if (headers[index] && headers[index].textContent !== 'Acciones') {
+                const headerText = headers[index].textContent;
+                let value;
+
+                if (cell.querySelector('input[type="checkbox"]')) {
+                    value = cell.querySelector('input[type="checkbox"]').checked;
+                } else {
+                    value = cell.textContent;
+                }
+                rowData[headerText] = value;
+            }
+        });
+
+        logEvent(rowData, 'Fila seleccionada en la tabla.');
     }
 
     // --- Lógica de otras secciones ---
@@ -388,14 +410,26 @@ document.addEventListener('DOMContentLoaded', function() {
     addFieldBtn.addEventListener('click', addNewField);
 
     fieldsTableBody.addEventListener('click', (e) => {
+        const deleteButton = e.target.closest('.delete-row-btn');
         const targetRow = e.target.closest('tr');
-        if (targetRow) {
+
+        if (deleteButton) {
+            // --- Lógica para borrar la fila ---
+            const rowToDelete = deleteButton.closest('tr');
+            if (rowToDelete === selectedRow) {
+                selectedRow = null;
+                logSelectedRowData(null); // Limpiar vista de detalles
+            }
+            rowToDelete.remove();
+
+        } else if (targetRow) {
+            // --- Lógica existente para seleccionar la fila ---
             if (targetRow !== selectedRow) {
                 document.querySelectorAll('#myTable tbody tr').forEach(r => r.classList.remove('selected'));
                 targetRow.classList.add('selected');
                 selectedRow = targetRow;
             }
-            displaySelectedValues(targetRow);
+            logSelectedRowData(targetRow);
         }
     });
 
@@ -431,4 +465,5 @@ document.addEventListener('DOMContentLoaded', function() {
     handleSendableChange();
     handleFieldActionChange();
     initializeLogState();
+    clearFieldsTable();
 });
