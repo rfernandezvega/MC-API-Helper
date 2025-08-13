@@ -58,9 +58,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const delimiterSelect = document.getElementById('delimiter-select');
     const customDelimiterInput = document.getElementById('custom-delimiter-input');
 
-    // Pestañas de Documentación (NUEVO)
+    // Pestañas de Documentación y Menú Colapsable
     const tabButtons = document.querySelectorAll('.tab-button');
     const tabContents = document.querySelectorAll('.tab-content');
+    const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
+
+    // Calendario
+    const calendarGrid = document.getElementById('calendar-grid');
+    const calendarYearSelect = document.getElementById('calendarYearSelect');
+    const automationList = document.getElementById('automation-list');
+    const refreshAutomationsBtn = document.getElementById('refreshAutomationsBtn');
+    let allAutomations = [];
+    let calendarDataForClient = '';
 
 
     // ==========================================================
@@ -281,7 +290,6 @@ document.addEventListener('DOMContentLoaded', function() {
             logMessage(`Buscando IDs de campos para la DE: ${externalKey}`);
             targetFieldSelect.disabled = true;
             targetFieldSelect.innerHTML = `<option>Recuperando IDs...</option>`;
-            
             await macroGetToken(true);
             const token = tokenField.value;
             const soapUri = soapUriInput.value;
@@ -290,15 +298,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const requestDetails = { endpoint: soapUri, method: "POST", headers: { 'Content-Type': 'text/xml' }, payload: soapPayload.trim() };
             logApiCall(requestDetails);
             logApiResponse('');
-            
             const response = await fetch(soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: requestDetails.payload });
             const responseText = await response.text();
             logApiResponse({ status: response.status, statusText: response.statusText, body: responseText });
-            
             const fields = await parseSoapFieldsAsync(responseText);
             populateDeletionPicklist(fields);
             logMessage(`${fields.length} IDs de campos recuperados.`);
-            
         } catch (error) {
             console.error("Error en macroGetFieldIds:", error);
             logMessage(`Error al recuperar IDs de campos: ${error.message}`);
@@ -328,11 +333,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const requestDetails = { endpoint: soapUri, method: "POST", headers: { 'Content-Type': 'text/xml' }, payload: soapPayload.trim() };
             logApiCall(requestDetails);
             logApiResponse('');
-            
             const response = await fetch(soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: requestDetails.payload });
             const responseText = await response.text();
             logApiResponse({ status: response.status, statusText: response.statusText, body: responseText });
-            
             if (responseText.includes('<OverallStatus>OK</OverallStatus>')) {
                 logMessage(`Campo "${selectedFieldName}" eliminado con éxito. Refrescando lista...`);
                 macroGetFieldIds();
@@ -348,6 +351,29 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    function buildFieldXml(fieldData) {
+        const { name, type, length, defaultValue, isPrimaryKey, isRequired } = fieldData;
+        const customerKey = name;
+        let fieldXml = '';
+        const commonNodes = `<CustomerKey>${customerKey}</CustomerKey><Name>${name}</Name><IsRequired>${isRequired}</IsRequired><IsPrimaryKey>${isPrimaryKey}</IsPrimaryKey>`;
+        const defaultValueNode = defaultValue ? `<DefaultValue>${defaultValue}</DefaultValue>` : '';
+        switch (type.toLowerCase()) {
+            case 'text': fieldXml = `<Field>${commonNodes}<FieldType>Text</FieldType>${length ? `<MaxLength>${length}</MaxLength>` : ''}${defaultValueNode}</Field>`; break;
+            case 'number': fieldXml = `<Field>${commonNodes}<FieldType>Number</FieldType>${defaultValueNode}</Field>`; break;
+            case 'date': fieldXml = `<Field>${commonNodes}<FieldType>Date</FieldType>${defaultValueNode}</Field>`; break;
+            case 'boolean': fieldXml = `<Field>${commonNodes}<FieldType>Boolean</FieldType>${defaultValueNode}</Field>`; break;
+            case 'emailaddress': fieldXml = `<Field>${commonNodes}<FieldType>EmailAddress</FieldType></Field>`; break;
+            case 'phone': fieldXml = `<Field>${commonNodes}<FieldType>Phone</FieldType></Field>`; break;
+            case 'locale': fieldXml = `<Field>${commonNodes}<FieldType>Locale</FieldType></Field>`; break;
+            case 'decimal':
+                const [maxLength, scale] = (length || ',').split(',').map(s => s.trim());
+                fieldXml = `<Field>${commonNodes}<FieldType>Decimal</FieldType>${maxLength ? `<MaxLength>${maxLength}</MaxLength>` : ''}${scale ? `<Scale>${scale}</Scale>` : ''}${defaultValueNode}</Field>`;
+                break;
+            default: return '';
+        }
+        return fieldXml.replace(/\s+/g, ' ').trim();
+    }
+
     async function macroCreateFields() {
         blockUI();
         try {
@@ -384,11 +410,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const requestDetails = { endpoint: soapUri, method: "POST", headers: { 'Content-Type': 'text/xml' }, payload: soapPayload.trim() };
             logApiCall(requestDetails);
             logApiResponse('');
-            
             const response = await fetch(soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: requestDetails.payload });
             const responseText = await response.text();
             logApiResponse({ status: response.status, statusText: response.statusText, body: responseText });
-
             if (responseText.includes('<OverallStatus>OK</OverallStatus>')) {
                 logMessage(`¡Éxito! Se han creado/actualizado ${validFieldsData.length} campos.`);
                 alert(`¡Éxito! Se han creado/actualizado ${validFieldsData.length} campos.`);
@@ -419,19 +443,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const token = tokenField.value;
             const soapUri = soapUriInput.value;
             if (!token || !soapUri) throw new Error('No se pudo obtener un token o la SOAP URI no está configurada.');
-            
             const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${token}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtensionField</ObjectType><Properties>Name</Properties><Properties>ObjectID</Properties><Properties>CustomerKey</Properties><Properties>FieldType</Properties><Properties>IsPrimaryKey</Properties><Properties>IsRequired</Properties><Properties>MaxLength</Properties><Properties>Ordinal</Properties><Properties>Scale</Properties><Properties>DefaultValue</Properties><Filter xsi:type="SimpleFilterPart"><Property>DataExtension.CustomerKey</Property><SimpleOperator>equals</SimpleOperator><Value>${externalKey}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-            
             const requestDetails = { endpoint: soapUri, method: "POST", headers: { 'Content-Type': 'text/xml' }, payload: soapPayload.trim() };
             logApiCall(requestDetails);
             logApiResponse('');
-            
             const response = await fetch(soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: requestDetails.payload });
             const responseText = await response.text();
             logApiResponse({ status: response.status, statusText: response.statusText, body: responseText });
-
             const fields = await parseFullSoapFieldsAsync(responseText);
-            
             if (fields.length > 0) {
                 populateFieldsTable(fields);
                 populateDeletionPicklist(fields);
@@ -484,7 +503,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('La Data Extension debe tener al menos un campo definido.');
                 return logMessage("Operación cancelada: No hay campos definidos.");
             }
-            
             await macroGetToken(true);
             const token = tokenField.value;
             const soapUri = soapUriInput.value;
@@ -505,11 +523,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const requestDetails = { endpoint: soapUri, method: "POST", headers: { 'Content-Type': 'text/xml' }, payload: soapPayload.trim() };
             logApiCall(requestDetails);
             logApiResponse('');
-            
             const response = await fetch(soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: requestDetails.payload });
             const responseText = await response.text();
             logApiResponse({ status: response.status, statusText: response.statusText, body: responseText });
-
             if (responseText.includes('<OverallStatus>OK</OverallStatus>')) {
                 logMessage(`¡Data Extension "${deName}" creada con éxito!`);
                 alert(`¡Data Extension "${deName}" creada con éxito!`);
@@ -623,7 +639,235 @@ document.addEventListener('DOMContentLoaded', function() {
             subscriberKeyTypeInput.value = '';
         }
     }
+    
+    // ==========================================================
+    // --- 4. LÓGICA DEL CALENDARIO (REDISEÑADO) ---
+    // ==========================================================
 
+    function macroViewCalendar() {
+        showSection('calendario-section');
+        populateCalendarYearSelect();
+        const savedAutomationsRaw = localStorage.getItem('calendarAutomations');
+        if(savedAutomationsRaw) {
+            const savedData = JSON.parse(savedAutomationsRaw);
+            const currentClient = clientNameInput.value;
+            if (savedData.client === currentClient) {
+                allAutomations = savedData.automations;
+                calendarDataForClient = savedData.client;
+                logMessage(`${allAutomations.length} automatizaciones cargadas desde la memoria local para "${currentClient}". Pulsa "Refrescar Datos" para actualizar.`);
+                generateCalendar();
+            } else {
+                allAutomations = [];
+                calendarDataForClient = '';
+                logMessage(`Los datos del calendario guardados son para el cliente "${savedData.client}". Pulsa "Refrescar Datos" para cargar los de "${currentClient}".`);
+                generateCalendar();
+            }
+        } else {
+            allAutomations = [];
+            calendarDataForClient = '';
+            logMessage('No hay datos de automatizaciones. Pulsa "Refrescar Datos" para empezar.');
+            generateCalendar();
+        }
+    }
+
+    async function macroGetAutomations() {
+        blockUI();
+        let allRequests = [];
+        let allResponses = [];
+        logMessage("Iniciando recuperación de automatizaciones...");
+        logApiCall('');
+        logApiResponse('');
+        try {
+            await macroGetToken(true);
+            const config = getFullClientConfig();
+            const currentClient = clientNameInput.value;
+            if (!config.restUri || !tokenField.value) {
+                throw new Error("La REST URI o el Token no están disponibles. Revisa la configuración.");
+            }
+            
+            let allItems = [];
+            let page = 1;
+            let moreResults = true;
+            logMessage("Paso 1/3: Obteniendo lista de todas las automatizaciones...");
+
+            const firstUrl = `${config.restUri}automation/v1/automations?$page=${page}`;
+            let firstRequestDetails = { step: `Paso 1 (Página ${page})`, endpoint: firstUrl, method: "GET" };
+            allRequests.push(firstRequestDetails);
+            const firstResponse = await fetch(firstUrl, { headers: { "Authorization": `Bearer ${tokenField.value}` } });
+            const firstData = await firstResponse.json();
+            if (!firstResponse.ok) throw new Error(firstData.message || "Error al obtener la lista de automatizaciones.");
+            allResponses.push({ request: firstRequestDetails, response: firstData });
+            allItems = allItems.concat(firstData.items);
+            
+            const totalPages = Math.ceil(firstData.count / firstData.pageSize);
+            if (totalPages > 1) {
+                for (page = 2; page <= totalPages; page++) {
+                    logMessage(`Paso 1/3: Obteniendo página ${page} de ${totalPages}...`);
+                    const url = `${config.restUri}automation/v1/automations?$page=${page}`;
+                    const requestDetails = { step: `Paso 1 (Página ${page})`, endpoint: url, method: "GET" };
+                    allRequests.push(requestDetails);
+                    const response = await fetch(url, { headers: { "Authorization": `Bearer ${tokenField.value}` } });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.message || "Error al obtener la lista de automatizaciones.");
+                    allResponses.push({ request: requestDetails, response: data });
+                    allItems = allItems.concat(data.items);
+                }
+            }
+
+            logMessage(`${allItems.length} automatizaciones encontradas. Filtrando las programadas...`);
+
+            const scheduledItems = allItems.filter(item => item.schedule && (item.schedule.scheduleStatus === 'Scheduled' || item.schedule.scheduleStatus === 'active'));
+            logMessage(`${scheduledItems.length} automatizaciones programadas encontradas. Inspeccionando cada una...`);
+
+            const journeyAutomations = [];
+            for (let i = 0; i < scheduledItems.length; i++) {
+                const item = scheduledItems[i];
+                logMessage(`Paso 2/3: Inspeccionando automatización ${i + 1} de ${scheduledItems.length}: "${item.name}"`);
+                
+                const detailUrl = `${config.restUri}automation/v1/automations/${item.id}`;
+                const requestDetails = { step: `Paso 2 (${i+1}/${scheduledItems.length})`, endpoint: detailUrl, method: "GET" };
+                allRequests.push(requestDetails);
+                
+                const detailResponse = await fetch(detailUrl, { headers: { "Authorization": `Bearer ${tokenField.value}` } });
+                const detailData = await detailResponse.json();
+                allResponses.push({ request: requestDetails, response: detailData });
+
+                if (detailData.steps) {
+                    const hasJourneyEntry = detailData.steps.some(step => 
+                        step.activities.some(activity => activity.objectTypeId === 952)
+                    );
+                    if (hasJourneyEntry) {
+                        journeyAutomations.push(item);
+                    }
+                }
+            }
+            
+            logMessage(`Paso 3/3: ${journeyAutomations.length} automatizaciones de Journeys encontradas. Procesando fechas...`);
+            processAndStoreAutomations(journeyAutomations);
+            
+            const dataToSave = { client: currentClient, automations: allAutomations };
+            localStorage.setItem('calendarAutomations', JSON.stringify(dataToSave));
+            calendarDataForClient = currentClient;
+
+            logMessage("Datos de automatizaciones actualizados y guardados localmente.");
+            generateCalendar();
+
+        } catch(error) {
+            console.error("Error en macroGetAutomations:", error);
+            logMessage(`Error al recuperar automatizaciones: ${error.message}`);
+            alert(`Error al recuperar automatizaciones: ${error.message}`);
+        } finally {
+            logApiCall(allRequests);
+            logApiResponse(allResponses);
+            unblockUI();
+        }
+    }
+
+    function processAndStoreAutomations(items) {
+        allAutomations = items.map(auto => {
+            const dateObj = new Date(auto.schedule.scheduledTime);
+            let scheduledTime = "N/A", scheduledHour = "N/A";
+            if (!isNaN(dateObj.getTime())) {
+                scheduledTime = dateObj.getFullYear() + "-" +
+                                ("0" + (dateObj.getMonth() + 1)).slice(-2) + "-" +
+                                ("0" + dateObj.getDate()).slice(-2);
+                const startOfDST = new Date(dateObj.getFullYear(), 2, 31);
+                startOfDST.setDate(31 - startOfDST.getDay());
+                const endOfDST = new Date(dateObj.getFullYear(), 9, 31);
+                endOfDST.setDate(31 - endOfDST.getDay());
+                const madridOffset = (dateObj >= startOfDST && dateObj < endOfDST) ? 2 : 1;
+                dateObj.setHours(dateObj.getUTCHours() + madridOffset);
+                scheduledHour = ("0" + dateObj.getHours()).slice(-2) + ":" + ("0" + dateObj.getMinutes()).slice(-2);
+            }
+            return { name: auto.name, status: 'Scheduled', scheduledTime: scheduledTime, scheduledHour: scheduledHour };
+        });
+    }
+
+    function generateCalendar() {
+        const year = calendarYearSelect.value;
+        calendarGrid.innerHTML = "";
+        const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        const days = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sa", "Do"];
+        for (let i = 0; i < 12; i++) {
+            const monthDiv = document.createElement("div");
+            monthDiv.classList.add("calendar-month");
+            monthDiv.innerHTML = `<h3>${months[i]} ${year}</h3>`;
+            const table = document.createElement("table");
+            const thead = document.createElement("thead");
+            const tbody = document.createElement("tbody");
+            const headRow = document.createElement("tr");
+            days.forEach(day => {
+                const th = document.createElement("th");
+                th.innerText = day;
+                headRow.appendChild(th);
+            });
+            thead.appendChild(headRow);
+            let firstDay = new Date(year, i, 1).getDay();
+            firstDay = (firstDay === 0) ? 6 : firstDay - 1;
+            const totalDays = new Date(year, i + 1, 0).getDate();
+            let row = document.createElement("tr");
+            for (let j = 0; j < firstDay; j++) { row.appendChild(document.createElement("td")); }
+            for (let day = 1; day <= totalDays; day++) {
+                const cell = document.createElement("td");
+                cell.innerText = day;
+                const currentDate = `${year}-${String(i + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                cell.dataset.date = currentDate;
+                const hasAutomation = allAutomations.some(auto => auto.scheduledTime === currentDate);
+                if (hasAutomation) cell.classList.add("has-automation");
+                cell.addEventListener("click", () => {
+                    document.querySelectorAll('.calendar-month td.selected').forEach(c => c.classList.remove('selected'));
+                    cell.classList.add('selected');
+                    filterAutomationsForDay(cell.dataset.date);
+                });
+                const dayOfWeek = (firstDay + day - 1) % 7;
+                if (dayOfWeek === 5 || dayOfWeek === 6) { cell.classList.add("weekend"); }
+                row.appendChild(cell);
+                if ((firstDay + day) % 7 === 0) {
+                    tbody.appendChild(row);
+                    row = document.createElement("tr");
+                }
+            }
+            tbody.appendChild(row);
+            table.appendChild(thead);
+            table.appendChild(tbody);
+            monthDiv.appendChild(table);
+            calendarGrid.appendChild(monthDiv);
+        }
+    }
+    
+    function filterAutomationsForDay(date) {
+        automationList.innerHTML = '';
+        const filtered = allAutomations
+            .filter(auto => auto.scheduledTime === date)
+            .sort((a,b) => a.scheduledHour.localeCompare(b.scheduledHour));
+        if (filtered.length > 0) {
+            filtered.forEach(auto => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'automation-item';
+                itemDiv.innerHTML = `<div class="automation-name">${auto.name}</div><div class="automation-details">${auto.status} - ${auto.scheduledHour}</div>`;
+                automationList.appendChild(itemDiv);
+            });
+        } else {
+            automationList.innerHTML = "<p>No hay automatizaciones de Journey programadas para este día.</p>";
+        }
+    }
+
+    function populateCalendarYearSelect() {
+        const currentYear = new Date().getFullYear();
+        if(calendarYearSelect.options.length === 0) {
+            for (let i = currentYear - 5; i <= currentYear + 5; i++) {
+                const option = new Option(i, i);
+                calendarYearSelect.appendChild(option);
+            }
+        }
+        calendarYearSelect.value = currentYear;
+        generateCalendar();
+    }
+    
+    // ==========================================================
+    // --- LÓGICA DE INICIALIZACIÓN Y EVENT LISTENERS ---
+    // ==========================================================
+    
     document.querySelectorAll('.back-button').forEach(button => {
         button.addEventListener('click', () => {
             mainMenu.style.display = 'flex';
@@ -642,13 +886,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 case 'createFields': macroCreateFields(); break;
                 case 'getFields': macroGetFields(); break;
                 case 'createDE': macroCreateDE(); break;
+                case 'viewCalendar': macroViewCalendar(); break;
                 default:
                     logMessage(`Función no implementada: ${macroType}`);
                     break;
             }
         });
     });
-
+    
     toggleLogBtn.addEventListener('click', () => {
         const isCollapsed = appContainer.classList.toggle('log-collapsed');
         localStorage.setItem('logCollapsedState', isCollapsed);
@@ -681,35 +926,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
     savedConfigsSelect.addEventListener('change', (e) => loadAndSyncClientConfig(e.target.value));
     sidebarClientSelect.addEventListener('change', (e) => loadAndSyncClientConfig(e.target.value));
-    
     authUriInput.addEventListener('blur', () => {
         if (!authUriInput.value.trim()) return;
         authUriInput.value = authUriInput.value.split('/v2/token').join('').replace(/\/+$/, '') + '/v2/token';
     });
-
     deNameInput.addEventListener('input', () => {
         deExternalKeyInput.value = deNameInput.value.replace(/\s+/g, '_') + '_CK';
     });
-    
     isSendableCheckbox.addEventListener('change', handleSendableChange);
     subscriberKeyFieldSelect.addEventListener('change', () => {
         const selectedOption = subscriberKeyFieldSelect.options[subscriberKeyFieldSelect.selectedIndex];
         subscriberKeyTypeInput.value = (selectedOption && selectedOption.dataset.type) ? selectedOption.dataset.type : '';
     });
-
     createDummyFieldsBtn.addEventListener('click', createDummyFields);
     clearFieldsBtn.addEventListener('click', clearFieldsTable);
     addFieldBtn.addEventListener('click', () => addNewField(true));
-
     fieldsTableBody.addEventListener('click', (e) => {
         const deleteButton = e.target.closest('.delete-row-btn');
         const targetRow = e.target.closest('tr');
         if (deleteButton) {
             observer.disconnect();
             const rowToDelete = deleteButton.closest('tr');
-            if (rowToDelete === selectedRow) {
-                selectedRow = null;
-            }
+            if (rowToDelete === selectedRow) { selectedRow = null; }
             rowToDelete.remove();
             updateSubscriberKeyFieldOptions();
             observer.observe(fieldsTableBody, observerConfig);
@@ -721,19 +959,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-
     document.getElementById('moveUp').addEventListener('click', () => {
-      if (selectedRow && selectedRow.previousElementSibling) {
-        selectedRow.parentNode.insertBefore(selectedRow, selectedRow.previousElementSibling);
-      }
+      if (selectedRow && selectedRow.previousElementSibling) { selectedRow.parentNode.insertBefore(selectedRow, selectedRow.previousElementSibling); }
     });
     document.getElementById('moveDown').addEventListener('click', () => {
-      if (selectedRow && selectedRow.nextElementSibling) {
-        selectedRow.parentNode.insertBefore(selectedRow.nextElementSibling, selectedRow);
-      }
+      if (selectedRow && selectedRow.nextElementSibling) { selectedRow.parentNode.insertBefore(selectedRow.nextElementSibling, selectedRow); }
     });
 
-    // Lógica del Modal de Importación
     function closeImportModal() {
         importModal.style.display = 'none';
         pasteDataArea.value = '';
@@ -741,19 +973,12 @@ document.addEventListener('DOMContentLoaded', function() {
         customDelimiterInput.classList.add('hidden');
         customDelimiterInput.value = '';
     }
-
     importFieldsBtn.addEventListener('click', () => {
         importModal.style.display = 'flex';
         pasteDataArea.focus();
     });
-
     cancelPasteBtn.addEventListener('click', closeImportModal);
-    importModal.addEventListener('click', (e) => {
-        if (e.target === importModal) {
-            closeImportModal();
-        }
-    });
-
+    importModal.addEventListener('click', (e) => { if (e.target === importModal) { closeImportModal(); } });
     delimiterSelect.addEventListener('change', () => {
         if(delimiterSelect.value === 'other') {
             customDelimiterInput.classList.remove('hidden');
@@ -762,68 +987,78 @@ document.addEventListener('DOMContentLoaded', function() {
             customDelimiterInput.classList.add('hidden');
         }
     });
-
     processPasteBtn.addEventListener('click', () => {
         const text = pasteDataArea.value.trim();
         if (!text) return;
-
-        let delimiter = '';
+        let delimiter;
         const selectedDelimiter = delimiterSelect.value;
-
         if (selectedDelimiter === 'tab') delimiter = '\t';
         else if (selectedDelimiter === 'comma') delimiter = ',';
         else if (selectedDelimiter === 'semicolon') delimiter = ';';
         else if (selectedDelimiter === 'other') {
             delimiter = customDelimiterInput.value;
-            if (!delimiter) {
-                alert('Por favor, introduce un carácter en el campo "Otro" como separador.');
-                return;
-            }
+            if (!delimiter) { alert('Por favor, introduce un carácter en el campo "Otro" como separador.'); return; }
         }
-
         const newFields = [];
         const lines = text.split('\n');
-
         lines.forEach(line => {
             if (!line.trim()) return;
             const columns = line.split(delimiter);
             const [name, type, length] = columns.map(c => c.trim());
-
-            if (name && type) {
-                newFields.push({ mc: name, type, len: length || '' });
-            }
+            if (name && type) { newFields.push({ mc: name, type, len: length || '' }); }
         });
-
         if (newFields.length > 0) {
             observer.disconnect();
             const firstRow = fieldsTableBody.querySelector('tr');
-            if(firstRow && firstRow.textContent.trim() === '×'){
-                firstRow.remove();
-            }
-
-            newFields.forEach(fieldData => {
-                fieldsTableBody.appendChild(createTableRow(fieldData));
-            });
+            if(firstRow && firstRow.textContent.trim() === '×'){ firstRow.remove(); }
+            newFields.forEach(fieldData => { fieldsTableBody.appendChild(createTableRow(fieldData)); });
             updateSubscriberKeyFieldOptions();
             observer.observe(fieldsTableBody, observerConfig);
             logMessage(`${newFields.length} campos importados a la tabla.`);
         }
-        
         closeImportModal();
     });
     
-    // Lógica de las Pestañas de Documentación
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
             const tabId = button.getAttribute('data-tab');
-
             tabButtons.forEach(btn => btn.classList.remove('active'));
             tabContents.forEach(content => content.classList.remove('active'));
-
             button.classList.add('active');
             document.getElementById(tabId).classList.add('active');
         });
     });
+
+    collapsibleHeaders.forEach(header => {
+        header.addEventListener('click', () => {
+            const content = header.nextElementSibling;
+            const headerText = header.textContent.trim();
+            const isExpanded = header.classList.toggle('active');
+            if (isExpanded) {
+                content.style.maxHeight = content.scrollHeight + "px";
+            } else {
+                content.style.maxHeight = 0;
+            }
+            const collapsibleStates = JSON.parse(localStorage.getItem('collapsibleStates')) || {};
+            collapsibleStates[headerText] = isExpanded;
+            localStorage.setItem('collapsibleStates', JSON.stringify(collapsibleStates));
+        });
+    });
+
+    function initializeCollapsibleMenus() {
+        const collapsibleStates = JSON.parse(localStorage.getItem('collapsibleStates')) || {};
+        collapsibleHeaders.forEach(header => {
+            const headerText = header.textContent.trim();
+            if (collapsibleStates[headerText] === true) {
+                header.classList.add('active');
+                const content = header.nextElementSibling;
+                content.style.maxHeight = content.scrollHeight + "px";
+            }
+        });
+    }
+
+    calendarYearSelect.addEventListener('change', generateCalendar);
+    refreshAutomationsBtn.addEventListener('click', macroGetAutomations);
 
     function initializeApp() {
         if (localStorage.getItem('logCollapsedState') === 'true') {
@@ -838,6 +1073,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         clearFieldsTable();
         observer.observe(fieldsTableBody, observerConfig);
+        initializeCollapsibleMenus();
         logMessage("Aplicación lista. Esperando acciones...");
     }
     

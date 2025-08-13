@@ -8,7 +8,7 @@
 
 <div class="app-container">
   
-  <!-- COLUMNA IZQUIERDA: MACROS -->
+  <!-- COLUMNA IZQUIERDA: FUNCIONALIDADES -->
   <aside id="macros-sidebar">
 	<div class="sidebar-client-selector">
 	  <h2>Cliente</h2>
@@ -16,25 +16,32 @@
         <option value="">Ninguno seleccionado</option>
       </select>
 	</div>
-    <h2>Macros</h2>
+    <h2>Funcionalidades</h2>
     
-    <h3>Administración</h3>
-    <ul>
-      <li><a class="macro-item" data-macro="getToken">Recuperar Token</a></li>
-    </ul>
+    <div class="collapsible-group">
+        <h3 class="collapsible-header">Administración</h3>
+        <ul class="collapsible-content">
+          <li><a class="macro-item" data-macro="getToken">Recuperar Token</a></li>
+          <li><a class="macro-item" data-macro="viewCalendar">Ver Calendario</a></li>
+        </ul>
+    </div>
 
-    <h3>Data Extensions</h3>
-    <ul>
-      <li><a class="macro-item" data-macro="createDE">Crear Data Extension</a></li>
-    </ul>
-
-    <h3>Campos</h3>
-    <ul>
-      <li><a class="macro-item" data-macro="getFieldIds">Recuperar Ids</a></li>
-      <li><a class="macro-item" data-macro="deleteField">Borrar campo</a></li>
-      <li><a class="macro-item" data-macro="createFields">Crear campos</a></li>
-      <li><a class="macro-item" data-macro="getFields">Recuperar campos</a></li>
-    </ul>
+    <div class="collapsible-group">
+        <h3 class="collapsible-header">Data Extensions</h3>
+        <ul class="collapsible-content">
+          <li><a class="macro-item" data-macro="createDE">Crear Data Extension</a></li>
+        </ul>
+    </div>
+    
+    <div class="collapsible-group">
+        <h3 class="collapsible-header">Campos</h3>
+        <ul class="collapsible-content">
+          <li><a class="macro-item" data-macro="getFieldIds">Recuperar Ids</a></li>
+          <li><a class="macro-item" data-macro="deleteField">Borrar campo</a></li>
+          <li><a class="macro-item" data-macro="createFields">Crear campos</a></li>
+          <li><a class="macro-item" data-macro="getFields">Recuperar campos</a></li>
+        </ul>
+    </div>
   </aside>
 
   <!-- COLUMNA CENTRAL: CONTENIDO PRINCIPAL -->
@@ -45,7 +52,6 @@
       <div class="menu-group">
         <h3>General</h3>
         <div class="menu-buttons-container">
-          <!-- Modificado para llamar a la nueva sección -->
           <button class="menu-button" onclick="showSection('documentacion-section')">Documentación</button>
           <button class="menu-button" onclick="showSection('configuracion-apis-section')">Configuración de APIs</button>
         </div>
@@ -62,7 +68,7 @@
 
     </div>
 
-    <!-- SECCIÓN DE DOCUMENTACIÓN (REDISEÑADA) -->
+    <!-- SECCIÓN DE DOCUMENTACIÓN -->
     <div id="documentacion-section" class="section">
       <div class="section-header">
         <button class="back-button">← Atrás</button>
@@ -106,25 +112,49 @@
             <ul>
                 <li><strong>Error de autenticación:</strong> Revisa que el MID, Client ID y Client Secret sean correctos. Asegúrate de que la aplicación API creada en Marketing Cloud es de tipo "Server-to-Server".</li>
                 <li><strong>La DE se crea en la carpeta raíz:</strong> Si quieres crear la DE en una carpeta específica, debes proporcionar el <strong>ID de la Carpeta</strong> (un número), no su nombre. Puedes encontrarlo en la URL al navegar a esa carpeta en Marketing Cloud.</li>
-                <li><strong>DE Sendable sin Subscriber Key:</strong> Si marcas una DE como "Sendable", es <strong>obligatorio</strong> seleccionar un campo que actúe como Subscriber Key y que este campo esté marcado como "Obligatorio" en la tabla de campos.</li>
+                <li><strong>DE Sendable sin Subscriber Key:</strong> Si marcas una DE como "Sendable", es <strong>obligatorio</strong> seleccionar un campo que actuará como Subscriber Key y que este campo esté marcado como "Obligatorio" en la tabla de campos.</li>
                 <li><strong>Error "DE ya existe":</strong> Si intentas crear una DE con una External Key que ya existe en la Business Unit, la API devolverá un error.</li>
                 <li><strong>Acceso a Business Units Hijas:</strong> La aplicación API debe crearse en la BU padre (Enterprise) y se le deben dar permisos explícitos para acceder a las BUs hijas que necesites.</li>
-                <li><strong>Error "Bad Request" con enlaces:</strong> Si pegas una URL en un campo de texto que contiene un "&", la API SOAP puede fallar. Reemplaza "&" por "&amp;amp;" para solucionarlo.</li>
+                <li><strong>Error "Bad Request" con enlaces:</strong> Si pegas una URL en un campo de texto que contiene un "&", la API SOAP puede fallar. Reemplaza <code>&</code> por <code>&amp;amp;</code> para solucionarlo.</li>
             </ul>
         </div>
 
         <div id="comentarios-adicionales" class="tab-content">
             <ul>
               <li><strong>Almacenamiento Local:</strong> Toda la configuración de tus clientes se guarda en el almacenamiento local de tu navegador. No se envía a ningún servidor externo. Si borras la caché de tu navegador o cambias de equipo, perderás esta información.</li>
-              <li><strong>Permisos de la Aplicación API:</strong> Para un funcionamiento completo, la aplicación API en Marketing Cloud necesita permisos de Lectura y Escritura para Data Extensions (`Data > Data Extensions > Read & Write`).</li>
+              <li><strong>Permisos de la Aplicación API:</strong> Para un funcionamiento completo, la aplicación API en Marketing Cloud necesita permisos de Lectura y Escritura para Data Extensions (<code>Data > Data Extensions > Read & Write</code>) y de Lectura para Automatizaciones (<code>Automations > Read</code>).</li>
               <li><strong>Creación vs. Actualización de Campos:</strong> La macro "Crear campos" es en realidad un "upsert". Esto significa que si un campo con el mismo nombre ya existe, actualizará sus propiedades. Si no existe, lo creará.</li>
               <li><strong>Tipos de Campo:</strong> Asegúrate de que los tipos de campo coinciden con los soportados por Marketing Cloud (Text, Number, Date, Boolean, EmailAddress, Phone, Locale, Decimal).</li>
-              <li><strong>Longitud en Decimales:</strong> Para campos de tipo "Decimal", la longitud debe especificarse como "total,decimales". Por ejemplo, `18,2` para un campo que admite hasta 18 dígitos, con 2 de ellos siendo decimales.</li>
+              <li><strong>Longitud en Decimales:</strong> Para campos de tipo "Decimal", la longitud debe especificarse como "total,decimales". Por ejemplo, <code>18,2</code> para un campo que admite hasta 18 dígitos, con 2 de ellos siendo decimales.</li>
             </ul>
         </div>
       </div>
     </div>
     
+    <!-- SECCIÓN DE CALENDARIO -->
+    <div id="calendario-section" class="section">
+        <div class="section-header">
+            <button class="back-button">← Atrás</button>
+             <div class="calendar-controls">
+                <label for="calendarYearSelect">Seleccionar año:</label>
+                <select id="calendarYearSelect"></select>
+                <button id="refreshAutomationsBtn" class="action-button">Refrescar Datos</button>
+            </div>
+        </div>
+        <h2>Calendario de Automatizaciones de Journeys</h2>
+        <div class="calendar-container">
+            <div id="calendar-main" class="calendar-main-view">
+                <div id="calendar-grid" class="calendar-grid"></div>
+            </div>
+            <div id="calendar-sidebar" class="calendar-sidebar">
+                <h3>Automatizaciones del día</h3>
+                <div id="automation-list">
+                    <p>Selecciona un día en el calendario o pulsa "Refrescar Datos" para empezar.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Sección de Configuración de APIs -->
     <div id="configuracion-apis-section" class="section config-section-container">
         <button class="back-button">← Atrás</button>

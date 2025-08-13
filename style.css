@@ -35,7 +35,7 @@ body {
 }
 
 /* ==========================================================
-   1. BARRA LATERAL IZQUIERDA (MACROS & CLIENTE)
+   1. BARRA LATERAL IZQUIERDA (FUNCIONALIDADES)
    ========================================================== */
 
 #macros-sidebar {
@@ -51,11 +51,37 @@ body {
   padding-bottom: 10px;
 }
 
-#macros-sidebar h3 {
+/* --- ESTILOS PARA MENÚS COLAPSABLES --- */
+.collapsible-header {
   color: #558ac7;
   margin-top: 20px;
   margin-bottom: 10px;
   font-size: 1.1em;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  user-select: none;
+}
+
+.collapsible-header::after {
+  content: '▶';
+  font-size: 0.7em;
+  transition: transform 0.3s ease;
+}
+
+.collapsible-header.active::after {
+  transform: rotate(90deg);
+}
+
+.collapsible-content {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-in-out;
 }
 
 .sidebar-client-selector {
@@ -71,12 +97,6 @@ body {
   border-radius: 4px;
   box-sizing: border-box;
   margin-top: 5px;
-}
-
-#macros-sidebar ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
 }
 
 #macros-sidebar .macro-item {
@@ -105,12 +125,27 @@ body {
   flex-direction: column;
 }
 
-/* --- Estilos del Menú Principal --- */
+/* --- Estilos del Menú Principal (Botones más pequeños) --- */
 .main-menu-container { display: flex; flex-direction: column; align-items: center; gap: 30px; width: 100%;}
 .menu-group { width: 90%; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
 .menu-group h3 { color: #558ac7; margin-top: 0; margin-bottom: 20px; text-align: center; border-bottom: 2px solid #e0e7ef; padding-bottom: 10px; }
-.menu-buttons-container { display: flex; justify-content: center; flex-wrap: wrap; gap: 20px; }
-.menu-button { background-color: #69a3db; color: #fff; border: none; border-radius: 10px;  padding: 15px; cursor: pointer; font-size: 1.1em; width: 180px; height: 100px; display: flex; justify-content: center; align-items: center; text-align: center; transition: background-color 0.3s; }
+.menu-buttons-container { display: flex; justify-content: center; flex-wrap: wrap; gap: 15px; }
+.menu-button { 
+  background-color: #69a3db; 
+  color: #fff; 
+  border: none; 
+  border-radius: 8px;  
+  padding: 12px 15px; 
+  cursor: pointer; 
+  font-size: 1em; 
+  width: 220px; 
+  height: 60px; 
+  display: flex; 
+  justify-content: center; 
+  align-items: center; 
+  text-align: center; 
+  transition: background-color 0.3s; 
+}
 .menu-button:hover { background-color: #558ac7; }
 
 /* --- Estilos de las Secciones Interiores --- */
@@ -302,7 +337,7 @@ td input[type="text"].cell-input {
    4. RESPONSIVE Y ESTILOS DE COMPONENTES
    ========================================================== */
 
-/* --- Estilos para Pestañas (NUEVO) --- */
+/* --- Estilos para Pestañas --- */
 .tabs-container {
   width: 100%;
 }
@@ -346,6 +381,12 @@ td input[type="text"].cell-input {
 .tab-content li {
   margin-bottom: 10px;
 }
+.tab-content code {
+  background-color: #e9ecef;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-family: monospace;
+}
 
 /* --- Estilos para Modal de Importación --- */
 .modal-overlay {
@@ -388,13 +429,11 @@ td input[type="text"].cell-input {
   font-family: monospace;
   margin-bottom: 15px;
 }
-
 .modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
 }
-
 .delimiter-selector {
     display: flex;
     align-items: center;
@@ -422,26 +461,105 @@ td input[type="text"].cell-input {
     display: none;
 }
 
+/* --- ESTILOS PARA LA SECCIÓN DE CALENDARIO --- */
+.calendar-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.calendar-container {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    flex-grow: 1; /* Ocupa el espacio disponible */
+}
+.calendar-main-view {
+    flex: 3;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+.calendar-sidebar {
+    flex: 1;
+    border-left: 1px solid #eee;
+    padding-left: 20px;
+    overflow-y: auto;
+}
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+.calendar-month {
+    margin-bottom: 20px;
+}
+.calendar-month h3 {
+    text-align: center;
+    color: #558ac7;
+    margin-top: 0;
+}
+.calendar-month table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+.calendar-month th, .calendar-month td {
+    width: 14.28%;
+    text-align: center;
+    padding: 6px;
+}
+.calendar-month th {
+    background-color: #69a3db;
+    color: white;
+}
+.calendar-month td {
+    border: 1px solid #ddd;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.calendar-month td.weekend { background-color: #f8f9fa; }
+.calendar-month td.has-automation { background-color: #a2d9ff; font-weight: bold; }
+.calendar-month td.selected { background-color: #558ac7; color: white; }
+.calendar-month td:hover { background-color: #e0e7ef; }
+
+#automation-list .automation-item {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+#automation-list .automation-name {
+    font-weight: bold;
+    word-break: break-all;
+}
+#automation-list .automation-details {
+    font-size: 0.9em;
+    color: #6c757d;
+}
+
+
 @media (max-width: 1024px) {
   .app-container {
     grid-template-columns: 1fr;
   }
-  
   #log-sidebar {
     height: auto;
     max-height: 500px;
   }
-
   .app-container.log-collapsed {
     grid-template-columns: 1fr;
   }
-
   .app-container.log-collapsed .log-header h2,
   .app-container.log-collapsed .log-block {
     display: flex;
   }
-
   #toggleLogBtn {
     display: none;
+  }
+  .calendar-container {
+    flex-direction: column;
   }
 }
