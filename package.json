@@ -1,0 +1,16 @@
+{
+  "name": "mc-api-desktop",
+  "version": "1.0.0",
+  "description": "Herramienta para interactuar con la API de Marketing Cloud",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-packager . MC-API-Helper --platform=win32 --arch=x64 --out=dist --overwrite"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^37.2.6" 
+  }
+}
