@@ -1,41 +1,67 @@
+/* ===================================================================
+   style.css
+   Hoja de estilos principal para la aplicación Marketing Cloud API Helper.
+   
+   ÍNDICE:
+   1. ESTILOS GLOBALES Y LAYOUT PRINCIPAL
+   2. BARRA LATERAL IZQUIERDA (FUNCIONALIDADES)
+   3. CONTENIDO PRINCIPAL (CENTRO)
+      3.1. Menú Principal
+      3.2. Secciones Interiores y Formularios
+      3.3. Estilos de Tablas y Campos
+   4. BARRA LATERAL DERECHA (LOG)
+   5. COMPONENTES REUTILIZABLES
+      5.1. Pestañas (Tabs)
+      5.2. Modal de Importación
+      5.3. Calendario
+   6. DISEÑO RESPONSIVE
+   =================================================================== */
+
+
 /* ==========================================================
-   GLOBAL & LAYOUT
+   1. ESTILOS GLOBALES Y LAYOUT PRINCIPAL
    ========================================================== */
 
 body {
   margin: 0;
   background-color: #f0f6fc;
   font-family: Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: inherit;
 }
 
 .app-container {
   display: grid;
-  grid-template-columns: 220px 1fr 360px; 
+  grid-template-columns: 220px 1fr 360px; /* Sidebar Izq | Contenido | Sidebar Der */
   gap: 20px;
   padding: 20px;
   min-height: 100vh;
-  box-sizing: border-box;
   transition: grid-template-columns 0.35s ease-in-out, opacity 0.2s ease-in-out;
 }
 
+/* Clase para bloquear la UI durante operaciones asíncronas */
 .app-container.is-updating {
-  pointer-events: none;
-  opacity: 0.6;
+  pointer-events: none; /* Deshabilita interacciones */
+  opacity: 0.6;        /* Indica visualmente que está ocupado */
 }
 .app-container.is-updating body {
-    cursor: wait;
+    cursor: wait; /* Cambia el cursor a modo de espera */
 }
 
+/* Estilo base para los paneles principales */
 #macros-sidebar, #main-content, #log-sidebar {
   background-color: #fff;
   border-radius: 10px;
   padding: 20px;
-  box-sizing: border-box;
   overflow: hidden; 
 }
 
+
 /* ==========================================================
-   1. BARRA LATERAL IZQUIERDA (FUNCIONALIDADES)
+   2. BARRA LATERAL IZQUIERDA (FUNCIONALIDADES)
    ========================================================== */
 
 #macros-sidebar {
@@ -51,39 +77,7 @@ body {
   padding-bottom: 10px;
 }
 
-/* --- ESTILOS PARA MENÚS COLAPSABLES --- */
-.collapsible-header {
-  color: #558ac7;
-  margin-top: 20px;
-  margin-bottom: 10px;
-  font-size: 1.1em;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 5px 0;
-  user-select: none;
-}
-
-.collapsible-header::after {
-  content: '▶';
-  font-size: 0.7em;
-  transition: transform 0.3s ease;
-}
-
-.collapsible-header.active::after {
-  transform: rotate(90deg);
-}
-
-.collapsible-content {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s ease-in-out;
-}
-
+/* --- Selector de Cliente en la Sidebar --- */
 .sidebar-client-selector {
   padding-bottom: 15px;
   border-bottom: 2px solid #f0f6fc;
@@ -95,10 +89,44 @@ body {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  box-sizing: border-box;
   margin-top: 5px;
 }
 
+/* --- Menús Colapsables --- */
+.collapsible-header {
+  color: #558ac7;
+  margin-top: 20px;
+  margin-bottom: 10px;
+  font-size: 1.1em;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  user-select: none; /* Evita seleccionar el texto del header */
+}
+
+/* Flecha indicadora */
+.collapsible-header::after {
+  content: '▶';
+  font-size: 0.7em;
+  transition: transform 0.3s ease;
+}
+
+.collapsible-header.active::after {
+  transform: rotate(90deg); /* La flecha gira cuando está activo */
+}
+
+.collapsible-content {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 0; /* Colapsado por defecto */
+  overflow: hidden;
+  transition: max-height 0.3s ease-in-out;
+}
+
+/* --- Elementos del Menú (Macros) --- */
 #macros-sidebar .macro-item {
   display: block;
   padding: 10px 12px;
@@ -116,8 +144,9 @@ body {
   cursor: pointer;
 }
 
+
 /* ==========================================================
-   2. CONTENIDO PRINCIPAL (CENTRO)
+   3. CONTENIDO PRINCIPAL (CENTRO)
    ========================================================== */
 
 #main-content {
@@ -125,11 +154,40 @@ body {
   flex-direction: column;
 }
 
-/* --- Estilos del Menú Principal (Botones más pequeños) --- */
-.main-menu-container { display: flex; flex-direction: column; align-items: center; gap: 30px; width: 100%;}
-.menu-group { width: 90%; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
-.menu-group h3 { color: #558ac7; margin-top: 0; margin-bottom: 20px; text-align: center; border-bottom: 2px solid #e0e7ef; padding-bottom: 10px; }
-.menu-buttons-container { display: flex; justify-content: center; flex-wrap: wrap; gap: 15px; }
+/* --- 3.1. Menú Principal --- */
+.main-menu-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+    width: 100%;
+}
+
+.menu-group {
+    width: 90%;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+.menu-group h3 {
+    color: #558ac7;
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-align: center;
+    border-bottom: 2px solid #e0e7ef;
+    padding-bottom: 10px;
+}
+
+.menu-buttons-container {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
 .menu-button { 
   background-color: #69a3db; 
   color: #fff; 
@@ -148,44 +206,146 @@ body {
 }
 .menu-button:hover { background-color: #558ac7; }
 
-/* --- Estilos de las Secciones Interiores --- */
-.section { display: none; width: 100%; flex-direction: column; }
-.section h2 { color: #69a3db; text-align: center; margin-top: 0; margin-bottom: 20px; }
-.back-button { background-color: #6c757d; color: #fff; border: none; border-radius: 5px; padding: 10px 15px; cursor: pointer; align-self: flex-start; }
+/* --- 3.2. Secciones Interiores y Formularios --- */
+.section {
+    display: none; /* Ocultas por defecto, se muestran con JS */
+    width: 100%;
+    flex-direction: column;
+}
 
-/* --- Estilos para Secciones con Formularios --- */
-.config-section-container .config-block {  background-color: #f8f9fa;  border: 1px solid #e9ecef;  border-radius: 8px;  padding: 20px;  margin-bottom: 20px;  }
+.section h2 {
+    color: #69a3db;
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+/* Contenedor general para secciones con configuración */
+.config-section-container .config-block {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
 .config-section-container h3 { color: #558ac7; margin-top: 0; }
 .config-section-container .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
 .config-section-container label { font-weight: bold; margin-bottom: 5px; color: #333; }
-.config-section-container input[type="text"], .config-section-container input[type="password"], .config-section-container select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+.config-section-container input[type="text"],
+.config-section-container input[type="password"],
+.config-section-container select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
 .config-section-container input[disabled] { background-color: #e9ecef; cursor: not-allowed; }
-.config-section-container .checkbox-group { flex-direction: row; align-items: center; justify-content: flex-start; }
-.config-section-container .checkbox-group label { font-weight: bold; margin-bottom: 0; margin-right: 8px; }
+
+/* Grupo de Checkbox */
+.config-section-container .checkbox-group {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+}
+.config-section-container .checkbox-group label { margin: 0 8px 0 0; }
 .config-section-container .checkbox-group input[type="checkbox"] { width: auto; }
-.client-management { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+
+/* Contenedor para gestión de clientes (guardar/borrar) */
+.client-management {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
 .client-management input, .client-management select { flex-grow: 1; }
-.client-management button { background-color: #69a3db; color: #fff; border: none;  border-radius: 5px;  padding: 10px 15px;  cursor: pointer; }
+.client-management button {
+    background-color: #69a3db;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 15px;
+    cursor: pointer;
+}
 .client-management .delete-btn { background-color: #dc3545; }
 .info-text { font-size: 0.9em; color: #6c757d; text-align: center; margin-top: 20px; }
 
-/* --- Estilos de la Sección de Campos --- */
-.section-header { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 20px; }
-.section-header .back-button { margin-bottom: 0; }
-.header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-.action-button { background-color: #69a3db; color: #fff; border: none; border-radius: 5px; padding: 10px 15px; cursor: pointer; transition: background-color 0.2s; }
-.action-button:hover { background-color: #558ac7; }
-.action-button.delete-btn { background-color: #6c757d; }
-.action-button.delete-btn:hover { background-color: #5a6268; }
-.table-container { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; overflow-x: auto; margin-top: 20px; padding-right: 40px; }
-table { border-collapse: collapse; width: 100%; }
-th, td { border: 1px solid #b9d4e7; padding: 8px; text-align: center; }
-th { background-color: #69a3db; color: #fff; position: sticky; top: 0; z-index: 2; }
-tr.selected { background-color: #c5dce6; }
-.control-buttons { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-left: 15px; }
-.control-buttons button { width: 100px; background-color: #69a3db; color: #fff; border: none; border-radius: 5px; padding: 8px; cursor: pointer; }
-.editable { outline: none; border-bottom: 1px dashed #ccc; }
 
+/* --- 3.3. Estilos de Tablas y Campos --- */
+
+/* Cabecera de sección con botón de atrás y acciones */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.action-button, .back-button {
+    background-color: #69a3db;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.action-button:hover { background-color: #558ac7; }
+.back-button { background-color: #6c757d; }
+.back-button:hover { background-color: #5a6268; }
+
+.action-button.delete-btn { background-color: #dc3545; }
+.action-button.delete-btn:hover { background-color: #c82333; }
+
+/* Contenedor de la tabla principal y sus botones de control */
+.table-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    overflow-x: auto;
+    margin-top: 20px;
+    padding-right: 40px; /* Espacio para el botón de borrar fila */
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th, td {
+    border: 1px solid #b9d4e7;
+    padding: 8px;
+    text-align: center;
+    position: relative; /* Para posicionar el botón de borrado */
+}
+
+th {
+    background-color: #69a3db;
+    color: #fff;
+    position: sticky; /* Cabecera fija al hacer scroll */
+    top: 0;
+    z-index: 2;
+}
+
+tr.selected { background-color: #c5dce6; }
+
+/* Celda editable */
+.editable {
+    outline: none;
+    border-bottom: 1px dashed #ccc;
+}
+
+/* Input dentro de una celda */
 td input[type="text"].cell-input {
   width: 95%;
   box-sizing: border-box; 
@@ -195,10 +355,25 @@ td input[type="text"].cell-input {
   padding: 4px;
 }
 
-#myTable tbody tr {
-  position: relative;
+/* Botones para subir/bajar filas */
+.control-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-left: 15px;
+}
+.control-buttons button {
+    width: 100px;
+    background-color: #69a3db;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 8px;
+    cursor: pointer;
 }
 
+/* Botón para eliminar una fila (aparece al seleccionar) */
 .delete-row-btn {
   position: absolute;
   right: -35px;
@@ -214,12 +389,12 @@ td input[type="text"].cell-input {
   font-weight: bold;
   cursor: pointer;
   transition: all 0.2s;
-  opacity: 0;
+  opacity: 0; /* Oculto por defecto */
   pointer-events: none;
 }
 
 #myTable tbody tr.selected .delete-row-btn {
-  opacity: 1;
+  opacity: 1; /* Visible en la fila seleccionada */
   pointer-events: auto;
 }
 
@@ -230,14 +405,15 @@ td input[type="text"].cell-input {
   transform: translateY(-50%) scale(1.1);
 }
 
+
 /* ==========================================================
-   3. BARRA LATERAL DERECHA (LOG)
+   4. BARRA LATERAL DERECHA (LOG)
    ========================================================== */
 
 #log-sidebar {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 40px);
+  height: calc(100vh - 40px); /* Ajusta la altura al viewport */
 }
 
 .log-header {
@@ -253,6 +429,7 @@ td input[type="text"].cell-input {
   border-bottom: none; 
 }
 
+/* Botón para colapsar/expandir el log */
 #toggleLogBtn {
   background: transparent;
   border: none;
@@ -261,10 +438,10 @@ td input[type="text"].cell-input {
   height: 28px;
   cursor: pointer;
   padding: 0;
-  flex-shrink: 0;
   position: relative;
 }
 
+/* Flecha del botón de colapso */
 #toggleLogBtn::after {
   content: '';
   display: inline-block;
@@ -276,8 +453,14 @@ td input[type="text"].cell-input {
   position: absolute;
   top: 8px;
   left: 6px;
+  transform: rotate(-45deg); /* Flecha apuntando a la derecha */
 }
 
+#toggleLogBtn:hover::after {
+  border-color: #dc3545;
+}
+
+/* Bloques de contenido del log */
 .log-block {
   margin-top: 15px;
   display: flex;
@@ -285,13 +468,9 @@ td input[type="text"].cell-input {
   min-height: 0;
 }
 
-#log-message-block {
-  flex: 0 1 25%;
-}
+#log-message-block { flex: 0 1 25%; }
 #log-request-block,
-#log-response-block {
-  flex: 1 1 37.5%;
-}
+#log-response-block { flex: 1 1 37.5%; }
 
 .log-block h4 {
   margin: 0 0 8px 0;
@@ -311,33 +490,28 @@ td input[type="text"].cell-input {
   height: 100%;
 }
 
-/* --- Lógica de Colapso para el Log (con Flechas) --- */
-#toggleLogBtn::after {
-  transform: rotate(-45deg);
-}
-#toggleLogBtn:hover::after {
-  border-color: #dc3545;
-}
+/* Lógica de colapso para el Log */
 .app-container.log-collapsed {
-  grid-template-columns: 220px 1fr 65px;
+  grid-template-columns: 220px 1fr 65px; /* Reduce la columna del log */
 }
 .app-container.log-collapsed .log-header h2,
 .app-container.log-collapsed .log-block {
-  display: none;
+  display: none; /* Oculta el contenido del log */
 }
 .app-container.log-collapsed #toggleLogBtn::after {
-  transform: rotate(135deg);
+  transform: rotate(135deg); /* Flecha apuntando a la izquierda */
   left: 10px;
 }
 .app-container.log-collapsed #toggleLogBtn:hover::after {
-  border-color: #28a745;
+  border-color: #28a745; /* Verde al pasar el ratón para indicar "expandir" */
 }
 
+
 /* ==========================================================
-   4. RESPONSIVE Y ESTILOS DE COMPONENTES
+   5. COMPONENTES REUTILIZABLES
    ========================================================== */
 
-/* --- Estilos para Pestañas --- */
+/* --- 5.1. Pestañas (Tabs) --- */
 .tabs-container {
   width: 100%;
 }
@@ -371,16 +545,9 @@ td input[type="text"].cell-input {
 .tab-content.active {
   display: block;
 }
-.tab-content h3 {
-  color: #558ac7;
-  margin-top: 0;
-}
-.tab-content ul, .tab-content ol {
-  padding-left: 20px;
-}
-.tab-content li {
-  margin-bottom: 10px;
-}
+.tab-content h3 { color: #558ac7; margin-top: 0; }
+.tab-content ul, .tab-content ol { padding-left: 20px; }
+.tab-content li { margin-bottom: 10px; }
 .tab-content code {
   background-color: #e9ecef;
   padding: 2px 5px;
@@ -388,41 +555,31 @@ td input[type="text"].cell-input {
   font-family: monospace;
 }
 
-/* --- Estilos para Modal de Importación --- */
+/* --- 5.2. Modal de Importación --- */
 .modal-overlay {
-  display: none;
+  display: none; /* Oculto por defecto */
   position: fixed;
   z-index: 1000;
   left: 0;
   top: 0;
   width: 100%;
   height: 100%;
-  overflow: auto;
-  background-color: rgba(0,0,0,0.5);
+  background-color: rgba(0,0,0,0.5); /* Fondo oscuro semitransparente */
   justify-content: center;
   align-items: center;
 }
 .modal-content {
   background-color: #fefefe;
   padding: 20px;
-  border: 1px solid #888;
   border-radius: 10px;
   width: 80%;
   max-width: 500px;
   box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
-.modal-content h3 {
-  margin-top: 0;
-  color: #558ac7;
-}
-.modal-content p {
-  font-size: 0.9em;
-  line-height: 1.4;
-  margin-bottom: 15px;
-}
+.modal-content h3 { margin-top: 0; color: #558ac7; }
+.modal-content p { font-size: 0.9em; line-height: 1.4; margin-bottom: 15px; }
 .modal-content textarea {
   width: 100%;
-  box-sizing: border-box;
   padding: 8px;
   border-radius: 4px;
   border: 1px solid #ccc;
@@ -434,6 +591,8 @@ td input[type="text"].cell-input {
   justify-content: flex-end;
   gap: 10px;
 }
+
+/* Selector de delimitador en el modal */
 .delimiter-selector {
     display: flex;
     align-items: center;
@@ -441,27 +600,17 @@ td input[type="text"].cell-input {
     margin-bottom: 15px;
     flex-wrap: wrap;
 }
-.delimiter-selector label {
-    font-weight: bold;
-    color: #333;
-}
-.delimiter-selector select {
+.delimiter-selector label { font-weight: bold; color: #333; }
+.delimiter-selector select, .delimiter-selector input {
     padding: 6px;
     border-radius: 4px;
     border: 1px solid #ccc;
 }
-.delimiter-selector input {
-    padding: 6px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    width: 40px;
-    text-align: center;
-}
-.hidden {
-    display: none;
-}
+.delimiter-selector input { width: 40px; text-align: center; }
+.hidden { display: none; }
 
-/* --- ESTILOS PARA LA SECCIÓN DE CALENDARIO --- */
+
+/* --- 5.3. Calendario --- */
 .calendar-controls {
     display: flex;
     align-items: center;
@@ -469,7 +618,6 @@ td input[type="text"].cell-input {
 }
 .calendar-container {
     display: flex;
-    flex-direction: row;
     gap: 20px;
     width: 100%;
     height: 100%;
@@ -486,7 +634,7 @@ td input[type="text"].cell-input {
     border-left: 1px solid #eee;
     padding-left: 20px;
     overflow-y: auto;
-    /* --- MEJORA DE USABILIDAD --- */
+    /* Mejora de usabilidad: la barra lateral se queda fija al hacer scroll */
     position: sticky;
     top: 0;
     align-self: flex-start; /* Necesario para que sticky funcione en un contenedor flex */
@@ -497,28 +645,11 @@ td input[type="text"].cell-input {
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
 }
-.calendar-month {
-    margin-bottom: 20px;
-}
-.calendar-month h3 {
-    text-align: center;
-    color: #558ac7;
-    margin-top: 0;
-}
-.calendar-month table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-}
-.calendar-month th, .calendar-month td {
-    width: 14.28%;
-    text-align: center;
-    padding: 6px;
-}
-.calendar-month th {
-    background-color: #69a3db;
-    color: white;
-}
+.calendar-month { margin-bottom: 20px; }
+.calendar-month h3 { text-align: center; color: #558ac7; margin-top: 0; }
+.calendar-month table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.calendar-month th { background-color: #69a3db; color: white; }
+.calendar-month th, .calendar-month td { width: 14.28%; text-align: center; padding: 6px; }
 .calendar-month td {
     border: 1px solid #ddd;
     cursor: pointer;
@@ -529,6 +660,7 @@ td input[type="text"].cell-input {
 .calendar-month td.selected { background-color: #558ac7; color: white; }
 .calendar-month td:hover { background-color: #e0e7ef; }
 
+/* Lista de automatizaciones en la sidebar del calendario */
 #automation-list .automation-item {
     background-color: #f8f9fa;
     border: 1px solid #e9ecef;
@@ -536,40 +668,43 @@ td input[type="text"].cell-input {
     padding: 10px;
     margin-bottom: 10px;
 }
-#automation-list .automation-name {
-    font-weight: bold;
-    word-break: break-all;
-}
-#automation-list .automation-details {
-    font-size: 0.9em;
-    color: #6c757d;
-}
+#automation-list .automation-name { font-weight: bold; word-break: break-all; }
+#automation-list .automation-details { font-size: 0.9em; color: #6c757d; }
 
+
+/* ==========================================================
+   6. DISEÑO RESPONSIVE
+   ========================================================== */
 
 @media (max-width: 1024px) {
+  /* En pantallas más pequeñas, las columnas se apilan verticalmente */
   .app-container {
     grid-template-columns: 1fr;
   }
+
+  /* Ajustes para la barra de log */
   #log-sidebar {
     height: auto;
     max-height: 500px;
   }
   .app-container.log-collapsed {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr; /* Mantiene una sola columna */
   }
   .app-container.log-collapsed .log-header h2,
   .app-container.log-collapsed .log-block {
-    display: flex;
+    display: flex; /* En móvil no se colapsa realmente, solo se reordena */
   }
   #toggleLogBtn {
-    display: none;
+    display: none; /* Oculta el botón de colapso en pantallas pequeñas */
   }
+
+  /* Ajustes para el calendario */
   .calendar-container {
-    flex-direction: column;
+    flex-direction: column; /* Apila la vista principal y la sidebar */
   }
   .calendar-sidebar {
-    position: static; /* Desactiva el modo sticky en pantallas pequeñas */
+    position: static; /* Desactiva el modo sticky */
     height: auto;
-    max-height: 300px; /* Limita la altura en móvil */
+    max-height: 300px; /* Limita su altura */
   }
 }

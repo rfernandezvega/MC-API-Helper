@@ -1,23 +1,31 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Marketing Cloud API Helper</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>Marketing Cloud API Helper</title>
+  <!-- Enlaza la hoja de estilos CSS -->
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+<!-- Contenedor principal de la aplicación con layout de rejilla (grid) -->
 <div class="app-container">
   
-  <!-- COLUMNA IZQUIERDA: FUNCIONALIDADES -->
+  <!-- ========================================================== -->
+  <!-- START: BARRA LATERAL IZQUIERDA (FUNCIONALIDADES) -->
+  <!-- ========================================================== -->
   <aside id="macros-sidebar">
-	<div class="sidebar-client-selector">
-	  <h2>Cliente</h2>
+    <!-- Selector de Cliente -->
+    <div class="sidebar-client-selector">
+      <h2>Cliente</h2>
       <select id="sidebarClientSelect">
         <option value="">Ninguno seleccionado</option>
       </select>
-	</div>
+    </div>
+    
     <h2>Vistas</h2>
     
+    <!-- Menús colapsables para agrupar funcionalidades -->
     <div class="collapsible-group">
         <h3 class="collapsible-header">General</h3>
         <ul class="collapsible-content">
@@ -44,222 +52,87 @@
           <li><a class="macro-item" data-macro="buscadorOrigenes">Buscador de Orígenes</a></li>
         </ul>
     </div>
-
   </aside>
+  <!-- END: BARRA LATERAL IZQUIERDA -->
 
-  <!-- COLUMNA CENTRAL: CONTENIDO PRINCIPAL -->
+  <!-- ========================================================== -->
+  <!-- START: CONTENIDO PRINCIPAL (CENTRO) -->
+  <!-- ========================================================== -->
   <main id="main-content">
-    <!-- Menú Principal -->
+    
+    <!-- Pantalla de Bienvenida / Menú Principal -->
     <div id="main-menu" class="main-menu-container" style="display: flex;">
-      
       <div class="menu-group">
-        <h3>Panel principal</h3>
+        <h3>Panel Principal</h3>
         <div class="menu-buttons-container">
-          <p class="info-text">
-            Selecciona alguna de las funcionalidades del panel izquierdo.
+         <p class="info-text">
+            Bienvenido a Marketing Cloud API Helper.
          </p>
          <p class="info-text">
-            Para que funcione, recuerda haber seleccionado un cliente que tendrás que haber configurado previamente en "Configuración de APIs"
+            Para empezar, configura un cliente en "Configuración de APIs" y luego selecciónalo en el panel superior izquierdo.
          </p>
         </div>
       </div>
-      
     </div>
 
-    <!-- SECCIÓN DE DOCUMENTACIÓN -->
+    <!-- SECCIÓN: Documentación -->
     <div id="documentacion-section" class="section">
-      <div class="section-header">
-        <button class="back-button">← Atrás</button>
-      </div>
+      <div class="section-header"><button class="back-button">← Atrás</button></div>
       <h2>Documentación</h2>
-      
       <div class="tabs-container">
         <div class="tab-buttons">
-          <button class="tab-button active" data-tab="configuracion-principal">Configuración principal</button>
+          <button class="tab-button active" data-tab="configuracion-principal">Configuración Principal</button>
           <button class="tab-button" data-tab="guia-rapida">Guía Rápida</button>
           <button class="tab-button" data-tab="errores-comunes">Errores Comunes</button>
           <button class="tab-button" data-tab="comentarios-adicionales">Comentarios Adicionales</button>
         </div>
-      <div id="configuracion-principal" class="tab-content active">
-          <h3>Configuración principal</h3>
-
+        <!-- Contenido de las Pestañas -->
+        <div id="configuracion-principal" class="tab-content active">
+          <h3>Configuración Principal</h3>
           <ul>
-            <li>
-              <strong>Configurar un Cliente:</strong>
-              Ve a <em>Configuración de APIs</em>. Introduce un nombre para tu proyecto o cliente, 
-              rellena los datos de la aplicación de Marketing Cloud (MID, Auth URI, Client ID, etc.) y pulsa "Guardar". 
-              La configuración se guardará localmente.
-              <ul style="list-style-type: circle;">
-                <li>
-                  <strong>Almacenamiento Local:</strong> Toda la configuración de los clientes se guarda en el almacenamiento local del navegador. 
-                  No se envía a ningún servidor externo. Si borras la caché de tu navegador o cambias de equipo, perderás esta información.
-                </li>
-                <li>
-                  <strong>Recuperar Token:</strong> (Opcional) Puedes pulsar "Recuperar Token" en el menú superior de esta vista 
-                  para comprobar que las credenciales son correctas. La aplicación lo hará automáticamente cuando ejecutes otras funciones.
-                </li>
-              </ul>
-            </li>
-
-            <li>
-              <strong>Clientes:</strong> Puedes guardar varios clientes y cambiar entre ellos ya sea desde la lista de 
-              <em>Configuración de APIs</em> o en el panel izquierdo de <em>Clientes</em>.
-            </li>
+            <li><strong>Configurar un Cliente:</strong> Ve a <em>Configuración de APIs</em>. Introduce un nombre, rellena los datos de la app de MC (MID, Auth URI, etc.) y pulsa "Guardar".</li>
+            <li><strong>Almacenamiento Local:</strong> La configuración se guarda en tu navegador. Si borras la caché, se perderá.</li>
+            <li><strong>Selección de Cliente:</strong> Puedes guardar varias configuraciones y cambiar entre ellas usando los menús desplegables.</li>
           </ul>
         </div>
-
         <div id="guia-rapida" class="tab-content">
-          <h1>Data Extensions</h1>
-          <h3>Configuración de Data Extension</h3>
-          <ul>
-            <li>
-              <strong>Configurar la Data Extension:</strong>
-              Ve a <em>Configuración de Data Extension</em>. Define el nombre, descripción y carpeta. La external Key se generará automáticamente.
-            </li>
-            <li>
-              <strong>Vincular Subscriber Key:</strong>
-              Si la DE debe ser "Sendable", selecciona la casilla para habilitar la lista de selección de campo.
-              <ul style="list-style-type: circle;">
-                <li>
-                  <strong>Campos:</strong>
-                  La lista de selección para vincular el Subscriber Key muestra automáticamente los campos disponibles en la vista de <em>Campos</em>.
-                </li>
-              </ul>
-            </li>
-            <li>
-              <strong>Creación:</strong>
-              Pulsa en el botón <em>Crear Data Extension</em> para que se cree en la carpeta indicada. 
-              Revisa el panel derecho de Logs por si se ha devuelto algún tipo de error.
-            </li>
-          </ul>
-
-          <h3>Campos</h3>
-          <ul>
-            <li>Esta vista muestra una tabla para indicar los campos que deberá tener la Data Extension.</li>
-            <li>
-              <strong>Añadir Campos:</strong> Para que la tabla muestre campos hay varias formas.
-              <ul style="list-style-type: circle;">
-                <li>
-                  Usa <b>"Añadir Fila"</b> para añadir filas manualmente y poder configurar los campos. Los tipos de campo son:
-                  <ul style="list-style-type: square;">
-                    <li>Text</li>
-                    <li>Boolean</li>
-                    <li>Date</li>
-                    <li>Decimal</li>
-                    <li>Phone</li>
-                    <li>EmailAddress</li>
-                    <li>Locale</li>
-                    <li>Number</li>
-                  </ul>
-                </li>
-                <li>Usa <b>"Crear Campos Dummy"</b> para generar un ejemplo rápido de un campo por cada tipo.</li>
-                <li>Usa <b>"Importar..."</b> para pegar una lista de campos desde Excel o un CSV. Podrás seleccionar el separador que quieras.</li>
-              </ul>
-              <li>Usa <b>"Limpiar Campos"</b> para eliminar todos los campos de la tabla.</li>
-              <li>Usa <b>"Crear campos"</b> para crear los campos de la tabla en la Data Extension definida en <em>Gestión de Campos</em>.</li>
-              <li>Define qué campos son Primary Key (PK) u obligatorios.</li>
-              <li>
-                Seleccionando una fila, podrás:
-                <ul style="list-style-type: square;">
-                  <li>
-                    <strong>Ordenar:</strong> Con los botones <em>Subir</em> y <em>Bajar</em> podrás organizar los campos. 
-                    Esto es útil cuando tenemos una tabla que queremos dejar bien ordenada. 
-                    Con la funcionalidad de recuperar tablas, podremos descargarla, ordenar los campos y crearla de nuevo.
-                  </li>
-                  <li>
-                    <strong>Borrar:</strong> A la derecha de la fila seleccionada aparecerá un botón de borrado para eliminar la fila.
-                  </li>
-                </ul>
-              </li>             
-            </li>
-          </ul>
-
-          <h3>Gestión de Campos</h3>
-          <ul>
-            <li>Esta vista muestra un campo para indicar la DE sobre la que se quiere trabajar para eliminar campos o para crearlos.</li>
-            <li>Usa <b>"Recuperar campos"</b> para recuperar todos los campos de la tabla. Aparecerán en <em>Campos</em> y en la lista <em>Campo a eliminar</em> de esta vista.</li>
-            <li>
-              Usa <b>"Borrar campo"</b> para borrar el campo seleccionado en la lista.
-              Esto es especialmente útil para eliminar campos que se utilizan en <b>Data Extensions conectadas en un grupo de atributos</b>, ya que por interfaz no se puede hacer.
-            </li>
-          </ul>
-          
-          <h1>Funcionalidades</h1>
-          <h3>Calendario</h3>
-           <ul>
-            <li>
-              Pulsa en <strong>Refrescar datos</strong> para recuperar los automatismos que tienen actividades de lanzamiento de Journeys. Tardará un rato.
-            </li>
-            <li>
-              Si hay automatismos programados, aparecerán en la fecha correspondiente en el calendario.
-            </li>
-            <li>
-              Pulsando en la fecha, aparecerán los automatismos en el bloque de <em>Automatizaciones del día</em>.
-            </li>
-          </ul>
-
-          <h3>Búsqueda de Data Extension</h3>
-           <ul>
-            <li>
-              Selecciona por qué campo quieres realizar la búsqueda: <em>Nombre</em> o <em>Clave externa</em>
-            </li>
-            <li>
-              Rellenar el Nombre o la Clave externa y pulsa en <em>Buscar</em>
-            </li>
-            <li>
-              Si la encuentra, aparecerá la ruta en el panel de <em>Resultados</em>.
-            </li>            
-          </ul>
-           <h3>Validador de email</h3>
-           <ul>
-            <li>
-              Rellena el mail que quieres validar y pulsa en  <em>Validar Email</em>
-            </li>
-            <li>
-              En el panel de <em>Resultado de la Validación</em> se indicará si es válido o no para Marketing Cloud.
-            </li>            
-          </ul>
-          <h3>Buscador de origenes</h3>
-           <ul>
-            <li>
-              Esta funcionalidad busca qué actividades rellenan información en la Data Extension indicada. <b>Importante:</b> se busca por Nombre
-            </li>
-            <li>
-              En el panel de <em>Actividades Encontradas</em> se mostrarán las actividades (Queries o Imports) que la rellenan.
-            </li>            
-          </ul>
-          
+          <h3>Guía Rápida de Funcionalidades</h3>
+          <ol>
+              <li><b>Configuración de DE:</b> Define nombre, descripción, carpeta y si es enviable.</li>
+              <li><b>Campos:</b> Añade campos manualmente, con el botón "Dummy" o importando desde el portapapeles.</li>
+              <li><b>Crear DE / Campos:</b> Usa los botones "Crear Data Extension" o "Crear Campos" para ejecutar la acción.</li>
+              <li><b>Gestión de Campos:</b> Recupera o borra campos de una DE existente. Especialmente útil para campos en Attribute Groups.</li>
+              <li><b>Calendario:</b> Refresca los datos para ver las automatizaciones de Journeys programadas.</li>
+              <li><b>Búsqueda y Validación:</b> Encuentra la ruta de una DE o valida la sintaxis de un email.</li>
+              <li><b>Buscador de Orígenes:</b> Introduce el nombre de una DE para ver qué Queries o Imports la están rellenando.</li>
+          </ol>
         </div>
-
-        
         <div id="errores-comunes" class="tab-content">
+            <h3>Errores Comunes</h3>
             <ul>
-                <li><strong>Error de autenticación:</strong> Revisa que el MID, Client ID y Client Secret sean correctos. Asegúrate de que la aplicación API creada en Marketing Cloud es de tipo "Server-to-Server".</li>
-                <li><strong>La DE se crea en la carpeta raíz:</strong> Si quieres crear la DE en una carpeta específica, debes proporcionar el <strong>ID de la Carpeta</strong> (un número), no su nombre. Puedes encontrarlo en la URL al navegar a esa carpeta en Marketing Cloud.</li>
-                <li><strong>DE Sendable sin Subscriber Key:</strong> Si marcas una DE como "Sendable", es <strong>obligatorio</strong> seleccionar un campo que actuará como Subscriber Key y que este campo esté marcado como "Obligatorio" en la tabla de campos.</li>
-                <li><strong>Error "DE ya existe":</strong> Si intentas crear una DE con una External Key que ya existe en la Business Unit, la API devolverá un error.</li>
-                <li><strong>Acceso a Business Units Hijas:</strong> La aplicación API debe crearse en la BU padre (Enterprise) y se le deben dar permisos explícitos para acceder a las BUs hijas que necesites.</li>
-                <li><strong>Error "Bad Request" con enlaces:</strong> Si pegas una URL en un campo de texto que contiene un "&", la API SOAP puede fallar. Reemplaza <code>&</code> por <code>&amp;amp;</code> para solucionarlo.</li>
+                <li><strong>Error de autenticación:</strong> Revisa que el MID, Client ID y Client Secret sean correctos. La app API debe ser de tipo "Server-to-Server".</li>
+                <li><strong>La DE se crea en la raíz:</strong> Para carpetas, debes usar el <strong>ID de la Carpeta</strong> (un número), no su nombre.</li>
+                <li><strong>DE Sendable sin Subscriber Key:</strong> Es <strong>obligatorio</strong> seleccionar un campo como Subscriber Key y que este sea requerido.</li>
+                <li><strong>Error "Bad Request" con enlaces:</strong> Si pegas una URL en un campo con "&", reemplázalo por <code>&amp;amp;</code> en la tabla.</li>
             </ul>
         </div>
-
         <div id="comentarios-adicionales" class="tab-content">
+            <h3>Comentarios Adicionales</h3>
             <ul>
-              <li><strong>Permisos de la Aplicación API:</strong> Para un funcionamiento completo, la aplicación API en Marketing Cloud necesita permisos de Lectura y Escritura para Data Extensions (<code>Data > Data Extensions > Read & Write</code>), de Lectura para Automatizaciones (<code>Automations > Read</code>) y de Lectura para Email (<code>Email > Read</code>).</li>
-              <li><strong>Creación vs. Actualización de Campos:</strong> La macro "Crear campos" es en realidad un "upsert". Esto significa que si un campo con el mismo nombre ya existe, actualizará sus propiedades. Si no existe, lo creará.</li>
-              <li><strong>Tipos de Campo:</strong> Asegúrate de que los tipos de campo coinciden con los soportados por Marketing Cloud (Text, Number, Date, Boolean, EmailAddress, Phone, Locale, Decimal).</li>
-              <li><strong>Longitud en Decimales:</strong> Para campos de tipo "Decimal", la longitud debe especificarse como "total,decimales". Por ejemplo, <code>18,2</code> para un campo que admite hasta 18 dígitos, con 2 de ellos siendo decimales.</li>
+              <li><strong>Permisos de la App API:</strong> Asegúrate de que la aplicación en MC tiene permisos de Lectura y Escritura para Data Extensions, Automatizaciones y Email.</li>
+              <li><strong>"Crear campos" es un "upsert":</strong> Actualiza campos existentes o crea nuevos si no existen.</li>
+              <li><strong>Longitud en Decimales:</strong> Usa el formato "total,decimales", por ejemplo, <code>18,2</code>.</li>
             </ul>
         </div>
       </div>
     </div>
     
-    <!-- SECCIÓN DE CALENDARIO -->
+    <!-- SECCIÓN: Calendario de Automatizaciones -->
     <div id="calendario-section" class="section">
         <div class="section-header">
             <button class="back-button">← Atrás</button>
              <div class="calendar-controls">
-                <label for="calendarYearSelect">Seleccionar año:</label>
+                <label for="calendarYearSelect">Año:</label>
                 <select id="calendarYearSelect"></select>
                 <button id="refreshAutomationsBtn" class="action-button">Refrescar Datos</button>
             </div>
@@ -269,22 +142,20 @@
             <div id="calendar-main" class="calendar-main-view">
                 <div id="calendar-grid" class="calendar-grid"></div>
             </div>
-            <div id="calendar-sidebar" class="calendar-sidebar">
-                <h3>Automatizaciones del día</h3>
+            <aside id="calendar-sidebar" class="calendar-sidebar">
+                <h3>Automatizaciones del Día</h3>
                 <div id="automation-list">
-                    <p>Selecciona un día en el calendario o pulsa "Refrescar Datos" para empezar.</p>
+                    <p>Selecciona un día para ver los detalles.</p>
                 </div>
-            </div>
+            </aside>
         </div>
     </div>
 
-    <!-- Sección de Configuración de APIs -->
+    <!-- SECCIÓN: Configuración de APIs -->
     <div id="configuracion-apis-section" class="section config-section-container">
          <div class="section-header">
             <button class="back-button">← Atrás</button>
-            <div class="header-actions">
-                <button id="getTokenBtn" class="action-button">Recuperar Token</button>
-            </div>
+            <div class="header-actions"><button id="getTokenBtn" class="action-button">Recuperar Token</button></div>
         </div>
         <h2>Configuración de APIs</h2>
         <div class="client-management">
@@ -298,49 +169,42 @@
             <div class="form-group"><label for="businessUnit">Business Unit (MID)</label><input type="text" id="businessUnit"></div>
             <div class="form-group"><label for="authUri">Auth URI</label><input type="text" id="authUri"></div>
             <div class="form-group"><label for="clientId">Client ID</label><input type="text" id="clientId"></div>
-            <div class="form-group"><label for="clientSecret">Client Secret</label><input type="text" id="clientSecret"></div>
+            <div class="form-group"><label for="clientSecret">Client Secret</label><input type="password" id="clientSecret"></div>
             <div class="form-group"><label for="token">Token</label><input type="text" id="token" disabled></div>
             <div class="form-group"><label for="soapUri">SOAP URI</label><input type="text" id="soapUri" disabled></div>
             <div class="form-group"><label for="restUri">REST URI</label><input type="text" id="restUri" disabled></div>
         </div>
-        <p class="info-text">
-            La configuración se guardará localmente en tu navegador. No se almacena en ningún servidor externo.
-        </p>
+        <p class="info-text">La configuración se guarda localmente en tu navegador.</p>
     </div>
 
-    <!-- Sección de Configuración de Data Extension -->
+    <!-- SECCIÓN: Configuración de Data Extension -->
     <div id="configuracion-de-section" class="section config-section-container">
         <div class="section-header">
             <button class="back-button">← Atrás</button>
-            <div class="header-actions">
-                <button id="createDE" class="action-button">Crear Data Extension</button>
-            </div>
+            <div class="header-actions"><button id="createDE" class="action-button">Crear Data Extension</button></div>
         </div>
         <h2>Configuración de Data Extension</h2>
         <div class="config-block">
-            <h3>Configuración Base DE</h3>
+            <h3>Configuración Base</h3>
             <div class="form-group"><label for="deName">Nombre Data Extension</label><input type="text" id="deName"></div>
             <div class="form-group"><label for="deDescription">Descripción</label><input type="text" id="deDescription"></div>
             <div class="form-group"><label for="deExternalKey">External Key</label><input type="text" id="deExternalKey" disabled></div>
-            <div class="form-group"><label for="deFolder">Carpeta</label><input type="text" id="deFolder"></div>
+            <div class="form-group"><label for="deFolder">ID de Carpeta (Opcional)</label><input type="text" id="deFolder" placeholder="Ej: 12345"></div>
         </div>
         <div class="config-block">
             <h3>Configuración Sendable</h3>
             <div class="form-group checkbox-group">
-                <label for="isSendable">Sendable DE:</label>
-                <input type="checkbox" id="isSendable">
+                <label for="isSendable">Es Sendable:</label><input type="checkbox" id="isSendable">
             </div>
             <div class="form-group">
                 <label for="subscriberKeyField">Campo SubscriberKey</label>
-                <select id="subscriberKeyField" disabled>
-                    <option value="">-- Primero defina campos en la sección 'Campos' --</option>
-                </select>
+                <select id="subscriberKeyField" disabled><option value="">-- Defina campos en la sección 'Campos' --</option></select>
             </div>
             <div class="form-group"><label for="subscriberKeyType">Tipo Campo SubscriberKey</label><input type="text" id="subscriberKeyType" disabled></div>
         </div>
     </div>
     
-    <!-- Sección de Búsqueda de DE -->
+    <!-- SECCIÓN: Búsqueda de Data Extension -->
     <div id="busqueda-de-section" class="section config-section-container">
         <button class="back-button">← Atrás</button>
         <h2>Búsqueda de Data Extension</h2>
@@ -363,11 +227,11 @@
         </div>
         <div class="config-block">
             <h3>Resultados</h3>
-            <pre id="de-search-results">Los resultados de la búsqueda aparecerán aquí.</pre>
+            <pre id="de-search-results">La ruta de la Data Extension aparecerá aquí.</pre>
         </div>
     </div>
 
-    <!-- Sección de Validador de Email -->
+    <!-- SECCIÓN: Validador de Email -->
     <div id="email-validator-section" class="section config-section-container">
         <button class="back-button">← Atrás</button>
         <h2>Validador de Email</h2>
@@ -383,11 +247,11 @@
         </div>
         <div class="config-block">
             <h3>Resultado de la Validación</h3>
-            <pre id="email-validation-results">El resultado de la validación aparecerá aquí.</pre>
+            <pre id="email-validation-results">El resultado aparecerá aquí.</pre>
         </div>
     </div>
     
-    <!-- Sección de Buscador de Orígenes de Datos (NUEVA) -->
+    <!-- SECCIÓN: Buscador de Orígenes de Datos -->
     <div id="data-source-finder-section" class="section config-section-container">
         <button class="back-button">← Atrás</button>
         <h2>Buscador de Orígenes de Datos</h2>
@@ -407,39 +271,30 @@
                  <table id="data-sources-table">
                     <thead>
                         <tr>
-                            <th>Actividad</th>
-                            <th>Tipo</th>
-                            <th>Automatización</th>
-                            <th>Paso</th>
-                            <th>Acción</th>
-                            <th>Descripción / Query</th>
+                            <th>Actividad</th><th>Tipo</th><th>Automatización</th>
+                            <th>Paso</th><th>Acción</th><th>Descripción / Query</th>
                         </tr>
                     </thead>
-                    <tbody id="data-sources-tbody">
-                        <!-- Los resultados se insertarán aquí -->
-                    </tbody>
+                    <tbody id="data-sources-tbody"></tbody>
                 </table>
             </div>
         </div>
     </div>
 
-
-    <!-- Sección de Configuración de Gestión de Campos -->
+    <!-- SECCIÓN: Gestión de Campos -->
     <div id="configuracion-campos-section" class="section config-section-container">
         <div class="section-header">
             <button class="back-button">← Atrás</button>
             <div class="header-actions">
-                <button id="getFields" class="action-button">Recuperar campos</button>
-                <button id="deleteField" class="action-button">Borrar campo</button>
+                <button id="getFields" class="action-button">Recuperar Campos</button>
+                <button id="deleteField" class="action-button delete-btn">Borrar Campo</button>
             </div>
         </div>
-
         <h2>Gestión de Campos de Data Extension</h2>
-        
         <div class="config-block">
             <h3>Parámetros</h3>
-            <p class="info-text" style="text-align: left; margin-top: 0; margin-bottom: 15px;">
-                Introduce la External Key de la DE y pulsa "Recuperar Ids" o "Recuperar Campos" en el menú de la izquierda para poblar la lista.
+            <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+                Introduce la External Key de la DE sobre la que quieres operar.
             </p>
             <div class="form-group">
                 <label for="recExternalKey">External Key de la DE</label>
@@ -447,70 +302,73 @@
             </div>
             <div class="form-group">
                 <label for="targetFieldSelect">Campo a eliminar</label>
-                <select id="targetFieldSelect" disabled>
-                    <option value="">-- Pulsa "Recuperar Ids" para poblar la lista --</option>
-                </select>
+                <select id="targetFieldSelect" disabled><option value="">-- Pulsa "Recuperar Campos" para poblar --</option></select>
             </div>
         </div>
     </div>
 
-    <!-- Sección de Campos -->
+    <!-- SECCIÓN: Campos de la Data Extension -->
     <div id="campos-section" class="section">
         <div class="section-header">
             <button class="back-button">← Atrás</button>
             <div class="header-actions">
                 <button id="importFieldsBtn" class="action-button">Importar...</button>
                 <button id="addFieldBtn" class="action-button">Añadir Fila</button>
-                <button id="createFieldsBtn" class="action-button">Crear campos</button>
-                <button id="createDummyFieldsBtn" class="action-button">Crear Campos Dummy</button>                
-                <button id="clearFieldsBtn" class="action-button delete-btn">Limpiar Campos</button>
+                <button id="createFieldsBtn" class="action-button">Crear/Actualizar Campos</button>
+                <button id="createDummyFieldsBtn" class="action-button">Campos de Ejemplo</button>                
+                <button id="clearFieldsBtn" class="action-button delete-btn">Limpiar Tabla</button>
             </div>
         </div>
-        
         <h2>Campos de la Data Extension</h2>
         <div class="table-container">
           <table id="myTable">
             <thead>
-              <tr><th>Campo MC</th><th>Tipo Campo</th><th>Longitud</th><th>Default</th><th>PK</th><th>Obligatorio</th></tr>
+              <tr><th>Campo MC</th><th>Tipo Campo</th><th>Longitud</th><th>Default</th><th>PK</th><th>Requerido</th></tr>
             </thead>
-            <tbody></tbody>
+            <tbody><!-- Las filas se insertan aquí con JS --></tbody>
           </table>
           <div class="control-buttons">
-            <button id="moveUp">Subir</button>
-            <button id="moveDown">Bajar</button>
+            <button id="moveUp" title="Mover fila seleccionada hacia arriba">Subir</button>
+            <button id="moveDown" title="Mover fila seleccionada hacia abajo">Bajar</button>
           </div>
         </div>
     </div>
   </main> 
+  <!-- END: CONTENIDO PRINCIPAL -->
 
-  <!-- COLUMNA DERECHA: LOG -->
+  <!-- ========================================================== -->
+  <!-- START: BARRA LATERAL DERECHA (LOG) -->
+  <!-- ========================================================== -->
   <aside id="log-sidebar">
     <div class="log-header">
       <h2>Log de Eventos</h2>
-      <button id="toggleLogBtn" title="Colapsar Log"></button>
+      <button id="toggleLogBtn" title="Colapsar/Expandir Log"></button>
     </div>
     <div id="log-message-block" class="log-block">
       <h4>Mensajes</h4>
       <pre><code id="log-messages">Esperando acciones...</code></pre>
     </div>
     <div id="log-request-block" class="log-block">
-      <h4>Llamada</h4>
+      <h4>Llamada API</h4>
       <pre><code id="log-request"></code></pre>
     </div>
     <div id="log-response-block" class="log-block">
-      <h4>Respuesta</h4>
+      <h4>Respuesta API</h4>
       <pre><code id="log-response"></code></pre>
     </div>
   </aside>
+  <!-- END: BARRA LATERAL DERECHA -->
 
 </div>
+<!-- END: CONTENEDOR PRINCIPAL -->
 
-<!-- MODAL DE IMPORTACIÓN -->
+<!-- ========================================================== -->
+<!-- START: MODAL DE IMPORTACIÓN -->
+<!-- ========================================================== -->
 <div id="import-modal" class="modal-overlay">
     <div class="modal-content">
         <h3>Importar Campos desde Portapapeles</h3>
-        <p>Pega aquí los datos de tu Excel o CSV. Las columnas deben ser: <b>Nombre</b>, <b>Tipo</b> y <b>Longitud</b>.</p>
-        
+        <p>Pega aquí los datos. Las columnas deben ser: <b>Nombre</b>, <b>Tipo</b> y <b>Longitud</b> (opcional).</p>
         <div class="delimiter-selector">
             <label for="delimiter-select">Separador:</label>
             <select id="delimiter-select">
@@ -519,9 +377,8 @@
                 <option value="semicolon">Punto y coma (;)</option>
                 <option value="other">Otro...</option>
             </select>
-            <input type="text" id="custom-delimiter-input" class="hidden" maxlength="1" placeholder="Ej: |">
+            <input type="text" id="custom-delimiter-input" class="hidden" maxlength="1" placeholder="|">
         </div>
-        
         <textarea id="paste-data-area" rows="10" placeholder="Ciudad	Text	50&#10;Email	EmailAddress	254"></textarea>
         <div class="modal-actions">
             <button id="process-paste-btn" class="action-button">Añadir Campos</button>
@@ -529,7 +386,9 @@
         </div>
     </div>
 </div>
+<!-- END: MODAL DE IMPORTACIÓN -->
 
+<!-- Enlaza el fichero JavaScript al final del body para un rendimiento óptimo -->
 <script src="ui.js"></script>
 </body>
 </html>
