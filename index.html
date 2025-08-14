@@ -21,6 +21,8 @@
       <select id="sidebarClientSelect">
         <option value="">Ninguno seleccionado</option>
       </select>
+      <!-- INDICADOR DE ESTADO DE LOGIN (NUEVO) -->
+      <p id="login-status" class="login-status inactive">🔴 Sesión no iniciada</p>
     </div>
     
     <h2>Vistas</h2>
@@ -90,17 +92,18 @@
         <div id="configuracion-principal" class="tab-content active">
           <h3>Configuración Principal</h3>
           <ul>
-            <li><strong>Configurar un Cliente:</strong> Ve a <em>Configuración de APIs</em>. Introduce un nombre, rellena los datos de la app de MC (MID, Auth URI, etc.) y pulsa "Guardar".</li>
-            <li><strong>Almacenamiento Local:</strong> La configuración se guarda en tu navegador. Si borras la caché, se perderá.</li>
-            <li><strong>Selección de Cliente:</strong> Puedes guardar varias configuraciones y cambiar entre ellas usando los menús desplegables.</li>
+            <li><strong>Configurar un Cliente:</strong> Ve a <em>Configuración de APIs</em>. Introduce un nombre, rellena los datos de la app de MC (MID, Auth URI, etc.) y pulsa "Login / Guardar".</li>
+            <li><strong>Almacenamiento Local:</strong> La configuración (sin el Client Secret) se guarda en tu ordenador.</li>
+            <li><strong>Gestión de Sesión:</strong> El botón "Login" inicia la autenticación y guarda la configuración. El botón "Logout" cierra la sesión activa y elimina la configuración guardada.</li>
+            <li><strong>Estado de la Sesión:</strong> El indicador de color bajo el selector de cliente te informa si la sesión está activa o no.</li>
           </ul>
         </div>
         <div id="guia-rapida" class="tab-content">
           <h3>Guía Rápida de Funcionalidades</h3>
           <ol>
               <li><b>Configuración de DE:</b> Define nombre, descripción, carpeta y si es enviable.</li>
-              <li><b>Campos:</b> Añade campos manualmente, con el botón "Dummy" o importando desde el portapapeles.</li>
-              <li><b>Crear DE / Campos:</b> Usa los botones "Crear Data Extension" o "Crear Campos" para ejecutar la acción.</li>
+              <li><b>Campos:</b> Añade campos manualmente, con el botón de ejemplo o importando desde el portapapeles.</li>
+              <li><b>Crear DE / Campos:</b> Usa los botones "Crear Data Extension" o "Crear/Actualizar Campos" para ejecutar la acción.</li>
               <li><b>Gestión de Campos:</b> Recupera o borra campos de una DE existente. Especialmente útil para campos en Attribute Groups.</li>
               <li><b>Calendario:</b> Refresca los datos para ver las automatizaciones de Journeys programadas.</li>
               <li><b>Búsqueda y Validación:</b> Encuentra la ruta de una DE o valida la sintaxis de un email.</li>
@@ -127,7 +130,7 @@
       </div>
     </div>
     
-    <!-- SECCIÓN: Calendario de Automatizaciones -->
+    <!-- SECCIÓN: Calendario de Automatizaciones (CORREGIDO) -->
     <div id="calendario-section" class="section">
         <div class="section-header">
             <button class="back-button">← Atrás</button>
@@ -137,9 +140,9 @@
                 <button id="refreshAutomationsBtn" class="action-button">Refrescar Datos</button>
             </div>
         </div>
-        <h2>Calendario de Automatizaciones de Journeys</h2>
         <div class="calendar-container">
             <div id="calendar-main" class="calendar-main-view">
+                <h2>Calendario de Automatizaciones de Journeys</h2>
                 <div id="calendar-grid" class="calendar-grid"></div>
             </div>
             <aside id="calendar-sidebar" class="calendar-sidebar">
@@ -155,26 +158,27 @@
     <div id="configuracion-apis-section" class="section config-section-container">
          <div class="section-header">
             <button class="back-button">← Atrás</button>
-            <div class="header-actions"><button id="getTokenBtn" class="action-button">Recuperar Token</button></div>
+            <div class="header-actions">
+                <button id="loginBtn" class="action-button">Login / Guardar</button>
+                <button id="logoutBtn" class="action-button delete-btn">Logout / Borrar</button>
+            </div>            
         </div>
         <h2>Configuración de APIs</h2>
         <div class="client-management">
             <input type="text" id="clientName" placeholder="Nombre del Cliente">
             <select id="savedConfigs"></select>
-            <button id="saveConfig">Guardar</button>
-            <button id="deleteConfig" class="delete-btn">Borrar</button>
         </div>
         <div class="config-block">
             <h3>Datos Aplicación</h3>
             <div class="form-group"><label for="businessUnit">Business Unit (MID)</label><input type="text" id="businessUnit"></div>
             <div class="form-group"><label for="authUri">Auth URI</label><input type="text" id="authUri"></div>
             <div class="form-group"><label for="clientId">Client ID</label><input type="text" id="clientId"></div>
-            <div class="form-group"><label for="clientSecret">Client Secret</label><input type="password" id="clientSecret"></div>
+            <div class="form-group"><label for="clientSecret">Client Secret</label><input type="password" id="clientSecret" placeholder="Necesario para el primer login"></div>
             <div class="form-group"><label for="token">Token</label><input type="text" id="token" disabled></div>
             <div class="form-group"><label for="soapUri">SOAP URI</label><input type="text" id="soapUri" disabled></div>
             <div class="form-group"><label for="restUri">REST URI</label><input type="text" id="restUri" disabled></div>
         </div>
-        <p class="info-text">La configuración se guarda localmente en tu navegador.</p>
+        <p class="info-text">Usa 'Login / Guardar' para iniciar sesión y guardar la configuración. 'Logout / Borrar' elimina toda la información y la sesión. El Client Secret se usa para el login pero no se guarda en el almacenamiento local.</p>
     </div>
 
     <!-- SECCIÓN: Configuración de Data Extension -->
@@ -204,9 +208,11 @@
         </div>
     </div>
     
-    <!-- SECCIÓN: Búsqueda de Data Extension -->
+    <!-- SECCIÓN: Búsqueda de Data Extension (CORREGIDO) -->
     <div id="busqueda-de-section" class="section config-section-container">
-        <button class="back-button">← Atrás</button>
+        <div class="section-header">
+            <button class="back-button">← Atrás</button>
+        </div>
         <h2>Búsqueda de Data Extension</h2>
         <div class="config-block">
             <h3>Parámetros de Búsqueda</h3>
@@ -231,9 +237,11 @@
         </div>
     </div>
 
-    <!-- SECCIÓN: Validador de Email -->
+    <!-- SECCIÓN: Validador de Email (CORREGIDO) -->
     <div id="email-validator-section" class="section config-section-container">
-        <button class="back-button">← Atrás</button>
+        <div class="section-header">
+            <button class="back-button">← Atrás</button>
+        </div>
         <h2>Validador de Email</h2>
         <div class="config-block">
             <h3>Parámetros de Validación</h3>
@@ -251,9 +259,11 @@
         </div>
     </div>
     
-    <!-- SECCIÓN: Buscador de Orígenes de Datos -->
+    <!-- SECCIÓN: Buscador de Orígenes de Datos (CORREGIDO) -->
     <div id="data-source-finder-section" class="section config-section-container">
-        <button class="back-button">← Atrás</button>
+        <div class="section-header">
+            <button class="back-button">← Atrás</button>
+        </div>
         <h2>Buscador de Orígenes de Datos</h2>
         <div class="config-block">
             <h3>Parámetros de Búsqueda</h3>
@@ -325,7 +335,7 @@
             <thead>
               <tr><th>Campo MC</th><th>Tipo Campo</th><th>Longitud</th><th>Default</th><th>PK</th><th>Requerido</th></tr>
             </thead>
-            <tbody><!-- Las filas se insertan aquí con JS --></tbody>
+            <tbody></tbody>
           </table>
           <div class="control-buttons">
             <button id="moveUp" title="Mover fila seleccionada hacia arriba">Subir</button>

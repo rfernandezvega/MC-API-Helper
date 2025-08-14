@@ -14,6 +14,7 @@
       5.1. Pestañas (Tabs)
       5.2. Modal de Importación
       5.3. Calendario
+      5.4. Indicador de Login
    6. DISEÑO RESPONSIVE
    =================================================================== */
 
@@ -40,6 +41,7 @@ body {
   padding: 20px;
   min-height: 100vh;
   transition: grid-template-columns 0.35s ease-in-out, opacity 0.2s ease-in-out;
+  align-items: start;
 }
 
 /* Clase para bloquear la UI durante operaciones asíncronas */
@@ -56,7 +58,10 @@ body {
   background-color: #fff;
   border-radius: 10px;
   padding: 20px;
-  overflow: hidden; 
+}
+
+#macros-sidebar, #log-sidebar {
+    overflow: hidden; /* Mantenemos el overflow para las barras laterales */
 }
 
 
@@ -150,8 +155,8 @@ body {
    ========================================================== */
 
 #main-content {
-  display: flex;
-  flex-direction: column;
+    overflow-y: auto;
+    height: calc(100vh - 40px); /* 100% de la altura de la ventana menos el padding superior/inferior */
 }
 
 /* --- 3.1. Menú Principal --- */
@@ -188,29 +193,12 @@ body {
     gap: 15px;
 }
 
-.menu-button { 
-  background-color: #69a3db; 
-  color: #fff; 
-  border: none; 
-  border-radius: 8px;  
-  padding: 12px 15px; 
-  cursor: pointer; 
-  font-size: 1em; 
-  width: 220px; 
-  height: 60px; 
-  display: flex; 
-  justify-content: center; 
-  align-items: center; 
-  text-align: center; 
-  transition: background-color 0.3s; 
-}
-.menu-button:hover { background-color: #558ac7; }
-
 /* --- 3.2. Secciones Interiores y Formularios --- */
 .section {
     display: none; /* Ocultas por defecto, se muestran con JS */
     width: 100%;
     flex-direction: column;
+    flex-grow: 1; /* Permite que la sección ocupe el espacio vertical */
 }
 
 .section h2 {
@@ -261,18 +249,12 @@ body {
     margin-bottom: 20px;
 }
 .client-management input, .client-management select { flex-grow: 1; }
-.client-management button {
-    background-color: #69a3db;
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    padding: 10px 15px;
-    cursor: pointer;
-}
-.client-management .delete-btn { background-color: #dc3545; }
+
 .info-text { font-size: 0.9em; color: #6c757d; text-align: center; margin-top: 20px; }
 
-
+#calendario-section {
+  overflow-y: auto;
+}
 /* --- 3.3. Estilos de Tablas y Campos --- */
 
 /* Cabecera de sección con botón de atrás y acciones */
@@ -288,6 +270,7 @@ body {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .action-button, .back-button {
@@ -298,6 +281,7 @@ body {
     padding: 10px 15px;
     cursor: pointer;
     transition: background-color 0.2s;
+    flex-shrink: 0; 
 }
 .action-button:hover { background-color: #558ac7; }
 .back-button { background-color: #6c757d; }
@@ -314,7 +298,8 @@ body {
     width: 100%;
     overflow-x: auto;
     margin-top: 20px;
-    padding-right: 40px; /* Espacio para el botón de borrar fila */
+    /* Espacio para el botón de borrar fila y los botones de subir/bajar */
+    padding-right: 40px; 
 }
 
 table {
@@ -326,7 +311,6 @@ th, td {
     border: 1px solid #b9d4e7;
     padding: 8px;
     text-align: center;
-    position: relative; /* Para posicionar el botón de borrado */
 }
 
 th {
@@ -337,23 +321,12 @@ th {
     z-index: 2;
 }
 
+/* REGLA CORREGIDA: Se añade position:relative para que el botón de borrado se posicione correctamente */
+#myTable tbody tr {
+    position: relative;
+}
+
 tr.selected { background-color: #c5dce6; }
-
-/* Celda editable */
-.editable {
-    outline: none;
-    border-bottom: 1px dashed #ccc;
-}
-
-/* Input dentro de una celda */
-td input[type="text"].cell-input {
-  width: 95%;
-  box-sizing: border-box; 
-  text-align: center;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  padding: 4px;
-}
 
 /* Botones para subir/bajar filas */
 .control-buttons {
@@ -386,6 +359,7 @@ td input[type="text"].cell-input {
   width: 24px;
   height: 24px;
   line-height: 22px;
+  text-align: center;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.2s;
@@ -615,31 +589,31 @@ td input[type="text"].cell-input {
     display: flex;
     align-items: center;
     gap: 10px;
+    margin-left: auto; /* Empuja los controles a la derecha */
 }
 .calendar-container {
     display: flex;
+    flex-direction: row; /* Vista principal a la izquierda, sidebar a la derecha */
     gap: 20px;
     width: 100%;
-    height: 100%;
-    overflow: hidden;
-    flex-grow: 1;
+    flex-grow: 1; /* Ocupa el espacio disponible */
 }
 .calendar-main-view {
-    flex: 3;
-    overflow-y: auto;
+    flex: 3; /* Ocupa 3/4 del espacio */
+    display: flex;
+    flex-direction: column;
     padding-right: 10px;
 }
+/* Ajustes para el calendario */
+
 .calendar-sidebar {
     flex: 1;
     border-left: 1px solid #eee;
     padding-left: 20px;
-    overflow-y: auto;
-    /* Mejora de usabilidad: la barra lateral se queda fija al hacer scroll */
     position: sticky;
-    top: 0;
-    align-self: flex-start; /* Necesario para que sticky funcione en un contenedor flex */
-    height: calc(100vh - 120px); /* Ajustar altura para que no ocupe más de la ventana */
+    top: 0; /* Se pegará a la parte de arriba del #main-content */
 }
+
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -672,6 +646,25 @@ td input[type="text"].cell-input {
 #automation-list .automation-details { font-size: 0.9em; color: #6c757d; }
 
 
+/* --- 5.4. Indicador de Login (NUEVO) --- */
+.login-status {
+    font-size: 0.85em;
+    font-weight: bold;
+    text-align: center;
+    margin: 10px 0 0 0;
+    padding: 5px;
+    border-radius: 4px;
+}
+.login-status.active {
+    color: #1c7430;
+    background-color: #d4edda;
+}
+.login-status.inactive {
+    color: #721c24;
+    background-color: #f8d7da;
+}
+
+
 /* ==========================================================
    6. DISEÑO RESPONSIVE
    ========================================================== */
@@ -698,13 +691,5 @@ td input[type="text"].cell-input {
     display: none; /* Oculta el botón de colapso en pantallas pequeñas */
   }
 
-  /* Ajustes para el calendario */
-  .calendar-container {
-    flex-direction: column; /* Apila la vista principal y la sidebar */
-  }
-  .calendar-sidebar {
-    position: static; /* Desactiva el modo sticky */
-    height: auto;
-    max-height: 300px; /* Limita su altura */
-  }
+  
 }
