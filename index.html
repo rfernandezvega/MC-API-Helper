@@ -75,36 +75,162 @@
       
       <div class="tabs-container">
         <div class="tab-buttons">
-          <button class="tab-button active" data-tab="guia-rapida">Guía Rápida</button>
+          <button class="tab-button active" data-tab="configuracion-principal">Configuración principal</button>
+          <button class="tab-button" data-tab="guia-rapida">Guía Rápida</button>
           <button class="tab-button" data-tab="errores-comunes">Errores Comunes</button>
           <button class="tab-button" data-tab="comentarios-adicionales">Comentarios Adicionales</button>
         </div>
-        
-        <div id="guia-rapida" class="tab-content active">
-          <h3>Flujo de Trabajo Principal</h3>
-          <ol>
-            <li><strong>Configurar un Cliente:</strong> Ve a <em>Configuración de APIs</em>. Introduce un nombre para tu proyecto o cliente, rellena los datos de la aplicación de Marketing Cloud (MID, Auth URI, Client ID, etc.) y pulsa "Guardar". La configuración se guardará localmente.</li>
-            <li><strong>Recuperar Token:</strong> (Opcional) Puedes pulsar "Recuperar Token" en el menú de la izquierda para comprobar que tus credenciales son correctas. La aplicación lo hará automáticamente cuando ejecutes otras macros.</li>
-            <li><strong>Configurar la Data Extension:</strong> Ve a <em>Configuración de Data Extension</em>. Define el nombre, descripción y carpeta. Si la DE es "Sendable", marca la casilla correspondiente.</li>
-            <li><strong>Añadir Campos:</strong> Ve a la sección de <em>Campos</em>.
-                <ul>
-                    <li>Usa <b>"Añadir Fila"</b> para añadir campos manualmente.</li>
-                    <li>Usa <b>"Importar..."</b> para pegar una lista de campos desde Excel o un CSV.</li>
-                    <li>Define qué campos son Primary Key (PK) u obligatorios.</li>
-                </ul>
+      <div id="configuracion-principal" class="tab-content active">
+          <h3>Configuración principal</h3>
+
+          <ul>
+            <li>
+              <strong>Configurar un Cliente:</strong>
+              Ve a <em>Configuración de APIs</em>. Introduce un nombre para tu proyecto o cliente, 
+              rellena los datos de la aplicación de Marketing Cloud (MID, Auth URI, Client ID, etc.) y pulsa "Guardar". 
+              La configuración se guardará localmente.
+              <ul style="list-style-type: circle;">
+                <li>
+                  <strong>Almacenamiento Local:</strong> Toda la configuración de los clientes se guarda en el almacenamiento local del navegador. 
+                  No se envía a ningún servidor externo. Si borras la caché de tu navegador o cambias de equipo, perderás esta información.
+                </li>
+                <li>
+                  <strong>Recuperar Token:</strong> (Opcional) Puedes pulsar "Recuperar Token" en el menú superior de esta vista 
+                  para comprobar que las credenciales son correctas. La aplicación lo hará automáticamente cuando ejecutes otras funciones.
+                </li>
+              </ul>
             </li>
-            <li><strong>Vincular Subscriber Key:</strong> Si tu DE es "Sendable", vuelve a <em>Configuración de Data Extension</em> y selecciona el campo que actuará como Subscriber Key en el menú desplegable.</li>
-            <li><strong>Crear la Data Extension:</strong> Pulsa "Crear Data Extension" en el menú de la izquierda.</li>
-          </ol>
-          <h3>Gestión de Campos Existentes</h3>
-           <ol>
-            <li><strong>Seleccionar Cliente:</strong> Asegúrate de que el cliente correcto esté seleccionado en el menú lateral izquierdo.</li>
-            <li><strong>Introducir External Key:</strong> Ve a <em>Gestión de Campos</em> e introduce la External Key de la Data Extension que quieres modificar.</li>
-            <li><strong>Recuperar Campos:</strong> Pulsa "Recuperar campos" para cargar su estructura en la tabla de la sección <em>Campos</em> y "Recuperar Ids" para poblar la lista de campos a eliminar.</li>
-            <li><strong>Modificar y Guardar:</strong> Añade, edita o elimina filas en la tabla de <em>Campos</em>. Cuando termines, pulsa "Crear campos" para aplicar los cambios (esta acción actualiza los existentes y añade los nuevos).</li>
-            <li><strong>Eliminar un Campo:</strong> En <em>Gestión de Campos</em>, pulsa "Recuperar Ids", selecciona el campo a borrar de la lista y pulsa "Borrar campo".</li>
-          </ol>
+
+            <li>
+              <strong>Clientes:</strong> Puedes guardar varios clientes y cambiar entre ellos ya sea desde la lista de 
+              <em>Configuración de APIs</em> o en el panel izquierdo de <em>Clientes</em>.
+            </li>
+          </ul>
         </div>
+
+        <div id="guia-rapida" class="tab-content">
+          <h1>Data Extensions</h1>
+          <h3>Configuración de Data Extension</h3>
+          <ul>
+            <li>
+              <strong>Configurar la Data Extension:</strong>
+              Ve a <em>Configuración de Data Extension</em>. Define el nombre, descripción y carpeta. La external Key se generará automáticamente.
+            </li>
+            <li>
+              <strong>Vincular Subscriber Key:</strong>
+              Si la DE debe ser "Sendable", selecciona la casilla para habilitar la lista de selección de campo.
+              <ul style="list-style-type: circle;">
+                <li>
+                  <strong>Campos:</strong>
+                  La lista de selección para vincular el Subscriber Key muestra automáticamente los campos disponibles en la vista de <em>Campos</em>.
+                </li>
+              </ul>
+            </li>
+            <li>
+              <strong>Creación:</strong>
+              Pulsa en el botón <em>Crear Data Extension</em> para que se cree en la carpeta indicada. 
+              Revisa el panel derecho de Logs por si se ha devuelto algún tipo de error.
+            </li>
+          </ul>
+
+          <h3>Campos</h3>
+          <ul>
+            <li>Esta vista muestra una tabla para indicar los campos que deberá tener la Data Extension.</li>
+            <li>
+              <strong>Añadir Campos:</strong> Para que la tabla muestre campos hay varias formas.
+              <ul style="list-style-type: circle;">
+                <li>
+                  Usa <b>"Añadir Fila"</b> para añadir filas manualmente y poder configurar los campos. Los tipos de campo son:
+                  <ul style="list-style-type: square;">
+                    <li>Text</li>
+                    <li>Boolean</li>
+                    <li>Date</li>
+                    <li>Decimal</li>
+                    <li>Phone</li>
+                    <li>EmailAddress</li>
+                    <li>Locale</li>
+                    <li>Number</li>
+                  </ul>
+                </li>
+                <li>Usa <b>"Crear Campos Dummy"</b> para generar un ejemplo rápido de un campo por cada tipo.</li>
+                <li>Usa <b>"Importar..."</b> para pegar una lista de campos desde Excel o un CSV. Podrás seleccionar el separador que quieras.</li>
+              </ul>
+              <li>Usa <b>"Limpiar Campos"</b> para eliminar todos los campos de la tabla.</li>
+              <li>Usa <b>"Crear campos"</b> para crear los campos de la tabla en la Data Extension definida en <em>Gestión de Campos</em>.</li>
+              <li>Define qué campos son Primary Key (PK) u obligatorios.</li>
+              <li>
+                Seleccionando una fila, podrás:
+                <ul style="list-style-type: square;">
+                  <li>
+                    <strong>Ordenar:</strong> Con los botones <em>Subir</em> y <em>Bajar</em> podrás organizar los campos. 
+                    Esto es útil cuando tenemos una tabla que queremos dejar bien ordenada. 
+                    Con la funcionalidad de recuperar tablas, podremos descargarla, ordenar los campos y crearla de nuevo.
+                  </li>
+                  <li>
+                    <strong>Borrar:</strong> A la derecha de la fila seleccionada aparecerá un botón de borrado para eliminar la fila.
+                  </li>
+                </ul>
+              </li>             
+            </li>
+          </ul>
+
+          <h3>Gestión de Campos</h3>
+          <ul>
+            <li>Esta vista muestra un campo para indicar la DE sobre la que se quiere trabajar para eliminar campos o para crearlos.</li>
+            <li>Usa <b>"Recuperar campos"</b> para recuperar todos los campos de la tabla. Aparecerán en <em>Campos</em> y en la lista <em>Campo a eliminar</em> de esta vista.</li>
+            <li>
+              Usa <b>"Borrar campo"</b> para borrar el campo seleccionado en la lista.
+              Esto es especialmente útil para eliminar campos que se utilizan en <b>Data Extensions conectadas en un grupo de atributos</b>, ya que por interfaz no se puede hacer.
+            </li>
+          </ul>
+          
+          <h1>Funcionalidades</h1>
+          <h3>Calendario</h3>
+           <ul>
+            <li>
+              Pulsa en <strong>Refrescar datos</strong> para recuperar los automatismos que tienen actividades de lanzamiento de Journeys. Tardará un rato.
+            </li>
+            <li>
+              Si hay automatismos programados, aparecerán en la fecha correspondiente en el calendario.
+            </li>
+            <li>
+              Pulsando en la fecha, aparecerán los automatismos en el bloque de <em>Automatizaciones del día</em>.
+            </li>
+          </ul>
+
+          <h3>Búsqueda de Data Extension</h3>
+           <ul>
+            <li>
+              Selecciona por qué campo quieres realizar la búsqueda: <em>Nombre</em> o <em>Clave externa</em>
+            </li>
+            <li>
+              Rellenar el Nombre o la Clave externa y pulsa en <em>Buscar</em>
+            </li>
+            <li>
+              Si la encuentra, aparecerá la ruta en el panel de <em>Resultados</em>.
+            </li>            
+          </ul>
+           <h3>Validador de email</h3>
+           <ul>
+            <li>
+              Rellena el mail que quieres validar y pulsa en  <em>Validar Email</em>
+            </li>
+            <li>
+              En el panel de <em>Resultado de la Validación</em> se indicará si es válido o no para Marketing Cloud.
+            </li>            
+          </ul>
+          <h3>Buscador de origenes</h3>
+           <ul>
+            <li>
+              Esta funcionalidad busca qué actividades rellenan información en la Data Extension indicada. <b>Importante:</b> se busca por Nombre
+            </li>
+            <li>
+              En el panel de <em>Actividades Encontradas</em> se mostrarán las actividades (Queries o Imports) que la rellenan.
+            </li>            
+          </ul>
+          
+        </div>
+
         
         <div id="errores-comunes" class="tab-content">
             <ul>
@@ -119,7 +245,6 @@
 
         <div id="comentarios-adicionales" class="tab-content">
             <ul>
-              <li><strong>Almacenamiento Local:</strong> Toda la configuración de tus clientes se guarda en el almacenamiento local de tu navegador. No se envía a ningún servidor externo. Si borras la caché de tu navegador o cambias de equipo, perderás esta información.</li>
               <li><strong>Permisos de la Aplicación API:</strong> Para un funcionamiento completo, la aplicación API en Marketing Cloud necesita permisos de Lectura y Escritura para Data Extensions (<code>Data > Data Extensions > Read & Write</code>), de Lectura para Automatizaciones (<code>Automations > Read</code>) y de Lectura para Email (<code>Email > Read</code>).</li>
               <li><strong>Creación vs. Actualización de Campos:</strong> La macro "Crear campos" es en realidad un "upsert". Esto significa que si un campo con el mismo nombre ya existe, actualizará sus propiedades. Si no existe, lo creará.</li>
               <li><strong>Tipos de Campo:</strong> Asegúrate de que los tipos de campo coinciden con los soportados por Marketing Cloud (Text, Number, Date, Boolean, EmailAddress, Phone, Locale, Decimal).</li>
