@@ -1,0 +1,28 @@
+<div id="configuracion-campos-section" class="section config-section-container">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>
+        <div class="header-actions">
+            <button id="getFields" class="action-button">Recuperar campos</button>
+            <button id="deleteField" class="action-button">Borrar campo</button>
+        </div>
+    </div>
+
+    <h2>Gestión de Campos de Data Extension</h2>
+    
+    <div class="config-block">
+        <h3>Parámetros</h3>
+        <p class="info-text" style="text-align: left; margin-top: 0; margin-bottom: 15px;">
+            Introduce la External Key de la DE y pulsa "Recuperar campos" para poblar la lista de campos.
+        </p>
+        <div class="form-group">
+            <label for="recExternalKey">External Key de la DE</label>
+            <input type="text" id="recExternalKey">
+        </div>
+        <div class="form-group">
+            <label for="targetFieldSelect">Campo a eliminar</label>
+            <select id="targetFieldSelect" disabled>
+                <option value="">-- Pulsa "Recuperar campos" para poblar la lista --</option>
+            </select>
+        </div>
+    </div>
+</div>

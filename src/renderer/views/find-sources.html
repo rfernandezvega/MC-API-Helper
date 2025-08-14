@@ -1,0 +1,34 @@
+<div id="data-source-finder-section" class="section config-section-container">
+    <button class="back-button">← Atrás</button>
+    <h2>Buscador de Orígenes de Datos</h2>
+    <div class="config-block">
+        <h3>Parámetros de Búsqueda</h3>
+        <div class="form-group">
+          <label for="deNameToFind">Nombre de la Data Extension:</label>
+          <input type="text" id="deNameToFind" placeholder="Introduce el nombre exacto de la DE">
+        </div>
+        <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+           <button id="findDataSourcesBtn" class="action-button">Buscar Orígenes</button>
+        </div>
+    </div>
+    <div class="config-block" style="flex-grow: 1; display: flex; flex-direction: column;">
+        <h3>Actividades Encontradas</h3>
+        <div class="table-container" style="flex-grow: 1; overflow-y: auto;">
+             <table id="data-sources-table">
+                <thead>
+                    <tr>
+                        <th>Actividad</th>
+                        <th>Tipo</th>
+                        <th>Automatización</th>
+                        <th>Paso</th>
+                        <th>Acción</th>
+                        <th>Descripción / Query</th>
+                    </tr>
+                </thead>
+                <tbody id="data-sources-tbody">
+                    <!-- Los resultados se insertarán aquí -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

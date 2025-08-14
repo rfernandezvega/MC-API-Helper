@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Marketing Cloud API Helper</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-container">
+  
+  <!-- COLUMNA IZQUIERDA: FUNCIONALIDADES -->
+  <aside id="macros-sidebar">
+    <div class="sidebar-client-selector">
+      <h2>Cliente</h2>
+      <select id="sidebarClientSelect">
+        <option value="">Ninguno seleccionado</option>
+      </select>
+    </div>
+    <h2>Vistas</h2>
+    
+    <div class="collapsible-group">
+        <h3 class="collapsible-header">General</h3>
+        <ul class="collapsible-content">
+          <li><a class="macro-item" data-view="documentacion">Documentación</a></li>
+          <li><a class="macro-item" data-view="config-api">Configuración de APIs</a></li>
+        </ul>
+    </div>
+
+    <div class="collapsible-group">
+        <h3 class="collapsible-header">Data Extensions</h3>
+        <ul class="collapsible-content">
+          <li><a class="macro-item" data-view="config-de">Configuración de Data Extension</a></li>
+          <li><a class="macro-item" data-view="campos">Campos</a></li>
+          <li><a class="macro-item" data-view="manage-fields">Gestión de Campos</a></li>
+        </ul>
+    </div>
+
+    <div class="collapsible-group">
+        <h3 class="collapsible-header">Funcionalidades</h3>
+        <ul class="collapsible-content">
+          <li><a class="macro-item" data-view="calendario">Calendario</a></li>
+          <li><a class="macro-item" data-view="find-de">Búsqueda de Data Extension</a></li>
+          <li><a class="macro-item" data-view="validate-email">Validador de Email</a></li>
+          <li><a class="macro-item" data-view="find-sources">Buscador de Orígenes</a></li>
+        </ul>
+    </div>
+  </aside>
+
+  <!-- COLUMNA CENTRAL: CONTENIDO PRINCIPAL -->
+  <main id="main-content">
+      <!-- El contenido de las vistas se cargará aquí dinámicamente -->
+      <div id="view-container"></div>
+  </main> 
+
+  <!-- COLUMNA DERECHA: LOG -->
+  <aside id="log-sidebar">
+    <div class="log-header">
+      <h2>Log de Eventos</h2>
+      <button id="toggleLogBtn" title="Colapsar Log"></button>
+    </div>
+    <div id="log-message-block" class="log-block">
+      <h4>Mensajes</h4>
+      <pre><code id="log-messages">Esperando acciones...</code></pre>
+    </div>
+    <div id="log-request-block" class="log-block">
+      <h4>Llamada</h4>
+      <pre><code id="log-request"></code></pre>
+    </div>
+    <div id="log-response-block" class="log-block">
+      <h4>Respuesta</h4>
+      <pre><code id="log-response"></code></pre>
+    </div>
+  </aside>
+</div>
+
+<!-- MODAL DE IMPORTACIÓN (Se podría mover a su propio parcial también) -->
+<div id="import-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Importar Campos desde Portapapeles</h3>
+        <p>Pega aquí los datos de tu Excel o CSV. Las columnas deben ser: <b>Nombre</b>, <b>Tipo</b> y <b>Longitud</b>.</p>
+        
+        <div class="delimiter-selector">
+            <label for="delimiter-select">Separador:</label>
+            <select id="delimiter-select">
+                <option value="tab" selected>Tabulador (Excel)</option>
+                <option value="comma">Coma (,)</option>
+                <option value="semicolon">Punto y coma (;)</option>
+                <option value="other">Otro...</option>
+            </select>
+            <input type="text" id="custom-delimiter-input" class="hidden" maxlength="1" placeholder="Ej: |">
+        </div>
+        
+        <textarea id="paste-data-area" rows="10" placeholder="Ciudad	Text	50&#10;Email	EmailAddress	254"></textarea>
+        <div class="modal-actions">
+            <button id="process-paste-btn" class="action-button">Añadir Campos</button>
+            <button id="cancel-paste-btn" class="action-button delete-btn">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- 
+  Cargamos el script principal como un módulo. 
+  Esto nos permite usar 'import' y 'export' para organizar nuestro código.
+-->
+<script type="module" src="js/main-renderer.js"></script>
+</body>
+</html>

@@ -544,7 +544,16 @@ td input[type="text"].cell-input {
     font-size: 0.9em;
     color: #6c757d;
 }
-
+/* 
+ * Esta regla es la solución. 
+ * Le dice al navegador: "Cualquier elemento con la clase .section
+ * que esté DIRECTAMENTE dentro del #view-container, debe ser visible
+ * y usar flexbox para su layout".
+ * Esto anula el 'display: none' general que ocultaba las vistas.
+*/
+#view-container > .section {
+    display: flex;
+}
 
 @media (max-width: 1024px) {
   .app-container {

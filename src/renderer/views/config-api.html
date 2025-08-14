@@ -1,0 +1,28 @@
+<div id="configuracion-apis-section" class="section config-section-container">
+     <div class="section-header">
+        <button class="back-button">← Atrás</button>
+        <div class="header-actions">
+            <button id="getTokenBtn" class="action-button">Recuperar Token</button>
+        </div>
+    </div>
+    <h2>Configuración de APIs</h2>
+    <div class="client-management">
+        <input type="text" id="clientName" placeholder="Nombre del Cliente">
+        <select id="savedConfigs"></select>
+        <button id="saveConfig">Guardar</button>
+        <button id="deleteConfig" class="delete-btn">Borrar</button>
+    </div>
+    <div class="config-block">
+        <h3>Datos Aplicación</h3>
+        <div class="form-group"><label for="businessUnit">Business Unit (MID)</label><input type="text" id="businessUnit"></div>
+        <div class="form-group"><label for="authUri">Auth URI</label><input type="text" id="authUri"></div>
+        <div class="form-group"><label for="clientId">Client ID</label><input type="text" id="clientId"></div>
+        <div class="form-group"><label for="clientSecret">Client Secret</label><input type="text" id="clientSecret"></div>
+        <div class="form-group"><label for="token">Token</label><input type="text" id="token" disabled></div>
+        <div class="form-group"><label for="soapUri">SOAP URI</label><input type="text" id="soapUri" disabled></div>
+        <div class="form-group"><label for="restUri">REST URI</label><input type="text" id="restUri" disabled></div>
+    </div>
+    <p class="info-text">
+        La configuración se guardará localmente en tu navegador. No se almacena en ningún servidor externo.
+    </p>
+</div>
