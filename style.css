@@ -570,6 +570,6 @@ td input[type="text"].cell-input {
   .calendar-sidebar {
     position: static; /* Desactiva el modo sticky en pantallas pequeñas */
     height: auto;
-    max-height: 300px; /* Limita la altura en móvil */
+    max-height: 300px;
   }
 }
