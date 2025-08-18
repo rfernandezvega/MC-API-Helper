@@ -1939,10 +1939,8 @@ document.addEventListener('DOMContentLoaded', function () {
 						'configuracionDE': 'configuracion-de-section',
 						'campos': 'campos-section',
 						'gestionCampos': 'configuracion-campos-section',
-						'busquedaDE': 'busqueda-de-section',
 						'validadorEmail': 'email-validator-section',
-						'buscadorOrigenes': 'data-source-finder-section',
-                        'buscadorClientes': 'customer-search-section'
+						'buscadores': 'buscadores-section'
 					};
 					if (sectionMap[macro]) {
 						showSection(sectionMap[macro]);

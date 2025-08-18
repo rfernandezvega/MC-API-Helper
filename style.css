@@ -3,19 +3,35 @@
    Hoja de estilos principal para la aplicación Marketing Cloud API Helper.
    
    ÍNDICE:
+   -------------------------------------------------------------------
    1. ESTILOS GLOBALES Y LAYOUT PRINCIPAL
-   2. BARRA LATERAL IZQUIERDA (FUNCIONALIDADES)
+      - body, app-container, panel-base, estado de carga.
+
+   2. BARRA LATERAL IZQUIERDA (NAVEGACIÓN)
+      - Contenedor principal, header.
+      - Selector de cliente e indicador de login.
+      - Menús colapsables (acordeón).
+      - Items de menú.
+
    3. CONTENIDO PRINCIPAL (CENTRO)
-      3.1. Menú Principal
-      3.2. Secciones Interiores y Formularios
-      3.3. Estilos de Tablas y Campos
+      - Contenedor principal.
+      - 3.1. Menú de Bienvenida.
+      - 3.2. Estructura de Secciones (formularios, bloques, etc.).
+      - 3.3. Botones (de acción, atrás, deshabilitados).
+      - 3.4. Tablas de Datos (estilos generales y específicos).
+
    4. BARRA LATERAL DERECHA (LOG)
+      - Contenedor, header, botón de colapso.
+      - Bloques de log y estado colapsado.
+
    5. COMPONENTES REUTILIZABLES
-      5.1. Pestañas (Tabs)
-      5.2. Modal de Importación
-      5.3. Calendario
-      5.4. Indicador de Login
+      - 5.1. Pestañas (Tabs).
+      - 5.2. Modal de Importación.
+      - 5.3. Calendario.
+      - 5.4. Bloques de Data View (Envíos).
+
    6. DISEÑO RESPONSIVE
+      - Ajustes para pantallas pequeñas.
    =================================================================== */
 
 
@@ -34,6 +50,7 @@ body {
   box-sizing: inherit;
 }
 
+/* Layout principal de la aplicación con 3 columnas */
 .app-container {
   display: grid;
   grid-template-columns: 220px 1fr 360px; /* Sidebar Izq | Contenido | Sidebar Der */
@@ -46,14 +63,14 @@ body {
 
 /* Clase para bloquear la UI durante operaciones asíncronas */
 .app-container.is-updating {
-  pointer-events: none; /* Deshabilita interacciones */
-  opacity: 0.6;        /* Indica visualmente que está ocupado */
+  pointer-events: none; /* Deshabilita interacciones con el ratón */
+  opacity: 0.6;        /* Indica visualmente que la app está ocupada */
 }
 .app-container.is-updating body {
     cursor: wait; /* Cambia el cursor a modo de espera */
 }
 
-/* Estilo base para los paneles principales */
+/* Estilo base para los 3 paneles principales */
 #macros-sidebar, #main-content, #log-sidebar {
   background-color: #fff;
   border-radius: 10px;
@@ -61,12 +78,12 @@ body {
 }
 
 #macros-sidebar, #log-sidebar {
-    overflow: hidden; /* Mantenemos el overflow para las barras laterales */
+    overflow: hidden;
 }
 
 
 /* ==========================================================
-   2. BARRA LATERAL IZQUIERDA (FUNCIONALIDADES)
+   2. BARRA LATERAL IZQUIERDA (NAVEGACIÓN)
    ========================================================== */
 
 #macros-sidebar {
@@ -82,7 +99,7 @@ body {
   padding-bottom: 10px;
 }
 
-/* --- Selector de Cliente en la Sidebar --- */
+/* --- Selector de Cliente e Indicador de Login --- */
 .sidebar-client-selector {
   padding-bottom: 15px;
   border-bottom: 2px solid #f0f6fc;
@@ -97,7 +114,25 @@ body {
   margin-top: 5px;
 }
 
-/* --- Menús Colapsables --- */
+.login-status {
+    font-size: 0.85em;
+    font-weight: bold;
+    text-align: center;
+    margin: 10px 0 0 0;
+    padding: 5px;
+    border-radius: 4px;
+    line-height: 1.4; /* Mejora la legibilidad si hay dos líneas */
+}
+.login-status.active {
+    color: #1c7430;
+    background-color: #d4edda;
+}
+.login-status.inactive {
+    color: #721c24;
+    background-color: #f8d7da;
+}
+
+/* --- Menús Colapsables (Acordeón) --- */
 .collapsible-header {
   color: #558ac7;
   margin-top: 20px;
@@ -108,10 +143,9 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 5px 0;
-  user-select: none; /* Evita seleccionar el texto del header */
+  user-select: none;
 }
 
-/* Flecha indicadora */
 .collapsible-header::after {
   content: '▶';
   font-size: 0.7em;
@@ -119,7 +153,7 @@ body {
 }
 
 .collapsible-header.active::after {
-  transform: rotate(90deg); /* La flecha gira cuando está activo */
+  transform: rotate(90deg);
 }
 
 .collapsible-content {
@@ -131,7 +165,7 @@ body {
   transition: max-height 0.3s ease-in-out;
 }
 
-/* --- Elementos del Menú (Macros) --- */
+/* --- Ítems de Menú (Enlaces a funcionalidades) --- */
 #macros-sidebar .macro-item {
   display: block;
   padding: 10px 12px;
@@ -156,10 +190,10 @@ body {
 
 #main-content {
     overflow-y: auto;
-    height: calc(100vh - 40px); /* 100% de la altura de la ventana menos el padding superior/inferior */
+    height: calc(100vh - 40px);
 }
 
-/* --- 3.1. Menú Principal --- */
+/* --- 3.1. Menú de Bienvenida --- */
 .main-menu-container {
     display: flex;
     flex-direction: column;
@@ -167,7 +201,6 @@ body {
     gap: 30px;
     width: 100%;
 }
-
 .menu-group {
     width: 90%;
     background-color: #f8f9fa;
@@ -176,7 +209,6 @@ body {
     padding: 20px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.05);
 }
-
 .menu-group h3 {
     color: #558ac7;
     margin-top: 0;
@@ -185,43 +217,28 @@ body {
     border-bottom: 2px solid #e0e7ef;
     padding-bottom: 10px;
 }
-
 .menu-buttons-container {
     display: flex;
-    flex-direction: column; 
+    flex-direction: column; /* CORRECCIÓN: Asegura que el texto de bienvenida se apile verticalmente */
     justify-content: center;
-    flex-wrap: wrap;
     gap: 15px;
 }
 
-/* --- 3.2. Secciones Interiores y Formularios --- */
+/* --- 3.2. Estructura de Secciones, Formularios y Bloques --- */
 .section {
-    display: none; /* Ocultas por defecto, se muestran con JS */
+    display: none;
     width: 100%;
     flex-direction: column;
-    flex-grow: 1; /* Permite que la sección ocupe el espacio vertical */
+    flex-grow: 1;
 }
-
-.section h2 {
+.section h2, .tab-content h2 {
     color: #69a3db;
     text-align: center;
     margin-top: 0;
     margin-bottom: 20px;
 }
 
-/* Contenedor para el título y los botones de una sección */
-.config-block-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px; /* Espacio antes de la tabla */
-}
-
-.config-block-header h3 {
-    margin: 0; /* Quitamos el margen por defecto del h3 */
-}
-
-/* Contenedor general para secciones con configuración */
+/* Contenedor principal para vistas con formularios */
 .config-section-container .config-block {
     background-color: #f8f9fa;
     border: 1px solid #e9ecef;
@@ -229,10 +246,33 @@ body {
     padding: 20px;
     margin-bottom: 20px;
 }
+.config-section-container h3 { 
+    color: #558ac7; 
+    margin-top: 0; 
+}
 
-.config-section-container h3 { color: #558ac7; margin-top: 0; }
-.config-section-container .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
-.config-section-container label { font-weight: bold; margin-bottom: 5px; color: #333; }
+/* Cabecera dentro de un bloque de configuración (para título y botones) */
+.config-block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+.config-block-header h3 {
+    margin: 0;
+}
+
+/* Estilos de Formularios */
+.config-section-container .form-group { 
+    margin-bottom: 15px; 
+    display: flex; 
+    flex-direction: column; 
+}
+.config-section-container label { 
+    font-weight: bold; 
+    margin-bottom: 5px; 
+    color: #333; 
+}
 .config-section-container input[type="text"],
 .config-section-container input[type="password"],
 .config-section-container select {
@@ -241,46 +281,40 @@ body {
     border: 1px solid #ccc;
     border-radius: 4px;
 }
-
-.config-section-container input[disabled] { background-color: #e9ecef; cursor: not-allowed; }
-
-.sends-dataview-block {
-    margin-top: 20px;
-    border-top: 1px solid #e0e7ef;
-    padding-top: 15px;
+.config-section-container input[disabled] { 
+    background-color: #e9ecef; 
+    cursor: not-allowed; 
 }
-.sends-dataview-block h4 {
-    margin: 0 0 10px 0;
-    color: #558ac7;
-}
-
-/* Grupo de Checkbox */
 .config-section-container .checkbox-group {
     flex-direction: row;
     align-items: center;
-    justify-content: flex-start;
 }
-.config-section-container .checkbox-group label { margin: 0 8px 0 0; }
-.config-section-container .checkbox-group input[type="checkbox"] { width: auto; }
+.config-section-container .checkbox-group label { 
+    margin: 0 8px 0 0; 
+}
+.config-section-container .checkbox-group input[type="checkbox"] { 
+    width: auto; 
+}
 
-/* Contenedor para gestión de clientes (guardar/borrar) */
+/* Contenedor para gestión de clientes */
 .client-management {
     display: flex;
     gap: 10px;
     align-items: center;
-    flex-wrap: wrap;
     margin-bottom: 20px;
 }
-.client-management input, .client-management select { flex-grow: 1; }
-
-.info-text { font-size: 0.9em; color: #6c757d; text-align: center; margin-top: 20px; }
-
-#calendario-section {
-  overflow-y: auto;
+.client-management input, .client-management select { 
+    flex-grow: 1; 
 }
-/* --- 3.3. Estilos de Tablas y Campos --- */
 
-/* Cabecera de sección con botón de atrás y acciones */
+.info-text { 
+    font-size: 0.9em; 
+    color: #6c757d; 
+    text-align: center; 
+    margin-top: 20px; 
+}
+
+/* --- 3.3. Botones (de acción, atrás, deshabilitados) --- */
 .section-header {
     display: flex;
     justify-content: space-between;
@@ -288,7 +322,6 @@ body {
     width: 100%;
     margin-bottom: 20px;
 }
-
 .header-actions {
     display: flex;
     gap: 10px;
@@ -306,25 +339,34 @@ body {
     transition: background-color 0.2s;
     flex-shrink: 0; 
 }
-.action-button:hover { background-color: #558ac7; }
-/* Estilo para los botones de acción cuando están deshabilitados */
+.action-button:hover { 
+    background-color: #558ac7; 
+}
+
+/* ESTILO PARA BOTONES DESHABILITADOS */
 .action-button[disabled] {
-  background-color: #cccccc; /* Un color gris claro para el fondo */
-  cursor: not-allowed;     /* Muestra el cursor de "no permitido" */
-  opacity: 0.6;            /* Lo hace un poco más tenue */
+  background-color: #cccccc;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
-
-/* Asegura que no haya cambio de color al pasar el ratón */
 .action-button[disabled]:hover {
-  background-color: #cccccc; /* Mantiene el mismo color gris */
+  background-color: #cccccc;
 }
-.back-button { background-color: #6c757d; }
-.back-button:hover { background-color: #5a6268; }
 
-.action-button.delete-btn { background-color: #dc3545; }
-.action-button.delete-btn:hover { background-color: #c82333; }
+.back-button { 
+    background-color: #6c757d; 
+}
+.back-button:hover { 
+    background-color: #5a6268; 
+}
+.action-button.delete-btn { 
+    background-color: #dc3545; 
+}
+.action-button.delete-btn:hover { 
+    background-color: #c82333; 
+}
 
-/* Contenedor de la tabla principal y sus botones de control */
+/* --- 3.4. Tablas de Datos --- */
 .table-container {
     display: flex;
     justify-content: space-between;
@@ -332,47 +374,40 @@ body {
     width: 100%;
     overflow-x: auto;
     margin-top: 20px;
-    /* Espacio para el botón de borrar fila y los botones de subir/bajar */
-    padding-right: 40px; 
+    padding-right: 40px; /* Espacio para botones de control */
 }
-
 table {
     border-collapse: collapse;
     width: 100%;
 }
-
 th, td {
     border: 1px solid #b9d4e7;
     padding: 8px;
     text-align: center;
 }
-
 th {
     background-color: #69a3db;
     color: #fff;
-    position: sticky; /* Cabecera fija al hacer scroll */
+    position: sticky;
     top: 0;
     z-index: 2;
 }
 
-/* Se añade position:relative para que el botón de borrado se posicione correctamente */
+/* Estilos para filas interactivas */
 #myTable tbody tr {
-    position: relative;
+    position: relative; /* Para el botón de borrado */
 }
-
-tr.selected { background-color: #c5dce6; }
-
-#customer-search-table tbody tr.selected { background-color: #c5dce6; }
-
 #customer-search-table tbody tr {
-    cursor: pointer;
+    cursor: pointer; /* Indica que la fila es clicable */
+}
+tr.selected, #customer-search-table tbody tr.selected { 
+    background-color: #c5dce6; 
 }
 
-/* Botones para subir/bajar filas */
+/* Controles de tabla (Subir/Bajar/Eliminar fila) */
 .control-buttons {
     display: flex;
     flex-direction: column;
-    align-items: center;
     gap: 10px;
     margin-left: 15px;
 }
@@ -385,8 +420,6 @@ tr.selected { background-color: #c5dce6; }
     padding: 8px;
     cursor: pointer;
 }
-
-/* Botón para eliminar una fila (aparece al seleccionar) */
 .delete-row-btn {
   position: absolute;
   right: -35px;
@@ -402,20 +435,17 @@ tr.selected { background-color: #c5dce6; }
   text-align: center;
   font-weight: bold;
   cursor: pointer;
-  transition: all 0.2s;
-  opacity: 0; /* Oculto por defecto */
+  opacity: 0;
   pointer-events: none;
+  transition: all 0.2s;
 }
-
 #myTable tbody tr.selected .delete-row-btn {
-  opacity: 1; /* Visible en la fila seleccionada */
+  opacity: 1;
   pointer-events: auto;
 }
-
 .delete-row-btn:hover {
   background-color: #dc3545;
   color: #fff;
-  border-color: #c5221f;
   transform: translateY(-50%) scale(1.1);
 }
 
@@ -427,16 +457,14 @@ tr.selected { background-color: #c5dce6; }
 #log-sidebar {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 40px); /* Ajusta la altura al viewport */
+  height: calc(100vh - 40px);
 }
-
 .log-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-bottom: 2px solid #f0f6fc;
 }
-
 .log-header h2 {
   padding-bottom: 10px;
   margin-bottom: 0;
@@ -454,8 +482,6 @@ tr.selected { background-color: #c5dce6; }
   padding: 0;
   position: relative;
 }
-
-/* Flecha del botón de colapso */
 #toggleLogBtn::after {
   content: '';
   display: inline-block;
@@ -467,9 +493,8 @@ tr.selected { background-color: #c5dce6; }
   position: absolute;
   top: 8px;
   left: 6px;
-  transform: rotate(-45deg); /* Flecha apuntando a la derecha */
+  transform: rotate(-45deg);
 }
-
 #toggleLogBtn:hover::after {
   border-color: #dc3545;
 }
@@ -481,7 +506,6 @@ tr.selected { background-color: #c5dce6; }
   flex-direction: column;
   min-height: 0;
 }
-
 #log-message-block { flex: 0 1 25%; }
 #log-request-block,
 #log-response-block { flex: 1 1 37.5%; }
@@ -490,7 +514,6 @@ tr.selected { background-color: #c5dce6; }
   margin: 0 0 8px 0;
   color: #558ac7;
 }
-
 .log-block pre {
   flex-grow: 1;
   background-color: #e9ecef;
@@ -504,20 +527,20 @@ tr.selected { background-color: #c5dce6; }
   height: 100%;
 }
 
-/* Lógica de colapso para el Log */
+/* Estado de log colapsado */
 .app-container.log-collapsed {
-  grid-template-columns: 220px 1fr 65px; /* Reduce la columna del log */
+  grid-template-columns: 220px 1fr 65px;
 }
 .app-container.log-collapsed .log-header h2,
 .app-container.log-collapsed .log-block {
-  display: none; /* Oculta el contenido del log */
+  display: none;
 }
 .app-container.log-collapsed #toggleLogBtn::after {
-  transform: rotate(135deg); /* Flecha apuntando a la izquierda */
+  transform: rotate(135deg);
   left: 10px;
 }
 .app-container.log-collapsed #toggleLogBtn:hover::after {
-  border-color: #28a745; /* Verde al pasar el ratón para indicar "expandir" */
+  border-color: #28a745;
 }
 
 
@@ -559,9 +582,12 @@ tr.selected { background-color: #c5dce6; }
 .tab-content.active {
   display: block;
 }
-.tab-content h3 { color: #558ac7; margin-top: 0; }
-.tab-content ul, .tab-content ol { padding-left: 20px; }
-.tab-content li { margin-bottom: 10px; }
+.tab-content ul, .tab-content ol { 
+    padding-left: 20px; 
+}
+.tab-content li { 
+    margin-bottom: 10px; 
+}
 .tab-content code {
   background-color: #e9ecef;
   padding: 2px 5px;
@@ -571,14 +597,12 @@ tr.selected { background-color: #c5dce6; }
 
 /* --- 5.2. Modal de Importación --- */
 .modal-overlay {
-  display: none; /* Oculto por defecto */
+  display: none;
   position: fixed;
   z-index: 1000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0,0,0,0.5); /* Fondo oscuro semitransparente */
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  background-color: rgba(0,0,0,0.5);
   justify-content: center;
   align-items: center;
 }
@@ -590,8 +614,10 @@ tr.selected { background-color: #c5dce6; }
   max-width: 500px;
   box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
-.modal-content h3 { margin-top: 0; color: #558ac7; }
-.modal-content p { font-size: 0.9em; line-height: 1.4; margin-bottom: 15px; }
+.modal-content h3 { 
+    margin-top: 0; 
+    color: #558ac7; 
+}
 .modal-content textarea {
   width: 100%;
   padding: 8px;
@@ -605,23 +631,24 @@ tr.selected { background-color: #c5dce6; }
   justify-content: flex-end;
   gap: 10px;
 }
-
-/* Selector de delimitador en el modal */
 .delimiter-selector {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-bottom: 15px;
-    flex-wrap: wrap;
 }
-.delimiter-selector label { font-weight: bold; color: #333; }
 .delimiter-selector select, .delimiter-selector input {
     padding: 6px;
     border-radius: 4px;
     border: 1px solid #ccc;
 }
-.delimiter-selector input { width: 40px; text-align: center; }
-.hidden { display: none; }
+.delimiter-selector input { 
+    width: 40px; 
+    text-align: center; 
+}
+.hidden { 
+    display: none; 
+}
 
 
 /* --- 5.3. Calendario --- */
@@ -629,52 +656,62 @@ tr.selected { background-color: #c5dce6; }
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-left: auto; /* Empuja los controles a la derecha */
+    margin-left: auto;
 }
 .calendar-container {
     display: flex;
-    flex-direction: row; /* Vista principal a la izquierda, sidebar a la derecha */
+    flex-direction: row;
     gap: 20px;
     width: 100%;
-    flex-grow: 1; /* Ocupa el espacio disponible */
+    flex-grow: 1;
 }
 .calendar-main-view {
-    flex: 3; /* Ocupa 3/4 del espacio */
+    flex: 3;
     display: flex;
     flex-direction: column;
     padding-right: 10px;
 }
-/* Ajustes para el calendario */
-
 .calendar-sidebar {
     flex: 1;
     border-left: 1px solid #eee;
     padding-left: 20px;
     position: sticky;
-    top: 0; /* Se pegará a la parte de arriba del #main-content */
+    top: 0;
 }
-
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
 }
-.calendar-month { margin-bottom: 20px; }
-.calendar-month h3 { text-align: center; color: #558ac7; margin-top: 0; }
-.calendar-month table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.calendar-month th { background-color: #69a3db; color: white; }
-.calendar-month th, .calendar-month td { width: 14.28%; text-align: center; padding: 6px; }
+.calendar-month { 
+    margin-bottom: 20px; 
+}
+.calendar-month h3 { 
+    text-align: center; 
+    color: #558ac7; 
+    margin-top: 0; 
+}
+.calendar-month table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    font-size: 12px; 
+}
+.calendar-month th { 
+    background-color: #69a3db; 
+    color: white; 
+}
 .calendar-month td {
     border: 1px solid #ddd;
     cursor: pointer;
     transition: background-color 0.2s;
+    text-align: center;
+    padding: 6px;
 }
 .calendar-month td.weekend { background-color: #f8f9fa; }
 .calendar-month td.has-automation { background-color: #a2d9ff; font-weight: bold; }
 .calendar-month td.selected { background-color: #558ac7; color: white; }
 .calendar-month td:hover { background-color: #e0e7ef; }
 
-/* Lista de automatizaciones en la sidebar del calendario */
 #automation-list .automation-item {
     background-color: #f8f9fa;
     border: 1px solid #e9ecef;
@@ -682,26 +719,24 @@ tr.selected { background-color: #c5dce6; }
     padding: 10px;
     margin-bottom: 10px;
 }
-#automation-list .automation-name { font-weight: bold; word-break: break-all; }
-#automation-list .automation-details { font-size: 0.9em; color: #6c757d; }
-
-
-/* --- 5.4. Indicador de Login (NUEVO) --- */
-.login-status {
-    font-size: 0.85em;
-    font-weight: bold;
-    text-align: center;
-    margin: 10px 0 0 0;
-    padding: 5px;
-    border-radius: 4px;
+#automation-list .automation-name { 
+    font-weight: bold; 
+    word-break: break-all; 
 }
-.login-status.active {
-    color: #1c7430;
-    background-color: #d4edda;
+#automation-list .automation-details { 
+    font-size: 0.9em; 
+    color: #6c757d; 
 }
-.login-status.inactive {
-    color: #721c24;
-    background-color: #f8d7da;
+
+/* --- 5.4. Bloques de Data View (Envíos) --- */
+.sends-dataview-block {
+    margin-top: 20px;
+    border-top: 1px solid #e0e7ef;
+    padding-top: 15px;
+}
+.sends-dataview-block h4 {
+    margin: 0 0 10px 0;
+    color: #558ac7;
 }
 
 
@@ -710,26 +745,21 @@ tr.selected { background-color: #c5dce6; }
    ========================================================== */
 
 @media (max-width: 1024px) {
-  /* En pantallas más pequeñas, las columnas se apilan verticalmente */
   .app-container {
     grid-template-columns: 1fr;
   }
-
-  /* Ajustes para la barra de log */
   #log-sidebar {
     height: auto;
     max-height: 500px;
   }
   .app-container.log-collapsed {
-    grid-template-columns: 1fr; /* Mantiene una sola columna */
+    grid-template-columns: 1fr;
   }
   .app-container.log-collapsed .log-header h2,
   .app-container.log-collapsed .log-block {
-    display: flex; /* En móvil no se colapsa realmente, solo se reordena */
+    display: flex;
   }
   #toggleLogBtn {
-    display: none; /* Oculta el botón de colapso en pantallas pequeñas */
+    display: none;
   }
-
-  
 }

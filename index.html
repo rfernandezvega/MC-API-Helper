@@ -49,10 +49,8 @@
         <h3 class="collapsible-header">Funcionalidades</h3>
         <ul class="collapsible-content">
           <li><a class="macro-item" data-macro="calendario">Calendario</a></li>
-          <li><a class="macro-item" data-macro="busquedaDE">Búsqueda de Data Extension</a></li>
           <li><a class="macro-item" data-macro="validadorEmail">Validador de Email</a></li>
-          <li><a class="macro-item" data-macro="buscadorOrigenes">Buscador de Orígenes</a></li>
-          <li><a class="macro-item" data-macro="buscadorClientes">Buscador de Clientes</a></li>
+          <li><a class="macro-item" data-macro="buscadores">Buscadores</a></li> 
         </ul>
     </div>
   </aside>
@@ -156,6 +154,158 @@
         </div>
     </div>
 
+    <!-- SECCIÓN: Buscadores -->
+    <div id="buscadores-section" class="section">
+      <div class="section-header"><button class="back-button">← Atrás</button></div>
+      <h2>Buscadores</h2>
+      <div class="tabs-container">
+        <!-- Pestañas de Navegación -->
+        <div class="tab-buttons">
+          <button class="tab-button active" data-tab="busqueda-de-tab">Data Extensions</button>
+          <button class="tab-button" data-tab="origenes-tab">Orígen de datos</button>
+          <button class="tab-button" data-tab="clientes-tab">Clientes</button>
+          <button class="tab-button" data-tab="clientes-tab">Texto en query</button>
+        </div>
+
+        <!-- Contenido de la Pestaña: Búsqueda de Data Extension -->
+        <div id="busqueda-de-tab" class="tab-content active config-section-container">
+              <div class="config-block">
+                  <h3>Parámetros de Búsqueda</h3>
+                  <div class="form-group">
+                    <label for="deSearchProperty">Buscar por:</label>
+                    <select id="deSearchProperty">
+                      <option value="Name">Nombre</option>
+                      <option value="CustomerKey">External Key</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="deSearchValue">Valor:</label>
+                    <input type="text" id="deSearchValue" placeholder="Ingresa el valor de búsqueda" maxlength="128">
+                  </div>
+                  <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                    <button id="searchDEBtn" class="action-button">Buscar</button>
+                  </div>
+              </div>
+              <div class="config-block">
+                  <h3>Resultados</h3>
+                  <pre id="de-search-results">La ruta de la Data Extension aparecerá aquí.</pre>
+              </div>
+        </div>
+
+        <!-- Contenido de la Pestaña: Buscador de Orígenes -->
+        <div id="origenes-tab" class="tab-content config-section-container">
+              <div class="config-block">
+                  <h3>Parámetros de Búsqueda</h3>
+                  <div class="form-group">
+                    <label for="deNameToFind">Nombre de la Data Extension:</label>
+                    <input type="text" id="deNameToFind" placeholder="Introduce el nombre exacto de la DE">
+                  </div>
+                  <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                    <button id="findDataSourcesBtn" class="action-button">Buscar Orígenes</button>
+                  </div>
+              </div>
+              <div class="config-block" style="flex-grow: 1; display: flex; flex-direction: column;">
+                  <h3>Actividades Encontradas</h3>
+                  <div class="table-container" style="flex-grow: 1; overflow-y: auto;">
+                      <table id="data-sources-table">
+                          <thead>
+                              <tr>
+                                  <th>Actividad</th><th>Tipo</th><th>Automatización</th>
+                                  <th>Paso</th><th>Acción</th><th>Descripción / Query</th>
+                              </tr>
+                          </thead>
+                          <tbody id="data-sources-tbody"></tbody>
+                      </table>
+                  </div>
+              </div>
+        </div>
+        
+        <!-- Contenido de la Pestaña: Buscador de Clientes -->
+        <div id="clientes-tab" class="tab-content config-section-container">
+              <div class="config-block">
+                  <h3>Parámetros de Búsqueda</h3>
+                  <div class="form-group">
+                    <label for="customerSearchValue">Buscar por ID o Email:</label>
+                    <input type="text" id="customerSearchValue" placeholder="Ingresa el Subscriber Key o el Email">
+                  </div>
+                  <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                    <button id="searchCustomerBtn" class="action-button">Buscar Cliente</button>
+                  </div>
+              </div>
+              <div class="config-block" style="flex-grow: 1; display: flex; flex-direction: column;">
+                  <div class="config-block-header">
+                      <h3>Resultados</h3>
+                      <div class="header-actions">
+                          <button id="getCustomerSendsBtn" class="action-button" disabled>Envíos</button>
+                          <button id="getCustomerJourneysBtn" class="action-button" disabled>Journeys</button>
+                      </div>
+                  </div>
+                  <div class="table-container" style="flex-grow: 1; overflow-y: auto;">
+                      <table id="customer-search-table">
+                          <thead>
+                              <tr>
+                                  <th>Subscriber Key</th>
+                                  <th>Email</th>
+                                  <th>Estado</th>
+                                  <th>Fecha Creación</th>
+                                  <th>Fecha Baja</th>
+                                  <th>Suscriptor</th>
+                              </tr>
+                          </thead>
+                          <tbody id="customer-search-tbody"></tbody>
+                      </table>
+                  </div>
+              </div>
+              <div id="customer-journeys-results-block" class="config-block hidden" style="flex-grow: 1; display: flex; flex-direction: column;">
+                  <h3>Journeys del Cliente Seleccionado</h3>
+                  <div class="table-container" style="flex-grow: 1; overflow-y: auto;">
+                      <table id="customer-journeys-table">
+                          <thead>
+                              <tr>
+                                  <th>Nombre del Journey</th>
+                                  <th>ID del Journey</th>
+                                  <th>Definition Key</th>
+                                  <th>Versión</th>
+                                  <th>Fecha Creación</th>
+                                  <th>Fecha Modificación</th>
+                              </tr>
+                          </thead>
+                          <tbody id="customer-journeys-tbody"></tbody>
+                      </table>
+                  </div>
+              </div>
+              <!-- Bloque para los resultados de Envíos -->
+              <div id="customer-sends-results-block" class="config-block hidden" ...>
+                <h3>Envíos del Cliente Seleccionado</h3>
+                
+                <!-- Contenedor para la tabla de Envíos (Sent) -->
+                <div class="sends-dataview-block">
+                    <h4>Enviados (Sent)</h4>
+                    <div id="sends-table-container" class="table-container" style="padding-right: 0;"></div>
+                </div>
+                
+                <!-- Contenedor para la tabla de Aperturas (Open) -->
+                <div class="sends-dataview-block">
+                    <h4>Aperturas (Open)</h4>
+                    <div id="opens-table-container" class="table-container" style="padding-right: 0;"></div>
+                </div>
+
+                <!-- Contenedor para la tabla de Clics (Click) -->
+                <div class="sends-dataview-block">
+                    <h4>Clics (Click)</h4>
+                    <div id="clicks-table-container" class="table-container" style="padding-right: 0;"></div>
+                </div>
+
+                <!-- Contenedor para la tabla de Rebotes (Bounce) -->
+                <div class="sends-dataview-block">
+                    <h4>Rebotes (Bounce)</h4>
+                    <div id="bounces-table-container" class="table-container" style="padding-right: 0;"></div>
+                </div>
+            </div>
+        </div>
+      </div>
+    </div>
+
     <!-- SECCIÓN: Configuración de APIs -->
     <div id="configuracion-apis-section" class="section config-section-container">
          <div class="section-header">
@@ -209,35 +359,7 @@
             <div class="form-group"><label for="subscriberKeyType">Tipo Campo SubscriberKey</label><input type="text" id="subscriberKeyType" disabled></div>
         </div>
     </div>
-    
-    <!-- SECCIÓN: Búsqueda de Data Extension (CORREGIDO) -->
-    <div id="busqueda-de-section" class="section config-section-container">
-        <div class="section-header">
-            <button class="back-button">← Atrás</button>
-        </div>
-        <h2>Búsqueda de Data Extension</h2>
-        <div class="config-block">
-            <h3>Parámetros de Búsqueda</h3>
-            <div class="form-group">
-              <label for="deSearchProperty">Buscar por:</label>
-              <select id="deSearchProperty">
-                <option value="Name">Nombre</option>
-                <option value="CustomerKey">External Key</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="deSearchValue">Valor:</label>
-              <input type="text" id="deSearchValue" placeholder="Ingresa el valor de búsqueda" maxlength="128">
-            </div>
-            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-               <button id="searchDEBtn" class="action-button">Buscar</button>
-            </div>
-        </div>
-        <div class="config-block">
-            <h3>Resultados</h3>
-            <pre id="de-search-results">La ruta de la Data Extension aparecerá aquí.</pre>
-        </div>
-    </div>
+        
 
     <!-- SECCIÓN: Validador de Email (CORREGIDO) -->
     <div id="email-validator-section" class="section config-section-container">
@@ -260,38 +382,7 @@
             <pre id="email-validation-results">El resultado aparecerá aquí.</pre>
         </div>
     </div>
-    
-    <!-- SECCIÓN: Buscador de Orígenes de Datos (CORREGIDO) -->
-    <div id="data-source-finder-section" class="section config-section-container">
-        <div class="section-header">
-            <button class="back-button">← Atrás</button>
-        </div>
-        <h2>Buscador de Orígenes de Datos</h2>
-        <div class="config-block">
-            <h3>Parámetros de Búsqueda</h3>
-            <div class="form-group">
-              <label for="deNameToFind">Nombre de la Data Extension:</label>
-              <input type="text" id="deNameToFind" placeholder="Introduce el nombre exacto de la DE">
-            </div>
-            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-               <button id="findDataSourcesBtn" class="action-button">Buscar Orígenes</button>
-            </div>
-        </div>
-        <div class="config-block" style="flex-grow: 1; display: flex; flex-direction: column;">
-            <h3>Actividades Encontradas</h3>
-            <div class="table-container" style="flex-grow: 1; overflow-y: auto;">
-                 <table id="data-sources-table">
-                    <thead>
-                        <tr>
-                            <th>Actividad</th><th>Tipo</th><th>Automatización</th>
-                            <th>Paso</th><th>Acción</th><th>Descripción / Query</th>
-                        </tr>
-                    </thead>
-                    <tbody id="data-sources-tbody"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+       
 
     <!-- SECCIÓN: Gestión de Campos -->
     <div id="configuracion-campos-section" class="section config-section-container">
@@ -345,94 +436,7 @@
           </div>
         </div>
     </div>
-
-    <!-- SECCIÓN: Buscador de Clientes -->
-    <div id="customer-search-section" class="section config-section-container">
-        <div class="section-header">
-            <button class="back-button">← Atrás</button>
-        </div>
-        <h2>Buscador de Clientes (Subscribers)</h2>
-        <div class="config-block">
-            <h3>Parámetros de Búsqueda</h3>
-            <div class="form-group">
-              <label for="customerSearchValue">Buscar por ID o Email:</label>
-              <input type="text" id="customerSearchValue" placeholder="Ingresa el Subscriber Key o el Email">
-            </div>
-            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-              <button id="searchCustomerBtn" class="action-button">Buscar Cliente</button>
-            </div>
-        </div>
-        <div class="config-block" style="flex-grow: 1; display: flex; flex-direction: column;">
-            <div class="config-block-header">
-                <h3>Resultados</h3>
-                <div class="header-actions">
-                    <button id="getCustomerSendsBtn" class="action-button" disabled>Envíos</button>
-                    <button id="getCustomerJourneysBtn" class="action-button" disabled>Journeys</button>
-                </div>
-            </div>
-            <div class="table-container" style="flex-grow: 1; overflow-y: auto;">
-                 <table id="customer-search-table">
-                    <thead>
-                        <tr>
-                            <th>Subscriber Key</th>
-                            <th>Email</th>
-                            <th>Estado</th>
-                            <th>Fecha Creación</th>
-                            <th>Fecha Baja</th>
-                            <th>Suscriptor</th>
-                        </tr>
-                    </thead>
-                    <tbody id="customer-search-tbody"></tbody>
-                </table>
-            </div>
-        </div>
-        <div id="customer-journeys-results-block" class="config-block hidden" style="flex-grow: 1; display: flex; flex-direction: column;">
-            <h3>Journeys del Cliente Seleccionado</h3>
-            <div class="table-container" style="flex-grow: 1; overflow-y: auto;">
-                 <table id="customer-journeys-table">
-                    <thead>
-                        <tr>
-                            <th>Nombre del Journey</th>
-                            <th>ID del Journey</th>
-                            <th>Definition Key</th>
-                            <th>Versión</th>
-                            <th>Fecha Creación</th>
-                            <th>Fecha Modificación</th>
-                        </tr>
-                    </thead>
-                    <tbody id="customer-journeys-tbody"></tbody>
-                </table>
-            </div>
-        </div>
-        <!-- Bloque para los resultados de Envíos -->
-        <div id="customer-sends-results-block" class="config-block hidden" ...>
-          <h3>Envíos del Cliente Seleccionado</h3>
-          
-          <!-- Contenedor para la tabla de Envíos (Sent) -->
-          <div class="sends-dataview-block">
-              <h4>Enviados (Sent)</h4>
-              <div id="sends-table-container" class="table-container" style="padding-right: 0;"></div>
-          </div>
-          
-          <!-- Contenedor para la tabla de Aperturas (Open) -->
-          <div class="sends-dataview-block">
-              <h4>Aperturas (Open)</h4>
-              <div id="opens-table-container" class="table-container" style="padding-right: 0;"></div>
-          </div>
-
-          <!-- Contenedor para la tabla de Clics (Click) -->
-          <div class="sends-dataview-block">
-              <h4>Clics (Click)</h4>
-              <div id="clicks-table-container" class="table-container" style="padding-right: 0;"></div>
-          </div>
-
-          <!-- Contenedor para la tabla de Rebotes (Bounce) -->
-          <div class="sends-dataview-block">
-              <h4>Rebotes (Bounce)</h4>
-              <div id="bounces-table-container" class="table-container" style="padding-right: 0;"></div>
-          </div>
-      </div>
-    </div>
+    
   </main> 
   <!-- END: CONTENIDO PRINCIPAL -->
 
