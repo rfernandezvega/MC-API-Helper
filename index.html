@@ -91,11 +91,31 @@
         <div id="configuracion-principal" class="tab-content active">
           <h3>Configuración Principal</h3>
           <ul>
-            <li><strong>Configurar un Cliente:</strong> Ve a <em>Configuración de APIs</em>. Introduce un nombre, rellena los datos de la app de MC (MID, Auth URI, etc.) y pulsa "Login / Guardar".</li>
+            <li><strong>Configurar aplicación en MC.</strong>. 
+              <ul>
+                <li>Entrar en Setup → Apps → Installed Packages</li>
+                <li>Crear un nuevo paquete de tipo <b>Web App</b></li>
+                <li>Configurar el callback URI como <b>https://127.0.0.1:8443/callback</b></li>
+                <li>Indicar los siguientes permisos en la aplicación 
+                  <ul>
+                    <li>Email: Read/Write</li>
+                    <li>Automations: Read/Write/Execute</li>  
+                    <li>Journeys: Read</li>    
+                    <li>Audiences: Read/Write</li>  
+                    <li>Contact to Business Unit Mapping: View</li>  
+                    <li>List and Subscribers: Read/Write</li>  
+                    <li>Data Extensions: Read/Write</li>              
+                  </ul>
+                </li>
+                <li>Indicar el siguiente permiso a nivel de Usuario:  “Email > Content > Email > View”.
+              </ul>
+            </li>
+            <li><strong>Configurar un Cliente:</strong> Ve a <em>Configuración de APIs</em>. Introduce un nombre, rellena los datos de la app de MC (MID, Auth URI, etc.) y pulsa "Login / Guardar". 
+              Saltará una ventana donde iniciar sesión en Marketing Cloud. Una vez introducidas las credenciales la aplicación tardará un poco en cerrar la ventana que indicará (No responde) <b>Es normal</b></li>
             <li><strong>Almacenamiento Local:</strong> La configuración (sin el Client Secret) se guarda en el navegador. Otra parte se guarda en el gestor de credenciales de Windows</li>
             <li><strong>Gestión de Sesión:</strong> El botón "Login" inicia la autenticación y guarda la configuración. El botón "Logout" cierra la sesión activa y elimina la configuración guardada.</li>
             <li><strong>Estado de la Sesión:</strong> El indicador de color bajo el selector de cliente te informa si la sesión está activa o no.</li>
-            <li><strong>Inicio:</strong> La aplicación se abrirá sin ningun cliente. Si había alguno guardado y se selecciona, intentará conectarse. <b>Esto puede tardar</b></li>
+            <li><strong>Inicio:</strong> La aplicación se abrirá sin ningun cliente. </li>
           </ul>
         </div>
         <div id="guia-rapida" class="tab-content">
@@ -106,14 +126,14 @@
               <li><b>Crear DE / Campos:</b> Usa los botones "Crear Data Extension" o "Crear/Actualizar Campos" para ejecutar la acción.</li>
               <li><b>Gestión de Campos:</b> Recupera o borra campos de una DE existente. Especialmente útil para campos en Attribute Groups que no se pueden borrar por pantalla.</li>
               <li><b>Calendario:</b> Refresca los datos para ver las automatizaciones de Journeys programadas. Los días con algun automatismo programado aparecerán en azul. Seleccionandolo aparecerá el listado.</li>
-              <li><b>Búsqueda y Validación:</b> Encuentra la ruta de una DE o valida la sintaxis de un email.</li>
-              <li><b>Buscador de Orígenes:</b> Introduce el nombre de una DE para ver qué Queries o Imports la están rellenando y en qué automatismos.</li>
+              <li><b>Validador de Emails:</b> Valida el mail indicado contra los validadores que utiliza Marketing Cloud para los campos de email.</li>
+              <li><b>Buscadores:</b> Permite buscar Data Extensions, el origen de sus datos, queries en base a un texto de su contenido y clientes (con sus envios y Journeys en los que se encuentra).</li>
           </ol>
         </div>
         <div id="errores-comunes" class="tab-content">
             <h3>Errores Comunes</h3>
             <ul>
-                <li><strong>Error de autenticación:</strong> Revisa que el MID, Client ID y Client Secret sean correctos. La app API debe ser de tipo "Server-to-Server".</li>
+                <li><strong>Error de autenticación:</strong> Revisa que el MID, Client ID y Client Secret sean correctos. La app API debe ser de tipo <b>"Web App"</b>.</li>
                 <li><strong>La DE se crea en la raíz:</strong> Para carpetas, debes usar el <strong>ID de la Carpeta</strong> (un número), no su nombre.</li>
                 <li><strong>DE Sendable sin Subscriber Key:</strong> Es <strong>obligatorio</strong> seleccionar un campo como Subscriber Key y que este sea requerido.</li>
                 <li><strong>Error "Bad Request" con enlaces:</strong> Si pegas una URL en un campo con "&", reemplázalo por <code>&amp;amp;</code> en la tabla.</li>
