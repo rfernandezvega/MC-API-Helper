@@ -68,6 +68,17 @@ document.addEventListener('DOMContentLoaded', function () {
 	const findDataSourcesBtn = document.getElementById('findDataSourcesBtn');
 	const deNameToFindInput = document.getElementById('deNameToFind');
 	const dataSourcesTbody = document.getElementById('data-sources-tbody');
+	const customerSearchProperty = document.getElementById('customerSearchProperty');
+    const customerSearchValue = document.getElementById('customerSearchValue');
+    const searchCustomerBtn = document.getElementById('searchCustomerBtn');
+    const customerSearchTbody = document.getElementById('customer-search-tbody');
+	const getCustomerSendsBtn = document.getElementById('getCustomerSendsBtn');
+    const getCustomerJourneysBtn = document.getElementById('getCustomerJourneysBtn');
+    let selectedCustomerRow = null; // Para la fila seleccionada
+    let selectedSubscriberData = null; // Para los datos del subscriber seleccionado
+	const customerJourneysResultsBlock = document.getElementById('customer-journeys-results-block');
+    const customerJourneysTbody = document.getElementById('customer-journeys-tbody');
+	const customerSendsResultsBlock = document.getElementById('customer-sends-results-block');
 	const tabButtons = document.querySelectorAll('.tab-button');
 	const tabContents = document.querySelectorAll('.tab-content');
 	const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
@@ -813,7 +824,259 @@ document.addEventListener('DOMContentLoaded', function () {
 			unblockUI();
 		}
 	}
+	
 
+	/** Busca un contacto, primero como Subscriber (SOAP) y si no, como Contact (REST). */
+	async function macroSearchCustomer() {
+		blockUI();
+		customerSearchTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
+		
+		// Resetea el estado completo de la UI para la nueva búsqueda
+		if (selectedCustomerRow) selectedCustomerRow.classList.remove('selected');
+		selectedCustomerRow = null;
+		selectedSubscriberData = null;
+		getCustomerSendsBtn.disabled = true;
+		getCustomerJourneysBtn.disabled = true;
+		customerJourneysResultsBlock.classList.add('hidden');
+		customerSendsResultsBlock.classList.add('hidden');
+
+		try {
+			const apiConfig = await getAuthenticatedConfig();
+			const property = customerSearchProperty.value;
+			const value = customerSearchValue.value.trim();
+			if (!value) throw new Error("El campo 'Valor' no puede estar vacío.");
+			
+			logMessage(`Buscando Subscriber por ${property}: ${value}`);
+
+			// --- PASO 1: Búsqueda en SUBSCRIBERS (SOAP) ---
+			const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>Subscriber</ObjectType><Properties>CreatedDate</Properties><Properties>Client.ID</Properties><Properties>EmailAddress</Properties><Properties>SubscriberKey</Properties><Properties>Status</Properties><Properties>UnsubscribedDate</Properties><Filter xsi:type="SimpleFilterPart"><Property>${property}</Property><SimpleOperator>equals</SimpleOperator><Value>${value}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+			const responseText = await (await fetch(apiConfig.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload })).text();
+			let finalResults = parseCustomerSearchResponse(responseText);
+
+			// --- PASO 2: Si no se encuentra como suscriptor, SIEMPRE intenta buscar como contacto ---
+			if (finalResults.length === 0) {
+				logMessage("No se encontró como Subscriber. Buscando como Contact...");
+				
+				// --- Llamada a la API de Contactos con el endpoint y payload CORRECTOS ---
+				const contactUrl = `${apiConfig.restUri}contacts/v1/addresses/search/ContactKey`;
+				const contactPayload = {
+				"filterConditionOperator": "Is",
+				"filterConditionValue": value
+				};
+
+				logApiCall({ endpoint: contactUrl, body: contactPayload });
+
+				const contactResponse = await fetch(contactUrl, {
+					method: 'POST',
+					headers: { 'Authorization': `Bearer ${apiConfig.accessToken}`, 'Content-Type': 'application/json' },
+					body: JSON.stringify(contactPayload)
+				});
+				
+				const contactData = await contactResponse.json();
+				logApiResponse(contactData); // Logueamos la respuesta SIEMPRE
+
+				if (!contactResponse.ok) {
+					const errorMessage = contactData.message || `Error API al buscar contactos: ${contactResponse.statusText}`;
+					throw new Error(errorMessage);
+				}
+				
+				finalResults = parseContactAddressSearchResponse(contactData);
+			}
+
+			renderCustomerSearchResults(finalResults);
+			logMessage(`Búsqueda completada. Se encontraron ${finalResults.length} resultado(s).`);
+
+		} catch (error) {
+			logMessage(`Error al buscar clientes: ${error.message}`);
+			customerSearchTbody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${error.message}</td></tr>`;
+		} finally {
+			unblockUI();
+		}
+	}
+
+	/** Parsea la respuesta XML de la búsqueda de suscriptores. */
+	function parseCustomerSearchResponse(xmlString) {
+		const parser = new DOMParser();
+		const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+		const overallStatus = xmlDoc.querySelector("OverallStatus")?.textContent;
+		
+		if (overallStatus !== 'OK' && overallStatus !== 'MoreDataAvailable') {
+			throw new Error(xmlDoc.querySelector("StatusMessage")?.textContent || 'Error desconocido en la respuesta SOAP.');
+		}
+
+		const results = Array.from(xmlDoc.querySelectorAll("Results"));
+		if (results.length === 0) return [];
+
+		return results.map(node => {
+			// Helper que devuelve el texto o null si no lo encuentra.
+			const getText = (tagName) => node.querySelector(tagName)?.textContent || null;
+
+			// Obtenemos las fechas. Si no existen, serán null.
+			const createdDateValue = getText("CreatedDate");
+			const unsubDateValue = getText("UnsubscribedDate");
+
+			return { 
+				subscriberKey: getText("SubscriberKey") || '---',
+				emailAddress: getText("EmailAddress") || '---',
+				status: getText("Status") || '---',
+				createdDate: createdDateValue ? new Date(createdDateValue).toLocaleString() : '---',
+				unsubscribedDate: unsubDateValue ? new Date(unsubDateValue).toLocaleString() : '---',
+				isSubscriber: true // Marcamos que es un suscriptor
+			};
+		});
+	}
+
+	/** Parsea la respuesta JSON de la búsqueda de contactos por /addresses/search/ContactKey. */
+	function parseContactAddressSearchResponse(jsonData) {
+		const addresses = jsonData?.addresses || [];
+		if (addresses.length === 0) return [];
+
+		// Tomamos el primer resultado, ya que buscamos un ID específico
+		const address = addresses[0];
+		const contactKey = address.contactKey?.value || '---';
+
+		// Buscamos la fecha de creación en la estructura anidada de la respuesta
+		let createdDate = '---';
+		const primaryValueSet = address.valueSets?.find(vs => vs.definitionKey === 'Primary');
+		if (primaryValueSet) {
+			const dateValueObj = primaryValueSet.values?.find(v => v.definitionKey === 'CreatedDate');
+			if (dateValueObj?.innerValue) {
+				createdDate = new Date(dateValueObj.innerValue).toLocaleString();
+			}
+		}
+
+		const result = {
+			subscriberKey: contactKey,
+			emailAddress: '---', // Esta API no devuelve el email directamente
+			status: '---',
+			createdDate: createdDate,
+			unsubscribedDate: '---',
+			isSubscriber: false // Crucial: Marcamos que NO es un suscriptor
+		};
+		
+		// Devolvemos el resultado dentro de un array para ser consistentes con el otro parser
+		return [result];
+	}
+
+	/** Pinta los resultados de la búsqueda de clientes en la tabla. */
+	function renderCustomerSearchResults(subscribers) {
+		customerSearchTbody.innerHTML = '';
+		if (subscribers.length === 0) {
+			customerSearchTbody.innerHTML = '<tr><td colspan="6">No se encontraron clientes con ese criterio.</td></tr>';
+			return;
+		}
+
+		subscribers.forEach(sub => {
+			const row = document.createElement('tr');
+			row.dataset.subscriberKey = sub.subscriberKey; // Guardamos el SK en el propio elemento
+			row.dataset.isSubscriber = sub.isSubscriber;
+			row.innerHTML = `
+				<td>${sub.subscriberKey}</td>
+				<td>${sub.emailAddress}</td>
+				<td>${sub.status}</td>
+				<td>${sub.createdDate}</td>
+				<td>${sub.unsubscribedDate}</td>
+				<td>${sub.isSubscriber ? 'Sí' : 'No'}</td>
+			`;
+			customerSearchTbody.appendChild(row);
+		});
+	}
+
+	/** Busca y muestra los Journeys en los que se encuentra un contacto. */
+	async function macroGetCustomerJourneys() {
+		if (!selectedSubscriberData?.subscriberKey) return;
+
+		blockUI();
+		// Muestra el bloque de resultados y pone un mensaje de carga
+		customerJourneysResultsBlock.classList.remove('hidden');
+		customerJourneysTbody.innerHTML = '<tr><td colspan="6">Buscando membresías de Journey...</td></tr>';
+
+		try {
+			const apiConfig = await getAuthenticatedConfig();
+			const contactKey = selectedSubscriberData.subscriberKey;
+
+			// --- 1. PRIMERA LLAMADA: Obtener las membresías del contacto ---
+			logMessage(`Buscando Journeys para el Contact Key: ${contactKey}`);
+			const membershipUrl = `${apiConfig.restUri}interaction/v1/interactions/contactMembership`;
+			const membershipPayload = { "ContactKeyList": [contactKey] };
+
+			logApiCall({ endpoint: membershipUrl, body: membershipPayload });
+
+			const membershipResponse = await fetch(membershipUrl, {
+				method: 'POST',
+				headers: {
+					'Authorization': `Bearer ${apiConfig.accessToken}`,
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(membershipPayload)
+			});
+
+			const membershipData = await membershipResponse.json();
+			logApiResponse(membershipData);
+
+			if (!membershipResponse.ok)
+			{
+				throw new Error(`Error API al buscar membresías: ${membershipResponse.statusText}`);
+			}				
+
+			const memberships = membershipData.results?.contactMemberships || [];
+
+			if (memberships.length === 0) {
+				customerJourneysTbody.innerHTML = '<tr><td colspan="6">No se encontraron Journeys para este contacto.</td></tr>';
+				logMessage("Búsqueda completada. El contacto no está en ningún Journey.");
+				return;
+			}
+
+			// --- 2. SEGUNDA LLAMADA: Obtener los detalles de cada Journey ---
+			customerJourneysTbody.innerHTML = '<tr><td colspan="6">Membresías encontradas. Obteniendo detalles de los Journeys...</td></tr>';
+			
+			// Obtenemos una lista de claves de definición únicas para no hacer llamadas repetidas
+			const uniqueDefinitionKeys = [...new Set(memberships.map(m => m.definitionKey))];
+
+			// Creamos una promesa para cada llamada de detalles
+			const detailPromises = uniqueDefinitionKeys.map(key => {
+				const detailUrl = `${apiConfig.restUri}interaction/v1/interactions/key:${key}`;
+				return fetch(detailUrl, {
+					method: 'GET',
+					headers: { 'Authorization': `Bearer ${apiConfig.accessToken}` }
+				}).then(res => res.json());
+			});
+			
+			// Esperamos a que todas las llamadas de detalles se completen
+			const journeyDetails = await Promise.all(detailPromises);
+			
+			renderCustomerJourneysTable(journeyDetails);
+			logMessage(`Búsqueda completada. Se encontraron detalles para ${journeyDetails.length} Journey(s).`);
+
+		} catch (error) {
+			logMessage(`Error al buscar journeys: ${error.message}`);
+			customerJourneysTbody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${error.message}</td></tr>`;
+		} finally {
+			unblockUI();
+		}
+	}
+
+	/** Pinta los detalles de los journeys en su tabla correspondiente. */
+	function renderCustomerJourneysTable(journeys) {
+		customerJourneysTbody.innerHTML = '';
+		if (!journeys || journeys.length === 0) {
+			customerJourneysTbody.innerHTML = '<tr><td colspan="6">No se pudieron recuperar los detalles de los Journeys.</td></tr>';
+			return;
+		}
+
+		journeys.forEach(journey => {
+			const row = document.createElement('tr');
+			row.innerHTML = `
+				<td>${journey.name || '---'}</td>
+				<td>${journey.id || '---'}</td>
+				<td>${journey.key || '---'}</td>
+				<td>${journey.version || '---'}</td>
+				<td>${journey.createdDate ? new Date(journey.createdDate).toLocaleString() : '---'}</td>
+				<td>${journey.modifiedDate ? new Date(journey.modifiedDate).toLocaleString() : '---'}</td>
+			`;
+			customerJourneysTbody.appendChild(row);
+		});
+	}
 
 	// ==========================================================
 	// --- 5. FUNCIONES AUXILIARES (HELPERS) ---
@@ -1431,6 +1694,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		// Botón de Login: guarda la configuración no sensible e inicia el flujo de autenticación.
 		loginBtn.addEventListener('click', () => {
+			console.log('[LOGIN-UI] Botón de Login pulsado.');
+
 			const clientName = clientNameInput.value.trim();
 			if (!clientName) return alert('Introduzca un nombre para el cliente.');
 			const config = {
@@ -1440,13 +1705,22 @@ document.addEventListener('DOMContentLoaded', function () {
 				clientSecret: clientSecretInput.value.trim(),
 				businessUnit: businessUnitInput.value.trim()
 			};
-			if (!config.authUri || !config.clientId || !config.clientSecret || !config.businessUnit) return alert('Se necesitan Auth URI, Client ID, Client Secret y MID para el login.');
+			console.log('[LOGIN-UI] Datos recogidos del formulario:', config);
+
+			if (!config.authUri || !config.clientId || !config.clientSecret || !config.businessUnit)
+			{
+				console.error('[LOGIN-UI] ¡VALIDACIÓN FALLIDA! Uno o más campos están vacíos.');
+				return alert('Se necesitan Auth URI, Client ID, Client Secret y MID para el login.');
+			}
 
 			// Guarda la configuración (sin el secret) antes de iniciar el login.
 			let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
 			configs[clientName] = getConfigToSave();
 			localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
 			loadConfigsIntoSelect(); // Actualiza los selectores.
+
+			console.log('[LOGIN-UI] Validaciones OK. Bloqueando UI y enviando evento a main.js.');
+
 			logMessage("Configuración guardada. Iniciando login...");
 			blockUI();
 			// Envía la configuración al proceso principal (main.js) para iniciar el OAuth flow.
@@ -1516,7 +1790,8 @@ document.addEventListener('DOMContentLoaded', function () {
 						'gestionCampos': 'configuracion-campos-section',
 						'busquedaDE': 'busqueda-de-section',
 						'validadorEmail': 'email-validator-section',
-						'buscadorOrigenes': 'data-source-finder-section'
+						'buscadorOrigenes': 'data-source-finder-section',
+                        'buscadorClientes': 'customer-search-section'
 					};
 					if (sectionMap[macro]) {
 						showSection(sectionMap[macro]);
@@ -1534,6 +1809,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		searchDEBtn.addEventListener('click', macroSearchDE);
 		validateEmailBtn.addEventListener('click', macroValidateEmail);
 		findDataSourcesBtn.addEventListener('click', macroFindDataSources);
+		searchCustomerBtn.addEventListener('click', macroSearchCustomer);
 		refreshAutomationsBtn.addEventListener('click', macroGetAutomations);
 		createDummyFieldsBtn.addEventListener('click', createDummyFields);
 		clearFieldsBtn.addEventListener('click', clearFieldsTable);
@@ -1577,7 +1853,9 @@ document.addEventListener('DOMContentLoaded', function () {
 		authUriInput.addEventListener('blur', () => {
 			const uri = authUriInput.value.trim();
 			// Solo lo añade si el campo no está vacío y no termina ya con /v2/token
-			if (uri && !uri.endsWith('/v2/token')) {
+			if (uri && !uri.endsWith('v2/token') && uri.endsWith('/')) {
+				authUriInput.value = uri + 'v2/token';
+			}else if (uri && !uri.endsWith('v2/token') && !uri.endsWith('/')) {
 				authUriInput.value = uri + '/v2/token';
 			}
 		});
@@ -1622,6 +1900,50 @@ document.addEventListener('DOMContentLoaded', function () {
 			});
 		});
 		calendarYearSelect.addEventListener('change', generateCalendar);
+
+		// Listener para la selección de filas en la tabla de búsqueda de clientes
+        customerSearchTbody.addEventListener('click', (e) => {
+            const clickedRow = e.target.closest('tr');
+            if (!clickedRow || !clickedRow.dataset.subscriberKey) return; // Salir si no es una fila con datos
+
+            // Deseleccionar la fila anterior si existe
+            if (selectedCustomerRow) {
+                selectedCustomerRow.classList.remove('selected');
+            }
+
+            // Seleccionar la nueva fila
+            clickedRow.classList.add('selected');
+            selectedCustomerRow = clickedRow;
+			
+			const isSub = clickedRow.dataset.isSubscriber === 'true';
+
+            // Guardar los datos del suscriptor y habilitar botones
+            selectedSubscriberData = {
+				subscriberKey: clickedRow.dataset.subscriberKey,
+				isSubscriber: isSub
+			};
+			// El botón de Envíos solo se activa si es un Suscriptor
+			getCustomerSendsBtn.disabled = !isSub;            
+			// El botón de Journeys se activa siempre que se encuentre un contacto/suscriptor
+			getCustomerJourneysBtn.disabled = false;
+        });
+
+        // Listeners para los nuevos botones (por ahora, con alertas)
+        getCustomerSendsBtn.addEventListener('click', () => {
+            if (selectedSubscriberData) {
+                // Oculta el otro panel y muestra este
+                customerJourneysResultsBlock.classList.add('hidden');
+                customerSendsResultsBlock.classList.remove('hidden');
+            }
+        });
+
+        getCustomerJourneysBtn.addEventListener('click', () => {
+			if (selectedSubscriberData) {
+				customerSendsResultsBlock.classList.add('hidden');
+				macroGetCustomerJourneys(); 
+			}
+		});
+
 	}
 
 	/** Función principal que inicializa el estado de la aplicación al cargar. */

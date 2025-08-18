@@ -52,6 +52,7 @@
           <li><a class="macro-item" data-macro="busquedaDE">Búsqueda de Data Extension</a></li>
           <li><a class="macro-item" data-macro="validadorEmail">Validador de Email</a></li>
           <li><a class="macro-item" data-macro="buscadorOrigenes">Buscador de Orígenes</a></li>
+          <li><a class="macro-item" data-macro="buscadorClientes">Buscador de Clientes</a></li>
         </ul>
     </div>
   </aside>
@@ -342,6 +343,79 @@
             <button id="moveUp" title="Mover fila seleccionada hacia arriba">Subir</button>
             <button id="moveDown" title="Mover fila seleccionada hacia abajo">Bajar</button>
           </div>
+        </div>
+    </div>
+
+    <!-- SECCIÓN: Buscador de Clientes -->
+    <div id="customer-search-section" class="section config-section-container">
+        <div class="section-header">
+            <button class="back-button">← Atrás</button>
+        </div>
+        <h2>Buscador de Clientes (Subscribers)</h2>
+        <div class="config-block">
+            <h3>Parámetros de Búsqueda</h3>
+            <div class="form-group">
+              <label for="customerSearchProperty">Buscar por:</label>
+              <select id="customerSearchProperty">
+                <option value="EmailAddress">Email</option>
+                <option value="SubscriberKey">ID (Subscriber Key)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="customerSearchValue">Valor:</label>
+              <input type="text" id="customerSearchValue" placeholder="Ingresa el valor de búsqueda">
+            </div>
+            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+               <button id="searchCustomerBtn" class="action-button">Buscar Cliente</button>
+            </div>
+        </div>
+        <div class="config-block" style="flex-grow: 1; display: flex; flex-direction: column;">
+            <div class="config-block-header">
+                <h3>Resultados</h3>
+                <div class="header-actions">
+                    <button id="getCustomerSendsBtn" class="action-button" disabled>Envíos</button>
+                    <button id="getCustomerJourneysBtn" class="action-button" disabled>Journeys</button>
+                </div>
+            </div>
+            <div class="table-container" style="flex-grow: 1; overflow-y: auto;">
+                 <table id="customer-search-table">
+                    <thead>
+                        <tr>
+                            <th>Subscriber Key</th>
+                            <th>Email</th>
+                            <th>Estado</th>
+                            <th>Fecha Creación</th>
+                            <th>Fecha Baja</th>
+                            <th>Suscriptor</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customer-search-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div id="customer-journeys-results-block" class="config-block hidden" style="flex-grow: 1; display: flex; flex-direction: column;">
+            <h3>Journeys del Cliente Seleccionado</h3>
+            <div class="table-container" style="flex-grow: 1; overflow-y: auto;">
+                 <table id="customer-journeys-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre del Journey</th>
+                            <th>ID del Journey</th>
+                            <th>Definition Key</th>
+                            <th>Versión</th>
+                            <th>Fecha Creación</th>
+                            <th>Fecha Modificación</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customer-journeys-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+        <!-- Bloque para los resultados de Envíos -->
+        <div id="customer-sends-results-block" class="config-block hidden" style="flex-grow: 1; display: flex; flex-direction: column;">
+            <h3>Envíos del Cliente Seleccionado</h3>
+            <p>Esta funcionalidad aún no está implementada.</p>
+            <!-- Aquí iría la futura tabla de envíos -->
         </div>
     </div>
   </main> 

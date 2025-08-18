@@ -35,6 +35,7 @@ function createWindow() {
         }
     });
     mainWindow.loadFile('index.html');
+    // Descomenta la siguiente línea para abrir las herramientas de desarrollador al iniciar
     // mainWindow.webContents.openDevTools();
 }
 
@@ -73,10 +74,8 @@ async function refreshAccessToken(clientName) {
         const response = await axios.post(authUri, payload, { headers: { 'Content-Type': 'application/json' } });
         const tokenData = response.data;
 
-        // Actualiza el refresh token en el llavero por si ha cambiado
         await keytar.setPassword(KEYTAR_SERVICE_NAME, `${clientName}-refreshToken`, tokenData.refresh_token);
 
-        // Actualiza la sesión activa en memoria
         activeSession = {
             clientName: clientName,
             accessToken: tokenData.access_token,
@@ -87,8 +86,8 @@ async function refreshAccessToken(clientName) {
 
     } catch (error) {
         console.error("Error crítico al refrescar el token. Se requiere nuevo login.", error.response ? error.response.data : error.message);
-        await keytar.deletePassword(KEYTAR_SERVICE_NAME, `${clientName}-refreshToken`); // Limpia el token inválido
-        activeSession = {}; // Resetea la sesión
+        await keytar.deletePassword(KEYTAR_SERVICE_NAME, `${clientName}-refreshToken`);
+        activeSession = {};
         throw new Error("Fallo al refrescar el token. Por favor, haz login de nuevo.");
     }
 }
@@ -97,12 +96,10 @@ async function refreshAccessToken(clientName) {
 ipcMain.handle('get-api-config', async (event, clientName) => {
     if (!clientName) return null;
 
-    // Si la sesión activa no es la correcta, o el token no existe, o ha expirado -> refresca
     if (activeSession.clientName !== clientName || !activeSession.accessToken || Date.now() >= activeSession.expiryTimestamp) {
         try {
             await refreshAccessToken(clientName);
         } catch (e) {
-            // Si el refresco falla, notifica al renderer que necesita login
             mainWindow.webContents.send('require-login', { message: e.message });
             return null;
         }
@@ -115,29 +112,48 @@ ipcMain.handle('get-api-config', async (event, clientName) => {
     };
 });
 
-// IPC: Inicia el flujo de login
+// IPC: Inicia el flujo de login (VERSIÓN CON DIAGNÓSTICOS)
 ipcMain.on('start-login', (event, config) => {
+    // Muestra la configuración recibida ---
+    //console.log('[LOGIN-START] Configuración recibida:', JSON.stringify(config, (key, value) => key === 'clientSecret' ? '******' : value, 2));
+
     const authUrl = new URL(`${config.authUri.replace('/v2/token', '')}/v2/authorize`);
     authUrl.searchParams.append('client_id', config.clientId);
     authUrl.searchParams.append('response_type', 'code');
     authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
-    authUrl.searchParams.append('scope', 'data_extensions_write data_extensions_read journeys_write journeys_read automations_write automations_read');
+    //authUrl.searchParams.append('scope', 'data_extensions_write data_extensions_read journeys_write journeys_read automations_write automations_read');
+
+    // Muestra la URL que se va a cargar ---
+    //console.log('[LOGIN-START] URL de autorización generada:', authUrl.toString());
 
     const loginWindow = new BrowserWindow({
         width: 800, height: 600, parent: mainWindow, modal: true, show: true,
         webPreferences: { nodeIntegration: false, contextIsolation: true }
     });
-    loginWindow.loadURL(authUrl.toString());
-    const { webContents } = loginWindow;
+    
+    // Para ver si la ventana falla al cargar la URL 
+    loginWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+        console.error(`[LOGIN-ERROR] La ventana de login falló al cargar: ${errorDescription} (Código: ${errorCode})`);
+    });
 
-    const onNavigate = async (evt, navigationUrl) => {
+    loginWindow.loadURL(authUrl.toString());
+
+    const { webContents } = loginWindow;
+    let loginHandled = false;
+
+    const redirectListener = async (evt, navigationUrl) => {
+        //console.log(`[LOGIN-REDIRECT] 'will-redirect' detectado. URL: ${navigationUrl}`);
+
         if (navigationUrl.startsWith(REDIRECT_URI)) {
+            //console.log('[LOGIN-REDIRECT] La URL coincide con REDIRECT_URI. Procesando login...');
+            loginHandled = true;
             const parsedUrl = new URL(navigationUrl);
             const authCode = parsedUrl.searchParams.get('code');
             loginWindow.close();
 
             if (authCode) {
                 try {
+                    //console.log('[LOGIN-TOKEN] Intercambiando código de autorización por token...');
                     const payload = {
                         grant_type: 'authorization_code',
                         client_id: config.clientId,
@@ -148,13 +164,12 @@ ipcMain.on('start-login', (event, config) => {
                     const response = await axios.post(config.authUri, payload, { headers: { 'Content-Type': 'application/json' } });
                     const tokenData = response.data;
                     
-                    // GUARDADO SEGURO
+                    //console.log('[LOGIN-TOKEN] Token recibido con éxito. Guardando credenciales de forma segura...');
                     await keytar.setPassword(KEYTAR_SERVICE_NAME, `${config.clientName}-refreshToken`, tokenData.refresh_token);
                     await keytar.setPassword(KEYTAR_SERVICE_NAME, `${config.clientName}-clientSecret`, config.clientSecret);
                     await keytar.setPassword(KEYTAR_SERVICE_NAME, `${config.clientName}-clientId`, config.clientId);
                     await keytar.setPassword(KEYTAR_SERVICE_NAME, `${config.clientName}-authUri`, config.authUri);
 
-                    // Actualiza la sesión activa
                     activeSession = {
                         clientName: config.clientName,
                         accessToken: tokenData.access_token,
@@ -163,32 +178,30 @@ ipcMain.on('start-login', (event, config) => {
                         expiryTimestamp: Date.now() + (tokenData.expires_in - TOKEN_EXPIRY_BUFFER) * 1000
                     };
                     
+                    //console.log('[LOGIN-SUCCESS] Proceso completado. Notificando a la UI.');
                     mainWindow.webContents.send('token-received', { success: true, data: tokenData });
                 } catch (error) {
-                    mainWindow.webContents.send('token-received', { success: false, error: error.response ? error.response.data : error.message });
+                    const errorMessage = error.response ? error.response.data : error.message;
+                    console.error('[LOGIN-ERROR] Fallo al intercambiar el código por el token:', errorMessage);
+                    mainWindow.webContents.send('token-received', { success: false, error: errorMessage });
                 }
+            } else {
+                 console.error('[LOGIN-ERROR] La redirección no contenía un código de autorización.');
+                 mainWindow.webContents.send('token-received', { success: false, error: 'No se recibió el código de autorización.' });
             }
         }
     };
-    webContents.on('will-redirect', onNavigate);
-     // Variable para saber si el login se completó con éxito
-    let loginHandled = false;
 
-    // Modificamos el listener 'will-redirect' para actualizar nuestra variable
-    webContents.on('will-redirect', (evt, navigationUrl) => {
-        loginHandled = true; // Marcamos que el flujo de login se está gestionando
-        onNavigate(evt, navigationUrl);
-    });
+    webContents.on('will-redirect', redirectListener);
 
-    // Añadimos un listener para el evento 'closed'
     loginWindow.on('closed', () => {
-        webContents.removeListener('will-redirect', onNavigate);
-        // Si la ventana se cierra sin que el login se haya gestionado,
-        // enviamos una respuesta de error para desbloquear la UI.
+        //console.log('[LOGIN-CLOSED] La ventana de login se ha cerrado. ¿Fue gestionado el login?', loginHandled);
+        webContents.removeListener('will-redirect', redirectListener);
         if (!loginHandled) {
+            //console.log('[LOGIN-CLOSED] El login no fue gestionado. Enviando cancelación al usuario.');
             mainWindow.webContents.send('token-received', { 
                 success: false, 
-                error: 'Proceso de login cancelado por el usuario.' 
+                error: 'Proceso de login cancelado.' 
             });
         }
     });
@@ -197,13 +210,11 @@ ipcMain.on('start-login', (event, config) => {
 // IPC: Cierra la sesión (logout)
 ipcMain.on('logout', async (event, clientName) => {
     if (!clientName) return;
-    // Limpia las credenciales seguras
     await keytar.deletePassword(KEYTAR_SERVICE_NAME, `${clientName}-refreshToken`);
     await keytar.deletePassword(KEYTAR_SERVICE_NAME, `${clientName}-clientSecret`);
     await keytar.deletePassword(KEYTAR_SERVICE_NAME, `${clientName}-clientId`);
     await keytar.deletePassword(KEYTAR_SERVICE_NAME, `${clientName}-authUri`);
     
-    // Limpia la sesión en memoria si era la activa
     if (activeSession.clientName === clientName) {
         activeSession = {};
     }

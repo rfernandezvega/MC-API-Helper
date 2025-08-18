@@ -209,6 +209,18 @@ body {
     margin-bottom: 20px;
 }
 
+/* Contenedor para el título y los botones de una sección */
+.config-block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px; /* Espacio antes de la tabla */
+}
+
+.config-block-header h3 {
+    margin: 0; /* Quitamos el margen por defecto del h3 */
+}
+
 /* Contenedor general para secciones con configuración */
 .config-section-container .config-block {
     background-color: #f8f9fa;
@@ -328,6 +340,12 @@ th {
 }
 
 tr.selected { background-color: #c5dce6; }
+
+#customer-search-table tbody tr.selected { background-color: #c5dce6; }
+
+#customer-search-table tbody tr {
+    cursor: pointer;
+}
 
 /* Botones para subir/bajar filas */
 .control-buttons {
