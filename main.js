@@ -171,7 +171,27 @@ ipcMain.on('start-login', (event, config) => {
         }
     };
     webContents.on('will-redirect', onNavigate);
-    loginWindow.on('closed', () => { webContents.removeListener('will-redirect', onNavigate); });
+     // Variable para saber si el login se completó con éxito
+    let loginHandled = false;
+
+    // Modificamos el listener 'will-redirect' para actualizar nuestra variable
+    webContents.on('will-redirect', (evt, navigationUrl) => {
+        loginHandled = true; // Marcamos que el flujo de login se está gestionando
+        onNavigate(evt, navigationUrl);
+    });
+
+    // Añadimos un listener para el evento 'closed'
+    loginWindow.on('closed', () => {
+        webContents.removeListener('will-redirect', onNavigate);
+        // Si la ventana se cierra sin que el login se haya gestionado,
+        // enviamos una respuesta de error para desbloquear la UI.
+        if (!loginHandled) {
+            mainWindow.webContents.send('token-received', { 
+                success: false, 
+                error: 'Proceso de login cancelado por el usuario.' 
+            });
+        }
+    });
 });
 
 // IPC: Cierra la sesión (logout)

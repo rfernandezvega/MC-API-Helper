@@ -226,28 +226,46 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * @param {string} clientName - El nombre del cliente a cargar.
 	 */
 	function loadAndSyncClientConfig(clientName) {
-		// Obtiene la configuración para el cliente seleccionado.
 		const configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
-		const configToLoad = configs[clientName] || {};
-		// Aplica la configuración a todos los formularios.
-		setClientConfigForm(configToLoad);
 
-		// Sincroniza el nombre y los selectores.
-		clientNameInput.value = clientName;
-		savedConfigsSelect.value = clientName;
-		sidebarClientSelect.value = clientName;
+		// 1. SIEMPRE resetea el estado de la sesión en la UI al cambiar de cliente.
+		//    Esto da feedback inmediato al usuario y evita mostrar un estado incorrecto.
+		tokenField.value = '';
+		soapUriInput.value = '';
+		restUriInput.value = '';
+		updateLoginStatus(false); // Muestra "Sesión no iniciada" por defecto.
 
-		// Guarda el último cliente seleccionado para restaurarlo al reabrir la app.
-		localStorage.setItem('lastSelectedClient', clientName);
+		// Limpia los datos del calendario
+		clearCalendarData();
 
 		if (clientName) {
+			blockUI(); 
+
+			// 2. Carga la configuración del cliente seleccionado desde localStorage.
+			const configToLoad = configs[clientName] || {};
+			setClientConfigForm(configToLoad);
+
+			// 3. Sincroniza el nombre y los selectores.
+			clientNameInput.value = clientName;
+			savedConfigsSelect.value = clientName;
+			sidebarClientSelect.value = clientName;
+
+			// 4. Ahora, intenta obtener el token para el nuevo cliente.
 			logMessage(`Cliente "${clientName}" cargado. Comprobando sesión...`);
-			// Intenta obtener un token para verificar si la sesión está activa y actualizar el indicador.
 			getAuthenticatedConfig()
-				.catch(() => {}); // El error se maneja dentro de getAuthenticatedConfig, aquí solo disparamos la comprobación.
+				.catch(() => {
+					// Si getAuthenticatedConfig falla, el estado ya es 'inactive'
+					// y se mostrará un error en el log, por lo que no hay que hacer nada más aquí.
+				})
+				.finally(() => {
+					unblockUI(); // Desbloquea la UI CUANDO TERMINE (éxito o error)
+				});
 		} else {
-			// Si no hay cliente seleccionado, la sesión está inactiva.
-			updateLoginStatus(false);
+			// 5. Si se selecciona "Ninguno", limpia todos los formularios.
+			setClientConfigForm({});
+			clientNameInput.value = '';
+			savedConfigsSelect.value = '';
+			sidebarClientSelect.value = '';
 			logMessage("Ningún cliente seleccionado.");
 		}
 	}
@@ -1009,6 +1027,22 @@ document.addEventListener('DOMContentLoaded', function () {
 	// ==========================================================
 	// --- 6. MANIPULACIÓN DEL DOM Y COMPONENTES ---
 	// ==========================================================
+	/** Limpia los datos del calendario y resetea la vista. */
+	function clearCalendarData() {
+		// Resetea el array de automatizaciones en memoria.
+		allAutomations = [];
+		// Limpia el nombre del cliente para el que se guardaron los datos.
+		calendarDataForClient = '';
+		// Limpia la lista de automatizaciones del día en la barra lateral.
+		if (automationList) {
+			automationList.innerHTML = '<p>Selecciona un día para ver los detalles.</p>';
+		}
+		// Vuelve a dibujar el calendario, que ahora estará vacío (sin días marcados).
+		if (calendarGrid) {
+		   generateCalendar();
+		}
+		logMessage('Datos del calendario limpiados debido al cambio de cliente.');
+	}
 
 	/** Crea una fila para la tabla de campos, con un botón de borrado funcional. */
 	function createTableRow(data = {}) {
@@ -1510,6 +1544,14 @@ document.addEventListener('DOMContentLoaded', function () {
 			const selectedOption = subscriberKeyFieldSelect.options[subscriberKeyFieldSelect.selectedIndex];
 			subscriberKeyTypeInput.value = (selectedOption?.dataset.type) || '';
 		});
+		// Añade /v2/token automáticamente al Auth URI al perder el foco
+		authUriInput.addEventListener('blur', () => {
+			const uri = authUriInput.value.trim();
+			// Solo lo añade si el campo no está vacío y no termina ya con /v2/token
+			if (uri && !uri.endsWith('/v2/token')) {
+				authUriInput.value = uri + '/v2/token';
+			}
+		});
 		deNameInput.addEventListener('input', () => {
 			deExternalKeyInput.value = deNameInput.value.replace(/\s+/g, '_') + '_CK';
 		});
@@ -1559,14 +1601,14 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (localStorage.getItem('logCollapsedState') === 'true') appContainer.classList.add('log-collapsed');
 		// Carga todas las configuraciones guardadas en los selectores.
 		loadConfigsIntoSelect();
-		// Carga el último cliente que se usó.
-		const lastSelectedClient = localStorage.getItem('lastSelectedClient') || '';
-		if (lastSelectedClient) {
-			loadAndSyncClientConfig(lastSelectedClient);
-		} else {
-			// Si no hay último cliente, el estado es "no logueado".
-			updateLoginStatus(false);
-		}
+		
+		// Asegura que al iniciar la app, ningún cliente esté seleccionado.
+		setClientConfigForm({}); // Limpia todos los formularios
+		clientNameInput.value = '';
+		savedConfigsSelect.value = '';
+		sidebarClientSelect.value = '';
+		updateLoginStatus(false); // Pone el indicador en "Sesión no iniciada"
+
 		// Prepara la tabla de campos.
 		clearFieldsTable();
 		observer.observe(fieldsTableBody, observerConfig);
