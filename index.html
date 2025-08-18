@@ -355,18 +355,11 @@
         <div class="config-block">
             <h3>Parámetros de Búsqueda</h3>
             <div class="form-group">
-              <label for="customerSearchProperty">Buscar por:</label>
-              <select id="customerSearchProperty">
-                <option value="EmailAddress">Email</option>
-                <option value="SubscriberKey">ID (Subscriber Key)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="customerSearchValue">Valor:</label>
-              <input type="text" id="customerSearchValue" placeholder="Ingresa el valor de búsqueda">
+              <label for="customerSearchValue">Buscar por ID o Email:</label>
+              <input type="text" id="customerSearchValue" placeholder="Ingresa el Subscriber Key o el Email">
             </div>
             <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-               <button id="searchCustomerBtn" class="action-button">Buscar Cliente</button>
+              <button id="searchCustomerBtn" class="action-button">Buscar Cliente</button>
             </div>
         </div>
         <div class="config-block" style="flex-grow: 1; display: flex; flex-direction: column;">
@@ -412,11 +405,33 @@
             </div>
         </div>
         <!-- Bloque para los resultados de Envíos -->
-        <div id="customer-sends-results-block" class="config-block hidden" style="flex-grow: 1; display: flex; flex-direction: column;">
-            <h3>Envíos del Cliente Seleccionado</h3>
-            <p>Esta funcionalidad aún no está implementada.</p>
-            <!-- Aquí iría la futura tabla de envíos -->
-        </div>
+        <div id="customer-sends-results-block" class="config-block hidden" ...>
+          <h3>Envíos del Cliente Seleccionado</h3>
+          
+          <!-- Contenedor para la tabla de Envíos (Sent) -->
+          <div class="sends-dataview-block">
+              <h4>Enviados (Sent)</h4>
+              <div id="sends-table-container" class="table-container" style="padding-right: 0;"></div>
+          </div>
+          
+          <!-- Contenedor para la tabla de Aperturas (Open) -->
+          <div class="sends-dataview-block">
+              <h4>Aperturas (Open)</h4>
+              <div id="opens-table-container" class="table-container" style="padding-right: 0;"></div>
+          </div>
+
+          <!-- Contenedor para la tabla de Clics (Click) -->
+          <div class="sends-dataview-block">
+              <h4>Clics (Click)</h4>
+              <div id="clicks-table-container" class="table-container" style="padding-right: 0;"></div>
+          </div>
+
+          <!-- Contenedor para la tabla de Rebotes (Bounce) -->
+          <div class="sends-dataview-block">
+              <h4>Rebotes (Bounce)</h4>
+              <div id="bounces-table-container" class="table-container" style="padding-right: 0;"></div>
+          </div>
+      </div>
     </div>
   </main> 
   <!-- END: CONTENIDO PRINCIPAL -->

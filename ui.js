@@ -68,7 +68,6 @@ document.addEventListener('DOMContentLoaded', function () {
 	const findDataSourcesBtn = document.getElementById('findDataSourcesBtn');
 	const deNameToFindInput = document.getElementById('deNameToFind');
 	const dataSourcesTbody = document.getElementById('data-sources-tbody');
-	const customerSearchProperty = document.getElementById('customerSearchProperty');
     const customerSearchValue = document.getElementById('customerSearchValue');
     const searchCustomerBtn = document.getElementById('searchCustomerBtn');
     const customerSearchTbody = document.getElementById('customer-search-tbody');
@@ -79,6 +78,10 @@ document.addEventListener('DOMContentLoaded', function () {
 	const customerJourneysResultsBlock = document.getElementById('customer-journeys-results-block');
     const customerJourneysTbody = document.getElementById('customer-journeys-tbody');
 	const customerSendsResultsBlock = document.getElementById('customer-sends-results-block');
+	const sendsTableContainer = document.getElementById('sends-table-container');
+    const opensTableContainer = document.getElementById('opens-table-container');
+    const clicksTableContainer = document.getElementById('clicks-table-container');
+    const bouncesTableContainer = document.getElementById('bounces-table-container');
 	const tabButtons = document.querySelectorAll('.tab-button');
 	const tabContents = document.querySelectorAll('.tab-content');
 	const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
@@ -825,13 +828,32 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 	}
 	
+	/**
+	 * Realiza una búsqueda de suscriptor por un campo específico.
+	 * @param {string} property - El campo por el que buscar ('SubscriberKey' o 'EmailAddress').
+	 * @param {string} value - El valor a buscar.
+	 * @param {object} apiConfig - La configuración de la API (token, URI, etc.).
+	 * @returns {Promise<Array>} - Una promesa que resuelve a un array de resultados.
+	 */
+	async function searchSubscriberByProperty(property, value, apiConfig) {
+		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>Subscriber</ObjectType><Properties>CreatedDate</Properties><Properties>Client.ID</Properties><Properties>EmailAddress</Properties><Properties>SubscriberKey</Properties><Properties>Status</Properties><Properties>UnsubscribedDate</Properties><Filter xsi:type="SimpleFilterPart"><Property>${property}</Property><SimpleOperator>equals</SimpleOperator><Value>${value}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+		
+		const responseText = await (await fetch(apiConfig.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload })).text();
+		// Logueamos cada intento para tener trazabilidad
+		logApiResponse({ step: `Search by ${property}`, body: responseText });
+		
+		return parseCustomerSearchResponse(responseText);
+	}
 
-	/** Busca un contacto, primero como Subscriber (SOAP) y si no, como Contact (REST). */
+	/**
+	 * Busca un contacto en cascada: primero como Subscriber por ID (SOAP),
+	 * luego como Subscriber por Email (SOAP), y finalmente como Contact (REST).
+	 */
 	async function macroSearchCustomer() {
 		blockUI();
 		customerSearchTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
 		
-		// Resetea el estado completo de la UI para la nueva búsqueda
+		// Resetea el estado completo de la UI
 		if (selectedCustomerRow) selectedCustomerRow.classList.remove('selected');
 		selectedCustomerRow = null;
 		selectedSubscriberData = null;
@@ -842,27 +864,27 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		try {
 			const apiConfig = await getAuthenticatedConfig();
-			const property = customerSearchProperty.value;
 			const value = customerSearchValue.value.trim();
-			if (!value) throw new Error("El campo 'Valor' no puede estar vacío.");
+			if (!value) throw new Error("El campo de búsqueda no puede estar vacío.");
 			
-			logMessage(`Buscando Subscriber por ${property}: ${value}`);
+			let finalResults = [];
 
-			// --- PASO 1: Búsqueda en SUBSCRIBERS (SOAP) ---
-			const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>Subscriber</ObjectType><Properties>CreatedDate</Properties><Properties>Client.ID</Properties><Properties>EmailAddress</Properties><Properties>SubscriberKey</Properties><Properties>Status</Properties><Properties>UnsubscribedDate</Properties><Filter xsi:type="SimpleFilterPart"><Property>${property}</Property><SimpleOperator>equals</SimpleOperator><Value>${value}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-			const responseText = await (await fetch(apiConfig.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload })).text();
-			let finalResults = parseCustomerSearchResponse(responseText);
+			// --- PASO 1: Búsqueda como Subscriber por ID (SubscriberKey) ---
+			logMessage(`Paso 1/3: Buscando como Suscriptor por ID: ${value}`);
+			finalResults = await searchSubscriberByProperty('SubscriberKey', value, apiConfig);
 
-			// --- PASO 2: Si no se encuentra como suscriptor, SIEMPRE intenta buscar como contacto ---
+			// --- PASO 2: Si no hay resultados, busca como Subscriber por Email ---
 			if (finalResults.length === 0) {
-				logMessage("No se encontró como Subscriber. Buscando como Contact...");
+				logMessage(`Paso 2/3: No encontrado por ID. Buscando como Suscriptor por Email: ${value}`);
+				finalResults = await searchSubscriberByProperty('EmailAddress', value, apiConfig);
+			}
+
+			// --- PASO 3: Si sigue sin haber resultados, busca como Contact ---
+			if (finalResults.length === 0) {
+				logMessage(`Paso 3/3: No encontrado como Suscriptor. Buscando como Contacto: ${value}`);
 				
-				// --- Llamada a la API de Contactos con el endpoint y payload CORRECTOS ---
 				const contactUrl = `${apiConfig.restUri}contacts/v1/addresses/search/ContactKey`;
-				const contactPayload = {
-				"filterConditionOperator": "Is",
-				"filterConditionValue": value
-				};
+				const contactPayload = { "filterConditionOperator": "Is", "filterConditionValue": value };
 
 				logApiCall({ endpoint: contactUrl, body: contactPayload });
 
@@ -873,7 +895,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				});
 				
 				const contactData = await contactResponse.json();
-				logApiResponse(contactData); // Logueamos la respuesta SIEMPRE
+				logApiResponse(contactData);
 
 				if (!contactResponse.ok) {
 					const errorMessage = contactData.message || `Error API al buscar contactos: ${contactResponse.statusText}`;
@@ -958,17 +980,42 @@ document.addEventListener('DOMContentLoaded', function () {
 		return [result];
 	}
 
-	/** Pinta los resultados de la búsqueda de clientes en la tabla. */
-	function renderCustomerSearchResults(subscribers) {
+	/** 
+	 * Pinta los resultados de la búsqueda de clientes en la tabla 
+	 * y gestiona el estado de los botones de acción.
+	 */
+	function renderCustomerSearchResults(results) {
 		customerSearchTbody.innerHTML = '';
-		if (subscribers.length === 0) {
+		
+		// --- LÓGICA DE BOTONES CENTRALIZADA ---
+		// Por defecto, todo deshabilitado
+		getCustomerSendsBtn.disabled = true;
+		getCustomerJourneysBtn.disabled = true;
+
+		if (!results || results.length === 0) {
 			customerSearchTbody.innerHTML = '<tr><td colspan="6">No se encontraron clientes con ese criterio.</td></tr>';
-			return;
+			return; // Salimos de la función, los botones quedan deshabilitados
 		}
 
-		subscribers.forEach(sub => {
+		// Si hemos llegado aquí, significa que SÍ hay resultados.
+		// Tomamos el primer (y único) resultado para decidir.
+		const customer = results[0];
+		
+		if (customer.isSubscriber) {
+			// ES SUSCRIPTOR: Se habilitan ambos botones
+			getCustomerSendsBtn.disabled = false;
+			getCustomerJourneysBtn.disabled = false;
+		} else {
+			// ES SOLO CONTACTO: Solo se habilita Journeys
+			getCustomerSendsBtn.disabled = true; // Ya está, pero lo dejamos por claridad
+			getCustomerJourneysBtn.disabled = false;
+		}
+		// --- FIN DE LÓGICA DE BOTONES ---
+
+		// Ahora, pintamos las filas en la tabla
+		results.forEach(sub => {
 			const row = document.createElement('tr');
-			row.dataset.subscriberKey = sub.subscriberKey; // Guardamos el SK en el propio elemento
+			row.dataset.subscriberKey = sub.subscriberKey;
 			row.dataset.isSubscriber = sub.isSubscriber;
 			row.innerHTML = `
 				<td>${sub.subscriberKey}</td>
@@ -1076,6 +1123,110 @@ document.addEventListener('DOMContentLoaded', function () {
 			`;
 			customerJourneysTbody.appendChild(row);
 		});
+	}
+
+	/** Busca y muestra los datos de envíos para un suscriptor desde las Data Views. */
+	async function macroGetCustomerSends() {
+		if (!selectedSubscriberData?.subscriberKey) return;
+
+		blockUI();
+		const subscriberKey = selectedSubscriberData.subscriberKey;
+		const dataViews = ['Sent', 'Open', 'Click', 'Bounce'];
+		const containers = {
+			'Sent': sendsTableContainer,
+			'Open': opensTableContainer,
+			'Click': clicksTableContainer,
+			'Bounce': bouncesTableContainer
+		};
+
+		// Limpia contenedores previos
+		Object.values(containers).forEach(c => c.innerHTML = '');
+		logMessage(`Iniciando búsqueda de envíos para: ${subscriberKey}`);
+
+		try {
+			const apiConfig = await getAuthenticatedConfig();
+			
+			// Hacemos las llamadas secuencialmente para no saturar y seguir un orden lógico
+			for (const viewName of dataViews) {
+				const container = containers[viewName];
+				container.innerHTML = `<p>Buscando en ${viewName}...</p>`;
+				logMessage(`Consultando DataView_${viewName}...`);
+
+				const dataViewKey = `DataView_${viewName}_CK`;
+				// Codificamos el valor del filtro para que sea seguro en una URL
+				const filter = encodeURIComponent(`"SubscriberKey"='${subscriberKey}'`);
+				const url = `${apiConfig.restUri}data/v1/customobjectdata/key/${dataViewKey}/rowset?$filter=${filter}`;
+				
+				logApiCall({ endpoint: url, method: 'GET' });
+				
+				const response = await fetch(url, {
+					method: 'GET',
+					headers: { 'Authorization': `Bearer ${apiConfig.accessToken}` }
+				});
+
+				const responseData = await response.json();
+				logApiResponse(responseData);
+
+				if (!response.ok) {
+					container.innerHTML = `<p style="color: red;">Error al consultar ${viewName}: ${responseData.message || response.statusText}</p>`;
+					// Continuamos con el siguiente aunque uno falle
+					continue; 
+				}
+				
+				// Llamamos al helper para que pinte la tabla
+				renderDataViewTable(container, responseData.items);
+			}
+			logMessage("Búsqueda de envíos completada.");
+
+		} catch (error) {
+			logMessage(`Error fatal durante la búsqueda de envíos: ${error.message}`);
+			customerSendsResultsBlock.innerHTML = `<p style="color: red;">${error.message}</p>`;
+		} finally {
+			unblockUI();
+		}
+	}
+
+	/**
+	 * Renderiza una tabla dinámica a partir de los items de una Data View.
+	 * @param {HTMLElement} containerElement - El div donde se inyectará la tabla.
+	 * @param {Array} items - El array de 'items' de la respuesta de la API.
+	 */
+	function renderDataViewTable(containerElement, items) {
+		containerElement.innerHTML = ''; // Limpiamos el mensaje de "cargando"
+
+		if (!items || items.length === 0) {
+			containerElement.innerHTML = '<p>No se encontraron registros.</p>';
+			return;
+		}
+
+		const table = document.createElement('table');
+		const thead = document.createElement('thead');
+		const tbody = document.createElement('tbody');
+		const headerRow = document.createElement('tr');
+
+		// 1. Obtener las cabeceras desde el primer objeto
+		const headers = Object.keys(items[0].values);
+		headers.forEach(headerText => {
+			const th = document.createElement('th');
+			th.textContent = headerText;
+			headerRow.appendChild(th);
+		});
+		thead.appendChild(headerRow);
+
+		// 2. Crear las filas de datos
+		items.forEach(item => {
+			const row = document.createElement('tr');
+			headers.forEach(header => {
+				const td = document.createElement('td');
+				td.textContent = item.values[header] || '---';
+				row.appendChild(td);
+			});
+			tbody.appendChild(row);
+		});
+
+		table.appendChild(thead);
+		table.appendChild(tbody);
+		containerElement.appendChild(table);
 	}
 
 	// ==========================================================
@@ -1903,41 +2054,32 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		// Listener para la selección de filas en la tabla de búsqueda de clientes
         customerSearchTbody.addEventListener('click', (e) => {
-            const clickedRow = e.target.closest('tr');
-            if (!clickedRow || !clickedRow.dataset.subscriberKey) return; // Salir si no es una fila con datos
+			const clickedRow = e.target.closest('tr');
+			if (!clickedRow || !clickedRow.dataset.subscriberKey) return;
 
-            // Deseleccionar la fila anterior si existe
-            if (selectedCustomerRow) {
-                selectedCustomerRow.classList.remove('selected');
-            }
-
-            // Seleccionar la nueva fila
-            clickedRow.classList.add('selected');
-            selectedCustomerRow = clickedRow;
+			if (selectedCustomerRow) {
+				selectedCustomerRow.classList.remove('selected');
+			}
+			clickedRow.classList.add('selected');
+			selectedCustomerRow = clickedRow;
 			
-			const isSub = clickedRow.dataset.isSubscriber === 'true';
-
-            // Guardar los datos del suscriptor y habilitar botones
-            selectedSubscriberData = {
+			// Solo guardamos los datos, no decidimos nada sobre los botones aquí
+			selectedSubscriberData = {
 				subscriberKey: clickedRow.dataset.subscriberKey,
-				isSubscriber: isSub
+				isSubscriber: clickedRow.dataset.isSubscriber === 'true'
 			};
-			// El botón de Envíos solo se activa si es un Suscriptor
-			getCustomerSendsBtn.disabled = !isSub;            
-			// El botón de Journeys se activa siempre que se encuentre un contacto/suscriptor
-			getCustomerJourneysBtn.disabled = false;
-        });
+		});
 
         // Listeners para los nuevos botones (por ahora, con alertas)
         getCustomerSendsBtn.addEventListener('click', () => {
-            if (selectedSubscriberData) {
-                // Oculta el otro panel y muestra este
-                customerJourneysResultsBlock.classList.add('hidden');
-                customerSendsResultsBlock.classList.remove('hidden');
-            }
-        });
+			if (selectedSubscriberData) {
+				customerJourneysResultsBlock.classList.add('hidden');
+				customerSendsResultsBlock.classList.remove('hidden');
+				macroGetCustomerSends(); // Llama a la nueva macro
+			}
+		});
 
-        getCustomerJourneysBtn.addEventListener('click', () => {
+		getCustomerJourneysBtn.addEventListener('click', () => {
 			if (selectedSubscriberData) {
 				customerSendsResultsBlock.classList.add('hidden');
 				macroGetCustomerJourneys(); 

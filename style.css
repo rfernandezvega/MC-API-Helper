@@ -244,6 +244,16 @@ body {
 
 .config-section-container input[disabled] { background-color: #e9ecef; cursor: not-allowed; }
 
+.sends-dataview-block {
+    margin-top: 20px;
+    border-top: 1px solid #e0e7ef;
+    padding-top: 15px;
+}
+.sends-dataview-block h4 {
+    margin: 0 0 10px 0;
+    color: #558ac7;
+}
+
 /* Grupo de Checkbox */
 .config-section-container .checkbox-group {
     flex-direction: row;
@@ -297,6 +307,17 @@ body {
     flex-shrink: 0; 
 }
 .action-button:hover { background-color: #558ac7; }
+/* Estilo para los botones de acción cuando están deshabilitados */
+.action-button[disabled] {
+  background-color: #cccccc; /* Un color gris claro para el fondo */
+  cursor: not-allowed;     /* Muestra el cursor de "no permitido" */
+  opacity: 0.6;            /* Lo hace un poco más tenue */
+}
+
+/* Asegura que no haya cambio de color al pasar el ratón */
+.action-button[disabled]:hover {
+  background-color: #cccccc; /* Mantiene el mismo color gris */
+}
 .back-button { background-color: #6c757d; }
 .back-button:hover { background-color: #5a6268; }
 
@@ -334,7 +355,7 @@ th {
     z-index: 2;
 }
 
-/* REGLA CORREGIDA: Se añade position:relative para que el botón de borrado se posicione correctamente */
+/* Se añade position:relative para que el botón de borrado se posicione correctamente */
 #myTable tbody tr {
     position: relative;
 }
