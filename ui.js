@@ -46,6 +46,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	const moveUpBtn = document.getElementById('moveUp');
 	const moveDownBtn = document.getElementById('moveDown');
 	let selectedRow = null; // Variable para almacenar la fila seleccionada en la tabla de campos.
+	let navigationHistory = ['main-menu']; // Array para el historial de navegación
 	const recExternalKeyInput = document.getElementById('recExternalKey');
 	const targetFieldSelect = document.getElementById('targetFieldSelect');
 	const getFieldsBtn = document.getElementById('getFields');
@@ -122,18 +123,49 @@ document.addEventListener('DOMContentLoaded', function () {
 		document.body.style.cursor = 'default';
 	}
 
-	/**
-	 * Muestra una sección específica del contenido principal y oculta las demás.
+		/**
+	 * Muestra una sección específica y gestiona el historial de navegación.
 	 * @param {string} sectionId - El ID de la sección a mostrar.
+	 * @param {boolean} [addToHistory=true] - Si es false, no añade la navegación al historial (usado para el botón 'Atrás').
 	 */
-	window.showSection = function (sectionId) {
-		// Oculta el menú principal y todas las secciones.
+	window.showSection = function (sectionId, addToHistory = true) {
 		mainMenu.style.display = 'none';
 		allSections.forEach(s => s.style.display = 'none');
-		// Muestra solo la sección solicitada.
+
 		const sectionToShow = document.getElementById(sectionId);
-		if (sectionToShow) sectionToShow.style.display = 'flex';
+
+		// Si la sección existe, la muestra. Si no, muestra el menú principal como fallback.
+		if (sectionToShow) {
+			sectionToShow.style.display = 'flex';
+		} else {
+			mainMenu.style.display = 'flex';
+			sectionId = 'main-menu'; // Asegura que el historial refleje el fallback.
+		}
+
+		// Añade la nueva sección al historial si es una navegación "hacia adelante".
+		if (addToHistory) {
+			// Evita añadir la misma página dos veces si se hace clic repetidamente.
+			if (navigationHistory[navigationHistory.length - 1] !== sectionId) {
+				navigationHistory.push(sectionId);
+			}
+		}
 	};
+
+	/**
+	 * Navega a la sección anterior del historial.
+	 */
+	function goBack() {
+		// Si solo queda una entrada en el historial (el menú principal), no hacemos nada más.
+		if (navigationHistory.length > 1) {
+			navigationHistory.pop(); // Elimina la página actual del historial
+		}
+
+		// Obtenemos la última página que ahora está en el historial (la página anterior).
+		const previousSectionId = navigationHistory[navigationHistory.length - 1];
+
+		// Navegamos a esa página SIN añadirla de nuevo al historial.
+		showSection(previousSectionId, false);
+	}
 
 	/**
 	 * Actualiza el indicador visual de estado de la sesión.
@@ -1470,10 +1502,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		// --- Listeners de navegación y botones de macros ---
 		document.querySelectorAll('.back-button')
-			.forEach(b => b.addEventListener('click', () => {
-				mainMenu.style.display = 'flex';
-				allSections.forEach(s => s.style.display = 'none');
-			}));
+			.forEach(b => b.addEventListener('click', goBack));
 		document.querySelectorAll('.macro-item')
 			.forEach(item => {
 				item.addEventListener('click', (e) => {
