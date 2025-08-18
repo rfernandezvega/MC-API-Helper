@@ -5,7 +5,8 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-packager . MC-API-Helper --platform=win32 --arch=x64 --icon=icon.ico --out=dist --overwrite"
+    "build": "electron-packager . MC-API-Helper --platform=win32 --arch=x64 --icon=icon.ico --out=dist --overwrite",
+    "dist": "electron-builder"
   },
   "keywords": [],
   "author": "",
@@ -16,6 +17,22 @@
   },
   "devDependencies": {
     "electron": "^37.2.6",
+    "electron-builder": "^26.0.12",
     "electron-packager": "^17.1.2"
+  },
+  "build": {
+    "appId": "com.seidor.mc-api-desktop",
+    "productName": "MC API Helper",
+    "forceCodeSigning": false,
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "icon.ico",
+      "signAndEditExecutable": false
+    }
   }
 }
