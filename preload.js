@@ -15,5 +15,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // --- Listeners desde el proceso principal hacia el renderizador ---
   onTokenReceived: (callback) => ipcRenderer.on('token-received', (_event, data) => callback(data)),
   onLogoutSuccess: (callback) => ipcRenderer.on('logout-success', () => callback()),
-  onRequireLogin: (callback) => ipcRenderer.on('require-login', (_event, data) => callback(data))
+  onRequireLogin: (callback) => ipcRenderer.on('require-login', (_event, data) => callback(data)),
+  openExternalLink: (url) => ipcRenderer.send('open-external-link', url)
 });

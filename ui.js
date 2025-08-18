@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', function () {
 	// Se obtienen referencias a todos los elementos HTML con los que se va a interactuar.
 	// Esto se hace una sola vez al cargar la página para optimizar el rendimiento.
 
+	let currentUserInfo = null;
+	let currentOrgInfo = null;
 	const appContainer = document.querySelector('.app-container');
 	const mainMenu = document.getElementById('main-menu');
 	const allSections = document.querySelectorAll('#main-content > .section');
@@ -28,6 +30,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	const soapUriInput = document.getElementById('soapUri');
 	const restUriInput = document.getElementById('restUri');
 	const businessUnitInput = document.getElementById('businessUnit');
+	const stackKeyInput = document.getElementById('stackKey');
 	const loginBtn = document.getElementById('loginBtn');
 	const logoutBtn = document.getElementById('logoutBtn');
 	const deNameInput = document.getElementById('deName');
@@ -82,6 +85,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const opensTableContainer = document.getElementById('opens-table-container');
     const clicksTableContainer = document.getElementById('clicks-table-container');
     const bouncesTableContainer = document.getElementById('bounces-table-container');
+	const querySearchText = document.getElementById('querySearchText');
+    const searchQueriesByTextBtn = document.getElementById('searchQueriesByTextBtn');
+    const querySearchResultsTbody = document.getElementById('query-search-results-tbody');
+	const showQueryTextCheckbox = document.getElementById('showQueryTextCheckbox');
 	const tabButtons = document.querySelectorAll('.tab-button');
 	const tabContents = document.querySelectorAll('.tab-content');
 	const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
@@ -186,16 +193,20 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * @param {boolean} isLoggedIn - True si la sesión está activa.
 	 * @param {string} [clientName=''] - El nombre del cliente para mostrar.
 	 */
-	function updateLoginStatus(isLoggedIn, clientName = '') {
-		// Cambia el texto y el color del indicador de sesión en la barra lateral.
-		if (isLoggedIn) {
-			loginStatusEl.textContent = `🟢 Sesión activa: ${clientName}`;
-			loginStatusEl.className = 'login-status active';
-		} else {
-			loginStatusEl.textContent = '🔴 Sesión no iniciada';
-			loginStatusEl.className = 'login-status inactive';
-		}
-	}
+	function updateLoginStatus(isLoggedIn, clientName = '', userInfo = null) {
+    if (isLoggedIn) {
+        let statusHTML = `🟢 Sesión activa: <strong>${clientName}</strong>`;
+        // Si tenemos info del usuario, añadimos su email en una línea nueva y más pequeña
+        if (userInfo && userInfo.email) {
+            statusHTML += `<br><small style="font-weight: normal;">Usuario: ${userInfo.email}</small>`;
+        }
+        loginStatusEl.innerHTML = statusHTML; // Usamos innerHTML para que reconozca el <br>
+        loginStatusEl.className = 'login-status active';
+    } else {
+        loginStatusEl.innerHTML = '🔴 Sesión no iniciada';
+        loginStatusEl.className = 'login-status inactive';
+    }
+}
 
 
 	// ==========================================================
@@ -208,19 +219,10 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * @returns {object} Un objeto con la configuración segura del cliente.
 	 */
 	const getConfigToSave = () => ({
-		// Crea un objeto con todos los valores de los formularios, EXCEPTO el Client Secret.
-		// Esto es lo que se guarda en el almacenamiento local para no exponer credenciales sensibles.
-		businessUnit: businessUnitInput.value,
 		authUri: authUriInput.value,
+		businessUnit: businessUnitInput.value,
 		clientId: clientIdInput.value,
-		deName: deNameInput.value,
-		deDescription: deDescriptionInput.value,
-		deExternalKey: deExternalKeyInput.value,
-		deFolder: deFolderInput.value,
-		isSendable: isSendableCheckbox.checked,
-		subscriberKeyField: subscriberKeyFieldSelect.value,
-		subscriberKeyType: subscriberKeyTypeInput.value,
-		recExternalKey: recExternalKeyInput.value
+		stackKey: stackKeyInput.value
 	});
 
 	/**
@@ -228,26 +230,17 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * @param {object} config - El objeto de configuración a cargar.
 	 */
 	const setClientConfigForm = (config) => {
-		// Rellena todos los campos de los formularios con los datos de un objeto de configuración.
+		// Rellena solo los campos de configuración principal
 		businessUnitInput.value = config.businessUnit || '';
 		authUriInput.value = config.authUri || '';
 		clientIdInput.value = config.clientId || '';
-		deNameInput.value = config.deName || '';
-		deDescriptionInput.value = config.deDescription || '';
-		deExternalKeyInput.value = config.deExternalKey || '';
-		deFolderInput.value = config.deFolder || '';
-		isSendableCheckbox.checked = config.isSendable || false;
-		subscriberKeyFieldSelect.value = config.subscriberKeyField || '';
-		subscriberKeyTypeInput.value = config.subscriberKeyType || '';
-		recExternalKeyInput.value = config.recExternalKey || '';
+		stackKeyInput.value = config.stackKey || ''; // Rellenamos también el Stack Key
 
 		// Asegura que los campos sensibles o derivados siempre se limpien al cargar una configuración.
 		tokenField.value = '';
 		soapUriInput.value = '';
 		restUriInput.value = '';
 		clientSecretInput.value = '';
-		// Actualiza el estado de los campos relacionados con "Sendable".
-		handleSendableChange();
 	};
 
 	/** Carga todas las configuraciones guardadas y las muestra en los <select>. */
@@ -312,6 +305,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			clientNameInput.value = '';
 			savedConfigsSelect.value = '';
 			sidebarClientSelect.value = '';
+			stackKeyInput.value = ''; // Limpia el campo de stack
 			logMessage("Ningún cliente seleccionado.");
 		}
 	}
@@ -340,6 +334,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		// 3. Si no se devuelve un token, la sesión no es válida.
 		if (!apiConfig || !apiConfig.accessToken) {
 			updateLoginStatus(false); // Actualiza el indicador visual a "no iniciada".
+			stackKeyInput.value = ''; // Limpiamos el campo de stack si falla
 			throw new Error("Sesión no activa. Por favor, inicia sesión.");
 		}
 
@@ -347,7 +342,15 @@ document.addEventListener('DOMContentLoaded', function () {
 		tokenField.value = apiConfig.accessToken;
 		soapUriInput.value = apiConfig.soapUri;
 		restUriInput.value = apiConfig.restUri;
-		updateLoginStatus(true, clientName);
+		currentUserInfo = apiConfig.userInfo; 
+		currentOrgInfo = apiConfig.orgInfo; 
+
+
+		// Rellenamos el campo de Stack con el valor del userInfo
+    	stackKeyInput.value = currentOrgInfo?.stack_key || 'No disponible';
+
+		// Pasamos el userInfo para que se muestre el email
+    	updateLoginStatus(true, clientName, currentUserInfo); 
 
 		// 5. Devuelve la configuración para ser usada por la macro que la solicitó.
 		return apiConfig;
@@ -1397,33 +1400,99 @@ document.addEventListener('DOMContentLoaded', function () {
 			}));
 	}
 
+
+	/**
+	 * Busca QueryDefinitions en base a un filtro SOAP genérico.
+	 * @param {string} filterXml - El fragmento XML del filtro a aplicar.
+	 * @param {object} apiConfig - La configuración de la API.
+	 * @returns {Promise<Array>} - Una promesa que resuelve a un array de queries encontradas.
+	 */
+	async function findQueriesByFilter(filterXml, apiConfig) {
+		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>QueryDefinition</ObjectType><Properties>Name</Properties><Properties>QueryText</Properties><Properties>TargetUpdateType</Properties><Properties>ObjectID</Properties>${filterXml}</RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+		
+		const responseText = await (await fetch(apiConfig.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload })).text();
+		
+		const queries = Array.from(new DOMParser().parseFromString(responseText, "application/xml").querySelectorAll("Results"))
+			.map(node => ({
+				name: node.querySelector("Name")?.textContent || 'N/A',
+				type: 'Query', // Mantenemos el tipo por consistencia
+				description: node.querySelector("QueryText")?.textContent || '---',
+				action: node.querySelector("TargetUpdateType")?.textContent || 'N/A',
+				objectID: node.querySelector("ObjectID")?.textContent
+			}));
+		
+		// Para cada query, busca a qué automatización pertenece
+		return await Promise.all(queries.map(q => findAutomationForQuery(q, apiConfig)));
+	}
+
 	/** Busca actividades de query que apunten a una DE por su nombre. */
 	async function findQueriesForDE(deName, apiConfig) {
-		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>QueryDefinition</ObjectType><Properties>Name</Properties><Properties>QueryText</Properties><Properties>TargetUpdateType</Properties><Properties>ObjectID</Properties><Filter xsi:type="SimpleFilterPart"><Property>DataExtensionTarget.Name</Property><SimpleOperator>equals</SimpleOperator><Value>${deName}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-		const responseText = await (await fetch(apiConfig.soapUri, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'text/xml'
-				},
-				body: soapPayload
-			}))
-			.text();
-		const queries = Array.from(new DOMParser()
-				.parseFromString(responseText, "application/xml")
-				.querySelectorAll("Results"))
-			.map(node => ({
-				name: node.querySelector("Name")
-					?.textContent || 'N/A',
-				type: 'Query',
-				description: node.querySelector("QueryText")
-					?.textContent || '---',
-				action: node.querySelector("TargetUpdateType")
-					?.textContent || 'N/A',
-				objectID: node.querySelector("ObjectID")
-					?.textContent
-			}));
-		// Para cada query encontrada, busca a qué automatización pertenece.
-		return await Promise.all(queries.map(q => findAutomationForQuery(q, apiConfig)));
+		const filterXml = `<Filter xsi:type="SimpleFilterPart"><Property>DataExtensionTarget.Name</Property><SimpleOperator>equals</SimpleOperator><Value>${deName}</Value></Filter>`;
+		return findQueriesByFilter(filterXml, apiConfig);
+	}
+
+	/** Busca queries que contengan un texto específico. */
+	async function macroSearchQueriesByText() {
+		blockUI();
+		querySearchResultsTbody.innerHTML = '<tr><td colspan="4">Buscando en todas las queries...</td></tr>';
+		try {
+			const apiConfig = await getAuthenticatedConfig();
+			const searchText = querySearchText.value.trim();
+			if (!searchText) throw new Error("El campo 'Texto a buscar' no puede estar vacío.");
+
+			logMessage(`Buscando queries que contengan: "${searchText}"`);
+			
+			const filterXml = `<Filter xsi:type="SimpleFilterPart"><Property>QueryText</Property><SimpleOperator>like</SimpleOperator><Value>%${searchText}%</Value></Filter>`;
+			const allQueries = await findQueriesByFilter(filterXml, apiConfig);
+
+			renderQuerySearchResults(allQueries);
+			logMessage(`Búsqueda completada. Se encontraron ${allQueries.length} queries.`);
+
+		} catch (error) {
+			logMessage(`Error al buscar en queries: ${error.message}`);
+			querySearchResultsTbody.innerHTML = `<tr><td colspan="4" style="color: red;">Error: ${error.message}</td></tr>`;
+		} finally {
+			unblockUI();
+		}
+	}
+
+	/** Pinta los resultados de la búsqueda de queries en su tabla. */
+	function renderQuerySearchResults(queries) {
+		querySearchResultsTbody.innerHTML = '';
+
+		// 1. Obtener el estado actual del checkbox
+		const showQuery = showQueryTextCheckbox.checked;
+		const displayStyle = showQuery ? '' : 'none';
+
+		// 2. Ajustar la visibilidad de la cabecera de la tabla
+		const table = document.getElementById('query-search-results-table');
+		const queryTextHeader = table.querySelector('thead th:nth-child(4)');
+		if (queryTextHeader) {
+			queryTextHeader.style.display = displayStyle;
+		}
+		
+		if (queries.length === 0) {
+			querySearchResultsTbody.innerHTML = '<tr><td colspan="4">No se encontraron queries con ese texto.</td></tr>';
+			return;
+		}
+
+		// 3. Renderizar las filas, AÑADIENDO SIEMPRE la 4ª celda pero con el estilo de visibilidad correcto
+		queries.forEach(query => {
+			const row = document.createElement('tr');
+			const queryLink = constructQueryLink(query.objectID);
+			
+			const queryNameCell = queryLink
+            ? `<td><a href="${queryLink}" class="external-link" title="Abrir query en Marketing Cloud">${query.name}</a></td>`
+            : `<td>${query.name}</td>`;
+
+			row.innerHTML = `
+				${queryNameCell}
+				<td>${query.automationName || '---'}</td>
+				<td>${query.step || '---'}</td>
+				<td style="white-space: pre-wrap; word-break: break-all; display: ${displayStyle};">${query.description}</td>
+			`;
+			querySearchResultsTbody.appendChild(row);
+		});
 	}
 
 	/** Busca la automatización a la que pertenece una actividad de query. */
@@ -1468,6 +1537,25 @@ document.addEventListener('DOMContentLoaded', function () {
 			automationName: autoData.name || 'N/A',
 			step
 		};
+	}
+
+	/**
+	 * Construye la URL para abrir una Query Activity en la UI de Automation Studio.
+	 * @param {string} queryObjectId - El ObjectID de la Query Definition.
+	 * @returns {string|null} La URL completa o null si falta información.
+	 */
+	function constructQueryLink(queryObjectId) {
+		// Usa la información que ya estamos guardando
+		if (!currentOrgInfo || !currentOrgInfo.stack_key || !businessUnitInput.value) {
+			return null;
+		}
+
+		const stack = currentOrgInfo.stack_key.toLowerCase();
+		const mid = businessUnitInput.value;
+		const baseUrl = `https://mc.${stack}.exacttarget.com/cloud/`;
+		const path = `#app/Automation%20Studio/AutomationStudioFuel3/%23ActivityDetails/300/${queryObjectId}`;
+
+		return baseUrl + path;
 	}
 
 	// ==========================================================
@@ -1845,7 +1933,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		// Botón de Login: guarda la configuración no sensible e inicia el flujo de autenticación.
 		loginBtn.addEventListener('click', () => {
-			console.log('[LOGIN-UI] Botón de Login pulsado.');
+			//console.log('[LOGIN-UI] Botón de Login pulsado.');
 
 			const clientName = clientNameInput.value.trim();
 			if (!clientName) return alert('Introduzca un nombre para el cliente.');
@@ -1856,7 +1944,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				clientSecret: clientSecretInput.value.trim(),
 				businessUnit: businessUnitInput.value.trim()
 			};
-			console.log('[LOGIN-UI] Datos recogidos del formulario:', config);
+			//console.log('[LOGIN-UI] Datos recogidos del formulario:', config);
 
 			if (!config.authUri || !config.clientId || !config.clientSecret || !config.businessUnit)
 			{
@@ -1870,7 +1958,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
 			loadConfigsIntoSelect(); // Actualiza los selectores.
 
-			console.log('[LOGIN-UI] Validaciones OK. Bloqueando UI y enviando evento a main.js.');
+			//console.log('[LOGIN-UI] Validaciones OK. Bloqueando UI y enviando evento a main.js.');
 
 			logMessage("Configuración guardada. Iniciando login...");
 			blockUI();
@@ -1900,6 +1988,15 @@ document.addEventListener('DOMContentLoaded', function () {
 			if (result.success) {
 				logMessage("Login exitoso. Sesión activa.");
 				alert("Login completado con éxito.");
+
+				currentUserInfo = result.data.userInfo; // Guardamos la info del usuario globalmente
+				currentOrgInfo = result.data.orgInfo;
+				
+				// Rellenamos el campo de Stack en la vista de configuración
+        		stackKeyInput.value = currentOrgInfo?.stack_key || 'No disponible';
+
+        		updateLoginStatus(true, clientNameInput.value, currentUserInfo);
+				
 				loadAndSyncClientConfig(clientNameInput.value); // Recarga el cliente para reflejar la sesión activa.
 			} else {
 				logMessage(`Error durante el login: ${result.error}`);
@@ -1959,10 +2056,30 @@ document.addEventListener('DOMContentLoaded', function () {
 		validateEmailBtn.addEventListener('click', macroValidateEmail);
 		findDataSourcesBtn.addEventListener('click', macroFindDataSources);
 		searchCustomerBtn.addEventListener('click', macroSearchCustomer);
+		searchQueriesByTextBtn.addEventListener('click', macroSearchQueriesByText);
 		refreshAutomationsBtn.addEventListener('click', macroGetAutomations);
 		createDummyFieldsBtn.addEventListener('click', createDummyFields);
 		clearFieldsBtn.addEventListener('click', clearFieldsTable);
 		addFieldBtn.addEventListener('click', () => addNewField(true));
+		
+		querySearchResultsTbody.addEventListener('click', (e) => {
+
+			const link = e.target.closest('a.external-link');
+			
+			if (link) {
+				e.preventDefault(); 
+				const url = link.href;
+				
+				// Verificamos si la función existe antes de llamarla
+				if (window.electronAPI && typeof window.electronAPI.openExternalLink === 'function') {
+					window.electronAPI.openExternalLink(url);
+				} else {
+					console.error('[ERROR] La función window.electronAPI.openExternalLink no existe! Revisa tu preload.js'); // Log de Error
+				}
+			} else {
+				console.log('[DEBUG] El clic no fue en un enlace con la clase "external-link".'); // Log de "no encontrado"
+			}
+		});
 
 		// --- Listener para la tabla de campos (selección y borrado de filas) ---
 		fieldsTableBody.addEventListener('click', (e) => {
@@ -2067,8 +2184,22 @@ document.addEventListener('DOMContentLoaded', function () {
 				isSubscriber: clickedRow.dataset.isSubscriber === 'true'
 			};
 		});
+		
+		showQueryTextCheckbox.addEventListener('change', () => {
+			const isChecked = showQueryTextCheckbox.checked;
+			const displayStyle = isChecked ? '' : 'none'; // Usa '' para volver al estilo por defecto de la hoja CSS
+			const table = document.getElementById('query-search-results-table');
+			
+			// Selecciona la cuarta cabecera (th) y todas las cuartas celdas del cuerpo (td)
+			const cellsToToggle = table.querySelectorAll('thead th:nth-child(4), tbody td:nth-child(4)');
+			
+			// Aplica el estilo a todas las celdas encontradas
+			cellsToToggle.forEach(cell => {
+				cell.style.display = displayStyle;
+			});
+		});
 
-        // Listeners para los nuevos botones (por ahora, con alertas)
+        // Listeners para los de Envios y Journeys
         getCustomerSendsBtn.addEventListener('click', () => {
 			if (selectedSubscriberData) {
 				customerJourneysResultsBlock.classList.add('hidden');

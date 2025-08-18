@@ -164,7 +164,7 @@
           <button class="tab-button active" data-tab="busqueda-de-tab">Data Extensions</button>
           <button class="tab-button" data-tab="origenes-tab">Orígen de datos</button>
           <button class="tab-button" data-tab="clientes-tab">Clientes</button>
-          <button class="tab-button" data-tab="clientes-tab">Texto en query</button>
+          <button class="tab-button" data-tab="queries-tab">Texto en Queries</button>
         </div>
 
         <!-- Contenido de la Pestaña: Búsqueda de Data Extension -->
@@ -303,6 +303,41 @@
                 </div>
             </div>
         </div>
+
+        <!-- Contenido de la Pestaña: Buscador de Queries -->
+        <div id="queries-tab" class="tab-content config-section-container">
+          <h2>Buscador de Texto en Queries</h2>
+          <div class="config-block">
+              <h3>Parámetros de Búsqueda</h3>
+              <div class="form-group">
+                <label for="querySearchText">Texto a buscar en la Query:</label>
+                <input type="text" id="querySearchText" placeholder="Ej: _Subscribers o Nombre_DE">
+              </div>
+              <div class="form-group checkbox-group" style="justify-content: flex-start; padding-left: 5px; margin-top: 10px;">
+                  <label for="showQueryTextCheckbox">Mostrar Query Text:</label>
+                  <input type="checkbox" id="showQueryTextCheckbox" checked>
+              </div>
+              <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                <button id="searchQueriesByTextBtn" class="action-button">Buscar en Queries</button>
+              </div>
+          </div>
+          <div class="config-block" style="flex-grow: 1; display: flex; flex-direction: column;">
+              <h3>Queries Encontradas</h3>
+              <div class="table-container" style="flex-grow: 1; overflow-y: auto;">
+                  <table id="query-search-results-table">
+                      <thead>
+                          <tr>
+                              <th>Nombre de la Query</th>
+                              <th>Automatización</th>
+                              <th>Paso</th>
+                              <th>Query Text</th>
+                          </tr>
+                      </thead>
+                      <tbody id="query-search-results-tbody"></tbody>
+                  </table>
+              </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -329,6 +364,7 @@
             <div class="form-group"><label for="token">Token</label><input type="text" id="token" disabled></div>
             <div class="form-group"><label for="soapUri">SOAP URI</label><input type="text" id="soapUri" disabled></div>
             <div class="form-group"><label for="restUri">REST URI</label><input type="text" id="restUri" disabled></div>
+             <div class="form-group"><label for="stackKey">Stack</label><input type="text" id="stackKey" disabled></div>
         </div>
         <p class="info-text">Usa 'Login / Guardar' para iniciar sesión y guardar la configuración. 'Logout / Borrar' elimina toda la información y la sesión. El Client Secret se usa para el login pero no se guarda en el almacenamiento local.</p>
     </div>

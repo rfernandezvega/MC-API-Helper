@@ -449,6 +449,16 @@ tr.selected, #customer-search-table tbody tr.selected {
   transform: translateY(-50%) scale(1.1);
 }
 
+td a {
+  color: #005A9C; /* Un azul estándar para enlaces */
+  text-decoration: underline;
+  font-weight: bold;
+}
+
+td a:hover {
+  color: #003366; /* Un azul más oscuro al pasar el ratón */
+}
+
 
 /* ==========================================================
    4. BARRA LATERAL DERECHA (LOG)
