@@ -1311,6 +1311,90 @@ document.addEventListener('DOMContentLoaded', function () {
 
         renderAutomationsTable(filteredAutomations);
     }
+
+	/**
+     * Evalúa la selección actual de automatismos y actualiza el estado (habilitado/deshabilitado)
+     * y los tooltips de los botones de acción.
+     */
+     function updateAutomationButtonsState() {
+        const selectedRows = document.querySelectorAll('#automations-table tbody tr.selected');
+        const selectedAutomations = Array.from(selectedRows).map(row => {
+            return fullAutomationList.find(auto => auto.id === row.dataset.automationId);
+        }).filter(Boolean);
+		
+        // Regla: Si no hay nada seleccionado, deshabilita todo y termina.
+        if (selectedAutomations.length === 0) {
+            activateAutomationBtn.disabled = true;
+            runAutomationBtn.disabled = true;
+            stopAutomationBtn.disabled = true;
+            activateAutomationBtn.title = '';
+            runAutomationBtn.title = '';
+            stopAutomationBtn.title = '';
+            return;
+        }
+
+        // PASO 1: Por defecto, deshabilitamos todos los botones si hay una selección.
+        // Solo los habilitaremos si se cumple una regla específica. Esto evita el error anterior.
+        activateAutomationBtn.disabled = true;
+        runAutomationBtn.disabled = true;
+        stopAutomationBtn.disabled = true;
+        
+        const statuses = selectedAutomations.map(auto => auto.statusText || auto.status);
+        const uniqueStatuses = [...new Set(statuses)];
+		console.log(statuses);
+		console.log(uniqueStatuses);
+        // Regla: Si hay estados mezclados, pon un tooltip y termina.
+        if (uniqueStatuses.length > 1) {
+            const tooltip = 'Seleccione automatismos con el mismo estado para realizar una acción.';
+            activateAutomationBtn.title = tooltip;
+            runAutomationBtn.title = tooltip;
+            stopAutomationBtn.title = tooltip;
+            return;
+        }
+
+        // Si llegamos aquí, todas las selecciones tienen el mismo estado.
+        const singleStatus = uniqueStatuses[0];
+        console.log(singleStatus);
+        // Limpiamos los tooltips para los casos válidos.
+        activateAutomationBtn.title = '';
+        runAutomationBtn.title = '';
+        stopAutomationBtn.title = '';
+
+        // PASO 2: Comparamos el estado en minúsculas para evitar errores de mayúsculas/minúsculas.
+        switch (singleStatus.toLowerCase()) {
+            case 'pausedschedule':
+				activateAutomationBtn.disabled = false;
+                runAutomationBtn.disabled = false;
+				stopAutomationBtn.disabled = true;
+                break;
+            case 'stopped':
+                // Habilitamos selectivamente los botones permitidos.
+                activateAutomationBtn.disabled = false;
+                runAutomationBtn.disabled = false;
+				stopAutomationBtn.disabled = true;
+                break;
+
+            case 'scheduled':
+				activateAutomationBtn.disabled = true;
+                runAutomationBtn.disabled = true;
+				stopAutomationBtn.disabled = false;
+                break;
+            case 'ready':
+                // Habilitamos selectivamente el botón permitido.
+				activateAutomationBtn.disabled = true;
+                runAutomationBtn.disabled = true;
+                stopAutomationBtn.disabled = false;
+                break;
+            
+            // Para cualquier otro caso ('running', 'error', etc.), los botones
+            // permanecerán deshabilitados gracias a nuestro estado por defecto del PASO 1.
+            default:
+				console.log("default");
+                break;
+        }
+    }
+
+
 	/** Ejecuta una petición SOAP genérica y maneja la respuesta. */
 	async function executeSoapRequest(soapUri, soapPayload, successMessage) {
 		// Esta función centraliza la lógica para hacer llamadas SOAP.
@@ -1704,14 +1788,12 @@ document.addEventListener('DOMContentLoaded', function () {
 	/** Muestra la nueva sección de Gestión de Automatismos y la puebla con datos. */
     async function viewAutomations(automationsToShow = null) {
         showSection('gestion-automatismos-section');
-        // Deselecciona cualquier fila y deshabilita los botones
+        // Deselecciona cualquier fila visualmente
         if (selectedAutomationRow) {
             selectedAutomationRow.classList.remove('selected');
             selectedAutomationRow = null;
         }
-        activateAutomationBtn.disabled = true;
-        runAutomationBtn.disabled = true;
-        stopAutomationBtn.disabled = true;
+        document.querySelectorAll('#automations-table tbody tr.selected').forEach(row => row.classList.remove('selected'));
 
         let dataToRender = [];
 
@@ -2518,23 +2600,16 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         // Listener para la selección de filas en la nueva tabla de automatismos
-         automationsTbody.addEventListener('click', (e) => {
+        automationsTbody.addEventListener('click', (e) => {
             const clickedRow = e.target.closest('tr');
             if (!clickedRow || !clickedRow.dataset.automationId) return;
 
-            // --- LÓGICA DE MULTI-SELECCIÓN ---
-            // Alterna la clase 'selected' en la fila clicada
+            // Paso 1: Alterna la clase 'selected' en la fila clicada.
             clickedRow.classList.toggle('selected');
-
-            // --- LÓGICA DE HABILITACIÓN DE BOTONES ---
-            // Comprueba cuántas filas están seleccionadas
-            const selectedRowsCount = document.querySelectorAll('#automations-table tbody tr.selected').length;
             
-            // Habilita o deshabilita los botones en base a si hay alguna selección
-            const areButtonsEnabled = selectedRowsCount > 0;
-            activateAutomationBtn.disabled = !areButtonsEnabled;
-            runAutomationBtn.disabled = !areButtonsEnabled;
-            stopAutomationBtn.disabled = !areButtonsEnabled;
+            // Paso 2: Llama a la función central para que ella SOLA decida el estado de los botones.
+            // NO hay más lógica de habilitación aquí.
+            updateAutomationButtonsState();
         });
 
         // Listeners para los botones de acción (con funcionalidad placeholder)

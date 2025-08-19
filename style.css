@@ -362,9 +362,24 @@ body {
 }
 /* ESTILO PARA BOTONES DESHABILITADOS */
 .action-button[disabled] {
-  background-color: #cccccc;
-  cursor: not-allowed;
-  opacity: 0.6;
+  background-color: #cccccc !important;
+  border-color: #cccccc !important;
+  cursor: not-allowed !important;
+  opacity: 0.6 !important;
+}
+
+/* Reglas específicas para cada tipo de botón, por si acaso */
+#runAutomationBtn[disabled],
+.action-button.activate-btn[disabled],
+.action-button.delete-btn[disabled] {
+  background-color: #cccccc !important;
+  border-color: #cccccc !important;
+}
+
+/* Suprime el efecto hover en TODOS los botones deshabilitados */
+#runAutomationBtn:hover[disabled],
+.action-button:hover[disabled] {
+    background-color: #cccccc !important;
 }
 .action-button[disabled]:hover {
   background-color: #cccccc;
