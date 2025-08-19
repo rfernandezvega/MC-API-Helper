@@ -343,6 +343,23 @@ body {
     background-color: #558ac7; 
 }
 
+.action-button.activate-btn { 
+    background-color: #28a745; 
+}
+.action-button.activate-btn:hover { 
+    background-color: #218838; 
+}
+/* Aplica el color naranja SOLO si el botón NO está deshabilitado */
+#runAutomationBtn:not([disabled]) {
+    background-color: #f39c12; /* Naranja */
+    border-color: #f39c12;
+}
+
+/* El efecto hover también se aplica solo si NO está deshabilitado */
+#runAutomationBtn:hover:not([disabled]) {
+    background-color: #e67e22; /* Naranja más oscuro */
+    border-color: #d35400;
+}
 /* ESTILO PARA BOTONES DESHABILITADOS */
 .action-button[disabled] {
   background-color: #cccccc;
@@ -350,6 +367,15 @@ body {
   opacity: 0.6;
 }
 .action-button[disabled]:hover {
+  background-color: #cccccc;
+}
+
+/* Suprime el efecto hover específicamente para los botones rojos cuando están deshabilitados */
+.action-button.delete-btn[disabled]:hover {
+    background-color: #cccccc;
+}
+
+.action-button.delete-btn[disabled] {
   background-color: #cccccc;
 }
 
@@ -365,7 +391,23 @@ body {
 .action-button.delete-btn:hover { 
     background-color: #c82333; 
 }
+.header-filters {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-grow: 1; /* Permite que los filtros ocupen el espacio disponible */
+}
 
+.filter-input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+#automationNameFilter {
+    min-width: 200px;
+}
 /* --- 3.4. Tablas de Datos --- */
 .table-container {
     display: flex;
@@ -402,6 +444,49 @@ th {
 }
 tr.selected, #customer-search-table tbody tr.selected { 
     background-color: #c5dce6; 
+}
+
+#customer-search-table tbody tr,
+#automations-table tbody tr {
+    cursor: pointer; /* Indica que la fila es clicable */
+}
+
+tr.selected, 
+#customer-search-table tbody tr.selected,
+#automations-table tbody tr.selected { 
+    background-color: #c5dce6; 
+}
+
+/* Estilos para las cabeceras de tabla que se pueden ordenar */
+.sortable-header {
+  cursor: pointer;
+  position: relative; /* Necesario para el pseudo-elemento ::after */
+  user-select: none; /* Evita que el texto se seleccione al hacer clic */
+}
+
+.sortable-header:hover {
+  background-color: #558ac7; /* Un poco más oscuro al pasar el ratón */
+}
+
+/* Estilos para los indicadores de ordenación (flechas) */
+.sortable-header::after {
+  content: '';
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 4px solid transparent;
+  opacity: 0.5;
+}
+
+.sortable-header.sort-asc::after {
+  border-bottom-color: #fff;
+  opacity: 1;
+}
+
+.sortable-header.sort-desc::after {
+  border-top-color: #fff;
+  opacity: 1;
 }
 
 /* Controles de tabla (Subir/Bajar/Eliminar fila) */
@@ -721,6 +806,17 @@ td a:hover {
 .calendar-month td.has-automation { background-color: #a2d9ff; font-weight: bold; }
 .calendar-month td.selected { background-color: #558ac7; color: white; }
 .calendar-month td:hover { background-color: #e0e7ef; }
+
+#automation-list-header.clickable {
+    cursor: pointer;
+    color: #005A9C;
+    text-decoration: underline;
+    transition: color 0.2s;
+}
+
+#automation-list-header.clickable:hover {
+    color: #003366;
+}
 
 #automation-list .automation-item {
     background-color: #f8f9fa;

@@ -50,7 +50,8 @@
         <ul class="collapsible-content">
           <li><a class="macro-item" data-macro="calendario">Calendario</a></li>
           <li><a class="macro-item" data-macro="validadorEmail">Validador de Email</a></li>
-          <li><a class="macro-item" data-macro="buscadores">Buscadores</a></li> 
+          <li><a class="macro-item" data-macro="buscadores">Buscadores</a></li>
+          <li><a class="macro-item" data-macro="gestionAutomatismos">Gestión de automatismos</a></li> 
         </ul>
     </div>
   </aside>
@@ -166,7 +167,7 @@
                 <div id="calendar-grid" class="calendar-grid"></div>
             </div>
             <aside id="calendar-sidebar" class="calendar-sidebar">
-                <h3>Automatizaciones del Día</h3>
+                <h3 id="automation-list-header">Automatizaciones del Día</h3>
                 <div id="automation-list">
                     <p>Selecciona un día para ver los detalles.</p>
                 </div>
@@ -490,6 +491,42 @@
             <button id="moveUp" title="Mover fila seleccionada hacia arriba">Subir</button>
             <button id="moveDown" title="Mover fila seleccionada hacia abajo">Bajar</button>
           </div>
+        </div>
+    </div>
+
+     <!-- SECCIÓN: Gestión de Automatismos (NUEVA) -->
+    <div id="gestion-automatismos-section" class="section">
+        <div class="section-header">
+            <button class="back-button">← Atrás</button>            
+            <div class="header-actions">
+                <button id="refreshAutomationsTableBtn" class="action-button">Refrescar</button>
+                <button id="activateAutomationBtn" class="action-button activate-btn" disabled>Activar</button>
+                <button id="runAutomationBtn" class="action-button" disabled>Ejecutar</button>
+                <button id="stopAutomationBtn" class="action-button delete-btn" disabled>Parar</button>
+            </div>
+        </div>
+        <h2>Gestión de Automatismos</h2>
+        <div class="header-filters">
+            <input type="text" id="automationNameFilter" class="filter-input" placeholder="Buscar por nombre...">
+            <select id="automationStatusFilter" class="filter-input">
+                <option value="">Todos los estados</option>
+                <!-- Las opciones se generarán con JavaScript -->
+            </select>
+        </div>
+        <div class="table-container" style="padding-right: 0;"> <!-- Quitamos el padding para que la tabla ocupe todo el ancho -->
+          <table id="automations-table">
+            <thead>
+              <tr>
+                <th class="sortable-header" data-sort-by="name">Nombre</th>
+                <th class="sortable-header" data-sort-by="lastRunTime">Última Ejecución</th>
+                <th class="sortable-header" data-sort-by="schedule.scheduledTime">Próxima Ejecución</th>
+                <th class="sortable-header" data-sort-by="status">Estado</th>
+              </tr>
+            </thead>
+            <tbody id="automations-tbody">
+                <!-- El contenido se generará con JavaScript -->
+            </tbody>
+          </table>
         </div>
     </div>
     

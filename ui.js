@@ -95,9 +95,22 @@ document.addEventListener('DOMContentLoaded', function () {
 	const calendarGrid = document.getElementById('calendar-grid');
 	const calendarYearSelect = document.getElementById('calendarYearSelect');
 	const automationList = document.getElementById('automation-list');
+	const automationListHeader = document.getElementById('automation-list-header');
+    const automationsTbody = document.getElementById('automations-tbody');
+	const refreshAutomationsTableBtn = document.getElementById('refreshAutomationsTableBtn');
+    const activateAutomationBtn = document.getElementById('activateAutomationBtn');
+    const runAutomationBtn = document.getElementById('runAutomationBtn');
+    const stopAutomationBtn = document.getElementById('stopAutomationBtn');
+    let selectedAutomationRow = null; // Para la fila de automatización seleccionada
+    let fullAutomationList = []; // Para guardar la lista completa de automatismos
+    let dailyFilteredAutomations = []; // Para guardar los automatismos del día seleccionado en el calendario
+	let currentSortColumn = 'name'; // Columna por defecto para ordenar
+    let currentSortDirection = 'asc'; // Dirección por defecto
 	const refreshAutomationsBtn = document.getElementById('refreshAutomationsBtn');
 	let allAutomations = []; // Almacena los datos de las automatizaciones para el calendario.
 	let calendarDataForClient = ''; // Guarda el nombre del cliente para el que se cargaron los datos del calendario.
+	const automationNameFilter = document.getElementById('automationNameFilter');
+    const automationStatusFilter = document.getElementById('automationStatusFilter');
 
 	// Observer para detectar cambios en la tabla de campos y actualizar dinámicamente el desplegable de Subscriber Key.
 	const observer = new MutationObserver(updateSubscriberKeyFieldOptions);
@@ -989,34 +1002,40 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	function renderCustomerSearchResults(results) {
 		customerSearchTbody.innerHTML = '';
-		
-		// --- LÓGICA DE BOTONES CENTRALIZADA ---
-		// Por defecto, todo deshabilitado
+
+		// Resetea el estado de selección para cada nueva búsqueda
+		selectedCustomerRow = null;
+		selectedSubscriberData = null;
 		getCustomerSendsBtn.disabled = true;
 		getCustomerJourneysBtn.disabled = true;
 
 		if (!results || results.length === 0) {
 			customerSearchTbody.innerHTML = '<tr><td colspan="6">No se encontraron clientes con ese criterio.</td></tr>';
-			return; // Salimos de la función, los botones quedan deshabilitados
+			return;
 		}
 
-		// Si hemos llegado aquí, significa que SÍ hay resultados.
-		// Tomamos el primer (y único) resultado para decidir.
+		// Lógica de habilitación de botones
 		const customer = results[0];
-		
 		if (customer.isSubscriber) {
-			// ES SUSCRIPTOR: Se habilitan ambos botones
 			getCustomerSendsBtn.disabled = false;
 			getCustomerJourneysBtn.disabled = false;
 		} else {
-			// ES SOLO CONTACTO: Solo se habilita Journeys
-			getCustomerSendsBtn.disabled = true; // Ya está, pero lo dejamos por claridad
 			getCustomerJourneysBtn.disabled = false;
 		}
-		// --- FIN DE LÓGICA DE BOTONES ---
+
+		// --- CORRECCIÓN PRINCIPAL ---
+		// Si solo hay un resultado, lo seleccionamos automáticamente
+		if (results.length === 1) {
+			selectedSubscriberData = {
+				subscriberKey: customer.subscriberKey,
+				isSubscriber: customer.isSubscriber
+			};
+		}
+		// --- FIN DE LA CORRECCIÓN ---
 
 		// Ahora, pintamos las filas en la tabla
-		results.forEach(sub => {
+		// ¡Asegúrate de que esta línea incluye (sub, index)!
+		results.forEach((sub, index) => {
 			const row = document.createElement('tr');
 			row.dataset.subscriberKey = sub.subscriberKey;
 			row.dataset.isSubscriber = sub.isSubscriber;
@@ -1028,6 +1047,13 @@ document.addEventListener('DOMContentLoaded', function () {
 				<td>${sub.unsubscribedDate}</td>
 				<td>${sub.isSubscriber ? 'Sí' : 'No'}</td>
 			`;
+
+			// Si es el único resultado, lo marcamos visualmente como seleccionado
+			if (results.length === 1 && index === 0) {
+				row.classList.add('selected');
+				selectedCustomerRow = row;
+			}
+
 			customerSearchTbody.appendChild(row);
 		});
 	}
@@ -1235,7 +1261,56 @@ document.addEventListener('DOMContentLoaded', function () {
 	// ==========================================================
 	// --- 5. FUNCIONES AUXILIARES (HELPERS) ---
 	// ==========================================================
+	 /**
+     * Rellena el desplegable de estados con los estados únicos de la lista de automatismos.
+     * @param {Array} automations - La lista completa de automatismos.
+     */
+    function populateStatusFilter(automations) {
+        // Guardamos la selección actual para restaurarla después de poblar
+        const currentSelectedValue = automationStatusFilter.value;
+        
+        automationStatusFilter.innerHTML = '<option value="">Todos los estados</option>'; // Resetea el select
+        
+        // Obtenemos los estados únicos, los limpiamos de nulos y los ordenamos
+        const statuses = [...new Set(
+            automations.map(auto => auto.statusText || auto.status).filter(Boolean)
+        )];
+        statuses.sort();
 
+        // Creamos una opción para cada estado
+        statuses.forEach(status => {
+            automationStatusFilter.appendChild(new Option(status, status));
+        });
+
+        // Restauramos la selección si todavía existe
+        automationStatusFilter.value = currentSelectedValue;
+    }
+
+    /**
+     * Aplica los filtros de nombre y estado a la lista completa de automatismos y redibuja la tabla.
+     */
+    function applyFiltersAndRender() {
+        const nameFilter = automationNameFilter.value.toLowerCase().trim();
+        const statusFilter = automationStatusFilter.value;
+
+        let filteredAutomations = fullAutomationList;
+
+        // Aplicar filtro por nombre
+        if (nameFilter) {
+            filteredAutomations = filteredAutomations.filter(auto => 
+                auto.name.toLowerCase().includes(nameFilter)
+            );
+        }
+
+        // Aplicar filtro por estado
+        if (statusFilter) {
+            filteredAutomations = filteredAutomations.filter(auto => 
+                (auto.statusText || auto.status) === statusFilter
+            );
+        }
+
+        renderAutomationsTable(filteredAutomations);
+    }
 	/** Ejecuta una petición SOAP genérica y maneja la respuesta. */
 	async function executeSoapRequest(soapUri, soapPayload, successMessage) {
 		// Esta función centraliza la lógica para hacer llamadas SOAP.
@@ -1558,6 +1633,102 @@ document.addEventListener('DOMContentLoaded', function () {
 		return baseUrl + path;
 	}
 
+	/**
+	 * Obtiene los detalles de TODAS las automatizaciones para la vista de gestión.
+	 */
+	async function macroGetAllAutomationDetails() {
+        blockUI();
+        logMessage("Recuperando todos los detalles de las automatizaciones...");
+
+        // 1. Inicializamos los arrays para el log y limpiamos la vista
+        let allRequests = [];
+        let allResponses = [];
+        logApiCall('');
+        logApiResponse('');
+
+        try {
+            const apiConfig = await getAuthenticatedConfig();
+            let allItems = [];
+            let page = 1;
+            let totalPages = 1;
+
+            do {
+                const url = `${apiConfig.restUri}automation/v1/automations?$page=${page}&$pageSize=50`;
+                // Mensaje de progreso mejorado
+                logMessage(`Obteniendo página ${page} de ${totalPages > 1 ? totalPages : '...'}...`);
+
+                // 2. Creamos y guardamos el objeto de la petición para el log
+                const requestDetails = {
+                    step: `Obtener Automatizaciones (Página ${page})`,
+                    endpoint: url,
+                    method: "GET"
+                };
+                allRequests.push(requestDetails);
+                
+                const response = await fetch(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
+                const data = await response.json();
+                
+                // 3. Guardamos el objeto de la respuesta para el log
+                allResponses.push({
+                    request: requestDetails,
+                    response: data
+                });
+
+                if (!response.ok) throw new Error(data.message || "Error al obtener la lista de automatizaciones.");
+                
+                allItems.push(...data.items);
+                totalPages = Math.ceil(data.count / data.pageSize);
+                page++;
+
+            } while (page <= totalPages);
+
+            fullAutomationList = allItems; // Guardamos la lista completa en la variable global
+            logMessage(`Recuperación completa. Se encontraron ${allItems.length} automatizaciones.`);
+
+			populateStatusFilter(fullAutomationList); // ¡Puebla el filtro de estados!
+
+            return allItems;
+
+        } catch (error) {
+            logMessage(`Error al recuperar los detalles de las automatizaciones: ${error.message}`);
+            alert(`Error: ${error.message}`);
+            return []; // Devuelve un array vacío en caso de error
+        } finally {
+            // 4. Al final, pintamos el log completo con todas las peticiones y respuestas
+            logApiCall(allRequests);
+            logApiResponse(allResponses);
+            unblockUI();
+        }
+    }
+
+	/** Muestra la nueva sección de Gestión de Automatismos y la puebla con datos. */
+    async function viewAutomations(automationsToShow = null) {
+        showSection('gestion-automatismos-section');
+        // Deselecciona cualquier fila y deshabilita los botones
+        if (selectedAutomationRow) {
+            selectedAutomationRow.classList.remove('selected');
+            selectedAutomationRow = null;
+        }
+        activateAutomationBtn.disabled = true;
+        runAutomationBtn.disabled = true;
+        stopAutomationBtn.disabled = true;
+
+        let dataToRender = [];
+
+        if (automationsToShow) {
+            // Si venimos del calendario, usamos los datos filtrados
+            dataToRender = automationsToShow;
+        } else {
+            // Si venimos del menú lateral, cargamos todo (o usamos la caché)
+            if (fullAutomationList.length === 0) {
+                await macroGetAllAutomationDetails();
+            }
+            dataToRender = fullAutomationList;
+        }
+        
+        renderAutomationsTable(dataToRender);
+    }
+
 	// ==========================================================
 	// --- 6. MANIPULACIÓN DEL DOM Y COMPONENTES ---
 	// ==========================================================
@@ -1842,17 +2013,22 @@ document.addEventListener('DOMContentLoaded', function () {
 	/** Muestra en la barra lateral del calendario las automatizaciones para un día específico. */
 	function filterAutomationsForDay(date) {
 		automationList.innerHTML = '';
-		const filtered = allAutomations.filter(auto => auto.scheduledTime === date)
+		dailyFilteredAutomations = allAutomations.filter(auto => auto.scheduledTime === date)
 			.sort((a, b) => a.scheduledHour.localeCompare(b.scheduledHour));
-		if (filtered.length > 0) {
-			filtered.forEach(auto => {
+
+        // Hacemos el título clicable solo si hay automatismos
+        if (dailyFilteredAutomations.length > 0) {
+            automationListHeader.classList.add('clickable');
+			dailyFilteredAutomations.forEach(auto => {
 				const itemDiv = document.createElement('div');
 				itemDiv.className = 'automation-item';
 				itemDiv.innerHTML = `<div class="automation-name">${auto.name}</div><div class="automation-details">${auto.status} - ${auto.scheduledHour}</div>`;
 				automationList.appendChild(itemDiv);
 			});
 		} else {
+            automationListHeader.classList.remove('clickable');
 			automationList.innerHTML = "<p>No hay automatizaciones programadas.</p>";
+            dailyFilteredAutomations = []; // Limpiamos por si acaso
 		}
 	}
 	/** Rellena el selector de año del calendario. */
@@ -1923,6 +2099,118 @@ document.addEventListener('DOMContentLoaded', function () {
 			}
 		});
 	}
+
+    /** Dibuja la tabla de la nueva sección de automatismos. */
+    function renderAutomationsTable(automations) {
+        automationsTbody.innerHTML = '';
+        updateSortIndicators(); // Actualiza las flechas primero
+
+        if (!automations || automations.length === 0) {
+            automationsTbody.innerHTML = '<tr><td colspan="4">No hay automatismos para mostrar.</td></tr>';
+            return;
+        }
+
+        // Llama a la función de ordenación con los datos a mostrar y guarda el resultado
+        const sortedData = sortAutomations(automations);
+
+        const formatDate = (dateString) => {
+            if (!dateString) return '---';
+            return new Date(dateString).toLocaleString();
+        };
+
+        // Itera sobre el array ya ordenado
+        sortedData.forEach(auto => {
+            const row = document.createElement('tr');
+            // Mantenemos la lógica de selección múltiple (si una fila ya estaba seleccionada, lo recordará)
+            const isSelected = document.querySelector(`#automations-table tbody tr.selected[data-automation-id="${auto.id}"]`);
+            if (isSelected) {
+                row.classList.add('selected');
+            }
+            row.dataset.automationId = auto.id;
+            row.innerHTML = `
+                <td>${auto.name || 'Sin Nombre'}</td>
+                <td>${formatDate(auto.lastRunTime)}</td>
+                <td>${formatDate(auto.schedule?.scheduledTime)}</td>
+                <td>${auto.status || '---'}</td>
+            `;
+            automationsTbody.appendChild(row);
+        });
+    }
+
+	 /**
+     * Ordena un array de automatismos dado según la columna y dirección actuales.
+     * Devuelve un nuevo array ordenado.
+     * @param {Array} dataToSort - El array de automatismos a ordenar.
+     * @returns {Array} El array ordenado.
+     */
+      function sortAutomations(dataToSort) {
+        const sortKey = currentSortColumn;
+        const direction = currentSortDirection === 'asc' ? 1 : -1;
+
+        // Función auxiliar para obtener el valor a comparar de forma consistente.
+        const getValue = (obj, key) => {
+            if (key === 'schedule.scheduledTime') {
+                return obj.schedule?.scheduledTime;
+            }
+            // **LA CORRECCIÓN CLAVE ESTÁ AQUÍ**
+            // Para el estado, usamos la misma lógica que al mostrarlo en la tabla.
+            // Esto garantiza que siempre comparamos el texto visible ("Ready", "Scheduled", etc.).
+            if (key === 'status') {
+                // Usamos el texto del estado si existe, si no, el valor del estado.
+                // Esto maneja cualquier inconsistencia de la API.
+                return obj.statusText || obj.status;
+            }
+            // Para 'name' y 'lastRunTime', devuelve la propiedad directamente.
+            return obj[key];
+        };
+
+        return dataToSort.slice().sort((a, b) => {
+            let valA = getValue(a, sortKey);
+            let valB = getValue(b, sortKey);
+
+            // Manejo de valores nulos o indefinidos (los envía al final de la lista).
+            if (valA == null) return 1;
+            if (valB == null) return -1;
+
+            let compareResult = 0;
+
+            // Comparar como fechas si la clave lo indica.
+            if (sortKey.includes('Time')) {
+                compareResult = new Date(valA) - new Date(valB);
+            }
+            // Comparar como texto para todo lo demás ('name', 'status').
+            else {
+                // Ahora es 100% seguro que comparamos texto vs texto, porque getValue()
+                // ya nos ha dado el valor correcto para el estado.
+                // Usamos String() por seguridad antes de comparar.
+                compareResult = String(valA).localeCompare(String(valB), undefined, { sensitivity: 'base' });
+            }
+
+            // Aplicar la dirección (ascendente o descendente).
+            const finalResult = compareResult * direction;
+
+            // Lógica de desempate por nombre si los valores son iguales.
+            if (finalResult === 0 && sortKey !== 'name') {
+                const nameA = a.name || '';
+                const nameB = b.name || '';
+                return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
+            }
+
+            return finalResult;
+        });
+    }
+
+    /**
+     * Actualiza los indicadores visuales (flechas) en las cabeceras de la tabla.
+     */
+    function updateSortIndicators() {
+        document.querySelectorAll('#automations-table .sortable-header').forEach(header => {
+            header.classList.remove('sort-asc', 'sort-desc');
+            if (header.dataset.sortBy === currentSortColumn) {
+                header.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+            }
+        });
+    }
 
 	// ==========================================================
 	// --- 7. INICIALIZACIÓN Y EVENT LISTENERS ---
@@ -2043,7 +2331,9 @@ document.addEventListener('DOMContentLoaded', function () {
 						showSection(sectionMap[macro]);
 					} else if (macro === 'calendario') {
 						viewCalendar();
-					}
+					} else if (macro === 'gestionAutomatismos') { 
+                        viewAutomations(); // Llamamos sin argumentos para que cargue todo
+                    }
 				});
 			});
 
@@ -2062,6 +2352,8 @@ document.addEventListener('DOMContentLoaded', function () {
 		clearFieldsBtn.addEventListener('click', clearFieldsTable);
 		addFieldBtn.addEventListener('click', () => addNewField(true));
 		
+		
+
 		querySearchResultsTbody.addEventListener('click', (e) => {
 
 			const link = e.target.closest('a.external-link');
@@ -2184,7 +2476,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				isSubscriber: clickedRow.dataset.isSubscriber === 'true'
 			};
 		});
-		
+
 		showQueryTextCheckbox.addEventListener('change', () => {
 			const isChecked = showQueryTextCheckbox.checked;
 			const displayStyle = isChecked ? '' : 'none'; // Usa '' para volver al estilo por defecto de la hoja CSS
@@ -2214,7 +2506,103 @@ document.addEventListener('DOMContentLoaded', function () {
 				macroGetCustomerJourneys(); 
 			}
 		});
+		// Listener para el título del calendario
+        automationListHeader.addEventListener('click', () => {
+            if (automationListHeader.classList.contains('clickable')) {
+                // Buscamos los detalles completos de los automatismos filtrados
+                const detailedAutomations = fullAutomationList.filter(fullAuto => 
+                    dailyFilteredAutomations.some(dailyAuto => dailyAuto.name === fullAuto.name)
+                );
+                viewAutomations(detailedAutomations);
+            }
+        });
 
+        // Listener para la selección de filas en la nueva tabla de automatismos
+         automationsTbody.addEventListener('click', (e) => {
+            const clickedRow = e.target.closest('tr');
+            if (!clickedRow || !clickedRow.dataset.automationId) return;
+
+            // --- LÓGICA DE MULTI-SELECCIÓN ---
+            // Alterna la clase 'selected' en la fila clicada
+            clickedRow.classList.toggle('selected');
+
+            // --- LÓGICA DE HABILITACIÓN DE BOTONES ---
+            // Comprueba cuántas filas están seleccionadas
+            const selectedRowsCount = document.querySelectorAll('#automations-table tbody tr.selected').length;
+            
+            // Habilita o deshabilita los botones en base a si hay alguna selección
+            const areButtonsEnabled = selectedRowsCount > 0;
+            activateAutomationBtn.disabled = !areButtonsEnabled;
+            runAutomationBtn.disabled = !areButtonsEnabled;
+            stopAutomationBtn.disabled = !areButtonsEnabled;
+        });
+
+        // Listeners para los botones de acción (con funcionalidad placeholder)
+         activateAutomationBtn.addEventListener('click', () => {
+            const selectedIds = Array.from(document.querySelectorAll('#automations-table tbody tr.selected'))
+                                   .map(row => row.dataset.automationId);
+            if (selectedIds.length > 0) {
+                alert(`Funcionalidad "Activar" para los automatismos IDs: ${selectedIds.join(', ')} no implementada.`);
+            }
+        });
+         runAutomationBtn.addEventListener('click', () => {
+            const selectedIds = Array.from(document.querySelectorAll('#automations-table tbody tr.selected'))
+                                   .map(row => row.dataset.automationId);
+            if (selectedIds.length > 0) {
+                alert(`Funcionalidad "Ejecutar" para los automatismos IDs: ${selectedIds.join(', ')} no implementada.`);
+            }
+        });
+        stopAutomationBtn.addEventListener('click', () => {
+            const selectedIds = Array.from(document.querySelectorAll('#automations-table tbody tr.selected'))
+                                   .map(row => row.dataset.automationId);
+            if (selectedIds.length > 0) {
+                alert(`Funcionalidad "Parar" para los automatismos IDs: ${selectedIds.join(', ')} no implementada.`);
+            }
+        });
+
+		refreshAutomationsTableBtn.addEventListener('click', async () => {
+            logMessage("Refrescando lista de automatismos...");
+            fullAutomationList = []; // Limpia la caché para forzar la recarga
+			automationNameFilter.value = '';
+            automationStatusFilter.value = '';
+            await viewAutomations();
+            logMessage("Lista de automatismos actualizada.");
+        });
+
+		// Listener para la cabecera de la tabla de automatismos (para ordenar)
+        document.querySelector('#automations-table thead').addEventListener('click', (e) => {
+            const header = e.target.closest('.sortable-header');
+            if (!header) return;
+
+            const newSortColumn = header.dataset.sortBy;
+            
+            // Si se hace clic en la misma columna, invierte la dirección.
+            // Si es una columna nueva, la establece y resetea la dirección a 'asc'.
+            if (currentSortColumn === newSortColumn) {
+                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortColumn = newSortColumn;
+                currentSortDirection = 'asc';
+            }
+
+            // Vuelve a renderizar la tabla con la nueva ordenación
+            renderAutomationsTable(fullAutomationList);
+        });
+
+        // Listener para el título del calendario (MODIFICADO LIGERAMENTE)
+        automationListHeader.addEventListener('click', () => {
+            if (automationListHeader.classList.contains('clickable')) {
+                const detailedAutomations = fullAutomationList.filter(fullAuto => 
+                    dailyFilteredAutomations.some(dailyAuto => dailyAuto.name === fullAuto.name)
+                );
+                // ¡Importante! No se llama a viewAutomations, sino directamente a render
+                // para evitar una recarga innecesaria y mostrar solo la selección del día.
+                showSection('gestion-automatismos-section');
+                renderAutomationsTable(detailedAutomations);
+            }
+        });
+		automationNameFilter.addEventListener('input', applyFiltersAndRender);
+        automationStatusFilter.addEventListener('change', applyFiltersAndRender);
 	}
 
 	/** Función principal que inicializa el estado de la aplicación al cargar. */
