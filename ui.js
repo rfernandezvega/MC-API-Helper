@@ -2252,7 +2252,7 @@ document.addEventListener('DOMContentLoaded', function () {
             row.innerHTML = `
                 <td>${auto.name || 'Sin Nombre'}</td>
                 <td>${formatDateToSpanishTime(auto.lastRunTime)}</td>
-                <td>${formatDateToSpanishTime(auto.nextRunTime)}</td>
+                <td>${formatDateToSpanishTime(auto.scheduledTime)}</td>
                 <td>${auto.status || '---'}</td>
             `;
             automationsTbody.appendChild(row);

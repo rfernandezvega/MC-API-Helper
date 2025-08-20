@@ -109,10 +109,17 @@
                   </ul>
                 </li>
                 <li>Indicar el siguiente permiso a nivel de Usuario:  “Email > Content > Email > View”.
+                <li><b>IMPORTANTE: </b> Despues de crear la aplicación, tarda en estar disponible. Esperad 5-10 minutos para hacer el login, si no MC devolverá un error.
               </ul>
             </li>
-            <li><strong>Configurar un Cliente:</strong> Ve a <em>Configuración de APIs</em>. Introduce un nombre, rellena los datos de la app de MC (MID, Auth URI, etc.) y pulsa "Login / Guardar". 
-              Saltará una ventana donde iniciar sesión en Marketing Cloud. Una vez introducidas las credenciales la aplicación tardará un poco en cerrar la ventana que indicará (No responde) <b>Es normal</b></li>
+            <li><strong>Configurar un Cliente:</strong> 
+                <ul>
+                  <li>Ve a <em>Configuración de APIs</em> </li>
+                  <li> Introduce un nombre, rellena los datos de la app de MC (MID, Auth URI, etc.) y pulsa "Login / Guardar".</li>
+                  <li> Saltará una ventana donde iniciar sesión en Marketing Cloud. </li>
+                  <li> Una vez introducidas las credenciales la aplicación tardará un poco en cerrar la ventana que indicará (No responde) <b>Es normal</b></li>
+                  <li> Si se quiere hacer uso de la busqueda de envios de un cliente, rellenar las External Keys de las DE que se utilizan para esas Data Views </li>
+                </ul> 
             <li><strong>Almacenamiento Local:</strong> La configuración (sin el Client Secret) se guarda en el navegador. Otra parte se guarda en el gestor de credenciales de Windows</li>
             <li><strong>Gestión de Sesión:</strong> El botón "Login" inicia la autenticación y guarda la configuración. El botón "Logout" cierra la sesión activa y elimina la configuración guardada.</li>
             <li><strong>Estado de la Sesión:</strong> El indicador de color bajo el selector de cliente te informa si la sesión está activa o no.</li>
@@ -126,9 +133,10 @@
               <li><b>Campos:</b> Añade campos manualmente, con el botón de ejemplo o importando desde el portapapeles indicando el separador</li>
               <li><b>Crear DE / Campos:</b> Usa los botones "Crear Data Extension" o "Crear/Actualizar Campos" para ejecutar la acción.</li>
               <li><b>Gestión de Campos:</b> Recupera o borra campos de una DE existente. Especialmente útil para campos en Attribute Groups que no se pueden borrar por pantalla.</li>
-              <li><b>Calendario:</b> Refresca los datos para ver las automatizaciones de Journeys programadas. Los días con algun automatismo programado aparecerán en azul. Seleccionandolo aparecerá el listado.</li>
+              <li><b>Calendario:</b> Refresca los datos para ver las automatizaciones programadas o de Journeys programados. Los días con algun automatismo programado aparecerán en azul. Seleccionandolo aparecerá el listado.</li>
               <li><b>Validador de Emails:</b> Valida el mail indicado contra los validadores que utiliza Marketing Cloud para los campos de email.</li>
               <li><b>Buscadores:</b> Permite buscar Data Extensions, el origen de sus datos, queries en base a un texto de su contenido y clientes (con sus envios y Journeys en los que se encuentra).</li>
+              <li><b>Gestión de automatismos:</b> Permite buscar recuperar todos los automatismos, ver su nombre, fecha de ultima y siguiente ejecución y estado. Además, permite <em>Activar, Ejecutar y Parar</em> de forma simultánea varios automatismos siempre y cuando los seleccionados tengan el mismo estado.</li>
           </ol>
         </div>
         <div id="errores-comunes" class="tab-content">
