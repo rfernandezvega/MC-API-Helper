@@ -9,14 +9,14 @@ const keytar = require('keytar'); // Librería para el llavero seguro
 
 // --- Variables de estado ---
 let mainWindow;
-let activeSession = { // Almacena en memoria la sesión activa
+let activeSession = { 
     clientName: null,
     accessToken: null,
     soapUri: null,
     restUri: null,
     expiryTimestamp: 0,
     userInfo: null,
-    orgInfo: null // <-- Importante añadir orgInfo aquí también
+    orgInfo: null 
 };
 
 // --- Constantes ---
@@ -37,8 +37,6 @@ function createWindow() {
         }
     });
     mainWindow.loadFile('index.html');
-    // Descomenta la siguiente línea para abrir las herramientas de desarrollador al iniciar
-    // mainWindow.webContents.openDevTools();
 }
 
 // --- 3. GESTIÓN DEL CICLO DE VIDA ---
@@ -52,7 +50,6 @@ app.on('activate', () => {
 
 // IPC: Abre un enlace en el navegador externo de forma segura
 ipcMain.on('open-external-link', (event, url) => {
-    //console.log(`[DEBUG main.js] Evento 'open-external-link' recibido. URL: ${url}`);
 
     // Comprobación de seguridad básica para asegurar que solo se abran enlaces web
     if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
@@ -94,12 +91,10 @@ async function refreshAccessToken(clientName) {
         let orgInfo = null; 
         try {
             const userInfoUrl = `${authUri.replace('/v2/token', '')}/v2/userinfo`;
-            //console.log('[DEBUG main.js] Intentando obtener user info desde:', userInfoUrl); 
 
             const userInfoResponse = await axios.get(userInfoUrl, {
                 headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
             });
-            //console.log('[DEBUG main.js] Respuesta COMPLETA de /v2/userinfo:', JSON.stringify(userInfoResponse.data, null, 2));
 
             userInfo = userInfoResponse.data.user;
             orgInfo = userInfoResponse.data.organization;
@@ -137,7 +132,6 @@ ipcMain.handle('get-api-config', async (event, clientName) => {
     } 
     // Condición 2: La sesión es "válida" pero le falta información crucial (orgInfo)
     else if (activeSession.accessToken && !activeSession.orgInfo) {
-        //console.log('[DEBUG main.js] Sesión activa pero incompleta. Forzando actualización de datos de usuario/org.');
         needsRefresh = true;
     }
 
@@ -208,14 +202,12 @@ ipcMain.on('start-login', async (event, config) => { // Asegurarse de que es asy
                     let orgInfo = null;
                     try {
                         const userInfoUrl = `${config.authUri.replace('/v2/token', '')}/v2/userinfo`;
-                        //console.log('[DEBUG main.js] Intentando obtener user info desde:', userInfoUrl); // LOG AÑADIDO
 
                         const userInfoResponse = await axios.get(userInfoUrl, {
                             headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
                         });
                         userInfo = userInfoResponse.data.user; 
                         orgInfo = userInfoResponse.data.organization;
-                        //console.log('[DEBUG main.js] Respuesta COMPLETA de /v2/userinfo:', JSON.stringify(userInfoResponse.data, null, 2));
                     } catch (e) {
                         console.error("No se pudo obtener la info de usuario/organización.", e.message);
                     }

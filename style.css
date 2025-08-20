@@ -855,4 +855,11 @@ td a:hover {
   .app-container.log-collapsed {
     grid-template-columns: 1fr;
   }
-  .app-container.lo
+  .app-container.log-collapsed .log-header h2,
+  .app-container.log-collapsed .log-block {
+    display: flex; /* Asegura que el contenido del log sea siempre visible */
+  }
+  #toggleLogBtn {
+    display: none; /* Oculta el botón de colapso */
+  }
+}
