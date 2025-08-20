@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	const restUriInput = document.getElementById('restUri');
 	const businessUnitInput = document.getElementById('businessUnit');
 	const stackKeyInput = document.getElementById('stackKey');
+	const saveConfigBtn = document.getElementById('saveConfigBtn');
 	const loginBtn = document.getElementById('loginBtn');
 	const logoutBtn = document.getElementById('logoutBtn');
 	const deNameInput = document.getElementById('deName');
@@ -89,6 +90,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const searchQueriesByTextBtn = document.getElementById('searchQueriesByTextBtn');
     const querySearchResultsTbody = document.getElementById('query-search-results-tbody');
 	const showQueryTextCheckbox = document.getElementById('showQueryTextCheckbox');
+	const dvSentInput = document.getElementById('dvSent');
+    const dvOpenInput = document.getElementById('dvOpen');
+    const dvClickInput = document.getElementById('dvClick');
+    const dvBounceInput = document.getElementById('dvBounce');
 	const tabButtons = document.querySelectorAll('.tab-button');
 	const tabContents = document.querySelectorAll('.tab-content');
 	const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
@@ -107,6 +112,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	let currentSortColumn = 'name'; // Columna por defecto para ordenar
     let currentSortDirection = 'asc'; // Dirección por defecto
 	const refreshAutomationsBtn = document.getElementById('refreshAutomationsBtn');
+	const refreshJourneyAutomationsBtn = document.getElementById('refreshJourneyAutomationsBtn');
 	let allAutomations = []; // Almacena los datos de las automatizaciones para el calendario.
 	let calendarDataForClient = ''; // Guarda el nombre del cliente para el que se cargaron los datos del calendario.
 	const automationNameFilter = document.getElementById('automationNameFilter');
@@ -235,7 +241,11 @@ document.addEventListener('DOMContentLoaded', function () {
 		authUri: authUriInput.value,
 		businessUnit: businessUnitInput.value,
 		clientId: clientIdInput.value,
-		stackKey: stackKeyInput.value
+		stackKey: stackKeyInput.value,
+		dvSent: dvSentInput.value,
+        dvOpen: dvOpenInput.value,
+        dvClick: dvClickInput.value,
+        dvBounce: dvBounceInput.value
 	});
 
 	/**
@@ -248,6 +258,11 @@ document.addEventListener('DOMContentLoaded', function () {
 		authUriInput.value = config.authUri || '';
 		clientIdInput.value = config.clientId || '';
 		stackKeyInput.value = config.stackKey || ''; // Rellenamos también el Stack Key
+		// Rellena los campos de Data Views
+        dvSentInput.value = config.dvSent || '';
+        dvOpenInput.value = config.dvOpen || '';
+        dvClickInput.value = config.dvClick || '';
+        dvBounceInput.value = config.dvBounce || '';
 
 		// Asegura que los campos sensibles o derivados siempre se limpien al cargar una configuración.
 		tokenField.value = '';
@@ -289,6 +304,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		// Limpia los datos del calendario
 		clearCalendarData();
+
+		 // Resetea los datos de la vista de Gestión de Automatismos.
+        fullAutomationList = [];          // Vacía la lista de datos en memoria.
+        automationNameFilter.value = '';  // Limpia el filtro de nombre.
+        populateStatusFilter([]);         // Limpia el filtro de estados.
+        renderAutomationsTable([]);       // Dibuja la tabla vacía.
+        updateAutomationButtonsState();   // Deshabilita los botones de acción.
 
 		if (clientName) {
 			blockUI(); 
@@ -725,124 +747,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 	}
 
-	/** Obtiene automatizaciones, las filtra y las muestra en el calendario. */
-	async function macroGetAutomations() {
-		blockUI();
-		// 1. Se inicializan arrays para recolectar todas las llamadas y respuestas para el log final.
-		let allRequests = [];
-		let allResponses = [];
-
-		logMessage("Iniciando recuperación de automatizaciones...");
-		logApiCall(''); // Limpia logs previos.
-		logApiResponse('');
-
-		try {
-			const apiConfig = await getAuthenticatedConfig();
-			const currentClient = clientNameInput.value;
-
-			let allItems = [];
-			let page = 1;
-			let totalPages = 1;
-
-			// 2. Logging en tiempo real para la paginación de automatizaciones.
-			logMessage("Paso 1/3: Obteniendo lista de todas las automatizaciones...");
-
-			// Bucle para recorrer todas las páginas de resultados de la API.
-			do {
-				if (page > 1) {
-					logMessage(`Paso 1/3: Obteniendo página ${page} de ${totalPages}...`);
-				}
-				const url = `${apiConfig.restUri}automation/v1/automations?$page=${page}`;
-
-				// Registra cada llamada individualmente para el log.
-				const requestDetails = {
-					step: `Paso 1 (Página ${page})`,
-					endpoint: url,
-					method: "GET"
-				};
-				allRequests.push(requestDetails);
-
-				const response = await fetch(url, {
-					headers: {
-						"Authorization": `Bearer ${apiConfig.accessToken}`
-					}
-				});
-				const data = await response.json();
-
-				// Registra cada respuesta individualmente.
-				allResponses.push({
-					request: requestDetails,
-					response: data
-				});
-
-				if (!response.ok) throw new Error(data.message || "Error al obtener la lista de automatizaciones.");
-
-				allItems.push(...data.items); // Añade los items de la página actual al total.
-				totalPages = Math.ceil(data.count / data.pageSize);
-				page++;
-			} while (page <= totalPages);
-
-			logMessage(`${allItems.length} automatizaciones encontradas. Filtrando las programadas...`);
-			// Filtra solo las automatizaciones que tienen una programación activa.
-			const scheduledItems = allItems.filter(item => item.schedule && (item.schedule.scheduleStatus === 'Scheduled' || item.schedule.scheduleStatus === 'active'));
-
-			logMessage(`${scheduledItems.length} automatizaciones programadas encontradas. Paso 2/3: Inspeccionando cada una...`);
-			const journeyAutomations = [];
-
-			// 3. Logging en tiempo real para la inspección de cada automatización.
-			// Se itera sobre las automatizaciones programadas para ver si contienen una actividad de Journey.
-			for (let i = 0; i < scheduledItems.length; i++) {
-				const item = scheduledItems[i];
-				logMessage(`Paso 2/3: Inspeccionando automatización ${i + 1} de ${scheduledItems.length}: "${item.name}"`);
-
-				const detailUrl = `${apiConfig.restUri}automation/v1/automations/${item.id}`;
-				const requestDetails = {
-					step: `Paso 2 (${i+1}/${scheduledItems.length})`,
-					endpoint: detailUrl,
-					method: "GET"
-				};
-				allRequests.push(requestDetails);
-
-				const detailResponse = await fetch(detailUrl, {
-					headers: {
-						"Authorization": `Bearer ${apiConfig.accessToken}`
-					}
-				});
-				const detailData = await detailResponse.json();
-				allResponses.push({
-					request: requestDetails,
-					response: detailData
-				});
-
-				// objectTypeId === 952 corresponde a una actividad de "Journey Entry".
-				if (detailData.steps?.some(step => step.activities.some(activity => activity.objectTypeId === 952))) {
-					journeyAutomations.push(item);
-				}
-			}
-
-			logMessage(`Paso 3/3: ${journeyAutomations.length} automatizaciones de Journeys encontradas. Procesando y guardando...`);
-			processAndStoreAutomations(journeyAutomations); // Procesa los datos para el calendario.
-
-			// Guarda los datos en el almacenamiento local para no tener que recargarlos cada vez.
-			localStorage.setItem('calendarAutomations', JSON.stringify({
-				client: currentClient,
-				automations: allAutomations
-			}));
-			calendarDataForClient = currentClient;
-
-			logMessage("Datos de automatizaciones actualizados y guardados localmente.");
-			generateCalendar(); // Redibuja el calendario con los nuevos datos.
-
-		} catch (error) {
-			logMessage(`Error al recuperar automatizaciones: ${error.message}`);
-			alert(`Error al recuperar automatizaciones: ${error.message}`);
-		} finally {
-			// 4. Al final del proceso, se muestran todas las llamadas y respuestas agrupadas en el log.
-			logApiCall(allRequests);
-			logApiResponse(allResponses);
-			unblockUI();
-		}
-	}
+	
 	
 	/**
 	 * Realiza una búsqueda de suscriptor por un campo específico.
@@ -1160,29 +1065,45 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		blockUI();
 		const subscriberKey = selectedSubscriberData.subscriberKey;
-		const dataViews = ['Sent', 'Open', 'Click', 'Bounce'];
+
+        // Obtenemos los nombres (External Keys) de las Data Views desde los inputs de configuración.
+        const customDataViews = {
+			Sent: dvSentInput.value.trim(),
+			Open: dvOpenInput.value.trim(),
+			Click: dvClickInput.value.trim(),
+			Bounce: dvBounceInput.value.trim()
+		};
+
+		// Mapeo de los tipos de vista a sus contenedores HTML.
 		const containers = {
 			'Sent': sendsTableContainer,
 			'Open': opensTableContainer,
 			'Click': clicksTableContainer,
 			'Bounce': bouncesTableContainer
 		};
-
-		// Limpia contenedores previos
+    
+		// Limpia los contenedores de resultados previos.
 		Object.values(containers).forEach(c => c.innerHTML = '');
 		logMessage(`Iniciando búsqueda de envíos para: ${subscriberKey}`);
 
 		try {
 			const apiConfig = await getAuthenticatedConfig();
 			
-			// Hacemos las llamadas secuencialmente para no saturar y seguir un orden lógico
-			for (const viewName of dataViews) {
-				const container = containers[viewName];
-				container.innerHTML = `<p>Buscando en ${viewName}...</p>`;
-				logMessage(`Consultando DataView_${viewName}...`);
+			// Iteramos sobre cada tipo de Data View configurada.
+			for (const viewType in customDataViews) {
+                const container = containers[viewType];
+                const dataViewKey = customDataViews[viewType]; // <-- Usamos el valor del input.
 
-				const dataViewKey = `DataView_${viewName}_CK`;
-				// Codificamos el valor del filtro para que sea seguro en una URL
+                // Si el usuario no ha definido una key para esta Data View, lo indicamos y la saltamos.
+                if (!dataViewKey) {
+                    container.innerHTML = `<p>Data View para '${viewType}' no configurada.</p>`;
+                    continue;
+                }
+
+				container.innerHTML = `<p>Buscando en ${viewType} ('${dataViewKey}')...</p>`;
+				logMessage(`Consultando Data View: ${dataViewKey}...`);
+
+				// Codificamos el valor del filtro para que sea seguro en una URL.
 				const filter = encodeURIComponent(`"SubscriberKey"='${subscriberKey}'`);
 				const url = `${apiConfig.restUri}data/v1/customobjectdata/key/${dataViewKey}/rowset?$filter=${filter}`;
 				
@@ -1197,12 +1118,11 @@ document.addEventListener('DOMContentLoaded', function () {
 				logApiResponse(responseData);
 
 				if (!response.ok) {
-					container.innerHTML = `<p style="color: red;">Error al consultar ${viewName}: ${responseData.message || response.statusText}</p>`;
-					// Continuamos con el siguiente aunque uno falle
+					container.innerHTML = `<p style="color: red;">Error al consultar ${viewType}: ${responseData.message || response.statusText}</p>`;
 					continue; 
 				}
 				
-				// Llamamos al helper para que pinte la tabla
+				// Llamamos a la función que renderiza la tabla con los resultados.
 				renderDataViewTable(container, responseData.items);
 			}
 			logMessage("Búsqueda de envíos completada.");
@@ -1394,6 +1314,99 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+	 /**
+     * Realiza una acción (activar, ejecutar, pausar) sobre los automatismos seleccionados.
+     * @param {string} actionName - La acción a realizar ('activate', 'run', 'pause').
+     */
+     async function macroPerformAutomationAction(actionName) {
+        const selectedRows = document.querySelectorAll('#automations-table tbody tr.selected');
+        if (selectedRows.length === 0) return;
+
+        const selectedAutomations = Array.from(selectedRows).map(row => {
+            return fullAutomationList.find(auto => auto.id === row.dataset.automationId);
+        }).filter(Boolean);
+        
+        if (selectedAutomations.length === 0) return;
+        if (!confirm(`¿Seguro que quieres '${actionName}' ${selectedAutomations.length} automatismo(s)?`)) return;
+
+        blockUI();
+        const successes = [];
+        const failures = [];
+        const allRequests = [];
+        const allResponses = [];
+
+        try {
+            const apiConfig = await getAuthenticatedConfig();
+            const headers = { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" };
+            const baseActionURL = `${apiConfig.restUri}legacy/v1/beta/bulk/automations/automation/definition/`;
+            let actionURL;
+
+            switch (actionName) {
+                case 'pause': actionURL = `${baseActionURL}?action=pauseSchedule`; break;
+                case 'run': actionURL = `${baseActionURL}?action=start`; break;
+                case 'activate': actionURL = `${baseActionURL}?action=schedule`; break;
+                default: throw new Error(`Acción desconocida: ${actionName}`);
+            }
+
+            for (const auto of selectedAutomations) {
+                let payload;
+                logMessage(`Procesando '${auto.name}'...`);
+
+                if (actionName === 'activate') {
+                    try {
+                        // Llamada GET de detalle SOLO para obtener el scheduleObject.id
+                        const detailUrl = `${apiConfig.restUri}legacy/v1/beta/bulk/automations/automation/definition/${auto.id}`;
+                        const requestDetails = { step: `Obteniendo scheduleObject para '${auto.name}'`, endpoint: detailUrl, method: 'GET' };
+                        allRequests.push(requestDetails);
+                        
+                        const detailResponse = await fetch(detailUrl, { headers });
+                        const autoDetails = await detailResponse.json();
+                        allResponses.push({ request: requestDetails, response: { status: detailResponse.status, body: autoDetails } });
+
+                        if (!autoDetails.scheduleObject?.id) throw new Error("No se pudo obtener el 'scheduleObject.id'");
+                        
+                        payload = { id: auto.id, scheduleObject: { id: autoDetails.scheduleObject.id } };
+                    } catch (error) {
+                        failures.push({ name: auto.name, reason: error.message });
+                        continue; 
+                    }
+                } else {
+                    payload = { id: auto.id }; // Para 'run' y 'pause', el ID ya lo tenemos.
+                }
+                
+                const requestDetails = { step: `Ejecutando '${actionName}' para '${auto.name}'`, endpoint: actionURL, method: 'POST', body: payload };
+                allRequests.push(requestDetails);
+
+                const actionResponse = await fetch(actionURL, { method: 'POST', headers, body: JSON.stringify(payload) });
+                let responseData;
+                if (actionResponse.ok) {
+                    successes.push({ name: auto.name });
+                    try { responseData = await actionResponse.json(); } catch (e) { responseData = "Respuesta vacía"; }
+                } else {
+                    responseData = await actionResponse.json();
+                    failures.push({ name: auto.name, reason: responseData.message || `Error ${actionResponse.status}` });
+                }
+                allResponses.push({ request: requestDetails, response: { status: actionResponse.status, body: responseData } });
+            }
+        } catch (error) {
+            logMessage(`Error fatal durante la acción '${actionName}': ${error.message}`);
+            alert(`Error fatal: ${error.message}`);
+        } finally {
+            unblockUI();
+            
+            const alertSummary = `Acción '${actionName}' completada. Éxitos: ${successes.length}, Fallos: ${failures.length}.`;
+            let logSummary = alertSummary;
+            if (failures.length > 0) {
+                const failureDetails = failures.map(f => `  - ${f.name}: ${f.reason}`).join('\n');
+                logSummary += `\n\n--- Detalles de Fallos ---\n${failureDetails}`;
+            }
+            logMessage(logSummary);
+            logApiCall(allRequests);
+            logApiResponse(allResponses);
+            alert(alertSummary);
+            refreshAutomationsTableBtn.click();
+        }
+    }
 
 	/** Ejecuta una petición SOAP genérica y maneja la respuesta. */
 	async function executeSoapRequest(soapUri, soapPayload, successMessage) {
@@ -1718,72 +1731,110 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 
 	/**
+	 * Llama al endpoint /legacy/, ordena por 'nextRunTime'
+	 * y devuelve una lista limpia y sin duplicados de todos los automatismos.
+	 * @returns {Promise<Array>} Una promesa que resuelve a la lista de automatismos únicos.
+	 */
+	async function macroFetchAllAutomations() {
+		blockUI();
+		logMessage("Iniciando recuperación de todas las definiciones de automatismos...");
+		try {
+			const apiConfig = await getAuthenticatedConfig();
+			// Usamos el endpoint legacy y lo ordenamos por la próxima ejecución para traer los más relevantes primero.
+			const url = `${apiConfig.restUri}/legacy/v1/beta/bulk/automations/automation/definition/`;
+			
+			logApiCall({ endpoint: url, method: 'GET' });
+			const response = await fetch(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
+			if (!response.ok) throw new Error(await response.text());
+			const data = await response.json();
+			const allItems = data.entry || [];
+			logApiResponse({ status: response.status, count: allItems.length, items: allItems });
+
+			logMessage(`Recuperación completa. Se encontraron ${allItems.length} definiciones.`);
+			
+			return allItems;
+
+		} catch (error) {
+			logMessage(`Error al recuperar automatismos: ${error.message}`);
+			alert(`Error: ${error.message}`);
+			return [];
+		} finally {
+			unblockUI();
+		}
+	}
+
+	/**
 	 * Obtiene los detalles de TODAS las automatizaciones para la vista de gestión.
 	 */
 	async function macroGetAllAutomationDetails() {
-        blockUI();
-        logMessage("Recuperando todos los detalles de las automatizaciones...");
+		const allItems = await macroFetchAllAutomations();
+		fullAutomationList = allItems;
+		populateStatusFilter(fullAutomationList);
+		applyFiltersAndRender();
+	}
 
-        // 1. Inicializamos los arrays para el log y limpiamos la vista
-        let allRequests = [];
-        let allResponses = [];
-        logApiCall('');
-        logApiResponse('');
+	/**
+	 * Handler para el botón "Refrescar Datos".
+	 * Carga todos los automatismos y los muestra en el calendario.
+	 */
+	async function macroGetAutomations() {
+		const allItems = await macroFetchAllAutomations();
+		fullAutomationList = allItems;
+		populateStatusFilter(fullAutomationList);
 
-        try {
-            const apiConfig = await getAuthenticatedConfig();
-            let allItems = [];
-            let page = 1;
-            let totalPages = 1;
+		// Filtra en memoria los que están programados para el calendario.
+		const scheduledItems = allItems.filter(item => item.status === 'Scheduled' && item.scheduledTime);
+		
+		// Procesa la lista filtrada y la guarda en la variable global 'allAutomations'.
+		processAndStoreAutomations(scheduledItems);
+		
+		const currentClient = clientNameInput.value;
+		localStorage.setItem('calendarAutomations', JSON.stringify({
+			client: currentClient,
+			automations: allAutomations // Guarda la lista ya PROCESADA.
+		}));
+		calendarDataForClient = currentClient;
+		generateCalendar();
 
-            do {
-                const url = `${apiConfig.restUri}automation/v1/automations?$page=${page}&$pageSize=50`;
-                // Mensaje de progreso mejorado
-                logMessage(`Obteniendo página ${page} de ${totalPages > 1 ? totalPages : '...'}...`);
+		logMessage(`Recuperación completa. Se encontraron ${allAutomations.length} definiciones.`);
+	}
 
-                // 2. Creamos y guardamos el objeto de la petición para el log
-                const requestDetails = {
-                    step: `Obtener Automatizaciones (Página ${page})`,
-                    endpoint: url,
-                    method: "GET"
-                };
-                allRequests.push(requestDetails);
-                
-                const response = await fetch(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
-                const data = await response.json();
-                
-                // 3. Guardamos el objeto de la respuesta para el log
-                allResponses.push({
-                    request: requestDetails,
-                    response: data
-                });
 
-                if (!response.ok) throw new Error(data.message || "Error al obtener la lista de automatizaciones.");
-                
-                allItems.push(...data.items);
-                totalPages = Math.ceil(data.count / data.pageSize);
-                page++;
 
-            } while (page <= totalPages);
+	/**
+	 * Handler para el botón "Refrescar Datos Journeys".
+	 */
+	async function macroGetJourneyAutomations() {
+		const allItems = await macroFetchAllAutomations();
+		fullAutomationList = allItems;
+		populateStatusFilter(fullAutomationList);
 
-            fullAutomationList = allItems; // Guardamos la lista completa en la variable global
-            logMessage(`Recuperación completa. Se encontraron ${allItems.length} automatizaciones.`);
+		logMessage(`Filtrando las ${allItems.length} automatizaciones para encontrar las programadas...`);
+		const scheduledItems = allItems.filter(item => item.status === 'Scheduled' && item.scheduledTime);
+		logMessage(`${scheduledItems.length} programadas encontradas. Inspeccionando para encontrar Journeys...`);
 
-			populateStatusFilter(fullAutomationList); // ¡Puebla el filtro de estados!
+		const journeyAutomations = scheduledItems.filter(auto =>
+			auto.processes?.some(proc =>
+				proc.workerCounts?.some(wc => wc.objectTypeId === 952)
+			)
+		);
 
-            return allItems;
+		logMessage(`Inspección completa. Se encontraron ${journeyAutomations.length} automatismos de Journeys.`);
+		
+		// Procesa la lista filtrada de journeys y la guarda en 'allAutomations'.
+		processAndStoreAutomations(journeyAutomations);
+		
+		const currentClient = clientNameInput.value;
+		localStorage.setItem('calendarAutomations', JSON.stringify({
+			client: currentClient,
+			automations: allAutomations // Guarda la lista de journeys ya PROCESADA.
+		}));
+		calendarDataForClient = currentClient;
+		generateCalendar();
 
-        } catch (error) {
-            logMessage(`Error al recuperar los detalles de las automatizaciones: ${error.message}`);
-            alert(`Error: ${error.message}`);
-            return []; // Devuelve un array vacío en caso de error
-        } finally {
-            // 4. Al final, pintamos el log completo con todas las peticiones y respuestas
-            logApiCall(allRequests);
-            logApiResponse(allResponses);
-            unblockUI();
-        }
-    }
+		logMessage(`Recuperación completa. Se encontraron ${allAutomations.length} definiciones.`);
+
+	}
 
 	/** Muestra la nueva sección de Gestión de Automatismos y la puebla con datos. */
     async function viewAutomations(automationsToShow = null) {
@@ -2028,24 +2079,25 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 	/** Procesa los datos de automatización crudos de la API a un formato simple para el calendario. */
 	function processAndStoreAutomations(items) {
-		allAutomations = items.map(auto => {
-				const dateObj = new Date(auto.schedule.scheduledTime);
+		allAutomations = items
+			.map(auto => {
+				// La fecha que nos interesa de la API /bulk/ es 'scheduledTime'.
+				const dateToUse = auto.scheduledTime;
+				
+				if (!dateToUse) return null;
+
+				const dateObj = new Date(dateToUse);
 				if (isNaN(dateObj.getTime())) return null;
-				const scheduledTime = dateObj.toISOString()
-					.split('T')[0];
-				const madridOffset = (new Date(dateObj.getFullYear(), 2, 31 - new Date(dateObj.getFullYear(), 2, 31)
-					.getDay()) <= dateObj && dateObj < new Date(dateObj.getFullYear(), 9, 31 - new Date(dateObj.getFullYear(), 9, 31)
-					.getDay())) ? 2 : 1;
-				dateObj.setHours(dateObj.getUTCHours() + madridOffset);
-				const scheduledHour = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
-				return {
-					name: auto.name,
-					status: 'Scheduled',
-					scheduledTime,
-					scheduledHour
-				};
+
+				const scheduledTime = dateObj.toISOString().split('T')[0];
+				
+				const scheduledHour = dateObj.toLocaleTimeString('es-ES', {
+					hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid'
+				});
+				
+				return { name: auto.name, status: auto.status, scheduledTime, scheduledHour };
 			})
-			.filter(Boolean);
+			.filter(Boolean); // Limpia cualquier nulo que se haya generado.
 	}
 	/** Dibuja la estructura completa del calendario para el año seleccionado. */
 	function generateCalendar() {
@@ -2185,34 +2237,22 @@ document.addEventListener('DOMContentLoaded', function () {
     /** Dibuja la tabla de la nueva sección de automatismos. */
     function renderAutomationsTable(automations) {
         automationsTbody.innerHTML = '';
-        updateSortIndicators(); // Actualiza las flechas primero
+        updateSortIndicators();
 
         if (!automations || automations.length === 0) {
             automationsTbody.innerHTML = '<tr><td colspan="4">No hay automatismos para mostrar.</td></tr>';
             return;
         }
 
-        // Llama a la función de ordenación con los datos a mostrar y guarda el resultado
         const sortedData = sortAutomations(automations);
 
-        const formatDate = (dateString) => {
-            if (!dateString) return '---';
-            return new Date(dateString).toLocaleString();
-        };
-
-        // Itera sobre el array ya ordenado
         sortedData.forEach(auto => {
             const row = document.createElement('tr');
-            // Mantenemos la lógica de selección múltiple (si una fila ya estaba seleccionada, lo recordará)
-            const isSelected = document.querySelector(`#automations-table tbody tr.selected[data-automation-id="${auto.id}"]`);
-            if (isSelected) {
-                row.classList.add('selected');
-            }
-            row.dataset.automationId = auto.id;
+            row.dataset.automationId = auto.id; // <-- Usa el ID codificado
             row.innerHTML = `
                 <td>${auto.name || 'Sin Nombre'}</td>
-                <td>${formatDate(auto.lastRunTime)}</td>
-                <td>${formatDate(auto.schedule?.scheduledTime)}</td>
+                <td>${formatDateToSpanishTime(auto.lastRunTime)}</td>
+                <td>${formatDateToSpanishTime(auto.nextRunTime)}</td>
                 <td>${auto.status || '---'}</td>
             `;
             automationsTbody.appendChild(row);
@@ -2294,13 +2334,53 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+	/**
+     * Formatea una cadena de fecha ISO (UTC) a una cadena legible en horario de España.
+     * @param {string} dateString - La fecha en formato ISO (ej: "2025-08-19T19:34:00Z").
+     * @returns {string} La fecha formateada o '---' si no es válida.
+     */
+    function formatDateToSpanishTime(dateString) {
+        // Si la fecha no es válida o es la fecha por defecto de la API, no mostrar nada.
+        if (!dateString || dateString.startsWith('0001-01-01')) {
+            return '---';
+        }
+        try {
+            const date = new Date(dateString);
+            // Opciones para mostrar fecha y hora completas en el formato español.
+            const options = {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                timeZone: 'Europe/Madrid'
+            };
+            return date.toLocaleString('es-ES', options);
+        } catch (error) {
+            return 'Fecha inválida';
+        }
+    }
+
 	// ==========================================================
 	// --- 7. INICIALIZACIÓN Y EVENT LISTENERS ---
 	// ==========================================================
 
 	/** Configura todos los event listeners de la aplicación. */
 	function setupEventListeners() {
+		saveConfigBtn.addEventListener('click', () => {
+			const clientName = clientNameInput.value.trim();
+			if (!clientName) {
+				return alert('Introduzca un nombre para el cliente antes de guardar.');
+			}
 
+			// Guarda la configuración (sin el secret) en localStorage.
+			let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
+			configs[clientName] = getConfigToSave();
+			localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
+			
+			loadConfigsIntoSelect(); // Actualiza los menús desplegables.
+
+			logMessage(`Configuración para "${clientName}" guardada localmente.`);
+			alert(`Configuración para "${clientName}" guardada.`);
+		});
+		
 		// Botón de Login: guarda la configuración no sensible e inicia el flujo de autenticación.
 		loginBtn.addEventListener('click', () => {
 			//console.log('[LOGIN-UI] Botón de Login pulsado.');
@@ -2433,7 +2513,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		createDummyFieldsBtn.addEventListener('click', createDummyFields);
 		clearFieldsBtn.addEventListener('click', clearFieldsTable);
 		addFieldBtn.addEventListener('click', () => addNewField(true));
-		
+		refreshJourneyAutomationsBtn.addEventListener('click', macroGetJourneyAutomations);
 		
 
 		querySearchResultsTbody.addEventListener('click', (e) => {
@@ -2613,26 +2693,14 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         // Listeners para los botones de acción (con funcionalidad placeholder)
-         activateAutomationBtn.addEventListener('click', () => {
-            const selectedIds = Array.from(document.querySelectorAll('#automations-table tbody tr.selected'))
-                                   .map(row => row.dataset.automationId);
-            if (selectedIds.length > 0) {
-                alert(`Funcionalidad "Activar" para los automatismos IDs: ${selectedIds.join(', ')} no implementada.`);
-            }
+		activateAutomationBtn.addEventListener('click', () => {
+            macroPerformAutomationAction('activate');
         });
          runAutomationBtn.addEventListener('click', () => {
-            const selectedIds = Array.from(document.querySelectorAll('#automations-table tbody tr.selected'))
-                                   .map(row => row.dataset.automationId);
-            if (selectedIds.length > 0) {
-                alert(`Funcionalidad "Ejecutar" para los automatismos IDs: ${selectedIds.join(', ')} no implementada.`);
-            }
+            macroPerformAutomationAction('run');
         });
         stopAutomationBtn.addEventListener('click', () => {
-            const selectedIds = Array.from(document.querySelectorAll('#automations-table tbody tr.selected'))
-                                   .map(row => row.dataset.automationId);
-            if (selectedIds.length > 0) {
-                alert(`Funcionalidad "Parar" para los automatismos IDs: ${selectedIds.join(', ')} no implementada.`);
-            }
+            macroPerformAutomationAction('pause');
         });
 
 		refreshAutomationsTableBtn.addEventListener('click', async () => {
@@ -2641,7 +2709,6 @@ document.addEventListener('DOMContentLoaded', function () {
 			automationNameFilter.value = '';
             automationStatusFilter.value = '';
             await viewAutomations();
-            logMessage("Lista de automatismos actualizada.");
         });
 
 		// Listener para la cabecera de la tabla de automatismos (para ordenar)

@@ -159,6 +159,7 @@
                 <label for="calendarYearSelect">Año:</label>
                 <select id="calendarYearSelect"></select>
                 <button id="refreshAutomationsBtn" class="action-button">Refrescar Datos</button>
+                <button id="refreshJourneyAutomationsBtn" class="action-button activate-btn">Refrescar Datos Journeys</button>
             </div>
         </div>
         <div class="calendar-container">
@@ -277,7 +278,7 @@
                       </table>
                   </div>
               </div>
-              <div id="customer-journeys-results-block" class="config-block hidden" style="flex-grow: 1; display: flex; flex-direction: column;">
+              <div id="customer-journeys-results-block" class="config-block hidden">
                   <h3>Journeys del Cliente Seleccionado</h3>
                   <div class="table-container" style="flex-grow: 1; overflow-y: auto;">
                       <table id="customer-journeys-table">
@@ -367,7 +368,8 @@
          <div class="section-header">
             <button class="back-button">← Atrás</button>
             <div class="header-actions">
-                <button id="loginBtn" class="action-button">Login / Guardar</button>
+                <button id="saveConfigBtn" class="action-button">Guardar</button>
+                <button id="loginBtn" class="action-button">Login</button>
                 <button id="logoutBtn" class="action-button delete-btn">Logout / Borrar</button>
             </div>            
         </div>
@@ -386,6 +388,16 @@
             <div class="form-group"><label for="soapUri">SOAP URI</label><input type="text" id="soapUri" disabled></div>
             <div class="form-group"><label for="restUri">REST URI</label><input type="text" id="restUri" disabled></div>
              <div class="form-group"><label for="stackKey">Stack</label><input type="text" id="stackKey" disabled></div>
+        </div>
+         <div class="config-block">
+            <h3>Data Views</h3>
+            <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+                Introduce la <strong>External Key completa</strong> de las Data Views de tracking de envíos.
+            </p>
+            <div class="form-group"><label for="dvSent">Sent</label><input type="text" id="dvSent" placeholder="Ej: DataView_Sent_ClienteX"></div>
+            <div class="form-group"><label for="dvOpen">Open</label><input type="text" id="dvOpen" placeholder="Ej: _Open"></div>
+            <div class="form-group"><label for="dvClick">Click</label><input type="text" id="dvClick" placeholder="Ej: _Click"></div>
+            <div class="form-group"><label for="dvBounce">Bounce</label><input type="text" id="dvBounce" placeholder="Ej: _Bounce"></div>
         </div>
         <p class="info-text">Usa 'Login / Guardar' para iniciar sesión y guardar la configuración. 'Logout / Borrar' elimina toda la información y la sesión. El Client Secret se usa para el login pero no se guarda en el almacenamiento local.</p>
     </div>

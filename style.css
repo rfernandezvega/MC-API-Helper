@@ -349,6 +349,14 @@ body {
 .action-button.activate-btn:hover { 
     background-color: #218838; 
 }
+
+#saveConfigBtn {
+    background-color: #28a745; 
+}
+#saveConfigBtn:hover {
+    background-color: #218838;
+}
+
 /* Aplica el color naranja SOLO si el botón NO está deshabilitado */
 #runAutomationBtn:not([disabled]) {
     background-color: #f39c12; /* Naranja */
