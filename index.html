@@ -1,33 +1,36 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <title>Marketing Cloud API Helper</title>
-  <!-- Enlaza la hoja de estilos CSS -->
+  <!-- Enlaza la hoja de estilos principal -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- Contenedor principal de la aplicación con layout de rejilla (grid) -->
+<!-- ===================================================================
+     CONTENEDOR PRINCIPAL DE LA APLICACIÓN
+     Utiliza CSS Grid para definir la estructura de 3 columnas.
+     =================================================================== -->
 <div class="app-container">
   
   <!-- ========================================================== -->
-  <!-- START: BARRA LATERAL IZQUIERDA (FUNCIONALIDADES) -->
+  <!-- START: BARRA LATERAL IZQUIERDA (NAVEGACIÓN) -->
   <!-- ========================================================== -->
   <aside id="macros-sidebar">
-    <!-- Selector de Cliente -->
+    
+    <!-- Selector de Cliente y Estado de Sesión -->
     <div class="sidebar-client-selector">
       <h2>Cliente</h2>
       <select id="sidebarClientSelect">
         <option value="">Ninguno seleccionado</option>
       </select>
-      <!-- INDICADOR DE ESTADO DE LOGIN (NUEVO) -->
       <p id="login-status" class="login-status inactive">🔴 Sesión no iniciada</p>
     </div>
     
     <h2>Vistas</h2>
     
-    <!-- Menús colapsables para agrupar funcionalidades -->
+    <!-- Menús colapsables para agrupar las funcionalidades de la aplicación -->
     <div class="collapsible-group">
         <h3 class="collapsible-header">General</h3>
         <ul class="collapsible-content">
@@ -58,11 +61,11 @@
   <!-- END: BARRA LATERAL IZQUIERDA -->
 
   <!-- ========================================================== -->
-  <!-- START: CONTENIDO PRINCIPAL (CENTRO) -->
+  <!-- START: CONTENIDO PRINCIPAL (VISTAS) -->
   <!-- ========================================================== -->
   <main id="main-content">
     
-    <!-- Pantalla de Bienvenida / Menú Principal -->
+    <!-- 1. PANTALLA DE BIENVENIDA (MENÚ PRINCIPAL) -->
     <div id="main-menu" class="main-menu-container" style="display: flex;">
       <div class="menu-group">
         <h3>Panel Principal</h3>
@@ -77,10 +80,11 @@
       </div>
     </div>
 
-    <!-- SECCIÓN: Documentación -->
+    <!-- 2. SECCIÓN: DOCUMENTACIÓN -->
     <div id="documentacion-section" class="section">
       <div class="section-header"><button class="back-button">← Atrás</button></div>
       <h2>Documentación</h2>
+      <!-- Contenedor de Pestañas para organizar la información -->
       <div class="tabs-container">
         <div class="tab-buttons">
           <button class="tab-button active" data-tab="configuracion-principal">Configuración Principal</button>
@@ -88,290 +92,80 @@
           <button class="tab-button" data-tab="errores-comunes">Errores Comunes</button>
           <button class="tab-button" data-tab="comentarios-adicionales">Comentarios Adicionales</button>
         </div>
-        <!-- Contenido de las Pestañas -->
+        
+        <!-- Pestaña: Configuración Principal -->
         <div id="configuracion-principal" class="tab-content active">
           <h3>Configuración Principal</h3>
           <ul>
-            <li><strong>Configurar aplicación en MC.</strong>. 
+            <li><strong>Configurar aplicación en MC:</strong>
               <ul>
-                <li>Entrar en Setup → Apps → Installed Packages</li>
-                <li>Crear un nuevo paquete de tipo <b>Web App</b></li>
-                <li>Configurar el callback URI como <b>https://127.0.0.1:8443/callback</b></li>
-                <li>Indicar los siguientes permisos en la aplicación 
+                <li>Entrar en Setup → Apps → Installed Packages.</li>
+                <li>Crear un nuevo paquete de tipo <b>Server-to-Server</b> o <b>Web App</b>.</li>
+                <li>Para <b>Web App</b>, configurar el callback URI como <b>https://127.0.0.1:8443/callback</b>.</li>
+                <li>Asignar los siguientes permisos en el componente de la API:
                   <ul>
-                    <li>Email: Read/Write</li>
-                    <li>Automations: Read/Write/Execute</li>  
+                    <li>Email: Read, Write</li>  
+                    <li>Automations: Read, Write, Execute</li>  
                     <li>Journeys: Read</li>    
-                    <li>Audiences: Read/Write</li>  
-                    <li>Contact to Business Unit Mapping: View</li>  
-                    <li>List and Subscribers: Read/Write</li>  
-                    <li>Data Extensions: Read/Write</li>              
+                    <li>Audiences: Read, Write</li>  
+                    <li>List and Subscribers: Read, Write</li>  
+                    <li>Data Extensions: Read, Write</li>              
                   </ul>
                 </li>
-                <li>Indicar el siguiente permiso a nivel de Usuario:  “Email > Content > Email > View”.
-                <li><b>IMPORTANTE: </b> Despues de crear la aplicación, tarda en estar disponible. Esperad 5-10 minutos para hacer el login, si no MC devolverá un error.
+                <li><b>IMPORTANTE:</b> Después de crear la aplicación, puede tardar 5-10 minutos en estar plenamente operativa.</li>
               </ul>
             </li>
-            <li><strong>Configurar un Cliente:</strong> 
+            <li><strong>Configurar un Cliente en la App:</strong> 
                 <ul>
-                  <li>Ve a <em>Configuración de APIs</em> </li>
-                  <li> Introduce un nombre, rellena los datos de la app de MC (MID, Auth URI, etc.) y pulsa "Login / Guardar".</li>
-                  <li> Saltará una ventana donde iniciar sesión en Marketing Cloud. </li>
-                  <li> Una vez introducidas las credenciales la aplicación tardará un poco en cerrar la ventana que indicará (No responde) <b>Es normal</b></li>
-                  <li> Si se quiere hacer uso de la busqueda de envios de un cliente, rellenar las External Keys de las DE que se utilizan para esas Data Views </li>
+                  <li>Ir a <em>Configuración de APIs</em>.</li>
+                  <li>Introducir un nombre, rellenar los datos de la app de MC (MID, Auth URI, etc.) y pulsar "Guardar".</li>
+                  <li>Pulsar "Login" para iniciar la sesión. Saltará una ventana para autenticarse en Marketing Cloud.</li>
+                  <li>Si se quiere hacer uso de la búsqueda de envíos de un cliente, rellenar las External Keys de las Data Views de tracking.</li>
                 </ul> 
-            <li><strong>Almacenamiento Local:</strong> La configuración (sin el Client Secret) se guarda en el navegador. Otra parte se guarda en el gestor de credenciales de Windows</li>
-            <li><strong>Gestión de Sesión:</strong> El botón "Login" inicia la autenticación y guarda la configuración. El botón "Logout" cierra la sesión activa y elimina la configuración guardada.</li>
-            <li><strong>Estado de la Sesión:</strong> El indicador de color bajo el selector de cliente te informa si la sesión está activa o no.</li>
-            <li><strong>Inicio:</strong> La aplicación se abrirá sin ningun cliente. </li>
+            </li>
+            <li><strong>Almacenamiento:</strong> La configuración (sin el Client Secret) se guarda en el almacenamiento local del navegador. Las credenciales seguras (refresh token, etc.) se guardan en el gestor de credenciales del sistema operativo.</li>
+            <li><strong>Gestión de Sesión:</strong> "Login" inicia la autenticación. "Logout / Borrar" cierra la sesión activa y elimina toda la configuración y credenciales guardadas para ese cliente.</li>
           </ul>
         </div>
+
+        <!-- Pestaña: Guía Rápida -->
         <div id="guia-rapida" class="tab-content">
           <h3>Guía Rápida de Funcionalidades</h3>
           <ol>
               <li><b>Configuración de DE:</b> Define nombre, descripción, carpeta y si es Sendable.</li>
-              <li><b>Campos:</b> Añade campos manualmente, con el botón de ejemplo o importando desde el portapapeles indicando el separador</li>
+              <li><b>Campos:</b> Añade campos manualmente, con el botón de ejemplo o importando desde el portapapeles.</li>
               <li><b>Crear DE / Campos:</b> Usa los botones "Crear Data Extension" o "Crear/Actualizar Campos" para ejecutar la acción.</li>
-              <li><b>Gestión de Campos:</b> Recupera o borra campos de una DE existente. Especialmente útil para campos en Attribute Groups que no se pueden borrar por pantalla.</li>
-              <li><b>Calendario:</b> Refresca los datos para ver las automatizaciones programadas o de Journeys programados. Los días con algun automatismo programado aparecerán en azul. Seleccionandolo aparecerá el listado.</li>
-              <li><b>Validador de Emails:</b> Valida el mail indicado contra los validadores que utiliza Marketing Cloud para los campos de email.</li>
-              <li><b>Buscadores:</b> Permite buscar Data Extensions, el origen de sus datos, queries en base a un texto de su contenido y clientes (con sus envios y Journeys en los que se encuentra).</li>
-              <li><b>Gestión de automatismos:</b> Permite buscar recuperar todos los automatismos, ver su nombre, fecha de ultima y siguiente ejecución y estado. Además, permite <em>Activar, Ejecutar y Parar</em> de forma simultánea varios automatismos siempre y cuando los seleccionados tengan el mismo estado.</li>
+              <li><b>Gestión de Campos:</b> Recupera o borra campos de una DE existente. Útil para campos en Attribute Groups que no se pueden borrar por la interfaz.</li>
+              <li><b>Calendario:</b> Visualiza las automatizaciones y Journeys programados.</li>
+              <li><b>Validador de Emails:</b> Valida una dirección de email contra los validadores de Marketing Cloud.</li>
+              <li><b>Buscadores:</b> Busca Data Extensions, el origen de sus datos, texto en queries y suscriptores (con sus envíos y Journeys).</li>
+              <li><b>Gestión de automatismos:</b> Permite buscar, filtrar y realizar acciones masivas (Activar, Ejecutar, Parar) sobre los automatismos.</li>
           </ol>
         </div>
+
+        <!-- Pestaña: Errores Comunes -->
         <div id="errores-comunes" class="tab-content">
             <h3>Errores Comunes</h3>
             <ul>
-                <li><strong>Error de autenticación:</strong> Revisa que el MID, Client ID y Client Secret sean correctos. La app API debe ser de tipo <b>"Web App"</b>.</li>
-                <li><strong>La DE se crea en la raíz:</strong> Para carpetas, debes usar el <strong>ID de la Carpeta</strong> (un número), no su nombre.</li>
-                <li><strong>DE Sendable sin Subscriber Key:</strong> Es <strong>obligatorio</strong> seleccionar un campo como Subscriber Key y que este sea requerido.</li>
-                <li><strong>Error "Bad Request" con enlaces:</strong> Si pegas una URL en un campo con "&", reemplázalo por <code>&amp;amp;</code> en la tabla.</li>
+                <li><strong>Error de autenticación:</strong> Revisa que el MID, Client ID y Client Secret sean correctos. La URI de autenticación debe terminar en `/v2/token`.</li>
+                <li><strong>La DE se crea en la raíz:</strong> Para crear una DE en una carpeta, debes usar el <strong>ID de la Carpeta</strong> (un número), no su nombre.</li>
+                <li><strong>DE Sendable sin Subscriber Key:</strong> Es <strong>obligatorio</strong> seleccionar un campo como Subscriber Key en la configuración "Sendable".</li>
             </ul>
         </div>
+        
+        <!-- Pestaña: Comentarios Adicionales -->
         <div id="comentarios-adicionales" class="tab-content">
             <h3>Comentarios Adicionales</h3>
             <ul>
-              <li><strong>Permisos de la App API:</strong> Asegúrate de que la aplicación en MC tiene permisos de Lectura y Escritura para Data Extensions, Automatizaciones y Email.</li>
-              <li><strong>"Crear campos" es un "upsert":</strong> Actualiza campos existentes o crea nuevos si no existen.</li>
-              <li><strong>Longitud en Decimales:</strong> Usa el formato "total,decimales", por ejemplo, <code>18,2</code>.</li>
+              <li><strong>Permisos:</strong> Asegúrate de que la aplicación API en MC tiene permisos de Lectura y Escritura para los objetos que quieres gestionar.</li>
+              <li><strong>"Crear/Actualizar campos" es un "upsert":</strong> Esta acción actualiza campos existentes o crea nuevos si no existen en la DE.</li>
+              <li><strong>Longitud en Decimales:</strong> Para campos de tipo Decimal, usa el formato "total_dígitos,número_decimales", por ejemplo, <code>18,2</code>.</li>
             </ul>
         </div>
       </div>
     </div>
     
-    <!-- SECCIÓN: Calendario de Automatizaciones (CORREGIDO) -->
-    <div id="calendario-section" class="section">
-        <div class="section-header">
-            <button class="back-button">← Atrás</button>
-             <div class="calendar-controls">
-                <label for="calendarYearSelect">Año:</label>
-                <select id="calendarYearSelect"></select>
-                <button id="refreshAutomationsBtn" class="action-button">Refrescar Datos</button>
-                <button id="refreshJourneyAutomationsBtn" class="action-button activate-btn">Refrescar Datos Journeys</button>
-            </div>
-        </div>
-        <div class="calendar-container">
-            <div id="calendar-main" class="calendar-main-view">
-                <h2>Calendario de Automatizaciones de Journeys</h2>
-                <div id="calendar-grid" class="calendar-grid"></div>
-            </div>
-            <aside id="calendar-sidebar" class="calendar-sidebar">
-                <h3 id="automation-list-header">Automatizaciones del Día</h3>
-                <div id="automation-list">
-                    <p>Selecciona un día para ver los detalles.</p>
-                </div>
-            </aside>
-        </div>
-    </div>
-
-    <!-- SECCIÓN: Buscadores -->
-    <div id="buscadores-section" class="section">
-      <div class="section-header"><button class="back-button">← Atrás</button></div>
-      <h2>Buscadores</h2>
-      <div class="tabs-container">
-        <!-- Pestañas de Navegación -->
-        <div class="tab-buttons">
-          <button class="tab-button active" data-tab="busqueda-de-tab">Data Extensions</button>
-          <button class="tab-button" data-tab="origenes-tab">Orígen de datos</button>
-          <button class="tab-button" data-tab="clientes-tab">Clientes</button>
-          <button class="tab-button" data-tab="queries-tab">Texto en Queries</button>
-        </div>
-
-        <!-- Contenido de la Pestaña: Búsqueda de Data Extension -->
-        <div id="busqueda-de-tab" class="tab-content active config-section-container">
-              <div class="config-block">
-                  <h3>Parámetros de Búsqueda</h3>
-                  <div class="form-group">
-                    <label for="deSearchProperty">Buscar por:</label>
-                    <select id="deSearchProperty">
-                      <option value="Name">Nombre</option>
-                      <option value="CustomerKey">External Key</option>
-                    </select>
-                  </div>
-                  <div class="form-group">
-                    <label for="deSearchValue">Valor:</label>
-                    <input type="text" id="deSearchValue" placeholder="Ingresa el valor de búsqueda" maxlength="128">
-                  </div>
-                  <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-                    <button id="searchDEBtn" class="action-button">Buscar</button>
-                  </div>
-              </div>
-              <div class="config-block">
-                  <h3>Resultados</h3>
-                  <pre id="de-search-results">La ruta de la Data Extension aparecerá aquí.</pre>
-              </div>
-        </div>
-
-        <!-- Contenido de la Pestaña: Buscador de Orígenes -->
-        <div id="origenes-tab" class="tab-content config-section-container">
-              <div class="config-block">
-                  <h3>Parámetros de Búsqueda</h3>
-                  <div class="form-group">
-                    <label for="deNameToFind">Nombre de la Data Extension:</label>
-                    <input type="text" id="deNameToFind" placeholder="Introduce el nombre exacto de la DE">
-                  </div>
-                  <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-                    <button id="findDataSourcesBtn" class="action-button">Buscar Orígenes</button>
-                  </div>
-              </div>
-              <div class="config-block" style="flex-grow: 1; display: flex; flex-direction: column;">
-                  <h3>Actividades Encontradas</h3>
-                  <div class="table-container" style="flex-grow: 1; overflow-y: auto;">
-                      <table id="data-sources-table">
-                          <thead>
-                              <tr>
-                                  <th>Actividad</th><th>Tipo</th><th>Automatización</th>
-                                  <th>Paso</th><th>Acción</th><th>Descripción / Query</th>
-                              </tr>
-                          </thead>
-                          <tbody id="data-sources-tbody"></tbody>
-                      </table>
-                  </div>
-              </div>
-        </div>
-        
-        <!-- Contenido de la Pestaña: Buscador de Clientes -->
-        <div id="clientes-tab" class="tab-content config-section-container">
-              <div class="config-block">
-                  <h3>Parámetros de Búsqueda</h3>
-                  <div class="form-group">
-                    <label for="customerSearchValue">Buscar por ID o Email:</label>
-                    <input type="text" id="customerSearchValue" placeholder="Ingresa el Subscriber Key o el Email">
-                  </div>
-                  <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-                    <button id="searchCustomerBtn" class="action-button">Buscar Cliente</button>
-                  </div>
-              </div>
-              <div class="config-block" style="flex-grow: 1; display: flex; flex-direction: column;">
-                  <div class="config-block-header">
-                      <h3>Resultados</h3>
-                      <div class="header-actions">
-                          <button id="getCustomerSendsBtn" class="action-button" disabled>Envíos</button>
-                          <button id="getCustomerJourneysBtn" class="action-button" disabled>Journeys</button>
-                      </div>
-                  </div>
-                  <div class="table-container" style="flex-grow: 1; overflow-y: auto;">
-                      <table id="customer-search-table">
-                          <thead>
-                              <tr>
-                                  <th>Subscriber Key</th>
-                                  <th>Email</th>
-                                  <th>Estado</th>
-                                  <th>Fecha Creación</th>
-                                  <th>Fecha Baja</th>
-                                  <th>Suscriptor</th>
-                              </tr>
-                          </thead>
-                          <tbody id="customer-search-tbody"></tbody>
-                      </table>
-                  </div>
-              </div>
-              <div id="customer-journeys-results-block" class="config-block hidden">
-                  <h3>Journeys del Cliente Seleccionado</h3>
-                  <div class="table-container" style="flex-grow: 1; overflow-y: auto;">
-                      <table id="customer-journeys-table">
-                          <thead>
-                              <tr>
-                                  <th>Nombre del Journey</th>
-                                  <th>ID del Journey</th>
-                                  <th>Definition Key</th>
-                                  <th>Versión</th>
-                                  <th>Fecha Creación</th>
-                                  <th>Fecha Modificación</th>
-                              </tr>
-                          </thead>
-                          <tbody id="customer-journeys-tbody"></tbody>
-                      </table>
-                  </div>
-              </div>
-              <!-- Bloque para los resultados de Envíos -->
-              <div id="customer-sends-results-block" class="config-block hidden" ...>
-                <h3>Envíos del Cliente Seleccionado</h3>
-                
-                <!-- Contenedor para la tabla de Envíos (Sent) -->
-                <div class="sends-dataview-block">
-                    <h4>Enviados (Sent)</h4>
-                    <div id="sends-table-container" class="table-container" style="padding-right: 0;"></div>
-                </div>
-                
-                <!-- Contenedor para la tabla de Aperturas (Open) -->
-                <div class="sends-dataview-block">
-                    <h4>Aperturas (Open)</h4>
-                    <div id="opens-table-container" class="table-container" style="padding-right: 0;"></div>
-                </div>
-
-                <!-- Contenedor para la tabla de Clics (Click) -->
-                <div class="sends-dataview-block">
-                    <h4>Clics (Click)</h4>
-                    <div id="clicks-table-container" class="table-container" style="padding-right: 0;"></div>
-                </div>
-
-                <!-- Contenedor para la tabla de Rebotes (Bounce) -->
-                <div class="sends-dataview-block">
-                    <h4>Rebotes (Bounce)</h4>
-                    <div id="bounces-table-container" class="table-container" style="padding-right: 0;"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Contenido de la Pestaña: Buscador de Queries -->
-        <div id="queries-tab" class="tab-content config-section-container">
-          <h2>Buscador de Texto en Queries</h2>
-          <div class="config-block">
-              <h3>Parámetros de Búsqueda</h3>
-              <div class="form-group">
-                <label for="querySearchText">Texto a buscar en la Query:</label>
-                <input type="text" id="querySearchText" placeholder="Ej: _Subscribers o Nombre_DE">
-              </div>
-              <div class="form-group checkbox-group" style="justify-content: flex-start; padding-left: 5px; margin-top: 10px;">
-                  <label for="showQueryTextCheckbox">Mostrar Query Text:</label>
-                  <input type="checkbox" id="showQueryTextCheckbox" checked>
-              </div>
-              <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-                <button id="searchQueriesByTextBtn" class="action-button">Buscar en Queries</button>
-              </div>
-          </div>
-          <div class="config-block" style="flex-grow: 1; display: flex; flex-direction: column;">
-              <h3>Queries Encontradas</h3>
-              <div class="table-container" style="flex-grow: 1; overflow-y: auto;">
-                  <table id="query-search-results-table">
-                      <thead>
-                          <tr>
-                              <th>Nombre de la Query</th>
-                              <th>Automatización</th>
-                              <th>Paso</th>
-                              <th>Query Text</th>
-                          </tr>
-                      </thead>
-                      <tbody id="query-search-results-tbody"></tbody>
-                  </table>
-              </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- SECCIÓN: Configuración de APIs -->
+    <!-- 3. SECCIÓN: CONFIGURACIÓN DE APIS -->
     <div id="configuracion-apis-section" class="section config-section-container">
          <div class="section-header">
             <button class="back-button">← Atrás</button>
@@ -382,41 +176,46 @@
             </div>            
         </div>
         <h2>Configuración de APIs</h2>
+        <!-- Gestión de Clientes (Crear, Seleccionar) -->
         <div class="client-management">
             <input type="text" id="clientName" placeholder="Nombre del Cliente">
-            <select id="savedConfigs"></select>
+            <select id="savedConfigs">
+                <option value="">Seleccionar configuración...</option>
+            </select>
         </div>
+        <!-- Datos de la Aplicación API -->
         <div class="config-block">
             <h3>Datos Aplicación</h3>
             <div class="form-group"><label for="businessUnit">Business Unit (MID)</label><input type="text" id="businessUnit"></div>
-            <div class="form-group"><label for="authUri">Auth URI</label><input type="text" id="authUri"></div>
+            <div class="form-group"><label for="authUri">Auth URI</label><input type="text" id="authUri" placeholder="Ej: https://...mc.auth.marketingcloudapis.com/v2/token"></div>
             <div class="form-group"><label for="clientId">Client ID</label><input type="text" id="clientId"></div>
             <div class="form-group"><label for="clientSecret">Client Secret</label><input type="password" id="clientSecret" placeholder="Necesario para el primer login"></div>
-            <div class="form-group"><label for="token">Token</label><input type="text" id="token" disabled></div>
+            <div class="form-group"><label for="token">Access Token</label><input type="text" id="token" disabled></div>
             <div class="form-group"><label for="soapUri">SOAP URI</label><input type="text" id="soapUri" disabled></div>
             <div class="form-group"><label for="restUri">REST URI</label><input type="text" id="restUri" disabled></div>
-             <div class="form-group"><label for="stackKey">Stack</label><input type="text" id="stackKey" disabled></div>
+            <div class="form-group"><label for="stackKey">Stack</label><input type="text" id="stackKey" disabled></div>
         </div>
-         <div class="config-block">
+        <!-- Configuración de Data Views para el buscador de envíos -->
+        <div class="config-block">
             <h3>Data Views</h3>
             <p class="info-text" style="text-align: left; margin: 0 0 15px;">
-                Introduce la <strong>External Key completa</strong> de las Data Views de tracking de envíos.
+                Introduce la <strong>External Key completa</strong> de las Data Extensions que replican las Data Views de tracking.
             </p>
-            <div class="form-group"><label for="dvSent">Sent</label><input type="text" id="dvSent" placeholder="Ej: DataView_Sent_ClienteX"></div>
-            <div class="form-group"><label for="dvOpen">Open</label><input type="text" id="dvOpen" placeholder="Ej: _Open"></div>
-            <div class="form-group"><label for="dvClick">Click</label><input type="text" id="dvClick" placeholder="Ej: _Click"></div>
-            <div class="form-group"><label for="dvBounce">Bounce</label><input type="text" id="dvBounce" placeholder="Ej: _Bounce"></div>
+            <div class="form-group"><label for="dvSent">Sent</label><input type="text" id="dvSent" placeholder="Ej: DE_SentLog_ClienteX"></div>
+            <div class="form-group"><label for="dvOpen">Open</label><input type="text" id="dvOpen" placeholder="Ej: DE_OpenLog_ClienteX"></div>
+            <div class="form-group"><label for="dvClick">Click</label><input type="text" id="dvClick" placeholder="Ej: DE_ClickLog_ClienteX"></div>
+            <div class="form-group"><label for="dvBounce">Bounce</label><input type="text" id="dvBounce" placeholder="Ej: DE_BounceLog_ClienteX"></div>
         </div>
-        <p class="info-text">Usa 'Login / Guardar' para iniciar sesión y guardar la configuración. 'Logout / Borrar' elimina toda la información y la sesión. El Client Secret se usa para el login pero no se guarda en el almacenamiento local.</p>
     </div>
 
-    <!-- SECCIÓN: Configuración de Data Extension -->
+    <!-- 4. SECCIÓN: CONFIGURACIÓN DE DATA EXTENSION (Creación) -->
     <div id="configuracion-de-section" class="section config-section-container">
         <div class="section-header">
             <button class="back-button">← Atrás</button>
             <div class="header-actions"><button id="createDE" class="action-button">Crear Data Extension</button></div>
         </div>
         <h2>Configuración de Data Extension</h2>
+        <!-- Configuración Base de la DE -->
         <div class="config-block">
             <h3>Configuración Base</h3>
             <div class="form-group"><label for="deName">Nombre Data Extension</label><input type="text" id="deName"></div>
@@ -424,6 +223,7 @@
             <div class="form-group"><label for="deExternalKey">External Key</label><input type="text" id="deExternalKey" disabled></div>
             <div class="form-group"><label for="deFolder">ID de Carpeta (Opcional)</label><input type="text" id="deFolder" placeholder="Ej: 12345"></div>
         </div>
+        <!-- Configuración Sendable -->
         <div class="config-block">
             <h3>Configuración Sendable</h3>
             <div class="form-group checkbox-group">
@@ -436,32 +236,36 @@
             <div class="form-group"><label for="subscriberKeyType">Tipo Campo SubscriberKey</label><input type="text" id="subscriberKeyType" disabled></div>
         </div>
     </div>
-        
 
-    <!-- SECCIÓN: Validador de Email (CORREGIDO) -->
-    <div id="email-validator-section" class="section config-section-container">
+    <!-- 5. SECCIÓN: CAMPOS DE LA DATA EXTENSION -->
+    <div id="campos-section" class="section">
         <div class="section-header">
             <button class="back-button">← Atrás</button>
-        </div>
-        <h2>Validador de Email</h2>
-        <div class="config-block">
-            <h3>Parámetros de Validación</h3>
-            <div class="form-group">
-              <label for="emailToValidate">Email a validar:</label>
-              <input type="text" id="emailToValidate" placeholder="Introduce la dirección de email">
-            </div>
-            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-               <button id="validateEmailBtn" class="action-button">Validar Email</button>
+            <div class="header-actions">
+                <button id="importFieldsBtn" class="action-button">Importar...</button>
+                <button id="addFieldBtn" class="action-button">Añadir Fila</button>
+                <button id="createFieldsBtn" class="action-button">Crear/Actualizar Campos</button>
+                <button id="createDummyFieldsBtn" class="action-button">Campos de Ejemplo</button>                
+                <button id="clearFieldsBtn" class="action-button delete-btn">Limpiar Tabla</button>
             </div>
         </div>
-        <div class="config-block">
-            <h3>Resultado de la Validación</h3>
-            <pre id="email-validation-results">El resultado aparecerá aquí.</pre>
+        <h2>Campos de la Data Extension</h2>
+        <div class="table-container">
+          <table id="myTable">
+            <thead>
+              <tr><th>Campo MC</th><th>Tipo Campo</th><th>Longitud</th><th>Default</th><th>PK</th><th>Requerido</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <!-- Botones para mover filas seleccionadas -->
+          <div class="control-buttons">
+            <button id="moveUp" title="Mover fila seleccionada hacia arriba">Subir</button>
+            <button id="moveDown" title="Mover fila seleccionada hacia abajo">Bajar</button>
+          </div>
         </div>
     </div>
-       
-
-    <!-- SECCIÓN: Gestión de Campos -->
+    
+    <!-- 6. SECCIÓN: GESTIÓN DE CAMPOS (Recuperar/Borrar) -->
     <div id="configuracion-campos-section" class="section config-section-container">
         <div class="section-header">
             <button class="back-button">← Atrás</button>
@@ -482,39 +286,229 @@
             </div>
             <div class="form-group">
                 <label for="targetFieldSelect">Campo a eliminar</label>
-                <select id="targetFieldSelect" disabled><option value="">-- Pulsa "Recuperar Campos" para poblar --</option></select>
+                <select id="targetFieldSelect" disabled><option value="">-- Pulsa "Recuperar Campos" --</option></select>
             </div>
         </div>
     </div>
 
-    <!-- SECCIÓN: Campos de la Data Extension -->
-    <div id="campos-section" class="section">
+    <!-- 7. SECCIÓN: CALENDARIO DE AUTOMATIZACIONES -->
+    <div id="calendario-section" class="section">
         <div class="section-header">
             <button class="back-button">← Atrás</button>
-            <div class="header-actions">
-                <button id="importFieldsBtn" class="action-button">Importar...</button>
-                <button id="addFieldBtn" class="action-button">Añadir Fila</button>
-                <button id="createFieldsBtn" class="action-button">Crear/Actualizar Campos</button>
-                <button id="createDummyFieldsBtn" class="action-button">Campos de Ejemplo</button>                
-                <button id="clearFieldsBtn" class="action-button delete-btn">Limpiar Tabla</button>
+             <div class="calendar-controls">
+                <label for="calendarYearSelect">Año:</label>
+                <select id="calendarYearSelect"></select>
+                <button id="refreshAutomationsBtn" class="action-button">Refrescar (Automatismos)</button>
+                <button id="refreshJourneyAutomationsBtn" class="action-button activate-btn">Refrescar (Journeys)</button>
             </div>
         </div>
-        <h2>Campos de la Data Extension</h2>
-        <div class="table-container">
-          <table id="myTable">
-            <thead>
-              <tr><th>Campo MC</th><th>Tipo Campo</th><th>Longitud</th><th>Default</th><th>PK</th><th>Requerido</th></tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-          <div class="control-buttons">
-            <button id="moveUp" title="Mover fila seleccionada hacia arriba">Subir</button>
-            <button id="moveDown" title="Mover fila seleccionada hacia abajo">Bajar</button>
-          </div>
+        <div class="calendar-container">
+            <!-- Rejilla de meses del calendario -->
+            <div id="calendar-main" class="calendar-main-view">
+                <h2>Calendario de Automatizaciones</h2>
+                <div id="calendar-grid" class="calendar-grid"></div>
+            </div>
+            <!-- Barra lateral para mostrar detalles del día seleccionado -->
+            <aside id="calendar-sidebar" class="calendar-sidebar">
+                <h3 id="automation-list-header">Automatizaciones del Día</h3>
+                <div id="automation-list">
+                    <p>Selecciona un día para ver los detalles.</p>
+                </div>
+            </aside>
         </div>
     </div>
 
-     <!-- SECCIÓN: Gestión de Automatismos (NUEVA) -->
+    <!-- 8. SECCIÓN: VALIDADOR DE EMAIL -->
+    <div id="email-validator-section" class="section config-section-container">
+        <div class="section-header"><button class="back-button">← Atrás</button></div>
+        <h2>Validador de Email</h2>
+        <div class="config-block">
+            <h3>Parámetros de Validación</h3>
+            <div class="form-group">
+              <label for="emailToValidate">Email a validar:</label>
+              <input type="text" id="emailToValidate" placeholder="Introduce la dirección de email">
+            </div>
+            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+               <button id="validateEmailBtn" class="action-button">Validar Email</button>
+            </div>
+        </div>
+        <div class="config-block">
+            <h3>Resultado de la Validación</h3>
+            <pre id="email-validation-results">El resultado aparecerá aquí.</pre>
+        </div>
+    </div>
+
+    <!-- 9. SECCIÓN: BUSCADORES -->
+    <div id="buscadores-section" class="section">
+      <div class="section-header"><button class="back-button">← Atrás</button></div>
+      <h2>Buscadores</h2>
+      <!-- Contenedor de pestañas para los diferentes tipos de búsqueda -->
+      <div class="tabs-container">
+        <div class="tab-buttons">
+          <button class="tab-button active" data-tab="busqueda-de-tab">Data Extensions</button>
+          <button class="tab-button" data-tab="origenes-tab">Origen de datos</button>
+          <button class="tab-button" data-tab="clientes-tab">Clientes</button>
+          <button class="tab-button" data-tab="queries-tab">Texto en Queries</button>
+        </div>
+
+        <!-- Pestaña: Búsqueda de Data Extension -->
+        <div id="busqueda-de-tab" class="tab-content active config-section-container">
+            <div class="config-block">
+                <h3>Parámetros de Búsqueda</h3>
+                <div class="form-group">
+                    <label for="deSearchProperty">Buscar por:</label>
+                    <select id="deSearchProperty">
+                        <option value="Name">Nombre</option>
+                        <option value="CustomerKey">External Key</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="deSearchValue">Valor:</label>
+                    <input type="text" id="deSearchValue" placeholder="Ingresa el valor de búsqueda" maxlength="128">
+                </div>
+                <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                    <button id="searchDEBtn" class="action-button">Buscar</button>
+                </div>
+            </div>
+            <div class="config-block">
+                <h3>Resultados</h3>
+                <pre id="de-search-results">La ruta de la Data Extension aparecerá aquí.</pre>
+            </div>
+        </div>
+
+        <!-- Pestaña: Buscador de Orígenes de Datos -->
+        <div id="origenes-tab" class="tab-content config-section-container">
+            <div class="config-block">
+                <h3>Parámetros de Búsqueda</h3>
+                <div class="form-group">
+                    <label for="deNameToFind">Nombre de la Data Extension:</label>
+                    <input type="text" id="deNameToFind" placeholder="Introduce el nombre exacto de la DE">
+                </div>
+                <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                    <button id="findDataSourcesBtn" class="action-button">Buscar Orígenes</button>
+                </div>
+            </div>
+            <div class="config-block" style="flex-grow: 1;">
+                <h3>Actividades Encontradas</h3>
+                <div class="table-container">
+                    <table id="data-sources-table">
+                        <thead>
+                            <tr>
+                                <th>Actividad</th><th>Tipo</th><th>Automatización</th>
+                                <th>Paso</th><th>Acción</th><th>Descripción / Query</th>
+                            </tr>
+                        </thead>
+                        <tbody id="data-sources-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pestaña: Buscador de Clientes (Suscriptores) -->
+        <div id="clientes-tab" class="tab-content config-section-container">
+            <div class="config-block">
+                <h3>Parámetros de Búsqueda</h3>
+                <div class="form-group">
+                    <label for="customerSearchValue">Buscar por Subscriber Key o Email:</label>
+                    <input type="text" id="customerSearchValue" placeholder="Ingresa el valor a buscar">
+                </div>
+                <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                    <button id="searchCustomerBtn" class="action-button">Buscar Cliente</button>
+                </div>
+            </div>
+            <!-- Bloque de Resultados de la Búsqueda -->
+            <div class="config-block" style="flex-grow: 1;">
+                <div class="config-block-header">
+                    <h3>Resultados</h3>
+                    <div class="header-actions">
+                        <button id="getCustomerSendsBtn" class="action-button" disabled>Envíos</button>
+                        <button id="getCustomerJourneysBtn" class="action-button" disabled>Journeys</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="customer-search-table">
+                        <thead>
+                            <tr>
+                                <th>Subscriber Key</th><th>Email</th><th>Estado</th>
+                                <th>Fecha Creación</th><th>Fecha Baja</th><th>Es Suscriptor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customer-search-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Bloque de Resultados de Journeys (oculto por defecto) -->
+            <div id="customer-journeys-results-block" class="config-block hidden">
+                <h3>Journeys del Cliente Seleccionado</h3>
+                <div class="table-container">
+                    <table id="customer-journeys-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre del Journey</th><th>ID</th><th>Definition Key</th>
+                                <th>Versión</th><th>Fecha Creación</th><th>Fecha Modificación</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customer-journeys-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Bloque de Resultados de Envíos (oculto por defecto) -->
+            <div id="customer-sends-results-block" class="config-block hidden">
+                <h3>Envíos del Cliente Seleccionado</h3>
+                <div class="sends-dataview-block">
+                    <h4>Enviados (Sent)</h4>
+                    <div id="sends-table-container" class="table-container"></div>
+                </div>
+                <div class="sends-dataview-block">
+                    <h4>Aperturas (Open)</h4>
+                    <div id="opens-table-container" class="table-container"></div>
+                </div>
+                <div class="sends-dataview-block">
+                    <h4>Clics (Click)</h4>
+                    <div id="clicks-table-container" class="table-container"></div>
+                </div>
+                <div class="sends-dataview-block">
+                    <h4>Rebotes (Bounce)</h4>
+                    <div id="bounces-table-container" class="table-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pestaña: Buscador de Texto en Queries -->
+        <div id="queries-tab" class="tab-content config-section-container">
+            <div class="config-block">
+                <h3>Parámetros de Búsqueda</h3>
+                <div class="form-group">
+                    <label for="querySearchText">Texto a buscar en la Query:</label>
+                    <input type="text" id="querySearchText" placeholder="Ej: _Subscribers o Nombre_DE">
+                </div>
+                <div class="form-group checkbox-group" style="justify-content: flex-start;">
+                    <label for="showQueryTextCheckbox">Mostrar Query Text:</label>
+                    <input type="checkbox" id="showQueryTextCheckbox" checked>
+                </div>
+                <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                    <button id="searchQueriesByTextBtn" class="action-button">Buscar en Queries</button>
+                </div>
+            </div>
+            <div class="config-block" style="flex-grow: 1;">
+                <h3>Queries Encontradas</h3>
+                <div class="table-container">
+                    <table id="query-search-results-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre de la Query</th><th>Automatización</th>
+                                <th>Paso</th><th>Query Text</th>
+                            </tr>
+                        </thead>
+                        <tbody id="query-search-results-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 10. SECCIÓN: GESTIÓN DE AUTOMATISMOS -->
     <div id="gestion-automatismos-section" class="section">
         <div class="section-header">
             <button class="back-button">← Atrás</button>            
@@ -526,14 +520,14 @@
             </div>
         </div>
         <h2>Gestión de Automatismos</h2>
+        <!-- Filtros para la tabla de automatismos -->
         <div class="header-filters">
             <input type="text" id="automationNameFilter" class="filter-input" placeholder="Buscar por nombre...">
             <select id="automationStatusFilter" class="filter-input">
                 <option value="">Todos los estados</option>
-                <!-- Las opciones se generarán con JavaScript -->
             </select>
         </div>
-        <div class="table-container" style="padding-right: 0;"> <!-- Quitamos el padding para que la tabla ocupe todo el ancho -->
+        <div class="table-container">
           <table id="automations-table">
             <thead>
               <tr>
@@ -543,9 +537,7 @@
                 <th class="sortable-header" data-sort-by="status">Estado</th>
               </tr>
             </thead>
-            <tbody id="automations-tbody">
-                <!-- El contenido se generará con JavaScript -->
-            </tbody>
+            <tbody id="automations-tbody"></tbody>
           </table>
         </div>
     </div>
@@ -561,14 +553,17 @@
       <h2>Log de Eventos</h2>
       <button id="toggleLogBtn" title="Colapsar/Expandir Log"></button>
     </div>
+    <!-- Bloque para mensajes de estado de la aplicación -->
     <div id="log-message-block" class="log-block">
       <h4>Mensajes</h4>
       <pre><code id="log-messages">Esperando acciones...</code></pre>
     </div>
+    <!-- Bloque para mostrar el cuerpo de las peticiones API -->
     <div id="log-request-block" class="log-block">
       <h4>Llamada API</h4>
       <pre><code id="log-request"></code></pre>
     </div>
+    <!-- Bloque para mostrar el cuerpo de las respuestas API -->
     <div id="log-response-block" class="log-block">
       <h4>Respuesta API</h4>
       <pre><code id="log-response"></code></pre>
@@ -580,7 +575,7 @@
 <!-- END: CONTENEDOR PRINCIPAL -->
 
 <!-- ========================================================== -->
-<!-- START: MODAL DE IMPORTACIÓN -->
+<!-- START: MODAL DE IMPORTACIÓN DE CAMPOS -->
 <!-- ========================================================== -->
 <div id="import-modal" class="modal-overlay">
     <div class="modal-content">

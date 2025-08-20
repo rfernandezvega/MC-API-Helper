@@ -1,24 +1,71 @@
+// ===================================================================
 // Fichero: ui.js
-// Descripción: Gestiona toda la lógica de la interfaz de usuario, interacciones del usuario,
-// llamadas a la API de Marketing Cloud y manipulación del DOM.
+// Descripción: Gestiona toda la lógica de la interfaz de usuario (UI),
+// las interacciones del usuario, las llamadas a la API de Marketing Cloud
+// y la manipulación dinámica del DOM.
+//
+// ÍNDICE:
+// -------------------------------------------------------------------
+// 1. DECLARACIÓN DE ELEMENTOS DEL DOM Y VARIABLES GLOBALES
+// 2. GESTIÓN DE LA UI (LOGS, ESTADO DE CARGA, NAVEGACIÓN)
+// 3. GESTIÓN DE CONFIGURACIÓN Y SESIÓN
+// 4. MACROS - FUNCIONES PRINCIPALES DE LA API
+//    - 4.1. Autenticación
+//    - 4.2. Gestión de Data Extensions
+//    - 4.3. Gestión de Campos
+//    - 4.4. Funcionalidades de Búsqueda
+//    - 4.5. Gestión de Automatismos
+// 5. FUNCIONES AUXILIARES (HELPERS)
+//    - 5.1. Helpers de API (SOAP, REST)
+//    - 5.2. Parsers (XML, JSON)
+//    - 5.3. Renderizadores de Tablas
+//    - 5.4. Otros Helpers
+// 6. MANIPULACIÓN DEL DOM Y COMPONENTES
+//    - 6.1. Tabla de Campos
+//    - 6.2. Calendario
+//    - 6.3. Modal de Importación
+//    - 6.4. Menús Colapsables
+// 7. EVENT LISTENERS
+// 8. INICIALIZACIÓN DE LA APLICACIÓN
+// ===================================================================
 
 document.addEventListener('DOMContentLoaded', function () {
 
 	// ==========================================================
-	// --- 1. DECLARACIÓN DE ELEMENTOS DEL DOM ---
+	// --- 1. DECLARACIÓN DE ELEMENTOS DEL DOM Y VARIABLES GLOBALES ---
 	// ==========================================================
-	// Se obtienen referencias a todos los elementos HTML con los que se va a interactuar.
-	// Esto se hace una sola vez al cargar la página para optimizar el rendimiento.
 
-	let currentUserInfo = null;
-	let currentOrgInfo = null;
+	// --- Variables de Estado Global ---
+	let currentUserInfo = null;      // Almacena la información del usuario logueado.
+	let currentOrgInfo = null;       // Almacena la información de la organización (stack, etc.).
+	let selectedRow = null;          // Fila seleccionada en la tabla de campos.
+	let selectedCustomerRow = null;  // Fila seleccionada en la tabla de búsqueda de clientes.
+	let selectedSubscriberData = null; // Datos del suscriptor seleccionado.
+	let navigationHistory = ['main-menu']; // Historial para el botón "Atrás".
+	let allAutomations = [];         // Caché de automatismos para el calendario.
+	let fullAutomationList = [];     // Caché de todos los automatismos para la vista de gestión.
+	let dailyFilteredAutomations = [];// Automatismos filtrados para un día específico en el calendario.
+	let calendarDataForClient = '';  // Cliente para el que se han cargado los datos del calendario.
+	let currentSortColumn = 'name';  // Columna de ordenación por defecto para la tabla de automatismos.
+	let currentSortDirection = 'asc';// Dirección de ordenación por defecto.
+
+	// --- Búferes para el sistema de Logs Acumulativos ---
+	let logBuffer = [];
+	let requestBuffer = [];
+	let responseBuffer = [];
+
+	// --- Contenedores y Navegación Principal ---
 	const appContainer = document.querySelector('.app-container');
 	const mainMenu = document.getElementById('main-menu');
 	const allSections = document.querySelectorAll('#main-content > .section');
+
+	// --- Barra Lateral Derecha (Log) ---
 	const toggleLogBtn = document.getElementById('toggleLogBtn');
 	const logMessagesEl = document.getElementById('log-messages');
 	const logRequestEl = document.getElementById('log-request');
 	const logResponseEl = document.getElementById('log-response');
+	
+	// --- Configuración de APIs y Sesión ---
 	const clientNameInput = document.getElementById('clientName');
 	const savedConfigsSelect = document.getElementById('savedConfigs');
 	const sidebarClientSelect = document.getElementById('sidebarClientSelect');
@@ -34,6 +81,12 @@ document.addEventListener('DOMContentLoaded', function () {
 	const saveConfigBtn = document.getElementById('saveConfigBtn');
 	const loginBtn = document.getElementById('loginBtn');
 	const logoutBtn = document.getElementById('logoutBtn');
+	const dvSentInput = document.getElementById('dvSent');
+    const dvOpenInput = document.getElementById('dvOpen');
+    const dvClickInput = document.getElementById('dvClick');
+    const dvBounceInput = document.getElementById('dvBounce');
+
+	// --- Creación de Data Extensions ---
 	const deNameInput = document.getElementById('deName');
 	const deDescriptionInput = document.getElementById('deDescription');
 	const deExternalKeyInput = document.getElementById('deExternalKey');
@@ -42,6 +95,8 @@ document.addEventListener('DOMContentLoaded', function () {
 	const subscriberKeyFieldSelect = document.getElementById('subscriberKeyField');
 	const subscriberKeyTypeInput = document.getElementById('subscriberKeyType');
 	const createDEBtn = document.getElementById('createDE');
+
+	// --- Gestión de Campos ---
 	const fieldsTableBody = document.querySelector('#myTable tbody');
 	const addFieldBtn = document.getElementById('addFieldBtn');
 	const createDummyFieldsBtn = document.getElementById('createDummyFieldsBtn');
@@ -49,36 +104,30 @@ document.addEventListener('DOMContentLoaded', function () {
 	const clearFieldsBtn = document.getElementById('clearFieldsBtn');
 	const moveUpBtn = document.getElementById('moveUp');
 	const moveDownBtn = document.getElementById('moveDown');
-	let selectedRow = null; // Variable para almacenar la fila seleccionada en la tabla de campos.
-	let navigationHistory = ['main-menu']; // Array para el historial de navegación
 	const recExternalKeyInput = document.getElementById('recExternalKey');
 	const targetFieldSelect = document.getElementById('targetFieldSelect');
 	const getFieldsBtn = document.getElementById('getFields');
 	const deleteFieldBtn = document.getElementById('deleteField');
 	const importFieldsBtn = document.getElementById('importFieldsBtn');
+
+	// --- Modal de Importación ---
 	const importModal = document.getElementById('import-modal');
 	const pasteDataArea = document.getElementById('paste-data-area');
 	const processPasteBtn = document.getElementById('process-paste-btn');
 	const cancelPasteBtn = document.getElementById('cancel-paste-btn');
 	const delimiterSelect = document.getElementById('delimiter-select');
 	const customDelimiterInput = document.getElementById('custom-delimiter-input');
-	const searchDEBtn = document.getElementById('searchDEBtn');
+
+	// --- Buscadores ---
 	const deSearchProperty = document.getElementById('deSearchProperty');
 	const deSearchValue = document.getElementById('deSearchValue');
 	const deSearchResults = document.getElementById('de-search-results');
-	const validateEmailBtn = document.getElementById('validateEmailBtn');
-	const emailToValidateInput = document.getElementById('emailToValidate');
-	const emailValidationResults = document.getElementById('email-validation-results');
-	const findDataSourcesBtn = document.getElementById('findDataSourcesBtn');
 	const deNameToFindInput = document.getElementById('deNameToFind');
 	const dataSourcesTbody = document.getElementById('data-sources-tbody');
     const customerSearchValue = document.getElementById('customerSearchValue');
-    const searchCustomerBtn = document.getElementById('searchCustomerBtn');
     const customerSearchTbody = document.getElementById('customer-search-tbody');
 	const getCustomerSendsBtn = document.getElementById('getCustomerSendsBtn');
     const getCustomerJourneysBtn = document.getElementById('getCustomerJourneysBtn');
-    let selectedCustomerRow = null; // Para la fila seleccionada
-    let selectedSubscriberData = null; // Para los datos del subscriber seleccionado
 	const customerJourneysResultsBlock = document.getElementById('customer-journeys-results-block');
     const customerJourneysTbody = document.getElementById('customer-journeys-tbody');
 	const customerSendsResultsBlock = document.getElementById('customer-sends-results-block');
@@ -87,145 +136,148 @@ document.addEventListener('DOMContentLoaded', function () {
     const clicksTableContainer = document.getElementById('clicks-table-container');
     const bouncesTableContainer = document.getElementById('bounces-table-container');
 	const querySearchText = document.getElementById('querySearchText');
-    const searchQueriesByTextBtn = document.getElementById('searchQueriesByTextBtn');
     const querySearchResultsTbody = document.getElementById('query-search-results-tbody');
 	const showQueryTextCheckbox = document.getElementById('showQueryTextCheckbox');
-	const dvSentInput = document.getElementById('dvSent');
-    const dvOpenInput = document.getElementById('dvOpen');
-    const dvClickInput = document.getElementById('dvClick');
-    const dvBounceInput = document.getElementById('dvBounce');
-	const tabButtons = document.querySelectorAll('.tab-button');
-	const tabContents = document.querySelectorAll('.tab-content');
-	const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
+	const searchDEBtn = document.getElementById('searchDEBtn');
+	const findDataSourcesBtn = document.getElementById('findDataSourcesBtn');
+	const searchCustomerBtn = document.getElementById('searchCustomerBtn');
+	const searchQueriesByTextBtn = document.getElementById('searchQueriesByTextBtn');
+
+	// --- Validador de Email ---
+	const validateEmailBtn = document.getElementById('validateEmailBtn');
+	const emailToValidateInput = document.getElementById('emailToValidate');
+	const emailValidationResults = document.getElementById('email-validation-results');
+
+	// --- Calendario ---
 	const calendarGrid = document.getElementById('calendar-grid');
 	const calendarYearSelect = document.getElementById('calendarYearSelect');
 	const automationList = document.getElementById('automation-list');
 	const automationListHeader = document.getElementById('automation-list-header');
+	const refreshAutomationsBtn = document.getElementById('refreshAutomationsBtn');
+	const refreshJourneyAutomationsBtn = document.getElementById('refreshJourneyAutomationsBtn');
+
+	// --- Gestión de Automatismos ---
     const automationsTbody = document.getElementById('automations-tbody');
 	const refreshAutomationsTableBtn = document.getElementById('refreshAutomationsTableBtn');
     const activateAutomationBtn = document.getElementById('activateAutomationBtn');
     const runAutomationBtn = document.getElementById('runAutomationBtn');
     const stopAutomationBtn = document.getElementById('stopAutomationBtn');
-    let selectedAutomationRow = null; // Para la fila de automatización seleccionada
-    let fullAutomationList = []; // Para guardar la lista completa de automatismos
-    let dailyFilteredAutomations = []; // Para guardar los automatismos del día seleccionado en el calendario
-	let currentSortColumn = 'name'; // Columna por defecto para ordenar
-    let currentSortDirection = 'asc'; // Dirección por defecto
-	const refreshAutomationsBtn = document.getElementById('refreshAutomationsBtn');
-	const refreshJourneyAutomationsBtn = document.getElementById('refreshJourneyAutomationsBtn');
-	let allAutomations = []; // Almacena los datos de las automatizaciones para el calendario.
-	let calendarDataForClient = ''; // Guarda el nombre del cliente para el que se cargaron los datos del calendario.
 	const automationNameFilter = document.getElementById('automationNameFilter');
     const automationStatusFilter = document.getElementById('automationStatusFilter');
 
-	// Observer para detectar cambios en la tabla de campos y actualizar dinámicamente el desplegable de Subscriber Key.
+	// --- Componentes Generales ---
+	const tabButtons = document.querySelectorAll('.tab-button');
+	const tabContents = document.querySelectorAll('.tab-content');
+	const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
+
+	// --- Observer para la tabla de campos ---
+	// Detecta cambios en la tabla para actualizar dinámicamente el desplegable de Subscriber Key.
 	const observer = new MutationObserver(updateSubscriberKeyFieldOptions);
-	const observerConfig = {
-		childList: true, // Observar adición/eliminación de filas.
-		subtree: true, // Observar cambios en el contenido de las celdas.
-		characterData: true // Observar cambios en el texto de las celdas.
-	};
+	const observerConfig = { childList: true, subtree: true, characterData: true };
+
 
 	// ==========================================================
-	// --- 2. GESTIÓN DE LOGS Y ESTADO DE LA UI ---
+	// --- 2. GESTIÓN DE LA UI (LOGS, ESTADO DE CARGA, NAVEGACIÓN) ---
 	// ==========================================================
 
-	/** Muestra un mensaje en el panel de log. @param {string} message */
+	// --- Sistema de Logs Acumulativos ---
+	// En lugar de escribir directamente en el DOM, estas funciones acumulan los logs
+	// en búferes. Esto permite mostrar un registro completo de acciones con múltiples pasos.
+
+	/**
+	 * Inicia el proceso de almacenamiento de logs en búfer. Limpia los búferes anteriores.
+	 * Debe llamarse al inicio de cada macro.
+	 */
+	function startLogBuffering() {
+		logBuffer = [];
+		requestBuffer = [];
+		responseBuffer = [];
+	}
+
+	/**
+	 * Formatea y muestra el contenido de los búferes de logs en el DOM.
+	 * Debe llamarse al final de cada macro (idealmente en un bloque `finally`).
+	 */
+	function endLogBuffering() {
+		const separator = '\n\n----------------------------------------\n\n';
+		const formatEntry = (entry) => (typeof entry === 'object') ? JSON.stringify(entry, null, 2) : entry;
+	
+		logMessagesEl.textContent = logBuffer.map(formatEntry).join(separator);
+		logRequestEl.textContent = requestBuffer.map(formatEntry).join(separator);
+		logResponseEl.textContent = responseBuffer.map(formatEntry).join(separator);
+	}
+
+	/**
+	 * Añade un mensaje informativo al búfer de logs.
+	 * @param {string} message - El texto a añadir.
+	 */
 	function logMessage(message) {
-		// Escribe un mensaje informativo en el bloque de "Mensajes" del log.
-		if (logMessagesEl) logMessagesEl.textContent = message;
+		logBuffer.push(message);
 	}
 
-	/** Muestra una llamada a la API en el panel de log. @param {object|string} requestData */
+	/**
+	 * Añade los detalles de una petición API al búfer de peticiones.
+	 * @param {object|string} requestData - El objeto de la petición o texto plano.
+	 */
 	function logApiCall(requestData) {
-		// Muestra el cuerpo de una petición a la API en el bloque "Llamada API", formateado como JSON si es un objeto.
-		if (logRequestEl) logRequestEl.textContent = (typeof requestData === 'object') ? JSON.stringify(requestData, null, 2) : requestData;
+		requestBuffer.push(requestData);
 	}
 
-	/** Muestra una respuesta de la API en el panel de log. @param {object|string} responseData */
+	/**
+	 * Añade los detalles de una respuesta API al búfer de respuestas.
+	 * @param {object|string} responseData - El objeto de la respuesta o texto plano.
+	 */
 	function logApiResponse(responseData) {
-		// Muestra el cuerpo de una respuesta de la API en el bloque "Respuesta API", formateado como JSON.
-		if (logResponseEl) logResponseEl.textContent = (typeof responseData === 'object') ? JSON.stringify(responseData, null, 2) : responseData;
+		responseBuffer.push(responseData);
 	}
-
-	/** Bloquea la UI para prevenir interacciones durante una operación. */
+	
+	/**
+	 * Bloquea la interfaz de usuario para prevenir interacciones durante una operación asíncrona.
+	 */
 	function blockUI() {
-		// Añade una clase al contenedor principal para aplicar estilos de "cargando" (opacidad, cursor) y desenfoca el elemento activo.
 		if (document.activeElement) document.activeElement.blur();
 		appContainer.classList.add('is-updating');
-		document.body.style.cursor = 'wait';
 	}
 
-	/** Desbloquea la UI una vez que la operación ha finalizado. */
+	/**
+	 * Desbloquea la interfaz de usuario una vez que la operación ha finalizado.
+	 */
 	function unblockUI() {
-		// Elimina la clase de "cargando" para restaurar la interactividad y el cursor por defecto.
 		appContainer.classList.remove('is-updating');
-		document.body.style.cursor = 'default';
 	}
-
-		/**
-	 * Muestra una sección específica y gestiona el historial de navegación.
-	 * @param {string} sectionId - El ID de la sección a mostrar.
-	 * @param {boolean} [addToHistory=true] - Si es false, no añade la navegación al historial (usado para el botón 'Atrás').
+	
+	/**
+	 * Muestra una sección específica del contenido principal y oculta las demás.
+	 * @param {string} sectionId - El ID del elemento de la sección a mostrar.
+	 * @param {boolean} [addToHistory=true] - Si es `false`, no añade la vista al historial.
 	 */
 	window.showSection = function (sectionId, addToHistory = true) {
 		mainMenu.style.display = 'none';
 		allSections.forEach(s => s.style.display = 'none');
 
 		const sectionToShow = document.getElementById(sectionId);
-
-		// Si la sección existe, la muestra. Si no, muestra el menú principal como fallback.
 		if (sectionToShow) {
 			sectionToShow.style.display = 'flex';
 		} else {
 			mainMenu.style.display = 'flex';
-			sectionId = 'main-menu'; // Asegura que el historial refleje el fallback.
+			sectionId = 'main-menu';
 		}
 
-		// Añade la nueva sección al historial si es una navegación "hacia adelante".
-		if (addToHistory) {
-			// Evita añadir la misma página dos veces si se hace clic repetidamente.
-			if (navigationHistory[navigationHistory.length - 1] !== sectionId) {
-				navigationHistory.push(sectionId);
-			}
+		if (addToHistory && navigationHistory[navigationHistory.length - 1] !== sectionId) {
+			navigationHistory.push(sectionId);
 		}
 	};
 
 	/**
-	 * Navega a la sección anterior del historial.
+	 * Navega a la sección anterior registrada en el historial.
 	 */
 	function goBack() {
-		// Si solo queda una entrada en el historial (el menú principal), no hacemos nada más.
 		if (navigationHistory.length > 1) {
-			navigationHistory.pop(); // Elimina la página actual del historial
+			navigationHistory.pop();
 		}
-
-		// Obtenemos la última página que ahora está en el historial (la página anterior).
 		const previousSectionId = navigationHistory[navigationHistory.length - 1];
-
-		// Navegamos a esa página SIN añadirla de nuevo al historial.
 		showSection(previousSectionId, false);
 	}
-
-	/**
-	 * Actualiza el indicador visual de estado de la sesión.
-	 * @param {boolean} isLoggedIn - True si la sesión está activa.
-	 * @param {string} [clientName=''] - El nombre del cliente para mostrar.
-	 */
-	function updateLoginStatus(isLoggedIn, clientName = '', userInfo = null) {
-    if (isLoggedIn) {
-        let statusHTML = `🟢 Sesión activa: <strong>${clientName}</strong>`;
-        // Si tenemos info del usuario, añadimos su email en una línea nueva y más pequeña
-        if (userInfo && userInfo.email) {
-            statusHTML += `<br><small style="font-weight: normal;">Usuario: ${userInfo.email}</small>`;
-        }
-        loginStatusEl.innerHTML = statusHTML; // Usamos innerHTML para que reconozca el <br>
-        loginStatusEl.className = 'login-status active';
-    } else {
-        loginStatusEl.innerHTML = '🔴 Sesión no iniciada';
-        loginStatusEl.className = 'login-status inactive';
-    }
-}
 
 
 	// ==========================================================
@@ -234,7 +286,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	/**
 	 * Recoge los valores del formulario que son seguros para guardar en localStorage.
-	 * OMITE el clientSecret y los valores derivados como el token.
 	 * @returns {object} Un objeto con la configuración segura del cliente.
 	 */
 	const getConfigToSave = () => ({
@@ -249,326 +300,224 @@ document.addEventListener('DOMContentLoaded', function () {
 	});
 
 	/**
-	 * Rellena los campos del formulario con una configuración dada. Limpia los campos sensibles.
-	 * @param {object} config - El objeto de configuración a cargar.
+	 * Rellena los campos del formulario de configuración con un objeto de configuración dado.
+	 * @param {object} config - El objeto de configuración a cargar en el formulario.
 	 */
 	const setClientConfigForm = (config) => {
-		// Rellena solo los campos de configuración principal
 		businessUnitInput.value = config.businessUnit || '';
 		authUriInput.value = config.authUri || '';
 		clientIdInput.value = config.clientId || '';
-		stackKeyInput.value = config.stackKey || ''; // Rellenamos también el Stack Key
-		// Rellena los campos de Data Views
+		stackKeyInput.value = config.stackKey || '';
         dvSentInput.value = config.dvSent || '';
         dvOpenInput.value = config.dvOpen || '';
         dvClickInput.value = config.dvClick || '';
         dvBounceInput.value = config.dvBounce || '';
-
-		// Asegura que los campos sensibles o derivados siempre se limpien al cargar una configuración.
 		tokenField.value = '';
 		soapUriInput.value = '';
 		restUriInput.value = '';
 		clientSecretInput.value = '';
 	};
 
-	/** Carga todas las configuraciones guardadas y las muestra en los <select>. */
+	/**
+	 * Carga todas las configuraciones guardadas en `localStorage` y las muestra en los selectores.
+	 */
 	const loadConfigsIntoSelect = () => {
-		// Lee las configuraciones guardadas desde el almacenamiento local del navegador.
 		const configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
 		const currentValue = sidebarClientSelect.value || savedConfigsSelect.value;
-		// Limpia y vuelve a poblar los dos menús desplegables de selección de cliente.
 		savedConfigsSelect.innerHTML = '<option value="">Seleccionar configuración...</option>';
 		sidebarClientSelect.innerHTML = '<option value="">Ninguno seleccionado</option>';
 		for (const name in configs) {
 			savedConfigsSelect.appendChild(new Option(name, name));
 			sidebarClientSelect.appendChild(new Option(name, name));
 		}
-		// Restaura la selección que estaba activa antes de recargar.
 		savedConfigsSelect.value = currentValue;
 		sidebarClientSelect.value = currentValue;
 	};
 
 	/**
-	 * Carga la configuración de un cliente, la aplica a los formularios y sincroniza los <select>.
+	 * Carga la configuración de un cliente, la aplica a los formularios y valida la sesión.
 	 * @param {string} clientName - El nombre del cliente a cargar.
 	 */
 	function loadAndSyncClientConfig(clientName) {
-		const configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
+		startLogBuffering();
+		try {
+			const configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
+			tokenField.value = '';
+			soapUriInput.value = '';
+			restUriInput.value = '';
+			updateLoginStatus(false);
+			clearCalendarData();
+			fullAutomationList = [];
+			automationNameFilter.value = '';
+			populateStatusFilter([]);
+			renderAutomationsTable([]);
+			updateAutomationButtonsState();
 
-		// 1. SIEMPRE resetea el estado de la sesión en la UI al cambiar de cliente.
-		//    Esto da feedback inmediato al usuario y evita mostrar un estado incorrecto.
-		tokenField.value = '';
-		soapUriInput.value = '';
-		restUriInput.value = '';
-		updateLoginStatus(false); // Muestra "Sesión no iniciada" por defecto.
+			if (clientName) {
+				blockUI();
+				const configToLoad = configs[clientName] || {};
+				setClientConfigForm(configToLoad);
+				clientNameInput.value = clientName;
+				savedConfigsSelect.value = clientName;
+				sidebarClientSelect.value = clientName;
 
-		// Limpia los datos del calendario
-		clearCalendarData();
-
-		 // Resetea los datos de la vista de Gestión de Automatismos.
-        fullAutomationList = [];          // Vacía la lista de datos en memoria.
-        automationNameFilter.value = '';  // Limpia el filtro de nombre.
-        populateStatusFilter([]);         // Limpia el filtro de estados.
-        renderAutomationsTable([]);       // Dibuja la tabla vacía.
-        updateAutomationButtonsState();   // Deshabilita los botones de acción.
-
-		if (clientName) {
-			blockUI(); 
-
-			// 2. Carga la configuración del cliente seleccionado desde localStorage.
-			const configToLoad = configs[clientName] || {};
-			setClientConfigForm(configToLoad);
-
-			// 3. Sincroniza el nombre y los selectores.
-			clientNameInput.value = clientName;
-			savedConfigsSelect.value = clientName;
-			sidebarClientSelect.value = clientName;
-
-			// 4. Ahora, intenta obtener el token para el nuevo cliente.
-			logMessage(`Cliente "${clientName}" cargado. Comprobando sesión...`);
-			getAuthenticatedConfig()
-				.catch(() => {
-					// Si getAuthenticatedConfig falla, el estado ya es 'inactive'
-					// y se mostrará un error en el log, por lo que no hay que hacer nada más aquí.
-				})
-				.finally(() => {
-					unblockUI(); // Desbloquea la UI CUANDO TERMINE (éxito o error)
-				});
+				logMessage(`Cliente "${clientName}" cargado. Comprobando sesión...`);
+				getAuthenticatedConfig()
+					.catch(() => { /* El error ya se gestiona y loguea dentro de getAuthenticatedConfig */ })
+					.finally(unblockUI);
+			} else {
+				setClientConfigForm({});
+				clientNameInput.value = '';
+				savedConfigsSelect.value = '';
+				sidebarClientSelect.value = '';
+				stackKeyInput.value = '';
+				logMessage("Ningún cliente seleccionado.");
+			}
+		} finally {
+			endLogBuffering();
+		}
+	}
+	
+	/**
+	 * Actualiza el indicador visual de estado de la sesión en la barra lateral.
+	 * @param {boolean} isLoggedIn - `true` si la sesión está activa.
+	 * @param {string} [clientName=''] - El nombre del cliente para mostrar.
+	 * @param {object} [userInfo=null] - Información del usuario para mostrar el email.
+	 */
+	function updateLoginStatus(isLoggedIn, clientName = '', userInfo = null) {
+		if (isLoggedIn) {
+			let statusHTML = `🟢 Sesión activa: <strong>${clientName}</strong>`;
+			if (userInfo && userInfo.email) {
+				statusHTML += `<br><small style="font-weight: normal;">Usuario: ${userInfo.email}</small>`;
+			}
+			loginStatusEl.innerHTML = statusHTML;
+			loginStatusEl.className = 'login-status active';
 		} else {
-			// 5. Si se selecciona "Ninguno", limpia todos los formularios.
-			setClientConfigForm({});
-			clientNameInput.value = '';
-			savedConfigsSelect.value = '';
-			sidebarClientSelect.value = '';
-			stackKeyInput.value = ''; // Limpia el campo de stack
-			logMessage("Ningún cliente seleccionado.");
+			loginStatusEl.innerHTML = '🔴 Sesión no iniciada';
+			loginStatusEl.className = 'login-status inactive';
 		}
 	}
 
+
 	// ==========================================================
-	// --- 4. LÓGICA DE API (MACROS) ---
+	// --- 4. MACROS - FUNCIONES PRINCIPALES DE LA API ---
 	// ==========================================================
+
+	// --- 4.1. Autenticación ---
 
 	/**
-	 * Punto de entrada para obtener la configuración de API validada y lista para usar.
-	 * Pide al proceso principal un token, que se encargará de refrescarlo si es necesario.
-	 * @returns {Promise<object>} Un objeto con { accessToken, soapUri, restUri }.
-	 * @throws {Error} Si no se puede obtener la configuración.
+	 * Punto de entrada central para obtener la configuración de API autenticada.
+	 * @returns {Promise<object>} Un objeto con `{ accessToken, soapUri, restUri, userInfo, orgInfo }`.
+	 * @throws {Error} Si no hay un cliente seleccionado o si la sesión no puede ser validada.
 	 */
 	async function getAuthenticatedConfig() {
-		// 1. Verifica que haya un cliente seleccionado.
 		const clientName = clientNameInput.value.trim();
-		if (!clientName) {
-			throw new Error("No hay ningún cliente seleccionado.");
-		}
-
-		// 2. Solicita la configuración de API (incluyendo el token) al proceso principal (main.js).
-		// El proceso principal gestiona de forma segura si el token es válido, ha expirado o necesita ser refrescado.
+		if (!clientName) throw new Error("No hay ningún cliente seleccionado.");
 		const apiConfig = await window.electronAPI.getApiConfig(clientName);
-
-		// 3. Si no se devuelve un token, la sesión no es válida.
 		if (!apiConfig || !apiConfig.accessToken) {
-			updateLoginStatus(false); // Actualiza el indicador visual a "no iniciada".
-			stackKeyInput.value = ''; // Limpiamos el campo de stack si falla
+			updateLoginStatus(false);
+			stackKeyInput.value = '';
 			throw new Error("Sesión no activa. Por favor, inicia sesión.");
 		}
-
-		// 4. Si se obtiene un token, se rellenan los campos de la UI y se actualiza el estado a "activa".
 		tokenField.value = apiConfig.accessToken;
 		soapUriInput.value = apiConfig.soapUri;
 		restUriInput.value = apiConfig.restUri;
-		currentUserInfo = apiConfig.userInfo; 
-		currentOrgInfo = apiConfig.orgInfo; 
-
-
-		// Rellenamos el campo de Stack con el valor del userInfo
-    	stackKeyInput.value = currentOrgInfo?.stack_key || 'No disponible';
-
-		// Pasamos el userInfo para que se muestre el email
-    	updateLoginStatus(true, clientName, currentUserInfo); 
-
-		// 5. Devuelve la configuración para ser usada por la macro que la solicitó.
+		currentUserInfo = apiConfig.userInfo;
+		currentOrgInfo = apiConfig.orgInfo;
+		stackKeyInput.value = currentOrgInfo?.stack_key || 'No disponible';
+		updateLoginStatus(true, clientName, currentUserInfo);
 		return apiConfig;
 	}
 
+	// --- 4.2. Gestión de Data Extensions ---
+
 	/**
-	 * Construye la porción XML para un único campo de Data Extension.
-	 * @param {object} fieldData - Datos del campo (name, type, length, etc.).
-	 * @returns {string} La cadena XML para el campo.
+	 * Macro para crear una Data Extension utilizando la API SOAP.
 	 */
-	function buildFieldXml(fieldData) {
-		// Desestructura el objeto del campo para acceder a sus propiedades.
-		const {
-			name,
-			type,
-			length,
-			defaultValue,
-			isPrimaryKey,
-			isRequired
-		} = fieldData;
-		let fieldXml = '';
-		// Nodos XML comunes a todos los tipos de campo.
-		const commonNodes = `<CustomerKey>${name}</CustomerKey><Name>${name}</Name><IsRequired>${isRequired}</IsRequired><IsPrimaryKey>${isPrimaryKey}</IsPrimaryKey>`;
-		const defaultValueNode = defaultValue ? `<DefaultValue>${defaultValue}</DefaultValue>` : '';
-
-		// Construye el XML específico según el tipo de campo.
-		switch (type.toLowerCase()) {
-		case 'text':
-			fieldXml = `<Field>${commonNodes}<FieldType>Text</FieldType>${length ? `<MaxLength>${length}</MaxLength>` : ''}${defaultValueNode}</Field>`;
-			break;
-		case 'number':
-			fieldXml = `<Field>${commonNodes}<FieldType>Number</FieldType>${defaultValueNode}</Field>`;
-			break;
-		case 'date':
-			fieldXml = `<Field>${commonNodes}<FieldType>Date</FieldType>${defaultValueNode}</Field>`;
-			break;
-		case 'boolean':
-			fieldXml = `<Field>${commonNodes}<FieldType>Boolean</FieldType>${defaultValueNode}</Field>`;
-			break;
-		case 'emailaddress':
-			fieldXml = `<Field>${commonNodes}<FieldType>EmailAddress</FieldType></Field>`;
-			break;
-		case 'phone':
-			fieldXml = `<Field>${commonNodes}<FieldType>Phone</FieldType></Field>`;
-			break;
-		case 'locale':
-			fieldXml = `<Field>${commonNodes}<FieldType>Locale</FieldType></Field>`;
-			break;
-		case 'decimal':
-			// Para campos decimales, la longitud se divide en total de dígitos y número de decimales.
-			const [maxLength, scale] = (length || ',')
-			.split(',')
-				.map(s => s.trim());
-			fieldXml = `<Field>${commonNodes}<FieldType>Decimal</FieldType>${maxLength ? `<MaxLength>${maxLength}</MaxLength>` : ''}${scale ? `<Scale>${scale}</Scale>` : ''}${defaultValueNode}</Field>`;
-			break;
-		default:
-			return '';
-		}
-		// Limpia espacios en blanco y devuelve el XML del campo.
-		return fieldXml.replace(/\s+/g, ' ')
-			.trim();
-	}
-
-	/** Crea una Data Extension usando la API SOAP. */
 	async function macroCreateDE() {
-		blockUI(); // Bloquea la UI para evitar interacciones.
+		blockUI();
+		startLogBuffering();
 		try {
 			logMessage("Iniciando creación de Data Extension...");
-			// Obtiene la configuración autenticada (token, etc.). Falla si la sesión no está activa.
 			const apiConfig = await getAuthenticatedConfig();
 
-			// Recoge y valida los datos del formulario.
 			const deName = deNameInput.value.trim();
 			const deExternalKey = deExternalKeyInput.value.trim();
 			if (!deName || !deExternalKey) throw new Error('El Nombre y la External Key son obligatorios.');
 
 			const isSendable = isSendableCheckbox.checked;
 			const subscriberKey = subscriberKeyFieldSelect.value;
-			if (isSendable && !subscriberKey) throw new Error('Para una DE enviable, seleccione un Campo SubscriberKey.');
+			if (isSendable && !subscriberKey) throw new Error('Para una DE sendable, es obligatorio seleccionar un Campo SubscriberKey.');
 
-			// Recoge los campos definidos en la tabla.
 			const validFieldsData = getFieldsDataFromTable();
 			if (validFieldsData.length === 0) throw new Error('La DE debe tener al menos un campo.');
 
-			// Construye las diferentes partes del payload SOAP.
 			const clientXml = businessUnitInput.value.trim() ? `<Client><ClientID>${businessUnitInput.value.trim()}</ClientID></Client>` : '';
 			const descriptionXml = deDescriptionInput.value.trim() ? `<Description>${deDescriptionInput.value.trim()}</Description>` : '';
 			const folderXml = deFolderInput.value.trim() ? `<CategoryID>${deFolderInput.value.trim()}</CategoryID>` : '';
 			const sendableXml = isSendable ? `<SendableDataExtensionField><CustomerKey>${subscriberKey}</CustomerKey><Name>${subscriberKey}</Name><FieldType>${subscriberKeyTypeInput.value.trim()}</FieldType></SendableDataExtensionField><SendableSubscriberField><Name>Subscriber Key</Name><Value/></SendableSubscriberField>` : '';
-			const fieldsXmlString = validFieldsData.map(buildFieldXml)
-				.join('');
+			const fieldsXmlString = validFieldsData.map(buildFieldXml).join('');
 
-			// Ensambla el payload SOAP completo.
 			const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Create</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><CreateRequest xmlns="http://exacttarget.com/wsdl/partnerAPI"><Objects xsi:type="DataExtension">${clientXml}<CustomerKey>${deExternalKey}</CustomerKey>${descriptionXml}<Name>${deName}</Name>${folderXml}<IsSendable>${isSendable}</IsSendable>${sendableXml}<Fields>${fieldsXmlString}</Fields></Objects></CreateRequest></s:Body></s:Envelope>`;
 
-			// Ejecuta la petición SOAP.
 			await executeSoapRequest(apiConfig.soapUri, soapPayload.trim(), `¡Data Extension "${deName}" creada con éxito!`);
-
 		} catch (error) {
-			// Maneja cualquier error durante el proceso.
 			logMessage(`Error al crear la Data Extension: ${error.message}`);
 			alert(`Error: ${error.message}`);
 		} finally {
-			// Desbloquea la UI independientemente del resultado.
 			unblockUI();
+			endLogBuffering();
 		}
 	}
 
-	/** Crea o actualiza campos en una Data Extension existente. */
+	// --- 4.3. Gestión de Campos ---
+
+	/**
+	 * Macro para crear o actualizar (upsert) campos en una Data Extension existente.
+	 */
 	async function macroCreateFields() {
 		blockUI();
+		startLogBuffering();
 		try {
 			logMessage(`Iniciando creación/actualización de campos...`);
 			const apiConfig = await getAuthenticatedConfig();
-
-			// Valida que se haya especificado una DE de destino.
 			const externalKey = recExternalKeyInput.value.trim();
 			if (!externalKey) throw new Error('Defina una "External Key de la DE" en "Gestión de Campos".');
-
-			// Obtiene los campos de la tabla.
 			const validFieldsData = getFieldsDataFromTable();
 			if (validFieldsData.length === 0) throw new Error('No hay campos válidos en la tabla.');
-
-			// Construye el XML de los campos y el payload SOAP de tipo "Update".
-			const fieldsXmlString = validFieldsData.map(buildFieldXml)
-				.join('');
+			const fieldsXmlString = validFieldsData.map(buildFieldXml).join('');
 			const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Update</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><UpdateRequest xmlns="http://exacttarget.com/wsdl/partnerAPI"><Objects xsi:type="DataExtension"><CustomerKey>${externalKey}</CustomerKey><Fields>${fieldsXmlString}</Fields></Objects></UpdateRequest></s:Body></s:Envelope>`;
-
-			// Ejecuta la petición.
 			await executeSoapRequest(apiConfig.soapUri, soapPayload.trim(), `¡Éxito! ${validFieldsData.length} campos creados/actualizados.`);
-
 		} catch (error) {
 			logMessage(`Error al crear los campos: ${error.message}`);
 			alert(`Error: ${error.message}`);
 		} finally {
 			unblockUI();
+			endLogBuffering();
 		}
 	}
 
-	/** Recupera todos los campos de una Data Extension y los muestra en la tabla. */
+	/**
+	 * Macro para recuperar todos los campos de una Data Extension y mostrarlos en la tabla.
+	 */
 	async function macroGetFields() {
 		blockUI();
+		startLogBuffering();
 		try {
 			const apiConfig = await getAuthenticatedConfig();
-
 			const externalKey = recExternalKeyInput.value.trim();
 			if (!externalKey) throw new Error('Introduzca la "External Key de la DE".');
 			logMessage(`Recuperando campos para la DE: ${externalKey}`);
-
-			// Construye la petición SOAP de tipo "Retrieve" para el objeto "DataExtensionField".
 			const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtensionField</ObjectType><Properties>Name</Properties><Properties>ObjectID</Properties><Properties>CustomerKey</Properties><Properties>FieldType</Properties><Properties>IsPrimaryKey</Properties><Properties>IsRequired</Properties><Properties>MaxLength</Properties><Properties>Ordinal</Properties><Properties>Scale</Properties><Properties>DefaultValue</Properties><Filter xsi:type="SimpleFilterPart"><Property>DataExtension.CustomerKey</Property><SimpleOperator>equals</SimpleOperator><Value>${externalKey}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-
-			// Registra y ejecuta la llamada.
-			const requestDetails = {
-				endpoint: apiConfig.soapUri,
-				method: "POST",
-				headers: {
-					'Content-Type': 'text/xml'
-				},
-				payload: soapPayload.trim()
-			};
-			logApiCall(requestDetails);
-			const responseText = await (await fetch(apiConfig.soapUri, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'text/xml'
-					},
-					body: requestDetails.payload
-				}))
-				.text();
-			logApiResponse({
-				body: responseText
-			});
-
-			// Parsea la respuesta XML para obtener un array de objetos de campo.
+			logApiCall({ payload: soapPayload });
+			const responseText = await (await fetch(apiConfig.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload })).text();
+			logApiResponse({ body: responseText });
 			const fields = await parseFullSoapFieldsAsync(responseText);
 			if (fields.length > 0) {
-				// Si se encuentran campos, puebla la tabla y el desplegable de borrado.
 				populateFieldsTable(fields);
 				populateDeletionPicklist(fields);
 				logMessage(`${fields.length} campos recuperados.`);
 			} else {
-				// Si no, limpia la UI.
 				clearFieldsTable();
 				populateDeletionPicklist([]);
 				logMessage('Llamada exitosa pero no se encontraron campos.');
@@ -578,41 +527,44 @@ document.addEventListener('DOMContentLoaded', function () {
 			alert(`Error: ${error.message}`);
 		} finally {
 			unblockUI();
+			endLogBuffering();
 		}
 	}
 
-	/** Elimina un campo específico de una Data Extension. */
+	/**
+	 * Macro para eliminar un campo específico de una Data Extension.
+	 */
 	async function macroDeleteField() {
 		blockUI();
+		startLogBuffering();
 		try {
 			const apiConfig = await getAuthenticatedConfig();
-
 			const externalKey = recExternalKeyInput.value.trim();
 			const fieldObjectId = targetFieldSelect.value;
 			const selectedFieldName = targetFieldSelect.selectedOptions[0]?.text;
 			if (!externalKey || !fieldObjectId) throw new Error('Introduzca la External Key y seleccione un campo a eliminar.');
-
-			// Muestra una confirmación antes de una acción destructiva.
 			if (!confirm(`¿Seguro que quieres eliminar el campo "${selectedFieldName}"? Esta acción no se puede deshacer.`)) return;
-
 			logMessage(`Iniciando borrado del campo "${selectedFieldName}"...`);
-			// Construye el payload SOAP de tipo "Delete".
 			const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth><a:Action s:mustUnderstand="1">Delete</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To></s:Header><s:Body xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><DeleteRequest xmlns="http://exacttarget.com/wsdl/partnerAPI"><Objects xsi:type="DataExtension"><CustomerKey>${externalKey}</CustomerKey><Fields><Field><ObjectID>${fieldObjectId}</ObjectID></Field></Fields></Objects></DeleteRequest></s:Body></s:Envelope>`;
-
 			await executeSoapRequest(apiConfig.soapUri, soapPayload.trim(), `Campo "${selectedFieldName}" eliminado.`);
-			// Refresca la lista de campos para reflejar el cambio.
-			macroGetFields();
+			await macroGetFields();
 		} catch (error) {
 			logMessage(`Error al eliminar el campo: ${error.message}`);
 			alert(`Error: ${error.message}`);
 		} finally {
 			unblockUI();
+			endLogBuffering();
 		}
 	}
 
-	/** Busca una Data Extension por nombre o clave externa y muestra su ruta completa. */
+	// --- 4.4. Funcionalidades de Búsqueda y Validación ---
+	
+	/**
+	 * Macro para buscar una Data Extension y mostrar su ruta de carpetas completa.
+	 */
 	async function macroSearchDE() {
 		blockUI();
+		startLogBuffering();
 		deSearchResults.textContent = 'Buscando...';
 		try {
 			const apiConfig = await getAuthenticatedConfig();
@@ -620,37 +572,14 @@ document.addEventListener('DOMContentLoaded', function () {
 			const value = deSearchValue.value.trim();
 			if (!value) throw new Error("El campo 'Valor' no puede estar vacío.");
 			logMessage(`Buscando DE por ${property}: ${value}`);
-
-			// Petición para encontrar la DE y obtener su CategoryID (ID de carpeta).
 			const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>Name</Properties><Properties>CategoryID</Properties><Filter xsi:type="SimpleFilterPart"><Property>${property}</Property><SimpleOperator>equals</SimpleOperator><Value>${value}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-			logApiCall({
-				endpoint: apiConfig.soapUri,
-				payload: soapPayload
-			});
-
-			const responseText = await (await fetch(apiConfig.soapUri, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'text/xml'
-					},
-					body: soapPayload
-				}))
-				.text();
-			logApiResponse({
-				body: responseText
-			});
-
-			// Parsea la respuesta para obtener el ID de la carpeta.
+			const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload, "Búsqueda de DE completada.");
 			const deInfo = await parseDESearchResponse(responseText);
 			if (deInfo.error) throw new Error(deInfo.error);
-
-			// Si no hay ID de carpeta, está en la raíz.
 			if (!deInfo.categoryId || parseInt(deInfo.categoryId) === 0) {
 				deSearchResults.textContent = `Data Extensions > ${deInfo.deName}`;
 				return;
 			}
-
-			// Si tiene ID de carpeta, llama a la función recursiva para obtener la ruta completa.
 			logMessage(`DE encontrada. Carpeta ID: ${deInfo.categoryId}. Recuperando ruta...`);
 			const folderPath = await getFolderPath(deInfo.categoryId, apiConfig);
 			deSearchResults.textContent = `${folderPath} > ${deInfo.deName}`;
@@ -659,83 +588,57 @@ document.addEventListener('DOMContentLoaded', function () {
 			deSearchResults.textContent = `Error: ${error.message}`;
 		} finally {
 			unblockUI();
+			endLogBuffering();
 		}
 	}
 
-	/** Valida una dirección de correo electrónico utilizando la API REST. */
+	/**
+	 * Macro para validar una dirección de email utilizando la API REST.
+	 */
 	async function macroValidateEmail() {
 		blockUI();
+		startLogBuffering();
 		emailValidationResults.textContent = 'Validando...';
 		try {
 			const apiConfig = await getAuthenticatedConfig();
 			const emailToValidate = emailToValidateInput.value.trim();
 			if (!emailToValidate) throw new Error("Introduzca un email para validar.");
 			logMessage(`Validando email: ${emailToValidate}`);
-
-			// Construye la llamada a la API REST de validación de email.
 			const validateUrl = `${apiConfig.restUri}address/v1/validateEmail`;
-			const payload = {
-				"email": emailToValidate,
-				"validators": ["SyntaxValidator", "MXValidator", "ListDetectiveValidator"]
-			};
-			const requestDetails = {
-				endpoint: validateUrl,
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					"Authorization": `Bearer ${apiConfig.accessToken}`
-				},
-				body: payload
-			};
-			logApiCall(requestDetails);
-
-			// Ejecuta la llamada REST.
-			const response = await fetch(validateUrl, {
-				method: 'POST',
-				headers: requestDetails.headers,
-				body: JSON.stringify(payload)
-			});
+			const payload = { "email": emailToValidate, "validators": ["SyntaxValidator", "MXValidator", "ListDetectiveValidator"] };
+			logApiCall({ endpoint: validateUrl, body: payload });
+			const response = await fetch(validateUrl, { method: 'POST', headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiConfig.accessToken}` }, body: JSON.stringify(payload) });
 			const responseData = await response.json();
-			logApiResponse({
-				status: response.status,
-				body: responseData
-			});
-
+			logApiResponse({ status: response.status, body: responseData });
 			if (!response.ok) throw new Error(responseData.message || `Error API: ${response.status}`);
-
-			// Muestra el resultado de la validación.
-			emailValidationResults.textContent = responseData.valid ?
-				`El email "${responseData.email}" es VÁLIDO.` :
-				`El email "${responseData.email}" es INVÁLIDO.\nRazón: ${responseData.failedValidation}`;
+			emailValidationResults.textContent = responseData.valid ? `El email "${responseData.email}" es VÁLIDO.` : `El email "${responseData.email}" es INVÁLIDO.\nRazón: ${responseData.failedValidation}`;
 		} catch (error) {
 			logMessage(`Error al validar el email: ${error.message}`);
 			emailValidationResults.textContent = `Error: ${error.message}`;
 		} finally {
 			unblockUI();
+			endLogBuffering();
 		}
 	}
 
-	/** Busca todas las actividades (Imports, Queries) que tienen como destino una DE. */
+	/**
+	 * Macro para encontrar todas las actividades que tienen como destino una Data Extension.
+	 */
 	async function macroFindDataSources() {
 		blockUI();
+		startLogBuffering();
 		dataSourcesTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
 		try {
 			const apiConfig = await getAuthenticatedConfig();
 			const deName = deNameToFindInput.value.trim();
 			if (!deName) throw new Error('Introduzca el nombre de la Data Extension.');
 			logMessage(`Buscando orígenes para la DE: "${deName}"`);
-
-			// 1. Obtiene el ObjectID de la DE, necesario para buscar Imports.
 			const deDetails = await getDeObjectId(deName, apiConfig);
 			logMessage(`ObjectID de la DE: ${deDetails.ObjectID}`);
-
-			// 2. Ejecuta en paralelo las búsquedas de Imports y Queries para mayor eficiencia.
 			const [imports, queries] = await Promise.all([
 				findImportsForDE(deDetails.ObjectID, apiConfig),
-				findQueriesForDE(deName, apiConfig) // Las queries se buscan por nombre de DE, no ObjectID.
+				findQueriesForDE(deName, apiConfig)
 			]);
-
-			// 3. Combina los resultados, los ordena y los muestra en la tabla.
 			const allSources = [...imports, ...queries].sort((a, b) => a.name.localeCompare(b.name));
 			renderDataSourcesTable(allSources);
 			logMessage(`Búsqueda completada. Se encontraron ${allSources.length} actividades.`);
@@ -744,37 +647,17 @@ document.addEventListener('DOMContentLoaded', function () {
 			dataSourcesTbody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${error.message}</td></tr>`;
 		} finally {
 			unblockUI();
+			endLogBuffering();
 		}
 	}
 
-	
-	
 	/**
-	 * Realiza una búsqueda de suscriptor por un campo específico.
-	 * @param {string} property - El campo por el que buscar ('SubscriberKey' o 'EmailAddress').
-	 * @param {string} value - El valor a buscar.
-	 * @param {object} apiConfig - La configuración de la API (token, URI, etc.).
-	 * @returns {Promise<Array>} - Una promesa que resuelve a un array de resultados.
-	 */
-	async function searchSubscriberByProperty(property, value, apiConfig) {
-		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>Subscriber</ObjectType><Properties>CreatedDate</Properties><Properties>Client.ID</Properties><Properties>EmailAddress</Properties><Properties>SubscriberKey</Properties><Properties>Status</Properties><Properties>UnsubscribedDate</Properties><Filter xsi:type="SimpleFilterPart"><Property>${property}</Property><SimpleOperator>equals</SimpleOperator><Value>${value}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-		
-		const responseText = await (await fetch(apiConfig.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload })).text();
-		// Logueamos cada intento para tener trazabilidad
-		logApiResponse({ step: `Search by ${property}`, body: responseText });
-		
-		return parseCustomerSearchResponse(responseText);
-	}
-
-	/**
-	 * Busca un contacto en cascada: primero como Subscriber por ID (SOAP),
-	 * luego como Subscriber por Email (SOAP), y finalmente como Contact (REST).
+	 * Macro para buscar un cliente (suscriptor) por Subscriber Key o Email.
 	 */
 	async function macroSearchCustomer() {
 		blockUI();
+		startLogBuffering();
 		customerSearchTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
-		
-		// Resetea el estado completo de la UI
 		if (selectedCustomerRow) selectedCustomerRow.classList.remove('selected');
 		selectedCustomerRow = null;
 		selectedSubscriberData = null;
@@ -782,989 +665,178 @@ document.addEventListener('DOMContentLoaded', function () {
 		getCustomerJourneysBtn.disabled = true;
 		customerJourneysResultsBlock.classList.add('hidden');
 		customerSendsResultsBlock.classList.add('hidden');
-
 		try {
 			const apiConfig = await getAuthenticatedConfig();
 			const value = customerSearchValue.value.trim();
 			if (!value) throw new Error("El campo de búsqueda no puede estar vacío.");
-			
 			let finalResults = [];
-
-			// --- PASO 1: Búsqueda como Subscriber por ID (SubscriberKey) ---
-			logMessage(`Paso 1/3: Buscando como Suscriptor por ID: ${value}`);
+			logMessage(`Paso 1: Buscando como Suscriptor por ID: ${value}`);
 			finalResults = await searchSubscriberByProperty('SubscriberKey', value, apiConfig);
-
-			// --- PASO 2: Si no hay resultados, busca como Subscriber por Email ---
 			if (finalResults.length === 0) {
-				logMessage(`Paso 2/3: No encontrado por ID. Buscando como Suscriptor por Email: ${value}`);
+				logMessage(`Paso 2: No encontrado. Buscando como Suscriptor por Email: ${value}`);
 				finalResults = await searchSubscriberByProperty('EmailAddress', value, apiConfig);
 			}
-
-			// --- PASO 3: Si sigue sin haber resultados, busca como Contact ---
-			if (finalResults.length === 0) {
-				logMessage(`Paso 3/3: No encontrado como Suscriptor. Buscando como Contacto: ${value}`);
-				
-				const contactUrl = `${apiConfig.restUri}contacts/v1/addresses/search/ContactKey`;
-				const contactPayload = { "filterConditionOperator": "Is", "filterConditionValue": value };
-
-				logApiCall({ endpoint: contactUrl, body: contactPayload });
-
-				const contactResponse = await fetch(contactUrl, {
-					method: 'POST',
-					headers: { 'Authorization': `Bearer ${apiConfig.accessToken}`, 'Content-Type': 'application/json' },
-					body: JSON.stringify(contactPayload)
-				});
-				
-				const contactData = await contactResponse.json();
-				logApiResponse(contactData);
-
-				if (!contactResponse.ok) {
-					const errorMessage = contactData.message || `Error API al buscar contactos: ${contactResponse.statusText}`;
-					throw new Error(errorMessage);
-				}
-				
-				finalResults = parseContactAddressSearchResponse(contactData);
-			}
-
 			renderCustomerSearchResults(finalResults);
 			logMessage(`Búsqueda completada. Se encontraron ${finalResults.length} resultado(s).`);
-
 		} catch (error) {
 			logMessage(`Error al buscar clientes: ${error.message}`);
 			customerSearchTbody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${error.message}</td></tr>`;
 		} finally {
 			unblockUI();
+			endLogBuffering();
 		}
 	}
 
-	/** Parsea la respuesta XML de la búsqueda de suscriptores. */
-	function parseCustomerSearchResponse(xmlString) {
-		const parser = new DOMParser();
-		const xmlDoc = parser.parseFromString(xmlString, "application/xml");
-		const overallStatus = xmlDoc.querySelector("OverallStatus")?.textContent;
-		
-		if (overallStatus !== 'OK' && overallStatus !== 'MoreDataAvailable') {
-			throw new Error(xmlDoc.querySelector("StatusMessage")?.textContent || 'Error desconocido en la respuesta SOAP.');
-		}
-
-		const results = Array.from(xmlDoc.querySelectorAll("Results"));
-		if (results.length === 0) return [];
-
-		return results.map(node => {
-			// Helper que devuelve el texto o null si no lo encuentra.
-			const getText = (tagName) => node.querySelector(tagName)?.textContent || null;
-
-			// Obtenemos las fechas. Si no existen, serán null.
-			const createdDateValue = getText("CreatedDate");
-			const unsubDateValue = getText("UnsubscribedDate");
-
-			return { 
-				subscriberKey: getText("SubscriberKey") || '---',
-				emailAddress: getText("EmailAddress") || '---',
-				status: getText("Status") || '---',
-				createdDate: createdDateValue ? new Date(createdDateValue).toLocaleString() : '---',
-				unsubscribedDate: unsubDateValue ? new Date(unsubDateValue).toLocaleString() : '---',
-				isSubscriber: true // Marcamos que es un suscriptor
-			};
-		});
-	}
-
-	/** Parsea la respuesta JSON de la búsqueda de contactos por /addresses/search/ContactKey. */
-	function parseContactAddressSearchResponse(jsonData) {
-		const addresses = jsonData?.addresses || [];
-		if (addresses.length === 0) return [];
-
-		// Tomamos el primer resultado, ya que buscamos un ID específico
-		const address = addresses[0];
-		const contactKey = address.contactKey?.value || '---';
-
-		// Buscamos la fecha de creación en la estructura anidada de la respuesta
-		let createdDate = '---';
-		const primaryValueSet = address.valueSets?.find(vs => vs.definitionKey === 'Primary');
-		if (primaryValueSet) {
-			const dateValueObj = primaryValueSet.values?.find(v => v.definitionKey === 'CreatedDate');
-			if (dateValueObj?.innerValue) {
-				createdDate = new Date(dateValueObj.innerValue).toLocaleString();
-			}
-		}
-
-		const result = {
-			subscriberKey: contactKey,
-			emailAddress: '---', // Esta API no devuelve el email directamente
-			status: '---',
-			createdDate: createdDate,
-			unsubscribedDate: '---',
-			isSubscriber: false // Crucial: Marcamos que NO es un suscriptor
-		};
-		
-		// Devolvemos el resultado dentro de un array para ser consistentes con el otro parser
-		return [result];
-	}
-
-	/** 
-	 * Pinta los resultados de la búsqueda de clientes en la tabla 
-	 * y gestiona el estado de los botones de acción.
+	/**
+	 * Macro para obtener los Journeys en los que se encuentra un cliente.
 	 */
-	function renderCustomerSearchResults(results) {
-		customerSearchTbody.innerHTML = '';
-
-		// Resetea el estado de selección para cada nueva búsqueda
-		selectedCustomerRow = null;
-		selectedSubscriberData = null;
-		getCustomerSendsBtn.disabled = true;
-		getCustomerJourneysBtn.disabled = true;
-
-		if (!results || results.length === 0) {
-			customerSearchTbody.innerHTML = '<tr><td colspan="6">No se encontraron clientes con ese criterio.</td></tr>';
-			return;
-		}
-
-		// Lógica de habilitación de botones
-		const customer = results[0];
-		if (customer.isSubscriber) {
-			getCustomerSendsBtn.disabled = false;
-			getCustomerJourneysBtn.disabled = false;
-		} else {
-			getCustomerJourneysBtn.disabled = false;
-		}
-
-		// --- CORRECCIÓN PRINCIPAL ---
-		// Si solo hay un resultado, lo seleccionamos automáticamente
-		if (results.length === 1) {
-			selectedSubscriberData = {
-				subscriberKey: customer.subscriberKey,
-				isSubscriber: customer.isSubscriber
-			};
-		}
-		// --- FIN DE LA CORRECCIÓN ---
-
-		// Ahora, pintamos las filas en la tabla
-		// ¡Asegúrate de que esta línea incluye (sub, index)!
-		results.forEach((sub, index) => {
-			const row = document.createElement('tr');
-			row.dataset.subscriberKey = sub.subscriberKey;
-			row.dataset.isSubscriber = sub.isSubscriber;
-			row.innerHTML = `
-				<td>${sub.subscriberKey}</td>
-				<td>${sub.emailAddress}</td>
-				<td>${sub.status}</td>
-				<td>${sub.createdDate}</td>
-				<td>${sub.unsubscribedDate}</td>
-				<td>${sub.isSubscriber ? 'Sí' : 'No'}</td>
-			`;
-
-			// Si es el único resultado, lo marcamos visualmente como seleccionado
-			if (results.length === 1 && index === 0) {
-				row.classList.add('selected');
-				selectedCustomerRow = row;
-			}
-
-			customerSearchTbody.appendChild(row);
-		});
-	}
-
-	/** Busca y muestra los Journeys en los que se encuentra un contacto. */
 	async function macroGetCustomerJourneys() {
 		if (!selectedSubscriberData?.subscriberKey) return;
-
 		blockUI();
-		// Muestra el bloque de resultados y pone un mensaje de carga
+		startLogBuffering();
 		customerJourneysResultsBlock.classList.remove('hidden');
 		customerJourneysTbody.innerHTML = '<tr><td colspan="6">Buscando membresías de Journey...</td></tr>';
-
 		try {
 			const apiConfig = await getAuthenticatedConfig();
 			const contactKey = selectedSubscriberData.subscriberKey;
-
-			// --- 1. PRIMERA LLAMADA: Obtener las membresías del contacto ---
 			logMessage(`Buscando Journeys para el Contact Key: ${contactKey}`);
 			const membershipUrl = `${apiConfig.restUri}interaction/v1/interactions/contactMembership`;
 			const membershipPayload = { "ContactKeyList": [contactKey] };
-
 			logApiCall({ endpoint: membershipUrl, body: membershipPayload });
-
-			const membershipResponse = await fetch(membershipUrl, {
-				method: 'POST',
-				headers: {
-					'Authorization': `Bearer ${apiConfig.accessToken}`,
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify(membershipPayload)
-			});
-
+			const membershipResponse = await fetch(membershipUrl, { method: 'POST', headers: { 'Authorization': `Bearer ${apiConfig.accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(membershipPayload) });
 			const membershipData = await membershipResponse.json();
 			logApiResponse(membershipData);
-
-			if (!membershipResponse.ok)
-			{
-				throw new Error(`Error API al buscar membresías: ${membershipResponse.statusText}`);
-			}				
-
+			if (!membershipResponse.ok) throw new Error(`Error API al buscar membresías: ${membershipResponse.statusText}`);
 			const memberships = membershipData.results?.contactMemberships || [];
-
 			if (memberships.length === 0) {
-				customerJourneysTbody.innerHTML = '<tr><td colspan="6">No se encontraron Journeys para este contacto.</td></tr>';
+				customerJourneysTbody.innerHTML = '<tr><td colspan="6">Este contacto no se encuentra en ningún Journey.</td></tr>';
 				logMessage("Búsqueda completada. El contacto no está en ningún Journey.");
 				return;
 			}
-
-			// --- 2. SEGUNDA LLAMADA: Obtener los detalles de cada Journey ---
-			customerJourneysTbody.innerHTML = '<tr><td colspan="6">Membresías encontradas. Obteniendo detalles de los Journeys...</td></tr>';
-			
-			// Obtenemos una lista de claves de definición únicas para no hacer llamadas repetidas
+			customerJourneysTbody.innerHTML = '<tr><td colspan="6">Membresías encontradas. Obteniendo detalles...</td></tr>';
 			const uniqueDefinitionKeys = [...new Set(memberships.map(m => m.definitionKey))];
-
-			// Creamos una promesa para cada llamada de detalles
 			const detailPromises = uniqueDefinitionKeys.map(key => {
 				const detailUrl = `${apiConfig.restUri}interaction/v1/interactions/key:${key}`;
-				return fetch(detailUrl, {
-					method: 'GET',
-					headers: { 'Authorization': `Bearer ${apiConfig.accessToken}` }
-				}).then(res => res.json());
+				logApiCall({ step: 'Get Journey Details', endpoint: detailUrl });
+				return fetch(detailUrl, { method: 'GET', headers: { 'Authorization': `Bearer ${apiConfig.accessToken}` } }).then(res => res.json());
 			});
-			
-			// Esperamos a que todas las llamadas de detalles se completen
 			const journeyDetails = await Promise.all(detailPromises);
-			
+			logApiResponse({ step: 'All Journey Details', responses: journeyDetails });
 			renderCustomerJourneysTable(journeyDetails);
 			logMessage(`Búsqueda completada. Se encontraron detalles para ${journeyDetails.length} Journey(s).`);
-
 		} catch (error) {
 			logMessage(`Error al buscar journeys: ${error.message}`);
 			customerJourneysTbody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${error.message}</td></tr>`;
 		} finally {
 			unblockUI();
+			endLogBuffering();
 		}
 	}
 
-	/** Pinta los detalles de los journeys en su tabla correspondiente. */
-	function renderCustomerJourneysTable(journeys) {
-		customerJourneysTbody.innerHTML = '';
-		if (!journeys || journeys.length === 0) {
-			customerJourneysTbody.innerHTML = '<tr><td colspan="6">No se pudieron recuperar los detalles de los Journeys.</td></tr>';
-			return;
-		}
-
-		journeys.forEach(journey => {
-			const row = document.createElement('tr');
-			row.innerHTML = `
-				<td>${journey.name || '---'}</td>
-				<td>${journey.id || '---'}</td>
-				<td>${journey.key || '---'}</td>
-				<td>${journey.version || '---'}</td>
-				<td>${journey.createdDate ? new Date(journey.createdDate).toLocaleString() : '---'}</td>
-				<td>${journey.modifiedDate ? new Date(journey.modifiedDate).toLocaleString() : '---'}</td>
-			`;
-			customerJourneysTbody.appendChild(row);
-		});
-	}
-
-	/** Busca y muestra los datos de envíos para un suscriptor desde las Data Views. */
+	/**
+	 * Macro para obtener los datos de envíos desde las Data Views configuradas.
+	 */
 	async function macroGetCustomerSends() {
 		if (!selectedSubscriberData?.subscriberKey) return;
-
 		blockUI();
-		const subscriberKey = selectedSubscriberData.subscriberKey;
-
-        // Obtenemos los nombres (External Keys) de las Data Views desde los inputs de configuración.
-        const customDataViews = {
-			Sent: dvSentInput.value.trim(),
-			Open: dvOpenInput.value.trim(),
-			Click: dvClickInput.value.trim(),
-			Bounce: dvBounceInput.value.trim()
-		};
-
-		// Mapeo de los tipos de vista a sus contenedores HTML.
-		const containers = {
-			'Sent': sendsTableContainer,
-			'Open': opensTableContainer,
-			'Click': clicksTableContainer,
-			'Bounce': bouncesTableContainer
-		};
-    
-		// Limpia los contenedores de resultados previos.
-		Object.values(containers).forEach(c => c.innerHTML = '');
-		logMessage(`Iniciando búsqueda de envíos para: ${subscriberKey}`);
-
+		startLogBuffering();
+		customerSendsResultsBlock.classList.remove('hidden');
 		try {
 			const apiConfig = await getAuthenticatedConfig();
-			
-			// Iteramos sobre cada tipo de Data View configurada.
+			const subscriberKey = selectedSubscriberData.subscriberKey;
+			const customDataViews = { Sent: dvSentInput.value.trim(), Open: dvOpenInput.value.trim(), Click: dvClickInput.value.trim(), Bounce: dvBounceInput.value.trim() };
+			const containers = { 'Sent': sendsTableContainer, 'Open': opensTableContainer, 'Click': clicksTableContainer, 'Bounce': bouncesTableContainer };
+			Object.values(containers).forEach(c => c.innerHTML = '');
+			logMessage(`Iniciando búsqueda de envíos para: ${subscriberKey}`);
 			for (const viewType in customDataViews) {
                 const container = containers[viewType];
-                const dataViewKey = customDataViews[viewType]; // <-- Usamos el valor del input.
-
-                // Si el usuario no ha definido una key para esta Data View, lo indicamos y la saltamos.
+                const dataViewKey = customDataViews[viewType];
                 if (!dataViewKey) {
                     container.innerHTML = `<p>Data View para '${viewType}' no configurada.</p>`;
                     continue;
                 }
-
 				container.innerHTML = `<p>Buscando en ${viewType} ('${dataViewKey}')...</p>`;
 				logMessage(`Consultando Data View: ${dataViewKey}...`);
-
-				// Codificamos el valor del filtro para que sea seguro en una URL.
 				const filter = encodeURIComponent(`"SubscriberKey"='${subscriberKey}'`);
 				const url = `${apiConfig.restUri}data/v1/customobjectdata/key/${dataViewKey}/rowset?$filter=${filter}`;
-				
 				logApiCall({ endpoint: url, method: 'GET' });
-				
-				const response = await fetch(url, {
-					method: 'GET',
-					headers: { 'Authorization': `Bearer ${apiConfig.accessToken}` }
-				});
-
+				const response = await fetch(url, { method: 'GET', headers: { 'Authorization': `Bearer ${apiConfig.accessToken}` } });
 				const responseData = await response.json();
-				logApiResponse(responseData);
-
+				logApiResponse({ request: url, response: responseData });
 				if (!response.ok) {
 					container.innerHTML = `<p style="color: red;">Error al consultar ${viewType}: ${responseData.message || response.statusText}</p>`;
 					continue; 
 				}
-				
-				// Llamamos a la función que renderiza la tabla con los resultados.
 				renderDataViewTable(container, responseData.items);
 			}
 			logMessage("Búsqueda de envíos completada.");
-
 		} catch (error) {
 			logMessage(`Error fatal durante la búsqueda de envíos: ${error.message}`);
-			customerSendsResultsBlock.innerHTML = `<p style="color: red;">${error.message}</p>`;
+			Object.values(sendsTableContainer.parentNode.children).forEach(c => c.innerHTML = `<p style="color: red;">${error.message}</p>`);
 		} finally {
 			unblockUI();
+			endLogBuffering();
 		}
 	}
 
 	/**
-	 * Renderiza una tabla dinámica a partir de los items de una Data View.
-	 * @param {HTMLElement} containerElement - El div donde se inyectará la tabla.
-	 * @param {Array} items - El array de 'items' de la respuesta de la API.
+	 * Macro para buscar en el texto de todas las Query Activities.
 	 */
-	function renderDataViewTable(containerElement, items) {
-		containerElement.innerHTML = ''; // Limpiamos el mensaje de "cargando"
-
-		if (!items || items.length === 0) {
-			containerElement.innerHTML = '<p>No se encontraron registros.</p>';
-			return;
-		}
-
-		const table = document.createElement('table');
-		const thead = document.createElement('thead');
-		const tbody = document.createElement('tbody');
-		const headerRow = document.createElement('tr');
-
-		// 1. Obtener las cabeceras desde el primer objeto
-		const headers = Object.keys(items[0].values);
-		headers.forEach(headerText => {
-			const th = document.createElement('th');
-			th.textContent = headerText;
-			headerRow.appendChild(th);
-		});
-		thead.appendChild(headerRow);
-
-		// 2. Crear las filas de datos
-		items.forEach(item => {
-			const row = document.createElement('tr');
-			headers.forEach(header => {
-				const td = document.createElement('td');
-				td.textContent = item.values[header] || '---';
-				row.appendChild(td);
-			});
-			tbody.appendChild(row);
-		});
-
-		table.appendChild(thead);
-		table.appendChild(tbody);
-		containerElement.appendChild(table);
-	}
-
-	// ==========================================================
-	// --- 5. FUNCIONES AUXILIARES (HELPERS) ---
-	// ==========================================================
-	 /**
-     * Rellena el desplegable de estados con los estados únicos de la lista de automatismos.
-     * @param {Array} automations - La lista completa de automatismos.
-     */
-    function populateStatusFilter(automations) {
-        // Guardamos la selección actual para restaurarla después de poblar
-        const currentSelectedValue = automationStatusFilter.value;
-        
-        automationStatusFilter.innerHTML = '<option value="">Todos los estados</option>'; // Resetea el select
-        
-        // Obtenemos los estados únicos, los limpiamos de nulos y los ordenamos
-        const statuses = [...new Set(
-            automations.map(auto => auto.statusText || auto.status).filter(Boolean)
-        )];
-        statuses.sort();
-
-        // Creamos una opción para cada estado
-        statuses.forEach(status => {
-            automationStatusFilter.appendChild(new Option(status, status));
-        });
-
-        // Restauramos la selección si todavía existe
-        automationStatusFilter.value = currentSelectedValue;
-    }
-
-    /**
-     * Aplica los filtros de nombre y estado a la lista completa de automatismos y redibuja la tabla.
-     */
-    function applyFiltersAndRender() {
-        const nameFilter = automationNameFilter.value.toLowerCase().trim();
-        const statusFilter = automationStatusFilter.value;
-
-        let filteredAutomations = fullAutomationList;
-
-        // Aplicar filtro por nombre
-        if (nameFilter) {
-            filteredAutomations = filteredAutomations.filter(auto => 
-                auto.name.toLowerCase().includes(nameFilter)
-            );
-        }
-
-        // Aplicar filtro por estado
-        if (statusFilter) {
-            filteredAutomations = filteredAutomations.filter(auto => 
-                (auto.statusText || auto.status) === statusFilter
-            );
-        }
-
-        renderAutomationsTable(filteredAutomations);
-    }
-
-	/**
-     * Evalúa la selección actual de automatismos y actualiza el estado (habilitado/deshabilitado)
-     * y los tooltips de los botones de acción.
-     */
-     function updateAutomationButtonsState() {
-        const selectedRows = document.querySelectorAll('#automations-table tbody tr.selected');
-        const selectedAutomations = Array.from(selectedRows).map(row => {
-            return fullAutomationList.find(auto => auto.id === row.dataset.automationId);
-        }).filter(Boolean);
-		
-        // Regla: Si no hay nada seleccionado, deshabilita todo y termina.
-        if (selectedAutomations.length === 0) {
-            activateAutomationBtn.disabled = true;
-            runAutomationBtn.disabled = true;
-            stopAutomationBtn.disabled = true;
-            activateAutomationBtn.title = '';
-            runAutomationBtn.title = '';
-            stopAutomationBtn.title = '';
-            return;
-        }
-
-        // PASO 1: Por defecto, deshabilitamos todos los botones si hay una selección.
-        // Solo los habilitaremos si se cumple una regla específica. Esto evita el error anterior.
-        activateAutomationBtn.disabled = true;
-        runAutomationBtn.disabled = true;
-        stopAutomationBtn.disabled = true;
-        
-        const statuses = selectedAutomations.map(auto => auto.statusText || auto.status);
-        const uniqueStatuses = [...new Set(statuses)];
-		console.log(statuses);
-		console.log(uniqueStatuses);
-        // Regla: Si hay estados mezclados, pon un tooltip y termina.
-        if (uniqueStatuses.length > 1) {
-            const tooltip = 'Seleccione automatismos con el mismo estado para realizar una acción.';
-            activateAutomationBtn.title = tooltip;
-            runAutomationBtn.title = tooltip;
-            stopAutomationBtn.title = tooltip;
-            return;
-        }
-
-        // Si llegamos aquí, todas las selecciones tienen el mismo estado.
-        const singleStatus = uniqueStatuses[0];
-        console.log(singleStatus);
-        // Limpiamos los tooltips para los casos válidos.
-        activateAutomationBtn.title = '';
-        runAutomationBtn.title = '';
-        stopAutomationBtn.title = '';
-
-        // PASO 2: Comparamos el estado en minúsculas para evitar errores de mayúsculas/minúsculas.
-        switch (singleStatus.toLowerCase()) {
-            case 'pausedschedule':
-				activateAutomationBtn.disabled = false;
-                runAutomationBtn.disabled = false;
-				stopAutomationBtn.disabled = true;
-                break;
-            case 'stopped':
-                // Habilitamos selectivamente los botones permitidos.
-                activateAutomationBtn.disabled = false;
-                runAutomationBtn.disabled = false;
-				stopAutomationBtn.disabled = true;
-                break;
-
-            case 'scheduled':
-				activateAutomationBtn.disabled = true;
-                runAutomationBtn.disabled = true;
-				stopAutomationBtn.disabled = false;
-                break;
-            case 'ready':
-                // Habilitamos selectivamente el botón permitido.
-				activateAutomationBtn.disabled = true;
-                runAutomationBtn.disabled = true;
-                stopAutomationBtn.disabled = false;
-                break;
-            
-            // Para cualquier otro caso ('running', 'error', etc.), los botones
-            // permanecerán deshabilitados gracias a nuestro estado por defecto del PASO 1.
-            default:
-				console.log("default");
-                break;
-        }
-    }
-
-	 /**
-     * Realiza una acción (activar, ejecutar, pausar) sobre los automatismos seleccionados.
-     * @param {string} actionName - La acción a realizar ('activate', 'run', 'pause').
-     */
-     async function macroPerformAutomationAction(actionName) {
-        const selectedRows = document.querySelectorAll('#automations-table tbody tr.selected');
-        if (selectedRows.length === 0) return;
-
-        const selectedAutomations = Array.from(selectedRows).map(row => {
-            return fullAutomationList.find(auto => auto.id === row.dataset.automationId);
-        }).filter(Boolean);
-        
-        if (selectedAutomations.length === 0) return;
-        if (!confirm(`¿Seguro que quieres '${actionName}' ${selectedAutomations.length} automatismo(s)?`)) return;
-
-        blockUI();
-        const successes = [];
-        const failures = [];
-        const allRequests = [];
-        const allResponses = [];
-
-        try {
-            const apiConfig = await getAuthenticatedConfig();
-            const headers = { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" };
-            const baseActionURL = `${apiConfig.restUri}legacy/v1/beta/bulk/automations/automation/definition/`;
-            let actionURL;
-
-            switch (actionName) {
-                case 'pause': actionURL = `${baseActionURL}?action=pauseSchedule`; break;
-                case 'run': actionURL = `${baseActionURL}?action=start`; break;
-                case 'activate': actionURL = `${baseActionURL}?action=schedule`; break;
-                default: throw new Error(`Acción desconocida: ${actionName}`);
-            }
-
-            for (const auto of selectedAutomations) {
-                let payload;
-                logMessage(`Procesando '${auto.name}'...`);
-
-                if (actionName === 'activate') {
-                    try {
-                        // Llamada GET de detalle SOLO para obtener el scheduleObject.id
-                        const detailUrl = `${apiConfig.restUri}legacy/v1/beta/bulk/automations/automation/definition/${auto.id}`;
-                        const requestDetails = { step: `Obteniendo scheduleObject para '${auto.name}'`, endpoint: detailUrl, method: 'GET' };
-                        allRequests.push(requestDetails);
-                        
-                        const detailResponse = await fetch(detailUrl, { headers });
-                        const autoDetails = await detailResponse.json();
-                        allResponses.push({ request: requestDetails, response: { status: detailResponse.status, body: autoDetails } });
-
-                        if (!autoDetails.scheduleObject?.id) throw new Error("No se pudo obtener el 'scheduleObject.id'");
-                        
-                        payload = { id: auto.id, scheduleObject: { id: autoDetails.scheduleObject.id } };
-                    } catch (error) {
-                        failures.push({ name: auto.name, reason: error.message });
-                        continue; 
-                    }
-                } else {
-                    payload = { id: auto.id }; // Para 'run' y 'pause', el ID ya lo tenemos.
-                }
-                
-                const requestDetails = { step: `Ejecutando '${actionName}' para '${auto.name}'`, endpoint: actionURL, method: 'POST', body: payload };
-                allRequests.push(requestDetails);
-
-                const actionResponse = await fetch(actionURL, { method: 'POST', headers, body: JSON.stringify(payload) });
-                let responseData;
-                if (actionResponse.ok) {
-                    successes.push({ name: auto.name });
-                    try { responseData = await actionResponse.json(); } catch (e) { responseData = "Respuesta vacía"; }
-                } else {
-                    responseData = await actionResponse.json();
-                    failures.push({ name: auto.name, reason: responseData.message || `Error ${actionResponse.status}` });
-                }
-                allResponses.push({ request: requestDetails, response: { status: actionResponse.status, body: responseData } });
-            }
-        } catch (error) {
-            logMessage(`Error fatal durante la acción '${actionName}': ${error.message}`);
-            alert(`Error fatal: ${error.message}`);
-        } finally {
-            unblockUI();
-            
-            const alertSummary = `Acción '${actionName}' completada. Éxitos: ${successes.length}, Fallos: ${failures.length}.`;
-            let logSummary = alertSummary;
-            if (failures.length > 0) {
-                const failureDetails = failures.map(f => `  - ${f.name}: ${f.reason}`).join('\n');
-                logSummary += `\n\n--- Detalles de Fallos ---\n${failureDetails}`;
-            }
-            logMessage(logSummary);
-            logApiCall(allRequests);
-            logApiResponse(allResponses);
-            alert(alertSummary);
-            refreshAutomationsTableBtn.click();
-        }
-    }
-
-	/** Ejecuta una petición SOAP genérica y maneja la respuesta. */
-	async function executeSoapRequest(soapUri, soapPayload, successMessage) {
-		// Esta función centraliza la lógica para hacer llamadas SOAP.
-		logApiCall({
-			endpoint: soapUri,
-			payload: soapPayload
-		});
-		logApiResponse('');
-		const responseText = await (await fetch(soapUri, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'text/xml'
-				},
-				body: soapPayload
-			}))
-			.text();
-		logApiResponse({
-			body: responseText
-		});
-		// Comprueba si la respuesta contiene un estado general "OK".
-		if (responseText.includes('<OverallStatus>OK</OverallStatus>')) {
-			logMessage(successMessage);
-			alert(successMessage);
-			return responseText;
-		} else {
-			// Si no es "OK", intenta extraer el mensaje de error específico.
-			const errorMatch = responseText.match(/<StatusMessage>(.*?)<\/StatusMessage>/);
-			throw new Error(errorMatch ? errorMatch[1] : 'Error desconocido en la respuesta SOAP.');
-		}
-	}
-
-	/** Parsea una respuesta SOAP para extraer información completa de los campos de una DE. */
-	function parseFullSoapFieldsAsync(xmlString) {
-		return new Promise(resolve => {
-			const fields = [],
-				parser = new DOMParser(),
-				xmlDoc = parser.parseFromString(xmlString, "application/xml");
-			const getText = (node, tagName) => node.querySelector(tagName)
-				?.textContent || '';
-			// Itera sobre cada nodo "Results" en la respuesta XML.
-			xmlDoc.querySelectorAll("Results")
-				.forEach(node => {
-					// Extrae cada propiedad del campo.
-					const fieldType = getText(node, 'FieldType');
-					let length = getText(node, 'MaxLength');
-					// Formato especial para la longitud de campos decimales.
-					if (fieldType.toLowerCase() === 'decimal' && getText(node, 'Scale') !== '0') {
-						length = `${length},${getText(node, 'Scale')}`;
-					}
-					// Construye un objeto de campo limpio.
-					fields.push({
-						mc: getText(node, 'Name'),
-						type: fieldType,
-						len: length,
-						defaultValue: getText(node, 'DefaultValue'),
-						pk: getText(node, 'IsPrimaryKey') === 'true',
-						req: getText(node, 'IsRequired') === 'true',
-						ordinal: parseInt(getText(node, 'Ordinal'), 10) || 0,
-						objectId: getText(node, 'ObjectID')
-					});
-				});
-			// Devuelve los campos ordenados por su posición original.
-			resolve(fields.sort((a, b) => a.ordinal - b.ordinal));
-		});
-	}
-
-	/** Parsea la respuesta de búsqueda de una DE para extraer su nombre y el ID de su carpeta. */
-	function parseDESearchResponse(xmlString) {
-		return new Promise(resolve => {
-			const xmlDoc = new DOMParser()
-				.parseFromString(xmlString, "application/xml");
-			if (xmlDoc.querySelector("OverallStatus")
-				?.textContent !== 'OK') {
-				return resolve({
-					error: xmlDoc.querySelector("StatusMessage")
-						?.textContent || 'Error desconocido.'
-				});
-			}
-			const resultNode = xmlDoc.querySelector("Results");
-			if (!resultNode) return resolve({
-				error: "No se encontró la Data Extension."
-			});
-			// Resuelve la promesa con el ID de la carpeta y el nombre de la DE.
-			resolve({
-				categoryId: resultNode.querySelector("CategoryID")
-					?.textContent,
-				deName: resultNode.querySelector("Name")
-					?.textContent
-			});
-		});
-	}
-
-	/** Obtiene la ruta completa de una carpeta de forma recursiva. */
-	async function getFolderPath(folderId, apiConfig) {
-		// Condición de salida de la recursión: si no hay folderId, se ha llegado a la raíz.
-		if (!folderId || isNaN(parseInt(folderId))) return '';
-		// Pide los datos de la carpeta actual.
-		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataFolder</ObjectType><Properties>Name</Properties><Properties>ParentFolder.ID</Properties><Filter xsi:type="SimpleFilterPart"><Property>ID</Property><SimpleOperator>equals</SimpleOperator><Value>${folderId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-		const responseText = await (await fetch(apiConfig.soapUri, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'text/xml'
-				},
-				body: soapPayload
-			}))
-			.text();
-		const resultNode = new DOMParser()
-			.parseFromString(responseText, "application/xml")
-			.querySelector("Results");
-		if (!resultNode) return '';
-		// Extrae el nombre de la carpeta actual y el ID de su padre.
-		const name = resultNode.querySelector("Name")
-			?.textContent;
-		const parentId = resultNode.querySelector("ParentFolder > ID")
-			?.textContent;
-		// Llamada recursiva para obtener la ruta del padre.
-		const parentPath = await getFolderPath(parentId, apiConfig);
-		// Concatena la ruta del padre con el nombre actual.
-		return parentPath ? `${parentPath} > ${name}` : name;
-	}
-
-	/** Obtiene el ObjectID de una DE a partir de su nombre. */
-	async function getDeObjectId(deName, apiConfig) {
-		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>ObjectID</Properties><Filter xsi:type="SimpleFilterPart"><Property>Name</Property><SimpleOperator>equals</SimpleOperator><Value>${deName}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-		const responseText = await (await fetch(apiConfig.soapUri, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'text/xml'
-				},
-				body: soapPayload
-			}))
-			.text();
-		const objectIDNode = new DOMParser()
-			.parseFromString(responseText, "application/xml")
-			.querySelector("Results > ObjectID");
-		if (!objectIDNode) throw new Error(`No se encontró DE con el nombre "${deName}".`);
-		return {
-			ObjectID: objectIDNode.textContent
-		};
-	}
-
-	/** Busca actividades de importación que apunten a un ObjectID de una DE. */
-	async function findImportsForDE(deObjectId, apiConfig) {
-		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>ImportDefinition</ObjectType><Properties>Name</Properties><Properties>Description</Properties><Filter xsi:type="SimpleFilterPart"><Property>DestinationObject.ObjectID</Property><SimpleOperator>equals</SimpleOperator><Value>${deObjectId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-		const responseText = await (await fetch(apiConfig.soapUri, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'text/xml'
-				},
-				body: soapPayload
-			}))
-			.text();
-		return Array.from(new DOMParser()
-				.parseFromString(responseText, "application/xml")
-				.querySelectorAll("Results"))
-			.map(node => ({
-				name: node.querySelector("Name")
-					?.textContent || 'N/A',
-				type: 'Import',
-				description: node.querySelector("Description")
-					?.textContent || '---'
-			}));
-	}
-
-
-	/**
-	 * Busca QueryDefinitions en base a un filtro SOAP genérico.
-	 * @param {string} filterXml - El fragmento XML del filtro a aplicar.
-	 * @param {object} apiConfig - La configuración de la API.
-	 * @returns {Promise<Array>} - Una promesa que resuelve a un array de queries encontradas.
-	 */
-	async function findQueriesByFilter(filterXml, apiConfig) {
-		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>QueryDefinition</ObjectType><Properties>Name</Properties><Properties>QueryText</Properties><Properties>TargetUpdateType</Properties><Properties>ObjectID</Properties>${filterXml}</RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-		
-		const responseText = await (await fetch(apiConfig.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload })).text();
-		
-		const queries = Array.from(new DOMParser().parseFromString(responseText, "application/xml").querySelectorAll("Results"))
-			.map(node => ({
-				name: node.querySelector("Name")?.textContent || 'N/A',
-				type: 'Query', // Mantenemos el tipo por consistencia
-				description: node.querySelector("QueryText")?.textContent || '---',
-				action: node.querySelector("TargetUpdateType")?.textContent || 'N/A',
-				objectID: node.querySelector("ObjectID")?.textContent
-			}));
-		
-		// Para cada query, busca a qué automatización pertenece
-		return await Promise.all(queries.map(q => findAutomationForQuery(q, apiConfig)));
-	}
-
-	/** Busca actividades de query que apunten a una DE por su nombre. */
-	async function findQueriesForDE(deName, apiConfig) {
-		const filterXml = `<Filter xsi:type="SimpleFilterPart"><Property>DataExtensionTarget.Name</Property><SimpleOperator>equals</SimpleOperator><Value>${deName}</Value></Filter>`;
-		return findQueriesByFilter(filterXml, apiConfig);
-	}
-
-	/** Busca queries que contengan un texto específico. */
 	async function macroSearchQueriesByText() {
 		blockUI();
+		startLogBuffering();
 		querySearchResultsTbody.innerHTML = '<tr><td colspan="4">Buscando en todas las queries...</td></tr>';
 		try {
 			const apiConfig = await getAuthenticatedConfig();
 			const searchText = querySearchText.value.trim();
 			if (!searchText) throw new Error("El campo 'Texto a buscar' no puede estar vacío.");
-
 			logMessage(`Buscando queries que contengan: "${searchText}"`);
-			
 			const filterXml = `<Filter xsi:type="SimpleFilterPart"><Property>QueryText</Property><SimpleOperator>like</SimpleOperator><Value>%${searchText}%</Value></Filter>`;
 			const allQueries = await findQueriesByFilter(filterXml, apiConfig);
-
 			renderQuerySearchResults(allQueries);
 			logMessage(`Búsqueda completada. Se encontraron ${allQueries.length} queries.`);
-
 		} catch (error) {
 			logMessage(`Error al buscar en queries: ${error.message}`);
 			querySearchResultsTbody.innerHTML = `<tr><td colspan="4" style="color: red;">Error: ${error.message}</td></tr>`;
 		} finally {
 			unblockUI();
+			endLogBuffering();
 		}
 	}
 
-	/** Pinta los resultados de la búsqueda de queries en su tabla. */
-	function renderQuerySearchResults(queries) {
-		querySearchResultsTbody.innerHTML = '';
-
-		// 1. Obtener el estado actual del checkbox
-		const showQuery = showQueryTextCheckbox.checked;
-		const displayStyle = showQuery ? '' : 'none';
-
-		// 2. Ajustar la visibilidad de la cabecera de la tabla
-		const table = document.getElementById('query-search-results-table');
-		const queryTextHeader = table.querySelector('thead th:nth-child(4)');
-		if (queryTextHeader) {
-			queryTextHeader.style.display = displayStyle;
-		}
-		
-		if (queries.length === 0) {
-			querySearchResultsTbody.innerHTML = '<tr><td colspan="4">No se encontraron queries con ese texto.</td></tr>';
-			return;
-		}
-
-		// 3. Renderizar las filas, AÑADIENDO SIEMPRE la 4ª celda pero con el estilo de visibilidad correcto
-		queries.forEach(query => {
-			const row = document.createElement('tr');
-			const queryLink = constructQueryLink(query.objectID);
-			
-			const queryNameCell = queryLink
-            ? `<td><a href="${queryLink}" class="external-link" title="Abrir query en Marketing Cloud">${query.name}</a></td>`
-            : `<td>${query.name}</td>`;
-
-			row.innerHTML = `
-				${queryNameCell}
-				<td>${query.automationName || '---'}</td>
-				<td>${query.step || '---'}</td>
-				<td style="white-space: pre-wrap; word-break: break-all; display: ${displayStyle};">${query.description}</td>
-			`;
-			querySearchResultsTbody.appendChild(row);
-		});
-	}
-
-	/** Busca la automatización a la que pertenece una actividad de query. */
-	async function findAutomationForQuery(query, apiConfig) {
-		if (!query.objectID) return {
-			...query,
-			automationName: '---',
-			step: '---'
-		};
-		// Busca una "Activity" cuyo "Definition" sea la query.
-		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>Activity</ObjectType><Properties>Program.ObjectID</Properties><Filter xsi:type="SimpleFilterPart"><Property>Definition.ObjectID</Property><SimpleOperator>equals</SimpleOperator><Value>${query.objectID}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-		const responseText = await (await fetch(apiConfig.soapUri, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'text/xml'
-				},
-				body: soapPayload
-			}))
-			.text();
-		const programIdNode = new DOMParser()
-			.parseFromString(responseText, "application/xml")
-			.querySelector("Program > ObjectID");
-		if (!programIdNode) return {
-			...query,
-			automationName: '---',
-			step: '---'
-		};
-
-		// Con el ID de la automatización (Program), usa la API REST para obtener sus detalles (nombre, pasos).
-		const restUrl = `${apiConfig.restUri}automation/v1/automations/${programIdNode.textContent}`;
-		const autoData = await (await fetch(restUrl, {
-				headers: {
-					"Authorization": `Bearer ${apiConfig.accessToken}`
-				}
-			}))
-			.json();
-		// Encuentra en qué paso de la automatización se encuentra la query.
-		const step = autoData.steps?.find(s => s.activities?.some(a => a.activityObjectId === query.objectID))
-			?.step || 'N/A';
-		return {
-			...query,
-			automationName: autoData.name || 'N/A',
-			step
-		};
-	}
-
+	// --- 4.5. Gestión de Automatismos ---
+	
 	/**
-	 * Construye la URL para abrir una Query Activity en la UI de Automation Studio.
-	 * @param {string} queryObjectId - El ObjectID de la Query Definition.
-	 * @returns {string|null} La URL completa o null si falta información.
-	 */
-	function constructQueryLink(queryObjectId) {
-		// Usa la información que ya estamos guardando
-		if (!currentOrgInfo || !currentOrgInfo.stack_key || !businessUnitInput.value) {
-			return null;
-		}
-
-		const stack = currentOrgInfo.stack_key.toLowerCase();
-		const mid = businessUnitInput.value;
-		const baseUrl = `https://mc.${stack}.exacttarget.com/cloud/`;
-		const path = `#app/Automation%20Studio/AutomationStudioFuel3/%23ActivityDetails/300/${queryObjectId}`;
-
-		return baseUrl + path;
-	}
-
-	/**
-	 * Llama al endpoint /legacy/, ordena por 'nextRunTime'
-	 * y devuelve una lista limpia y sin duplicados de todos los automatismos.
-	 * @returns {Promise<Array>} Una promesa que resuelve a la lista de automatismos únicos.
+	 * Macro para obtener la lista COMPLETA de todas las automatizaciones.
+	 * @returns {Promise<Array>} Una promesa que resuelve a la lista de automatismos.
 	 */
 	async function macroFetchAllAutomations() {
 		blockUI();
-		logMessage("Iniciando recuperación de todas las definiciones de automatismos...");
+		startLogBuffering();
+		logMessage("Recuperando todas las definiciones de automatismos...");
 		try {
 			const apiConfig = await getAuthenticatedConfig();
-			// Usamos el endpoint legacy y lo ordenamos por la próxima ejecución para traer los más relevantes primero.
 			const url = `${apiConfig.restUri}/legacy/v1/beta/bulk/automations/automation/definition/`;
-			
 			logApiCall({ endpoint: url, method: 'GET' });
 			const response = await fetch(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
 			if (!response.ok) throw new Error(await response.text());
 			const data = await response.json();
 			const allItems = data.entry || [];
-			logApiResponse({ status: response.status, count: allItems.length, items: allItems });
-
+			logApiResponse({ status: response.status, count: allItems.length });
 			logMessage(`Recuperación completa. Se encontraron ${allItems.length} definiciones.`);
-			
 			return allItems;
-
 		} catch (error) {
 			logMessage(`Error al recuperar automatismos: ${error.message}`);
 			alert(`Error: ${error.message}`);
 			return [];
 		} finally {
 			unblockUI();
+			endLogBuffering();
 		}
 	}
 
 	/**
-	 * Obtiene los detalles de TODAS las automatizaciones para la vista de gestión.
+	 * Macro para poblar la vista "Gestión de Automatismos" con todos los datos.
 	 */
 	async function macroGetAllAutomationDetails() {
 		const allItems = await macroFetchAllAutomations();
@@ -1774,297 +846,339 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 
 	/**
-	 * Handler para el botón "Refrescar Datos".
-	 * Carga todos los automatismos y los muestra en el calendario.
+	 * Macro para obtener las automatizaciones PROGRAMADAS y mostrarlas en el calendario.
 	 */
 	async function macroGetAutomations() {
 		const allItems = await macroFetchAllAutomations();
-		fullAutomationList = allItems;
-		populateStatusFilter(fullAutomationList);
-
-		// Filtra en memoria los que están programados para el calendario.
 		const scheduledItems = allItems.filter(item => item.status === 'Scheduled' && item.scheduledTime);
-		
-		// Procesa la lista filtrada y la guarda en la variable global 'allAutomations'.
 		processAndStoreAutomations(scheduledItems);
-		
 		const currentClient = clientNameInput.value;
-		localStorage.setItem('calendarAutomations', JSON.stringify({
-			client: currentClient,
-			automations: allAutomations // Guarda la lista ya PROCESADA.
-		}));
+		localStorage.setItem('calendarAutomations', JSON.stringify({ client: currentClient, automations: allAutomations }));
 		calendarDataForClient = currentClient;
 		generateCalendar();
-
-		logMessage(`Recuperación completa. Se encontraron ${allAutomations.length} definiciones.`);
+		logMessage(`Calendario actualizado con ${allAutomations.length} automatismos programados.`);
 	}
 
-
-
 	/**
-	 * Handler para el botón "Refrescar Datos Journeys".
+	 * Macro para obtener solo los JOURNEYS PROGRAMADOS y mostrarlos en el calendario.
 	 */
 	async function macroGetJourneyAutomations() {
 		const allItems = await macroFetchAllAutomations();
-		fullAutomationList = allItems;
-		populateStatusFilter(fullAutomationList);
-
-		logMessage(`Filtrando las ${allItems.length} automatizaciones para encontrar las programadas...`);
 		const scheduledItems = allItems.filter(item => item.status === 'Scheduled' && item.scheduledTime);
-		logMessage(`${scheduledItems.length} programadas encontradas. Inspeccionando para encontrar Journeys...`);
-
-		const journeyAutomations = scheduledItems.filter(auto =>
-			auto.processes?.some(proc =>
-				proc.workerCounts?.some(wc => wc.objectTypeId === 952)
-			)
-		);
-
-		logMessage(`Inspección completa. Se encontraron ${journeyAutomations.length} automatismos de Journeys.`);
-		
-		// Procesa la lista filtrada de journeys y la guarda en 'allAutomations'.
+		const journeyAutomations = scheduledItems.filter(auto => auto.processes?.some(proc => proc.workerCounts?.some(wc => wc.objectTypeId === 952)));
+		logMessage(`Se encontraron ${journeyAutomations.length} automatismos de Journeys programados.`);
 		processAndStoreAutomations(journeyAutomations);
-		
 		const currentClient = clientNameInput.value;
-		localStorage.setItem('calendarAutomations', JSON.stringify({
-			client: currentClient,
-			automations: allAutomations // Guarda la lista de journeys ya PROCESADA.
-		}));
+		localStorage.setItem('calendarAutomations', JSON.stringify({ client: currentClient, automations: allAutomations }));
 		calendarDataForClient = currentClient;
 		generateCalendar();
-
-		logMessage(`Recuperación completa. Se encontraron ${allAutomations.length} definiciones.`);
-
+		logMessage(`Calendario actualizado con ${allAutomations.length} Journeys programados.`);
 	}
 
-	/** Muestra la nueva sección de Gestión de Automatismos y la puebla con datos. */
-    async function viewAutomations(automationsToShow = null) {
-        showSection('gestion-automatismos-section');
-        // Deselecciona cualquier fila visualmente
-        if (selectedAutomationRow) {
-            selectedAutomationRow.classList.remove('selected');
-            selectedAutomationRow = null;
-        }
-        document.querySelectorAll('#automations-table tbody tr.selected').forEach(row => row.classList.remove('selected'));
+	/**
+     * Macro para realizar una acción masiva (activar, ejecutar, parar) sobre los automatismos.
+     * @param {string} actionName - La acción a realizar ('activate', 'run', 'pause').
+     */
+	async function macroPerformAutomationAction(actionName) {
+		const selectedRows = document.querySelectorAll('#automations-table tbody tr.selected');
+		if (selectedRows.length === 0) return;
+		const selectedAutomations = Array.from(selectedRows).map(row => fullAutomationList.find(auto => auto.id === row.dataset.automationId)).filter(Boolean);
+		if (selectedAutomations.length === 0) return;
+		if (!confirm(`¿Seguro que quieres '${actionName}' ${selectedAutomations.length} automatismo(s)?`)) return;
+		
+		blockUI();
+		startLogBuffering();
+		const successes = [];
+		const failures = [];
 
-        let dataToRender = [];
-
-        if (automationsToShow) {
-            // Si venimos del calendario, usamos los datos filtrados
-            dataToRender = automationsToShow;
-        } else {
-            // Si venimos del menú lateral, cargamos todo (o usamos la caché)
-            if (fullAutomationList.length === 0) {
-                await macroGetAllAutomationDetails();
-            }
-            dataToRender = fullAutomationList;
-        }
-        
-        renderAutomationsTable(dataToRender);
-    }
-
-	// ==========================================================
-	// --- 6. MANIPULACIÓN DEL DOM Y COMPONENTES ---
-	// ==========================================================
-	/** Limpia los datos del calendario y resetea la vista. */
-	function clearCalendarData() {
-		// Resetea el array de automatizaciones en memoria.
-		allAutomations = [];
-		// Limpia el nombre del cliente para el que se guardaron los datos.
-		calendarDataForClient = '';
-		// Limpia la lista de automatizaciones del día en la barra lateral.
-		if (automationList) {
-			automationList.innerHTML = '<p>Selecciona un día para ver los detalles.</p>';
-		}
-		// Vuelve a dibujar el calendario, que ahora estará vacío (sin días marcados).
-		if (calendarGrid) {
-		   generateCalendar();
-		}
-		logMessage('Datos del calendario limpiados debido al cambio de cliente.');
-	}
-
-	/** Crea una fila para la tabla de campos, con un botón de borrado funcional. */
-	function createTableRow(data = {}) {
-		const row = document.createElement('tr');
-		// Define los datos por defecto si no se proporcionan.
-		const fieldData = {
-			mc: data.mc || '',
-			type: data.type || '',
-			len: data.len || '',
-			defaultValue: data.defaultValue || '',
-			pk: data.pk || false,
-			req: data.req || false
-		};
-		// Crea el HTML interno de la fila.
-		row.innerHTML = `
-            <td contenteditable="true">${fieldData.mc}</td>
-            <td contenteditable="true">${fieldData.type}</td>
-            <td contenteditable="true">${fieldData.len}</td>
-            <td contenteditable="true">${fieldData.defaultValue}</td>
-            <td><input type="checkbox" ${fieldData.pk ? 'checked' : ''}></td>
-            <td><input type="checkbox" ${fieldData.req ? 'checked' : ''}></td>
-        `;
-		// Crea y añade el botón de borrado.
-		const deleteButton = document.createElement('button');
-		deleteButton.className = 'delete-row-btn';
-		deleteButton.title = 'Eliminar fila';
-		deleteButton.textContent = '×';
-		row.appendChild(deleteButton);
-		return row;
-	}
-
-	/** Muestra la sección del calendario y prepara su contenido. */
-	function viewCalendar() {
-		showSection('calendario-section'); // Muestra la sección.
-		populateCalendarYearSelect(); // Rellena el selector de año.
-		// Intenta cargar los datos del calendario desde el almacenamiento local.
-		const savedDataRaw = localStorage.getItem('calendarAutomations');
-		if (savedDataRaw) {
-			const savedData = JSON.parse(savedDataRaw);
-			const currentClient = clientNameInput.value;
-			// Comprueba si los datos guardados corresponden al cliente actual.
-			if (savedData.client === currentClient) {
-				allAutomations = savedData.automations;
-				calendarDataForClient = savedData.client;
-				logMessage(`${allAutomations.length} automatizaciones cargadas de la memoria local.`);
-				generateCalendar(); // Dibuja el calendario con los datos cargados.
-				return;
+		try {
+			const apiConfig = await getAuthenticatedConfig();
+			const headers = { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" };
+			const baseActionURL = `${apiConfig.restUri}legacy/v1/beta/bulk/automations/automation/definition/`;
+			let actionURL;
+			switch (actionName) {
+				case 'pause': actionURL = `${baseActionURL}?action=pauseSchedule`; break;
+				case 'run': actionURL = `${baseActionURL}?action=start`; break;
+				case 'activate': actionURL = `${baseActionURL}?action=schedule`; break;
+				default: throw new Error(`Acción desconocida: ${actionName}`);
 			}
+
+			for (const auto of selectedAutomations) {
+				let payload = { id: auto.id };
+				logMessage(`Procesando '${auto.name}'...`);
+				if (actionName === 'activate') {
+					try {
+						const detailUrl = `${apiConfig.restUri}legacy/v1/beta/bulk/automations/automation/definition/${auto.id}`;
+						logApiCall({ step: `Get schedule for ${auto.name}`, endpoint: detailUrl });
+						const detailResponse = await fetch(detailUrl, { headers });
+						const autoDetails = await detailResponse.json();
+						if (!autoDetails.scheduleObject?.id) throw new Error("No se pudo obtener el 'scheduleObject.id'");
+						payload = { id: auto.id, scheduleObject: { id: autoDetails.scheduleObject.id } };
+					} catch (error) {
+						failures.push({ name: auto.name, reason: error.message });
+						continue;
+					}
+				}
+				logApiCall({ action: actionName, endpoint: actionURL, payload });
+				const actionResponse = await fetch(actionURL, { method: 'POST', headers, body: JSON.stringify(payload) });
+				if (actionResponse.ok) {
+					successes.push({ name: auto.name });
+					logApiResponse({ for: auto.name, status: 'Success' });
+				} else {
+					const responseData = await actionResponse.json();
+					failures.push({ name: auto.name, reason: responseData.message || `Error ${actionResponse.status}` });
+					logApiResponse({ for: auto.name, status: 'Failure', response: responseData });
+				}
+			}
+		} catch (error) {
+			logMessage(`Error fatal durante la acción '${actionName}': ${error.message}`);
+			alert(`Error fatal: ${error.message}`);
+		} finally {
+			const alertSummary = `Acción '${actionName}' completada. Éxitos: ${successes.length}, Fallos: ${failures.length}.`;
+			let logSummary = alertSummary;
+			if (failures.length > 0) {
+				const failureDetails = failures.map(f => `  - ${f.name}: ${f.reason}`).join('\n');
+				logSummary += `\n\n--- Detalles de Fallos ---\n${failureDetails}`;
+			}
+			logMessage(logSummary);
+			alert(alertSummary);
+			unblockUI();
+			endLogBuffering();
+			refreshAutomationsTableBtn.click();
 		}
-		// Si no hay datos guardados o son de otro cliente, muestra el calendario vacío.
-		allAutomations = [];
-		generateCalendar();
-		logMessage('No hay datos de calendario. Pulsa "Refrescar Datos".');
 	}
 
-	/** Rellena la tabla de campos con un array de objetos de campo. */
-	function populateFieldsTable(fields = []) {
-		observer.disconnect();
-		fieldsTableBody.innerHTML = '';
-		if (fields.length > 0) {
-			fields.forEach(fieldData => fieldsTableBody.appendChild(createTableRow(fieldData)));
+
+	// ==========================================================
+	// --- 5. FUNCIONES AUXILIARES (HELPERS) ---
+	// ==========================================================
+	
+	// --- 5.1. Helpers de API (SOAP, REST) ---
+
+	/**
+	 * Ejecuta una petición SOAP genérica, maneja la respuesta y los errores.
+	 * @param {string} soapUri - La URL del endpoint SOAP.
+	 * @param {string} soapPayload - El cuerpo XML de la petición.
+	 * @param {string} successMessage - Mensaje a mostrar en caso de éxito.
+	 * @returns {Promise<string>} La respuesta XML en formato de texto.
+	 */
+	async function executeSoapRequest(soapUri, soapPayload, successMessage) {
+		logApiCall({ endpoint: soapUri, payload: soapPayload });
+		const response = await fetch(soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload });
+		const responseText = await response.text();
+		logApiResponse({ status: response.status, body: responseText });
+		if (responseText.includes('<OverallStatus>OK</OverallStatus>')) {
+			logMessage(successMessage);
+			if (!successMessage.includes("Búsqueda")) alert(successMessage);
+			return responseText;
 		} else {
-			addNewField(false);
-		}
-		updateSubscriberKeyFieldOptions();
-		observer.observe(fieldsTableBody, observerConfig);
-	}
-	/** Limpia completamente la tabla de campos. */
-	function clearFieldsTable() {
-		observer.disconnect();
-		fieldsTableBody.innerHTML = '';
-		selectedRow = null;
-		addNewField(false);
-		updateSubscriberKeyFieldOptions();
-		populateDeletionPicklist([]);
-		observer.observe(fieldsTableBody, observerConfig);
-	}
-	/** Añade una nueva fila vacía a la tabla de campos. */
-	function addNewField(observe = true) {
-		if (!observe) observer.disconnect();
-		fieldsTableBody.appendChild(createTableRow());
-		if (!observe) {
-			updateSubscriberKeyFieldOptions();
-			observer.observe(fieldsTableBody, observerConfig);
+			const errorMatch = responseText.match(/<StatusMessage>(.*?)<\/StatusMessage>/);
+			throw new Error(errorMatch ? errorMatch[1] : 'Error desconocido en la respuesta SOAP.');
 		}
 	}
-	/** Rellena la tabla con campos de ejemplo de cada tipo. */
-	function createDummyFields() {
-		populateFieldsTable([{
-			mc: 'NombreCompleto',
-			type: 'Text',
-			len: '100',
-			pk: true,
-			req: true
-		}, {
-			mc: 'Email',
-			type: 'EmailAddress',
-			len: '254',
-			req: true
-		}, {
-			mc: 'SincronizarMC',
-			type: 'Boolean',
-			defaultValue: 'true'
-		}, {
-			mc: 'FechaNacimiento',
-			type: 'Date'
-		}, {
-			mc: 'Recibo',
-			type: 'Decimal',
-			len: '18,2'
-		}, {
-			mc: 'Telefono',
-			type: 'Phone'
-		}, {
-			mc: 'Locale',
-			type: 'Locale'
-		}, {
-			mc: 'Numero',
-			type: 'Number'
-		}]);
-		populateDeletionPicklist([]);
+
+	/**
+	 * Construye el fragmento XML para un único campo de Data Extension.
+	 * @param {object} fieldData - Objeto con los datos del campo (name, type, length, etc.).
+	 * @returns {string} La cadena XML para el campo.
+	 */
+	function buildFieldXml(fieldData) {
+		const { name, type, length, defaultValue, isPrimaryKey, isRequired } = fieldData;
+		let fieldXml = '';
+		const commonNodes = `<CustomerKey>${name}</CustomerKey><Name>${name}</Name><IsRequired>${isRequired}</IsRequired><IsPrimaryKey>${isPrimaryKey}</IsPrimaryKey>`;
+		const defaultValueNode = defaultValue ? `<DefaultValue>${defaultValue}</DefaultValue>` : '';
+		switch (type.toLowerCase()) {
+			case 'text': fieldXml = `<Field>${commonNodes}<FieldType>Text</FieldType>${length ? `<MaxLength>${length}</MaxLength>` : ''}${defaultValueNode}</Field>`; break;
+			case 'number': fieldXml = `<Field>${commonNodes}<FieldType>Number</FieldType>${defaultValueNode}</Field>`; break;
+			case 'date': fieldXml = `<Field>${commonNodes}<FieldType>Date</FieldType>${defaultValueNode}</Field>`; break;
+			case 'boolean': fieldXml = `<Field>${commonNodes}<FieldType>Boolean</FieldType>${defaultValueNode}</Field>`; break;
+			case 'emailaddress': fieldXml = `<Field>${commonNodes}<FieldType>EmailAddress</FieldType></Field>`; break;
+			case 'phone': fieldXml = `<Field>${commonNodes}<FieldType>Phone</FieldType></Field>`; break;
+			case 'locale': fieldXml = `<Field>${commonNodes}<FieldType>Locale</FieldType></Field>`; break;
+			case 'decimal':
+				const [maxLength, scale] = (length || ',').split(',').map(s => s.trim());
+				fieldXml = `<Field>${commonNodes}<FieldType>Decimal</FieldType>${maxLength ? `<MaxLength>${maxLength}</MaxLength>` : ''}${scale ? `<Scale>${scale}</Scale>` : ''}${defaultValueNode}</Field>`;
+				break;
+			default: return '';
+		}
+		return fieldXml.replace(/\s+/g, ' ').trim();
 	}
-	/** Extrae los datos de todas las filas de la tabla de campos y los devuelve como un array de objetos. */
-	function getFieldsDataFromTable() {
-		return Array.from(fieldsTableBody.querySelectorAll('tr'))
-			.map(row => {
-				const cells = row.querySelectorAll('td');
-				const name = cells[0].textContent.trim();
-				const type = cells[1].textContent.trim();
-				return (name && type) ? {
-					name,
-					type,
-					length: cells[2].textContent.trim(),
-					defaultValue: cells[3].textContent.trim(),
-					isPrimaryKey: cells[4].querySelector('input')
-						.checked,
-					isRequired: cells[5].querySelector('input')
-						.checked
-				} : null;
-			})
-			.filter(Boolean);
+
+	/**
+	 * Obtiene la ruta completa de una carpeta de forma recursiva.
+	 * @param {string} folderId - El ID de la carpeta a buscar.
+	 * @param {object} apiConfig - La configuración de la API autenticada.
+	 * @returns {Promise<string>} La ruta completa de la carpeta (ej. "Carpeta A > Carpeta B").
+	 */
+	async function getFolderPath(folderId, apiConfig) {
+		if (!folderId || isNaN(parseInt(folderId))) return '';
+		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataFolder</ObjectType><Properties>Name</Properties><Properties>ParentFolder.ID</Properties><Filter xsi:type="SimpleFilterPart"><Property>ID</Property><SimpleOperator>equals</SimpleOperator><Value>${folderId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+		const responseText = await (await fetch(apiConfig.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload })).text();
+		const resultNode = new DOMParser().parseFromString(responseText, "application/xml").querySelector("Results");
+		if (!resultNode) return '';
+		const name = resultNode.querySelector("Name")?.textContent;
+		const parentId = resultNode.querySelector("ParentFolder > ID")?.textContent;
+		const parentPath = await getFolderPath(parentId, apiConfig);
+		return parentPath ? `${parentPath} > ${name}` : name;
 	}
-	/** Actualiza las opciones del desplegable de Subscriber Key basándose en los campos de la tabla. */
-	function updateSubscriberKeyFieldOptions() {
-		const currentSelection = subscriberKeyFieldSelect.value;
-		subscriberKeyFieldSelect.innerHTML = '<option value="">-- Seleccione un campo --</option>';
-		getFieldsDataFromTable()
-			.forEach(field => {
-				if (field.name) {
-					const option = new Option(field.name, field.name);
-					option.dataset.type = field.type;
-					subscriberKeyFieldSelect.appendChild(option);
-				}
+
+	/**
+	 * Obtiene el ObjectID de una Data Extension a partir de su nombre.
+	 * @param {string} deName - El nombre de la DE.
+	 * @param {object} apiConfig - Configuración de la API.
+	 * @returns {Promise<object>} Un objeto con la propiedad `ObjectID`.
+	 */
+	async function getDeObjectId(deName, apiConfig) {
+		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>ObjectID</Properties><Filter xsi:type="SimpleFilterPart"><Property>Name</Property><SimpleOperator>equals</SimpleOperator><Value>${deName}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+		const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload, `ObjectID para '${deName}' obtenido.`);
+		const objectIDNode = new DOMParser().parseFromString(responseText, "application/xml").querySelector("Results > ObjectID");
+		if (!objectIDNode) throw new Error(`No se encontró DE con el nombre "${deName}".`);
+		return { ObjectID: objectIDNode.textContent };
+	}
+
+	/**
+	 * Busca actividades de importación que apunten a un ObjectID de una DE.
+	 * @param {string} deObjectId - El ObjectID de la DE de destino.
+	 * @param {object} apiConfig - Configuración de la API.
+	 * @returns {Promise<Array>} Un array de objetos de importación encontrados.
+	 */
+	async function findImportsForDE(deObjectId, apiConfig) {
+		logMessage(`Buscando Imports para el ObjectID: ${deObjectId}`);
+		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>ImportDefinition</ObjectType><Properties>Name</Properties><Properties>Description</Properties><Filter xsi:type="SimpleFilterPart"><Property>DestinationObject.ObjectID</Property><SimpleOperator>equals</SimpleOperator><Value>${deObjectId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+		const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload, `Búsqueda de Imports completada.`);
+		return Array.from(new DOMParser().parseFromString(responseText, "application/xml").querySelectorAll("Results")).map(node => ({
+			name: node.querySelector("Name")?.textContent || 'N/A',
+			type: 'Import',
+			description: node.querySelector("Description")?.textContent || '---'
+		}));
+	}
+	
+	/**
+	 * Busca QueryDefinitions que apunten a una DE por su nombre.
+	 * @param {string} deName - El nombre de la DE de destino.
+	 * @param {object} apiConfig - Configuración de la API.
+	 * @returns {Promise<Array>} Un array de objetos de query encontrados.
+	 */
+	async function findQueriesForDE(deName, apiConfig) {
+		logMessage(`Buscando Queries que apunten a la DE: ${deName}`);
+		const filterXml = `<Filter xsi:type="SimpleFilterPart"><Property>DataExtensionTarget.Name</Property><SimpleOperator>equals</SimpleOperator><Value>${deName}</Value></Filter>`;
+		return findQueriesByFilter(filterXml, apiConfig);
+	}
+
+	/**
+	 * Busca QueryDefinitions en base a un filtro SOAP genérico y enriquece los resultados.
+	 * @param {string} filterXml - El fragmento XML del filtro a aplicar.
+	 * @param {object} apiConfig - La configuración de la API.
+	 * @returns {Promise<Array>} Una promesa que resuelve a un array de queries encontradas.
+	 */
+	async function findQueriesByFilter(filterXml, apiConfig) {
+		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>QueryDefinition</ObjectType><Properties>Name</Properties><Properties>QueryText</Properties><Properties>TargetUpdateType</Properties><Properties>ObjectID</Properties>${filterXml}</RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+		const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload, `Búsqueda de Queries completada.`);
+		const queries = Array.from(new DOMParser().parseFromString(responseText, "application/xml").querySelectorAll("Results")).map(node => ({
+			name: node.querySelector("Name")?.textContent || 'N/A',
+			type: 'Query',
+			description: node.querySelector("QueryText")?.textContent || '---',
+			action: node.querySelector("TargetUpdateType")?.textContent || 'N/A',
+			objectID: node.querySelector("ObjectID")?.textContent
+		}));
+		logMessage(`Encontradas ${queries.length} queries. Buscando sus automatizaciones...`);
+		return await Promise.all(queries.map(q => findAutomationForQuery(q, apiConfig)));
+	}
+
+	/**
+	 * Busca la automatización a la que pertenece una actividad de query.
+	 * @param {object} query - El objeto de la query.
+	 * @param {object} apiConfig - Configuración de la API.
+	 * @returns {Promise<object>} El objeto de la query enriquecido con `automationName` y `step`.
+	 */
+	async function findAutomationForQuery(query, apiConfig) {
+		if (!query.objectID) return { ...query, automationName: '---', step: '---' };
+		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>Activity</ObjectType><Properties>Program.ObjectID</Properties><Filter xsi:type="SimpleFilterPart"><Property>Definition.ObjectID</Property><SimpleOperator>equals</SimpleOperator><Value>${query.objectID}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+		const responseText = await (await fetch(apiConfig.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload })).text();
+		const programIdNode = new DOMParser().parseFromString(responseText, "application/xml").querySelector("Program > ObjectID");
+		if (!programIdNode) return { ...query, automationName: '---', step: '---' };
+		const restUrl = `${apiConfig.restUri}automation/v1/automations/${programIdNode.textContent}`;
+		const autoData = await (await fetch(restUrl, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } })).json();
+		const step = autoData.steps?.find(s => s.activities?.some(a => a.activityObjectId === query.objectID))?.step || 'N/A';
+		return { ...query, automationName: autoData.name || 'N/A', step };
+	}
+
+	/**
+	 * Realiza una búsqueda de suscriptor por un campo específico.
+	 * @param {string} property - El campo por el que buscar ('SubscriberKey' o 'EmailAddress').
+	 * @param {string} value - El valor a buscar.
+	 * @param {object} apiConfig - La configuración de la API (token, URI, etc.).
+	 * @returns {Promise<Array>} - Una promesa que resuelve a un array de resultados.
+	 */
+	async function searchSubscriberByProperty(property, value, apiConfig) {
+		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>Subscriber</ObjectType><Properties>CreatedDate</Properties><Properties>Client.ID</Properties><Properties>EmailAddress</Properties><Properties>SubscriberKey</Properties><Properties>Status</Properties><Properties>UnsubscribedDate</Properties><Filter xsi:type="SimpleFilterPart"><Property>${property}</Property><SimpleOperator>equals</SimpleOperator><Value>${value}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+		const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload, `Búsqueda por ${property} completada.`);
+		return parseCustomerSearchResponse(responseText);
+	}
+
+	// --- 5.2. Parsers (XML, JSON) ---
+	
+	/**
+	 * Parsea una respuesta SOAP de campos de DE y la convierte en un array de objetos.
+	 * @param {string} xmlString - La respuesta XML de la API.
+	 * @returns {Promise<Array>} Un array de objetos, cada uno representando un campo.
+	 */
+	function parseFullSoapFieldsAsync(xmlString) {
+		return new Promise(resolve => {
+			const fields = [];
+			const parser = new DOMParser();
+			const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+			const getText = (node, tagName) => node.querySelector(tagName)?.textContent || '';
+			xmlDoc.querySelectorAll("Results").forEach(node => {
+				const fieldType = getText(node, 'FieldType');
+				let length = getText(node, 'MaxLength');
+				if (fieldType.toLowerCase() === 'decimal' && getText(node, 'Scale') !== '0') length = `${length},${getText(node, 'Scale')}`;
+				fields.push({ mc: getText(node, 'Name'), type: fieldType, len: length, defaultValue: getText(node, 'DefaultValue'), pk: getText(node, 'IsPrimaryKey') === 'true', req: getText(node, 'IsRequired') === 'true', ordinal: parseInt(getText(node, 'Ordinal'), 10) || 0, objectId: getText(node, 'ObjectID') });
 			});
-		if (Array.from(subscriberKeyFieldSelect.options)
-			.some(opt => opt.value === currentSelection)) {
-			subscriberKeyFieldSelect.value = currentSelection;
-		} else {
-			subscriberKeyFieldSelect.value = '';
-		}
+			resolve(fields.sort((a, b) => a.ordinal - b.ordinal));
+		});
 	}
-	/** Habilita o deshabilita los campos de "Sendable" según si el checkbox está marcado. */
-	function handleSendableChange() {
-		const isChecked = isSendableCheckbox.checked;
-		subscriberKeyFieldSelect.disabled = !isChecked;
-		if (!isChecked) {
-			subscriberKeyFieldSelect.value = '';
-			subscriberKeyTypeInput.value = '';
-		}
+
+	/**
+	 * Parsea la respuesta de búsqueda de una DE para extraer su nombre y el ID de su carpeta.
+	 * @param {string} xmlString - La respuesta XML de la API.
+	 * @returns {Promise<object>} Un objeto con `categoryId` y `deName`, o un `error`.
+	 */
+	function parseDESearchResponse(xmlString) {
+		return new Promise(resolve => {
+			const xmlDoc = new DOMParser().parseFromString(xmlString, "application/xml");
+			if (xmlDoc.querySelector("OverallStatus")?.textContent !== 'OK') {
+				return resolve({ error: xmlDoc.querySelector("StatusMessage")?.textContent || 'Error desconocido.' });
+			}
+			const resultNode = xmlDoc.querySelector("Results");
+			if (!resultNode) return resolve({ error: "No se encontró la Data Extension." });
+			resolve({ categoryId: resultNode.querySelector("CategoryID")?.textContent, deName: resultNode.querySelector("Name")?.textContent });
+		});
 	}
-	/** Rellena el desplegable de campos a eliminar con los campos recuperados de una DE. */
-	function populateDeletionPicklist(fields) {
-		targetFieldSelect.innerHTML = '';
-		const validFields = fields.filter(f => f.mc && f.objectId);
-		if (validFields.length > 0) {
-			targetFieldSelect.innerHTML = '<option value="">-- Seleccione un campo --</option>';
-			validFields.forEach(field => targetFieldSelect.appendChild(new Option(field.mc, field.objectId)));
-			targetFieldSelect.disabled = false;
-		} else {
-			targetFieldSelect.innerHTML = '<option value="">No hay campos recuperados</option>';
-			targetFieldSelect.disabled = true;
+	
+	/**
+	 * Parsea la respuesta XML de la búsqueda de suscriptores y la convierte en un array de objetos.
+	 * @param {string} xmlString - La respuesta XML de la API.
+	 * @returns {Array} Un array de objetos de suscriptor.
+	 */
+	function parseCustomerSearchResponse(xmlString) {
+		const parser = new DOMParser();
+		const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+		if (xmlDoc.querySelector("OverallStatus")?.textContent.includes('Error')) {
+			throw new Error(xmlDoc.querySelector("StatusMessage")?.textContent || 'Error desconocido en la respuesta SOAP.');
 		}
+		return Array.from(xmlDoc.querySelectorAll("Results")).map(node => {
+			const getText = (tagName) => node.querySelector(tagName)?.textContent || null;
+			return { subscriberKey: getText("SubscriberKey") || '---', emailAddress: getText("EmailAddress") || '---', status: getText("Status") || '---', createdDate: getText("CreatedDate") ? new Date(getText("CreatedDate")).toLocaleString() : '---', unsubscribedDate: getText("UnsubscribedDate") ? new Date(getText("UnsubscribedDate")).toLocaleString() : '---', isSubscriber: true };
+		});
 	}
-	/** Dibuja la tabla de resultados para el buscador de orígenes. */
+
+	// --- 5.3. Renderizadores de Tablas ---
+	
+	/**
+	 * Dibuja la tabla de resultados para el buscador de orígenes de datos.
+	 * @param {Array} sources - Array de actividades (imports, queries) encontradas.
+	 */
 	function renderDataSourcesTable(sources) {
 		dataSourcesTbody.innerHTML = '';
 		if (sources.length === 0) {
@@ -2077,28 +1191,426 @@ document.addEventListener('DOMContentLoaded', function () {
 			dataSourcesTbody.appendChild(row);
 		});
 	}
-	/** Procesa los datos de automatización crudos de la API a un formato simple para el calendario. */
-	function processAndStoreAutomations(items) {
-		allAutomations = items
-			.map(auto => {
-				// La fecha que nos interesa de la API /bulk/ es 'scheduledTime'.
-				const dateToUse = auto.scheduledTime;
-				
-				if (!dateToUse) return null;
 
-				const dateObj = new Date(dateToUse);
-				if (isNaN(dateObj.getTime())) return null;
-
-				const scheduledTime = dateObj.toISOString().split('T')[0];
-				
-				const scheduledHour = dateObj.toLocaleTimeString('es-ES', {
-					hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid'
-				});
-				
-				return { name: auto.name, status: auto.status, scheduledTime, scheduledHour };
-			})
-			.filter(Boolean); // Limpia cualquier nulo que se haya generado.
+	/** 
+	 * Pinta los resultados de la búsqueda de clientes en la tabla y gestiona la selección automática.
+	 * @param {Array} results - El array de suscriptores encontrados.
+	 */
+	function renderCustomerSearchResults(results) {
+		customerSearchTbody.innerHTML = '';
+		selectedCustomerRow = null;
+		selectedSubscriberData = null;
+		getCustomerSendsBtn.disabled = true;
+		getCustomerJourneysBtn.disabled = true;
+		if (!results || results.length === 0) {
+			customerSearchTbody.innerHTML = '<tr><td colspan="6">No se encontraron clientes con ese criterio.</td></tr>';
+			return;
+		}
+		results.forEach((sub, index) => {
+			const row = document.createElement('tr');
+			row.dataset.subscriberKey = sub.subscriberKey;
+			row.dataset.isSubscriber = sub.isSubscriber;
+			row.innerHTML = `<td>${sub.subscriberKey}</td><td>${sub.emailAddress}</td><td>${sub.status}</td><td>${sub.createdDate}</td><td>${sub.unsubscribedDate}</td><td>${sub.isSubscriber ? 'Sí' : 'No'}</td>`;
+			if (results.length === 1 && index === 0) {
+				row.classList.add('selected');
+				selectedCustomerRow = row;
+				selectedSubscriberData = { subscriberKey: sub.subscriberKey, isSubscriber: sub.isSubscriber };
+				getCustomerJourneysBtn.disabled = false;
+				if (sub.isSubscriber) getCustomerSendsBtn.disabled = false;
+			}
+			customerSearchTbody.appendChild(row);
+		});
 	}
+	
+	/**
+	 * Pinta los detalles de los journeys de un cliente en su tabla correspondiente.
+	 * @param {Array} journeys - Array de objetos de Journey.
+	 */
+	function renderCustomerJourneysTable(journeys) {
+		customerJourneysTbody.innerHTML = '';
+		if (!journeys || journeys.length === 0) {
+			customerJourneysTbody.innerHTML = '<tr><td colspan="6">No se pudieron recuperar los detalles de los Journeys.</td></tr>';
+			return;
+		}
+		journeys.forEach(journey => {
+			const row = document.createElement('tr');
+			row.innerHTML = `<td>${journey.name || '---'}</td><td>${journey.id || '---'}</td><td>${journey.key || '---'}</td><td>${journey.version || '---'}</td><td>${journey.createdDate ? new Date(journey.createdDate).toLocaleString() : '---'}</td><td>${journey.modifiedDate ? new Date(journey.modifiedDate).toLocaleString() : '---'}</td>`;
+			customerJourneysTbody.appendChild(row);
+		});
+	}
+	
+	/**
+	 * Renderiza una tabla dinámica a partir de los items de una Data View.
+	 * @param {HTMLElement} containerElement - El div donde se inyectará la tabla.
+	 * @param {Array} items - El array de 'items' de la respuesta de la API.
+	 */
+	function renderDataViewTable(containerElement, items) {
+		containerElement.innerHTML = '';
+		if (!items || items.length === 0) {
+			containerElement.innerHTML = '<p>No se encontraron registros.</p>';
+			return;
+		}
+		const table = document.createElement('table');
+		const thead = document.createElement('thead');
+		const tbody = document.createElement('tbody');
+		const headerRow = document.createElement('tr');
+		const headers = Object.keys(items[0].values);
+		headers.forEach(headerText => {
+			const th = document.createElement('th');
+			th.textContent = headerText;
+			headerRow.appendChild(th);
+		});
+		thead.appendChild(headerRow);
+		items.forEach(item => {
+			const row = document.createElement('tr');
+			headers.forEach(header => {
+				const td = document.createElement('td');
+				td.textContent = item.values[header] || '---';
+				row.appendChild(td);
+			});
+			tbody.appendChild(row);
+		});
+		table.append(thead, tbody);
+		containerElement.appendChild(table);
+	}
+
+	/**
+	 * Pinta los resultados de la búsqueda de texto en queries en su tabla.
+	 * @param {Array} queries - Array de queries encontradas.
+	 */
+	function renderQuerySearchResults(queries) {
+		querySearchResultsTbody.innerHTML = '';
+		const showQuery = showQueryTextCheckbox.checked;
+		const displayStyle = showQuery ? '' : 'none';
+		const table = document.getElementById('query-search-results-table');
+		table.querySelector('thead th:nth-child(4)').style.display = displayStyle;
+		if (queries.length === 0) {
+			querySearchResultsTbody.innerHTML = '<tr><td colspan="4">No se encontraron queries con ese texto.</td></tr>';
+			return;
+		}
+		queries.forEach(query => {
+			const row = document.createElement('tr');
+			const queryLink = constructQueryLink(query.objectID);
+			const queryNameCell = queryLink ? `<td><a href="${queryLink}" class="external-link" title="Abrir query en Marketing Cloud">${query.name}</a></td>` : `<td>${query.name}</td>`;
+			row.innerHTML = `${queryNameCell}<td>${query.automationName || '---'}</td><td>${query.step || '---'}</td><td style="white-space: pre-wrap; word-break: break-all; display: ${displayStyle};">${query.description}</td>`;
+			querySearchResultsTbody.appendChild(row);
+		});
+	}
+
+	/**
+     * Dibuja la tabla de la vista "Gestión de Automatismos" con los datos proporcionados.
+     * @param {Array} automations - El array de automatismos a mostrar.
+     */
+	function renderAutomationsTable(automations) {
+		automationsTbody.innerHTML = '';
+		updateSortIndicators();
+		if (!automations || automations.length === 0) {
+			automationsTbody.innerHTML = '<tr><td colspan="4">No hay automatismos para mostrar.</td></tr>';
+			return;
+		}
+		const sortedData = sortAutomations(automations);
+		sortedData.forEach(auto => {
+			const row = document.createElement('tr');
+			row.dataset.automationId = auto.id;
+			row.innerHTML = `<td>${auto.name || 'Sin Nombre'}</td><td>${formatDateToSpanishTime(auto.lastRunTime)}</td><td>${formatDateToSpanishTime(auto.scheduledTime)}</td><td>${auto.status || '---'}</td>`;
+			automationsTbody.appendChild(row);
+		});
+	}
+
+	// --- 5.4. Otros Helpers ---
+	
+	/**
+	 * Construye la URL para abrir una Query Activity en la UI de Automation Studio.
+	 * @param {string} queryObjectId - El ObjectID de la Query Definition.
+	 * @returns {string|null} La URL completa o null si falta información.
+	 */
+	function constructQueryLink(queryObjectId) {
+		if (!currentOrgInfo || !currentOrgInfo.stack_key || !businessUnitInput.value) return null;
+		const stack = currentOrgInfo.stack_key.toLowerCase();
+		const mid = businessUnitInput.value;
+		return `https://mc.${stack}.exacttarget.com/cloud/#app/Automation%20Studio/AutomationStudioFuel3/%23ActivityDetails/300/${queryObjectId}`;
+	}
+
+	/**
+     * Formatea una cadena de fecha ISO (UTC) a una cadena legible en horario de España.
+     * @param {string} dateString - La fecha en formato ISO (ej: "2025-08-19T19:34:00Z").
+     * @returns {string} La fecha formateada o '---' si no es válida.
+     */
+	function formatDateToSpanishTime(dateString) {
+		if (!dateString || dateString.startsWith('0001-01-01')) return '---';
+		try {
+			const date = new Date(dateString);
+			return date.toLocaleString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Europe/Madrid' });
+		} catch (error) {
+			return 'Fecha inválida';
+		}
+	}
+
+	/**
+     * Rellena el desplegable de estados con los estados únicos de la lista de automatismos.
+     * @param {Array} automations - La lista completa de automatismos.
+     */
+	function populateStatusFilter(automations) {
+		const currentSelectedValue = automationStatusFilter.value;
+		automationStatusFilter.innerHTML = '<option value="">Todos los estados</option>';
+		const statuses = [...new Set(automations.map(auto => auto.status).filter(Boolean))].sort();
+		statuses.forEach(status => automationStatusFilter.appendChild(new Option(status, status)));
+		automationStatusFilter.value = currentSelectedValue;
+	}
+
+	/**
+     * Aplica los filtros de nombre y estado a la lista de automatismos y redibuja la tabla.
+     */
+	function applyFiltersAndRender() {
+		const nameFilter = automationNameFilter.value.toLowerCase().trim();
+		const statusFilter = automationStatusFilter.value;
+		let filteredAutomations = fullAutomationList;
+		if (nameFilter) {
+			filteredAutomations = filteredAutomations.filter(auto => auto.name.toLowerCase().includes(nameFilter));
+		}
+		if (statusFilter) {
+			filteredAutomations = filteredAutomations.filter(auto => auto.status === statusFilter);
+		}
+		renderAutomationsTable(filteredAutomations);
+	}
+
+	/**
+     * Evalúa la selección de automatismos y actualiza el estado (habilitado/deshabilitado)
+     * de los botones de acción masiva.
+     */
+	function updateAutomationButtonsState() {
+		const selectedRows = document.querySelectorAll('#automations-table tbody tr.selected');
+		const selectedAutomations = Array.from(selectedRows).map(row => fullAutomationList.find(auto => auto.id === row.dataset.automationId)).filter(Boolean);
+		if (selectedAutomations.length === 0) {
+			activateAutomationBtn.disabled = true; runAutomationBtn.disabled = true; stopAutomationBtn.disabled = true;
+			return;
+		}
+		const statuses = [...new Set(selectedAutomations.map(auto => auto.status))];
+		if (statuses.length > 1) {
+			activateAutomationBtn.disabled = true; runAutomationBtn.disabled = true; stopAutomationBtn.disabled = true;
+			return;
+		}
+		const singleStatus = statuses[0].toLowerCase();
+		switch (singleStatus) {
+			case 'pausedschedule':
+			case 'stopped':
+				activateAutomationBtn.disabled = false; runAutomationBtn.disabled = false; stopAutomationBtn.disabled = true;
+				break;
+			case 'scheduled':
+			case 'ready':
+				activateAutomationBtn.disabled = true; runAutomationBtn.disabled = true; stopAutomationBtn.disabled = false;
+				break;
+			default:
+				activateAutomationBtn.disabled = true; runAutomationBtn.disabled = true; stopAutomationBtn.disabled = true;
+		}
+	}
+	
+	/**
+     * Ordena un array de automatismos según la columna y dirección actuales.
+     * @param {Array} dataToSort - El array de automatismos a ordenar.
+     * @returns {Array} El array ordenado.
+     */
+	function sortAutomations(dataToSort) {
+		const sortKey = currentSortColumn;
+		const direction = currentSortDirection === 'asc' ? 1 : -1;
+		const getValue = (obj, key) => (key === 'schedule.scheduledTime') ? obj.schedule?.scheduledTime : obj[key];
+		return [...dataToSort].sort((a, b) => {
+			let valA = getValue(a, sortKey);
+			let valB = getValue(b, sortKey);
+			if (valA == null) return 1;
+			if (valB == null) return -1;
+			let compareResult = 0;
+			if (sortKey.includes('Time')) compareResult = new Date(valA) - new Date(valB);
+			else compareResult = String(valA).localeCompare(String(valB), undefined, { sensitivity: 'base' });
+			const finalResult = compareResult * direction;
+			if (finalResult === 0 && sortKey !== 'name') {
+				return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+			}
+			return finalResult;
+		});
+	}
+
+	/**
+     * Actualiza los indicadores visuales de ordenación (flechas) en las cabeceras de la tabla.
+     */
+	function updateSortIndicators() {
+		document.querySelectorAll('#automations-table .sortable-header').forEach(header => {
+			header.classList.remove('sort-asc', 'sort-desc');
+			if (header.dataset.sortBy === currentSortColumn) {
+				header.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+			}
+		});
+	}
+
+
+	// ==========================================================
+	// --- 6. MANIPULACIÓN DEL DOM Y COMPONENTES ---
+	// ==========================================================
+	
+	// --- 6.1. Tabla de Campos ---
+
+	/**
+	 * Crea una nueva fila `<tr>` para la tabla de campos.
+	 * @param {object} [data={}] - Objeto opcional con datos para pre-rellenar la fila.
+	 * @returns {HTMLTableRowElement} El elemento de la fila creado.
+	 */
+	function createTableRow(data = {}) {
+		const row = document.createElement('tr');
+		const fieldData = { mc: data.mc || '', type: data.type || '', len: data.len || '', defaultValue: data.defaultValue || '', pk: data.pk || false, req: data.req || false };
+		row.innerHTML = `<td contenteditable="true">${fieldData.mc}</td><td contenteditable="true">${fieldData.type}</td><td contenteditable="true">${fieldData.len}</td><td contenteditable="true">${fieldData.defaultValue}</td><td><input type="checkbox" ${fieldData.pk ? 'checked' : ''}></td><td><input type="checkbox" ${fieldData.req ? 'checked' : ''}></td>`;
+		const deleteButton = document.createElement('button');
+		deleteButton.className = 'delete-row-btn';
+		deleteButton.title = 'Eliminar fila';
+		deleteButton.textContent = '×';
+		row.appendChild(deleteButton);
+		return row;
+	}
+	
+	/**
+	 * Rellena la tabla de campos con un array de objetos de campo.
+	 * @param {Array} [fields=[]] - El array de campos.
+	 */
+	function populateFieldsTable(fields = []) {
+		observer.disconnect();
+		fieldsTableBody.innerHTML = '';
+		if (fields.length > 0) {
+			fields.forEach(fieldData => fieldsTableBody.appendChild(createTableRow(fieldData)));
+		} else {
+			addNewField(false);
+		}
+		updateSubscriberKeyFieldOptions();
+		observer.observe(fieldsTableBody, observerConfig);
+	}
+	
+	/** Limpia completamente la tabla de campos y añade una fila vacía. */
+	function clearFieldsTable() {
+		observer.disconnect();
+		fieldsTableBody.innerHTML = '';
+		selectedRow = null;
+		addNewField(false);
+		updateSubscriberKeyFieldOptions();
+		populateDeletionPicklist([]);
+		observer.observe(fieldsTableBody, observerConfig);
+	}
+	
+	/** Añade una nueva fila vacía a la tabla de campos. */
+	function addNewField(observe = true) {
+		if (!observe) observer.disconnect();
+		fieldsTableBody.appendChild(createTableRow());
+		if (!observe) {
+			updateSubscriberKeyFieldOptions();
+			observer.observe(fieldsTableBody, observerConfig);
+		}
+	}
+	
+	/** Rellena la tabla con un conjunto de campos de ejemplo. */
+	function createDummyFields() {
+		populateFieldsTable([{ mc: 'NombreCompleto', type: 'Text', len: '100', pk: true, req: true }, { mc: 'Email', type: 'EmailAddress', len: '254', req: true }, { mc: 'SincronizarMC', type: 'Boolean', defaultValue: 'true' }, { mc: 'FechaNacimiento', type: 'Date' }, { mc: 'Recibo', type: 'Decimal', len: '18,2' }, { mc: 'Telefono', type: 'Phone' }, { mc: 'Locale', type: 'Locale' }, { mc: 'Numero', type: 'Number' }]);
+		populateDeletionPicklist([]);
+	}
+	
+	/**
+	 * Extrae los datos de todas las filas de la tabla de campos.
+	 * @returns {Array} Un array de objetos, cada uno representando un campo.
+	 */
+	function getFieldsDataFromTable() {
+		return Array.from(fieldsTableBody.querySelectorAll('tr')).map(row => {
+			const cells = row.querySelectorAll('td');
+			const name = cells[0].textContent.trim();
+			const type = cells[1].textContent.trim();
+			return (name && type) ? { name, type, length: cells[2].textContent.trim(), defaultValue: cells[3].textContent.trim(), isPrimaryKey: cells[4].querySelector('input').checked, isRequired: cells[5].querySelector('input').checked } : null;
+		}).filter(Boolean);
+	}
+	
+	/** Actualiza las opciones del desplegable de Subscriber Key basándose en los campos de la tabla. */
+	function updateSubscriberKeyFieldOptions() {
+		const currentSelection = subscriberKeyFieldSelect.value;
+		subscriberKeyFieldSelect.innerHTML = '<option value="">-- Seleccione un campo --</option>';
+		getFieldsDataFromTable().forEach(field => {
+			if (field.name) {
+				const option = new Option(field.name, field.name);
+				option.dataset.type = field.type;
+				subscriberKeyFieldSelect.appendChild(option);
+			}
+		});
+		subscriberKeyFieldSelect.value = Array.from(subscriberKeyFieldSelect.options).some(opt => opt.value === currentSelection) ? currentSelection : '';
+	}
+	
+	/** Habilita o deshabilita los campos de "Sendable" según el estado del checkbox. */
+	function handleSendableChange() {
+		subscriberKeyFieldSelect.disabled = !isSendableCheckbox.checked;
+		if (!isSendableCheckbox.checked) {
+			subscriberKeyFieldSelect.value = '';
+			subscriberKeyTypeInput.value = '';
+		}
+	}
+	
+	/**
+	 * Rellena el desplegable de campos a eliminar con los campos recuperados de una DE.
+	 * @param {Array} fields - Array de campos recuperados de la API.
+	 */
+	function populateDeletionPicklist(fields) {
+		targetFieldSelect.innerHTML = '';
+		const validFields = fields.filter(f => f.mc && f.objectId);
+		if (validFields.length > 0) {
+			targetFieldSelect.innerHTML = '<option value="">-- Seleccione un campo --</option>';
+			validFields.forEach(field => targetFieldSelect.appendChild(new Option(field.mc, field.objectId)));
+			targetFieldSelect.disabled = false;
+		} else {
+			targetFieldSelect.innerHTML = '<option value="">No hay campos recuperados</option>';
+			targetFieldSelect.disabled = true;
+		}
+	}
+
+	// --- 6.2. Calendario ---
+
+	/** Muestra la sección del calendario y la inicializa. */
+	function viewCalendar() {
+		showSection('calendario-section');
+		populateCalendarYearSelect();
+		const savedDataRaw = localStorage.getItem('calendarAutomations');
+		if (savedDataRaw) {
+			const savedData = JSON.parse(savedDataRaw);
+			if (savedData.client === clientNameInput.value) {
+				allAutomations = savedData.automations;
+				calendarDataForClient = savedData.client;
+				startLogBuffering();
+				logMessage(`${allAutomations.length} automatizaciones cargadas de la memoria local.`);
+				endLogBuffering();
+				generateCalendar();
+				return;
+			}
+		}
+		allAutomations = [];
+		generateCalendar();
+		startLogBuffering();
+		logMessage('No hay datos de calendario. Pulsa "Refrescar Datos".');
+		endLogBuffering();
+	}
+	
+	/** Limpia los datos del calendario y resetea la vista. */
+	function clearCalendarData() {
+		allAutomations = [];
+		calendarDataForClient = '';
+		if (automationList) automationList.innerHTML = '<p>Selecciona un día para ver los detalles.</p>';
+		if (calendarGrid) generateCalendar();
+		logMessage('Datos del calendario limpiados.');
+	}
+	
+	/**
+	 * Procesa los datos crudos de automatización de la API a un formato simple para el calendario.
+	 * @param {Array} items - Array de automatismos crudos de la API.
+	 */
+	function processAndStoreAutomations(items) {
+		allAutomations = items.map(auto => {
+			const dateToUse = auto.scheduledTime;
+			if (!dateToUse) return null;
+			const dateObj = new Date(dateToUse);
+			if (isNaN(dateObj.getTime())) return null;
+			return { name: auto.name, status: auto.status, scheduledTime: dateObj.toISOString().split('T')[0], scheduledHour: dateObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid' }) };
+		}).filter(Boolean);
+	}
+	
 	/** Dibuja la estructura completa del calendario para el año seleccionado. */
 	function generateCalendar() {
 		const year = calendarYearSelect.value;
@@ -2107,32 +1619,24 @@ document.addEventListener('DOMContentLoaded', function () {
 		const days = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sa", "Do"];
 		for (let i = 0; i < 12; i++) {
 			const monthDiv = document.createElement("div");
-			monthDiv.classList.add("calendar-month");
+			monthDiv.className = "calendar-month";
 			monthDiv.innerHTML = `<h3>${months[i]} ${year}</h3>`;
 			const table = document.createElement("table");
 			table.innerHTML = `<thead><tr>${days.map(d => `<th>${d}</th>`).join('')}</tr></thead>`;
 			const tbody = document.createElement("tbody");
-			let firstDay = (new Date(year, i, 1)
-				.getDay() + 6) % 7;
-			const totalDays = new Date(year, i + 1, 0)
-				.getDate();
+			let firstDay = (new Date(year, i, 1).getDay() + 6) % 7;
+			const totalDays = new Date(year, i + 1, 0).getDate();
 			let date = 1;
 			for (let rowIdx = 0; rowIdx < 6 && date <= totalDays; rowIdx++) {
 				const row = document.createElement("tr");
 				for (let colIdx = 0; colIdx < 7; colIdx++) {
 					const cell = document.createElement("td");
 					if ((rowIdx > 0 || colIdx >= firstDay) && date <= totalDays) {
-						cell.innerText = date;
 						const currentDate = `${year}-${String(i + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+						cell.innerText = date;
 						cell.dataset.date = currentDate;
 						if (allAutomations.some(auto => auto.scheduledTime === currentDate)) cell.classList.add("has-automation");
 						if (colIdx >= 5) cell.classList.add("weekend");
-						cell.addEventListener("click", () => {
-							document.querySelectorAll('.calendar-month td.selected')
-								.forEach(c => c.classList.remove('selected'));
-							cell.classList.add('selected');
-							filterAutomationsForDay(cell.dataset.date);
-						});
 						date++;
 					}
 					row.appendChild(cell);
@@ -2144,15 +1648,16 @@ document.addEventListener('DOMContentLoaded', function () {
 			calendarGrid.appendChild(monthDiv);
 		}
 	}
-	/** Muestra en la barra lateral del calendario las automatizaciones para un día específico. */
+	
+	/**
+	 * Muestra en la barra lateral del calendario las automatizaciones para un día específico.
+	 * @param {string} date - La fecha seleccionada en formato YYYY-MM-DD.
+	 */
 	function filterAutomationsForDay(date) {
 		automationList.innerHTML = '';
-		dailyFilteredAutomations = allAutomations.filter(auto => auto.scheduledTime === date)
-			.sort((a, b) => a.scheduledHour.localeCompare(b.scheduledHour));
-
-        // Hacemos el título clicable solo si hay automatismos
-        if (dailyFilteredAutomations.length > 0) {
-            automationListHeader.classList.add('clickable');
+		dailyFilteredAutomations = allAutomations.filter(auto => auto.scheduledTime === date).sort((a, b) => a.scheduledHour.localeCompare(b.scheduledHour));
+		automationListHeader.classList.toggle('clickable', dailyFilteredAutomations.length > 0);
+		if (dailyFilteredAutomations.length > 0) {
 			dailyFilteredAutomations.forEach(auto => {
 				const itemDiv = document.createElement('div');
 				itemDiv.className = 'automation-item';
@@ -2160,15 +1665,13 @@ document.addEventListener('DOMContentLoaded', function () {
 				automationList.appendChild(itemDiv);
 			});
 		} else {
-            automationListHeader.classList.remove('clickable');
 			automationList.innerHTML = "<p>No hay automatizaciones programadas.</p>";
-            dailyFilteredAutomations = []; // Limpiamos por si acaso
 		}
 	}
+	
 	/** Rellena el selector de año del calendario. */
 	function populateCalendarYearSelect() {
-		const currentYear = new Date()
-			.getFullYear();
+		const currentYear = new Date().getFullYear();
 		if (calendarYearSelect.options.length === 0) {
 			for (let i = currentYear - 2; i <= currentYear + 3; i++) {
 				calendarYearSelect.appendChild(new Option(i, i));
@@ -2176,52 +1679,50 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 		calendarYearSelect.value = currentYear;
 	}
-	/** Cierra el modal de importación de campos. */
+
+	// --- 6.3. Modal de Importación ---
+	
+	/** Cierra y resetea el modal de importación de campos. */
 	function closeImportModal() {
 		importModal.style.display = 'none';
 		pasteDataArea.value = '';
 		delimiterSelect.value = 'tab';
 		customDelimiterInput.classList.add('hidden');
-		customDelimiterInput.value = '';
 	}
+
 	/** Procesa los datos pegados en el modal y los añade a la tabla de campos. */
 	function processPastedData() {
-		const text = pasteDataArea.value.trim();
-		if (!text) return;
-		let delimiter;
-		const selectedDelimiter = delimiterSelect.value;
-		if (selectedDelimiter === 'tab') delimiter = '\t';
-		else if (selectedDelimiter === 'comma') delimiter = ',';
-		else if (selectedDelimiter === 'semicolon') delimiter = ';';
-		else if (selectedDelimiter === 'other') {
-			delimiter = customDelimiterInput.value;
-			if (!delimiter) {
-				alert('Introduce un separador.');
-				return;
-			}
-		}
-		const newFields = text.split('\n')
-			.map(line => {
+		startLogBuffering();
+		try {
+			const text = pasteDataArea.value.trim();
+			if (!text) return;
+			let delimiter;
+			const selectedDelimiter = delimiterSelect.value;
+			if (selectedDelimiter === 'other') delimiter = customDelimiterInput.value;
+			else if (selectedDelimiter === 'comma') delimiter = ',';
+			else if (selectedDelimiter === 'semicolon') delimiter = ';';
+			else delimiter = '\t';
+			if (!delimiter) return alert('Por favor, introduce un separador.');
+			const newFields = text.split('\n').map(line => {
 				if (!line.trim()) return null;
-				const columns = line.split(delimiter);
-				const [name, type, length] = columns.map(c => c.trim());
-				return (name && type) ? {
-					mc: name,
-					type,
-					len: length || ''
-				} : null;
-			})
-			.filter(Boolean);
-		if (newFields.length > 0) {
-			observer.disconnect();
-			if (fieldsTableBody.textContent.trim() === '') fieldsTableBody.innerHTML = '';
-			newFields.forEach(fieldData => fieldsTableBody.appendChild(createTableRow(fieldData)));
-			updateSubscriberKeyFieldOptions();
-			observer.observe(fieldsTableBody, observerConfig);
-			logMessage(`${newFields.length} campos importados.`);
+				const [name, type, length] = line.split(delimiter).map(c => c.trim());
+				return (name && type) ? { mc: name, type, len: length || '' } : null;
+			}).filter(Boolean);
+			if (newFields.length > 0) {
+				observer.disconnect();
+				newFields.forEach(fieldData => fieldsTableBody.appendChild(createTableRow(fieldData)));
+				updateSubscriberKeyFieldOptions();
+				observer.observe(fieldsTableBody, observerConfig);
+				logMessage(`${newFields.length} campos importados.`);
+			}
+			closeImportModal();
+		} finally {
+			endLogBuffering();
 		}
-		closeImportModal();
 	}
+	
+	// --- 6.4. Menús Colapsables y Automatismos ---
+	
 	/** Restaura el estado (abierto/cerrado) de los menús colapsables al iniciar la app. */
 	function initializeCollapsibleMenus() {
 		const collapsibleStates = JSON.parse(localStorage.getItem('collapsibleStates')) || {};
@@ -2234,272 +1735,135 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 	}
 
-    /** Dibuja la tabla de la nueva sección de automatismos. */
-    function renderAutomationsTable(automations) {
-        automationsTbody.innerHTML = '';
-        updateSortIndicators();
-
-        if (!automations || automations.length === 0) {
-            automationsTbody.innerHTML = '<tr><td colspan="4">No hay automatismos para mostrar.</td></tr>';
-            return;
-        }
-
-        const sortedData = sortAutomations(automations);
-
-        sortedData.forEach(auto => {
-            const row = document.createElement('tr');
-            row.dataset.automationId = auto.id; // <-- Usa el ID codificado
-            row.innerHTML = `
-                <td>${auto.name || 'Sin Nombre'}</td>
-                <td>${formatDateToSpanishTime(auto.lastRunTime)}</td>
-                <td>${formatDateToSpanishTime(auto.scheduledTime)}</td>
-                <td>${auto.status || '---'}</td>
-            `;
-            automationsTbody.appendChild(row);
-        });
-    }
-
-	 /**
-     * Ordena un array de automatismos dado según la columna y dirección actuales.
-     * Devuelve un nuevo array ordenado.
-     * @param {Array} dataToSort - El array de automatismos a ordenar.
-     * @returns {Array} El array ordenado.
-     */
-      function sortAutomations(dataToSort) {
-        const sortKey = currentSortColumn;
-        const direction = currentSortDirection === 'asc' ? 1 : -1;
-
-        // Función auxiliar para obtener el valor a comparar de forma consistente.
-        const getValue = (obj, key) => {
-            if (key === 'schedule.scheduledTime') {
-                return obj.schedule?.scheduledTime;
-            }
-            // **LA CORRECCIÓN CLAVE ESTÁ AQUÍ**
-            // Para el estado, usamos la misma lógica que al mostrarlo en la tabla.
-            // Esto garantiza que siempre comparamos el texto visible ("Ready", "Scheduled", etc.).
-            if (key === 'status') {
-                // Usamos el texto del estado si existe, si no, el valor del estado.
-                // Esto maneja cualquier inconsistencia de la API.
-                return obj.statusText || obj.status;
-            }
-            // Para 'name' y 'lastRunTime', devuelve la propiedad directamente.
-            return obj[key];
-        };
-
-        return dataToSort.slice().sort((a, b) => {
-            let valA = getValue(a, sortKey);
-            let valB = getValue(b, sortKey);
-
-            // Manejo de valores nulos o indefinidos (los envía al final de la lista).
-            if (valA == null) return 1;
-            if (valB == null) return -1;
-
-            let compareResult = 0;
-
-            // Comparar como fechas si la clave lo indica.
-            if (sortKey.includes('Time')) {
-                compareResult = new Date(valA) - new Date(valB);
-            }
-            // Comparar como texto para todo lo demás ('name', 'status').
-            else {
-                // Ahora es 100% seguro que comparamos texto vs texto, porque getValue()
-                // ya nos ha dado el valor correcto para el estado.
-                // Usamos String() por seguridad antes de comparar.
-                compareResult = String(valA).localeCompare(String(valB), undefined, { sensitivity: 'base' });
-            }
-
-            // Aplicar la dirección (ascendente o descendente).
-            const finalResult = compareResult * direction;
-
-            // Lógica de desempate por nombre si los valores son iguales.
-            if (finalResult === 0 && sortKey !== 'name') {
-                const nameA = a.name || '';
-                const nameB = b.name || '';
-                return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
-            }
-
-            return finalResult;
-        });
-    }
-
-    /**
-     * Actualiza los indicadores visuales (flechas) en las cabeceras de la tabla.
-     */
-    function updateSortIndicators() {
-        document.querySelectorAll('#automations-table .sortable-header').forEach(header => {
-            header.classList.remove('sort-asc', 'sort-desc');
-            if (header.dataset.sortBy === currentSortColumn) {
-                header.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
-            }
-        });
-    }
-
 	/**
-     * Formatea una cadena de fecha ISO (UTC) a una cadena legible en horario de España.
-     * @param {string} dateString - La fecha en formato ISO (ej: "2025-08-19T19:34:00Z").
-     * @returns {string} La fecha formateada o '---' si no es válida.
-     */
-    function formatDateToSpanishTime(dateString) {
-        // Si la fecha no es válida o es la fecha por defecto de la API, no mostrar nada.
-        if (!dateString || dateString.startsWith('0001-01-01')) {
-            return '---';
+	 * Muestra la vista de "Gestión de Automatismos" y la puebla con datos.
+	 * @param {Array|null} [automationsToShow=null] - Si se proporciona, muestra solo estos automatismos.
+	 */
+	async function viewAutomations(automationsToShow = null) {
+        showSection('gestion-automatismos-section');
+        document.querySelectorAll('#automations-table tbody tr.selected').forEach(row => row.classList.remove('selected'));
+		let dataToRender;
+        if (automationsToShow) {
+            dataToRender = automationsToShow;
+        } else {
+            if (fullAutomationList.length === 0) await macroGetAllAutomationDetails();
+            dataToRender = fullAutomationList;
         }
-        try {
-            const date = new Date(dateString);
-            // Opciones para mostrar fecha y hora completas en el formato español.
-            const options = {
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', second: '2-digit',
-                timeZone: 'Europe/Madrid'
-            };
-            return date.toLocaleString('es-ES', options);
-        } catch (error) {
-            return 'Fecha inválida';
-        }
+        renderAutomationsTable(dataToRender);
     }
 
-	// ==========================================================
-	// --- 7. INICIALIZACIÓN Y EVENT LISTENERS ---
-	// ==========================================================
 
-	/** Configura todos los event listeners de la aplicación. */
+	// ==========================================================
+	// --- 7. EVENT LISTENERS ---
+	// ==========================================================
+	
+	/**
+	 * Configura todos los event listeners de la aplicación una sola vez.
+	 */
 	function setupEventListeners() {
+
+		// --- Listeners de Configuración y Sesión ---
 		saveConfigBtn.addEventListener('click', () => {
-			const clientName = clientNameInput.value.trim();
-			if (!clientName) {
-				return alert('Introduzca un nombre para el cliente antes de guardar.');
-			}
-
-			// Guarda la configuración (sin el secret) en localStorage.
-			let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
-			configs[clientName] = getConfigToSave();
-			localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
-			
-			loadConfigsIntoSelect(); // Actualiza los menús desplegables.
-
-			logMessage(`Configuración para "${clientName}" guardada localmente.`);
-			alert(`Configuración para "${clientName}" guardada.`);
-		});
-		
-		// Botón de Login: guarda la configuración no sensible e inicia el flujo de autenticación.
-		loginBtn.addEventListener('click', () => {
-			//console.log('[LOGIN-UI] Botón de Login pulsado.');
-
-			const clientName = clientNameInput.value.trim();
-			if (!clientName) return alert('Introduzca un nombre para el cliente.');
-			const config = {
-				clientName,
-				authUri: authUriInput.value.trim(),
-				clientId: clientIdInput.value.trim(),
-				clientSecret: clientSecretInput.value.trim(),
-				businessUnit: businessUnitInput.value.trim()
-			};
-			//console.log('[LOGIN-UI] Datos recogidos del formulario:', config);
-
-			if (!config.authUri || !config.clientId || !config.clientSecret || !config.businessUnit)
-			{
-				console.error('[LOGIN-UI] ¡VALIDACIÓN FALLIDA! Uno o más campos están vacíos.');
-				return alert('Se necesitan Auth URI, Client ID, Client Secret y MID para el login.');
-			}
-
-			// Guarda la configuración (sin el secret) antes de iniciar el login.
-			let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
-			configs[clientName] = getConfigToSave();
-			localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
-			loadConfigsIntoSelect(); // Actualiza los selectores.
-
-			//console.log('[LOGIN-UI] Validaciones OK. Bloqueando UI y enviando evento a main.js.');
-
-			logMessage("Configuración guardada. Iniciando login...");
-			blockUI();
-			// Envía la configuración al proceso principal (main.js) para iniciar el OAuth flow.
-			window.electronAPI.startLogin(config);
-		});
-
-		// Botón de Logout: elimina la configuración local y las credenciales seguras.
-		logoutBtn.addEventListener('click', () => {
-			const clientName = savedConfigsSelect.value;
-			if (!clientName) return alert("Seleccione un cliente para hacer logout.");
-			if (confirm(`Esto borrará la configuración y cerrará la sesión para "${clientName}". ¿Continuar?`)) {
-				// Borra del localStorage.
+			startLogBuffering();
+			try {
+				const clientName = clientNameInput.value.trim();
+				if (!clientName) return alert('Introduzca un nombre para el cliente antes de guardar.');
 				let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
-				delete configs[clientName];
+				configs[clientName] = getConfigToSave();
 				localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
-				// Pide al proceso principal que borre las credenciales seguras (refresh token, etc.).
-				window.electronAPI.logout(clientName);
+				loadConfigsIntoSelect();
+				logMessage(`Configuración para "${clientName}" guardada localmente.`);
+				alert(`Configuración para "${clientName}" guardada.`);
+			} finally {
+				endLogBuffering();
 			}
 		});
 
-		// --- Listeners para eventos recibidos desde el proceso principal (main.js) ---
+		loginBtn.addEventListener('click', () => {
+			startLogBuffering();
+			try {
+				const clientName = clientNameInput.value.trim();
+				if (!clientName) return alert('Introduzca un nombre para el cliente.');
+				const config = { clientName, authUri: authUriInput.value.trim(), clientId: clientIdInput.value.trim(), clientSecret: clientSecretInput.value.trim(), businessUnit: businessUnitInput.value.trim() };
+				if (!config.authUri || !config.clientId || !config.clientSecret || !config.businessUnit) return alert('Se necesitan Auth URI, Client ID, Client Secret y MID para el login.');
+				let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
+				configs[clientName] = getConfigToSave();
+				localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
+				loadConfigsIntoSelect();
+				logMessage("Configuración guardada. Iniciando login...");
+				blockUI();
+				window.electronAPI.startLogin(config);
+			} finally {
+				endLogBuffering();
+			}
+		});
 
-		// Se activa cuando el proceso de login finaliza (con éxito o error).
+		logoutBtn.addEventListener('click', () => {
+			startLogBuffering();
+			try {
+				const clientName = savedConfigsSelect.value;
+				if (!clientName) return alert("Seleccione un cliente para hacer logout.");
+				if (confirm(`Esto borrará la configuración y cerrará la sesión para "${clientName}". ¿Continuar?`)) {
+					let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
+					delete configs[clientName];
+					localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
+					window.electronAPI.logout(clientName);
+				}
+			} finally {
+				endLogBuffering();
+			}
+		});
+
+		savedConfigsSelect.addEventListener('change', (e) => loadAndSyncClientConfig(e.target.value));
+		sidebarClientSelect.addEventListener('change', (e) => loadAndSyncClientConfig(e.target.value));
+
+		// --- Listeners de Eventos desde el Proceso Principal (main.js) ---
 		window.electronAPI.onTokenReceived(result => {
 			unblockUI();
+			startLogBuffering();
 			if (result.success) {
 				logMessage("Login exitoso. Sesión activa.");
 				alert("Login completado con éxito.");
-
-				currentUserInfo = result.data.userInfo; // Guardamos la info del usuario globalmente
-				currentOrgInfo = result.data.orgInfo;
-				
-				// Rellenamos el campo de Stack en la vista de configuración
-        		stackKeyInput.value = currentOrgInfo?.stack_key || 'No disponible';
-
-        		updateLoginStatus(true, clientNameInput.value, currentUserInfo);
-				
-				loadAndSyncClientConfig(clientNameInput.value); // Recarga el cliente para reflejar la sesión activa.
+				loadAndSyncClientConfig(clientNameInput.value);
 			} else {
 				logMessage(`Error durante el login: ${result.error}`);
 				alert(`Hubo un error en el login: ${result.error}`);
 				updateLoginStatus(false);
 			}
+			endLogBuffering();
 		});
 
-		// Se activa cuando el proceso de logout finaliza con éxito.
 		window.electronAPI.onLogoutSuccess(() => {
-			const clientName = clientNameInput.value;
-			alert(`Sesión cerrada y configuración para "${clientName}" borrada.`);
+			startLogBuffering();
+			alert(`Sesión cerrada y configuración borrada.`);
 			logMessage("Sesión cerrada y configuración borrada.");
-			// Limpia la UI.
 			loadConfigsIntoSelect();
 			loadAndSyncClientConfig('');
+			endLogBuffering();
 		});
 
-		// Se activa cuando una llamada a la API falla por un token expirado.
 		window.electronAPI.onRequireLogin(data => {
+			startLogBuffering();
 			alert(`La sesión ha expirado o no es válida. Por favor, haz login de nuevo.\n\nMotivo: ${data.message}`);
 			logMessage(`LOGIN REQUERIDO: ${data.message}`);
 			updateLoginStatus(false);
+			endLogBuffering();
 		});
 
-		// --- Listeners de navegación y botones de macros ---
-		document.querySelectorAll('.back-button')
-			.forEach(b => b.addEventListener('click', goBack));
-		document.querySelectorAll('.macro-item')
-			.forEach(item => {
-				item.addEventListener('click', (e) => {
-					e.preventDefault();
-					const macro = e.target.getAttribute('data-macro');
-					const sectionMap = {
-						'docu': 'documentacion-section',
-						'configuracionAPIs': 'configuracion-apis-section',
-						'configuracionDE': 'configuracion-de-section',
-						'campos': 'campos-section',
-						'gestionCampos': 'configuracion-campos-section',
-						'validadorEmail': 'email-validator-section',
-						'buscadores': 'buscadores-section'
-					};
-					if (sectionMap[macro]) {
-						showSection(sectionMap[macro]);
-					} else if (macro === 'calendario') {
-						viewCalendar();
-					} else if (macro === 'gestionAutomatismos') { 
-                        viewAutomations(); // Llamamos sin argumentos para que cargue todo
-                    }
-				});
+		// --- Listeners de Navegación ---
+		document.querySelectorAll('.back-button').forEach(b => b.addEventListener('click', goBack));
+		document.querySelectorAll('.macro-item').forEach(item => {
+			item.addEventListener('click', (e) => {
+				e.preventDefault();
+				const macro = e.target.getAttribute('data-macro');
+				const sectionMap = { 'docu': 'documentacion-section', 'configuracionAPIs': 'configuracion-apis-section', 'configuracionDE': 'configuracion-de-section', 'campos': 'campos-section', 'gestionCampos': 'configuracion-campos-section', 'validadorEmail': 'email-validator-section', 'buscadores': 'buscadores-section' };
+				if (sectionMap[macro]) showSection(sectionMap[macro]);
+				else if (macro === 'calendario') viewCalendar();
+				else if (macro === 'gestionAutomatismos') viewAutomations();
 			});
+		});
 
-		// --- Listeners de botones de acción ---
+		// --- Listeners de Botones de Macros ---
 		createDEBtn.addEventListener('click', macroCreateDE);
 		createFieldsBtn.addEventListener('click', macroCreateFields);
 		getFieldsBtn.addEventListener('click', macroGetFields);
@@ -2510,43 +1874,24 @@ document.addEventListener('DOMContentLoaded', function () {
 		searchCustomerBtn.addEventListener('click', macroSearchCustomer);
 		searchQueriesByTextBtn.addEventListener('click', macroSearchQueriesByText);
 		refreshAutomationsBtn.addEventListener('click', macroGetAutomations);
+		refreshJourneyAutomationsBtn.addEventListener('click', macroGetJourneyAutomations);
+		getCustomerSendsBtn.addEventListener('click', () => { if (selectedSubscriberData) macroGetCustomerSends(); });
+		getCustomerJourneysBtn.addEventListener('click', () => { if (selectedSubscriberData) macroGetCustomerJourneys(); });
+
+		// --- Listeners de la Tabla de Campos ---
 		createDummyFieldsBtn.addEventListener('click', createDummyFields);
 		clearFieldsBtn.addEventListener('click', clearFieldsTable);
 		addFieldBtn.addEventListener('click', () => addNewField(true));
-		refreshJourneyAutomationsBtn.addEventListener('click', macroGetJourneyAutomations);
-		
-
-		querySearchResultsTbody.addEventListener('click', (e) => {
-
-			const link = e.target.closest('a.external-link');
-			
-			if (link) {
-				e.preventDefault(); 
-				const url = link.href;
-				
-				// Verificamos si la función existe antes de llamarla
-				if (window.electronAPI && typeof window.electronAPI.openExternalLink === 'function') {
-					window.electronAPI.openExternalLink(url);
-				} else {
-					console.error('[ERROR] La función window.electronAPI.openExternalLink no existe! Revisa tu preload.js'); // Log de Error
-				}
-			} else {
-				console.log('[DEBUG] El clic no fue en un enlace con la clase "external-link".'); // Log de "no encontrado"
-			}
-		});
-
-		// --- Listener para la tabla de campos (selección y borrado de filas) ---
 		fieldsTableBody.addEventListener('click', (e) => {
 			const targetRow = e.target.closest('tr');
 			if (!targetRow) return;
-			// Si se hace clic en el botón de borrar de la fila.
 			if (e.target.matches('.delete-row-btn')) {
-				observer.disconnect(); // Pausa el observer para evitar re-triggers.
+				observer.disconnect();
 				if (targetRow === selectedRow) selectedRow = null;
 				targetRow.remove();
-				updateSubscriberKeyFieldOptions(); // Actualiza el desplegable.
-				observer.observe(fieldsTableBody, observerConfig); // Reanuda el observer.
-			} else { // Si se hace clic en cualquier otra parte de la fila.
+				updateSubscriberKeyFieldOptions();
+				observer.observe(fieldsTableBody, observerConfig);
+			} else {
 				if (targetRow !== selectedRow) {
 					if (selectedRow) selectedRow.classList.remove('selected');
 					targetRow.classList.add('selected');
@@ -2554,221 +1899,144 @@ document.addEventListener('DOMContentLoaded', function () {
 				}
 			}
 		});
-
-		// --- Otros Listeners de UI ---
-		savedConfigsSelect.addEventListener('change', (e) => loadAndSyncClientConfig(e.target.value));
-		sidebarClientSelect.addEventListener('change', (e) => loadAndSyncClientConfig(e.target.value));
-		moveUpBtn.addEventListener('click', () => {
-			if (selectedRow?.previousElementSibling) selectedRow.parentNode.insertBefore(selectedRow, selectedRow.previousElementSibling);
-		});
-		moveDownBtn.addEventListener('click', () => {
-			if (selectedRow?.nextElementSibling) selectedRow.parentNode.insertBefore(selectedRow.nextElementSibling, selectedRow);
-		});
+		moveUpBtn.addEventListener('click', () => { if (selectedRow?.previousElementSibling) selectedRow.parentNode.insertBefore(selectedRow, selectedRow.previousElementSibling); });
+		moveDownBtn.addEventListener('click', () => { if (selectedRow?.nextElementSibling) selectedRow.parentNode.insertBefore(selectedRow.nextElementSibling, selectedRow); });
 		isSendableCheckbox.addEventListener('change', handleSendableChange);
-		subscriberKeyFieldSelect.addEventListener('change', () => {
-			const selectedOption = subscriberKeyFieldSelect.options[subscriberKeyFieldSelect.selectedIndex];
-			subscriberKeyTypeInput.value = (selectedOption?.dataset.type) || '';
-		});
-		// Añade /v2/token automáticamente al Auth URI al perder el foco
+		subscriberKeyFieldSelect.addEventListener('change', () => { subscriberKeyTypeInput.value = subscriberKeyFieldSelect.options[subscriberKeyFieldSelect.selectedIndex]?.dataset.type || ''; });
+		deNameInput.addEventListener('input', () => { deExternalKeyInput.value = deNameInput.value.replace(/\s+/g, '_') + '_CK'; });
 		authUriInput.addEventListener('blur', () => {
 			const uri = authUriInput.value.trim();
-			// Solo lo añade si el campo no está vacío y no termina ya con /v2/token
-			if (uri && !uri.endsWith('v2/token') && uri.endsWith('/')) {
-				authUriInput.value = uri + 'v2/token';
-			}else if (uri && !uri.endsWith('v2/token') && !uri.endsWith('/')) {
-				authUriInput.value = uri + '/v2/token';
+			if (uri && !uri.endsWith('v2/token')) {
+				authUriInput.value = (uri.endsWith('/') ? uri : uri + '/') + 'v2/token';
 			}
 		});
-		deNameInput.addEventListener('input', () => {
-			deExternalKeyInput.value = deNameInput.value.replace(/\s+/g, '_') + '_CK';
-		});
-		importFieldsBtn.addEventListener('click', () => {
-			importModal.style.display = 'flex';
-			pasteDataArea.focus();
-		});
+
+		// --- Listeners del Modal de Importación ---
+		importFieldsBtn.addEventListener('click', () => { importModal.style.display = 'flex'; pasteDataArea.focus(); });
 		cancelPasteBtn.addEventListener('click', closeImportModal);
-		importModal.addEventListener('click', (e) => {
-			if (e.target === importModal) closeImportModal();
-		});
-		delimiterSelect.addEventListener('change', () => {
-			customDelimiterInput.classList.toggle('hidden', delimiterSelect.value !== 'other');
-			if (delimiterSelect.value === 'other') customDelimiterInput.focus();
-		});
+		importModal.addEventListener('click', (e) => { if (e.target === importModal) closeImportModal(); });
+		delimiterSelect.addEventListener('change', () => { customDelimiterInput.classList.toggle('hidden', delimiterSelect.value !== 'other'); if (delimiterSelect.value === 'other') customDelimiterInput.focus(); });
 		processPasteBtn.addEventListener('click', processPastedData);
-		toggleLogBtn.addEventListener('click', () => {
-			const isCollapsed = appContainer.classList.toggle('log-collapsed');
-			localStorage.setItem('logCollapsedState', isCollapsed);
+		
+		// --- Listeners de Componentes de UI Generales ---
+		toggleLogBtn.addEventListener('click', () => { const isCollapsed = appContainer.classList.toggle('log-collapsed'); localStorage.setItem('logCollapsedState', isCollapsed); });
+		tabButtons.forEach(button => button.addEventListener('click', () => {
+			const tabId = button.getAttribute('data-tab');
+			const parent = button.closest('.tabs-container');
+			parent.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+			parent.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+			button.classList.add('active');
+			parent.querySelector(`#${tabId}`).classList.add('active');
+		}));
+		collapsibleHeaders.forEach(header => header.addEventListener('click', () => {
+			const content = header.nextElementSibling;
+			const isExpanded = header.classList.toggle('active');
+			content.style.maxHeight = isExpanded ? content.scrollHeight + "px" : "0px";
+			const states = JSON.parse(localStorage.getItem('collapsibleStates')) || {};
+			states[header.textContent.trim()] = isExpanded;
+			localStorage.setItem('collapsibleStates', JSON.stringify(states));
+		}));
+		querySearchResultsTbody.addEventListener('click', (e) => {
+			const link = e.target.closest('a.external-link');
+			if (link) { e.preventDefault(); window.electronAPI.openExternalLink(link.href); }
 		});
-		tabButtons.forEach(button => {
-			button.addEventListener('click', () => {
-				const tabId = button.getAttribute('data-tab');
-				tabButtons.forEach(btn => btn.classList.remove('active'));
-				tabContents.forEach(content => content.classList.remove('active'));
-				button.classList.add('active');
-				document.getElementById(tabId)
-					.classList.add('active');
-			});
-		});
-		collapsibleHeaders.forEach(header => {
-			header.addEventListener('click', () => {
-				const content = header.nextElementSibling;
-				const isExpanded = header.classList.toggle('active');
-				content.style.maxHeight = isExpanded ? content.scrollHeight + "px" : 0;
-				const states = JSON.parse(localStorage.getItem('collapsibleStates')) || {};
-				states[header.textContent.trim()] = isExpanded;
-				localStorage.setItem('collapsibleStates', JSON.stringify(states));
-			});
-		});
-		calendarYearSelect.addEventListener('change', generateCalendar);
-
-		// Listener para la selección de filas en la tabla de búsqueda de clientes
-        customerSearchTbody.addEventListener('click', (e) => {
-			const clickedRow = e.target.closest('tr');
-			if (!clickedRow || !clickedRow.dataset.subscriberKey) return;
-
-			if (selectedCustomerRow) {
-				selectedCustomerRow.classList.remove('selected');
-			}
-			clickedRow.classList.add('selected');
-			selectedCustomerRow = clickedRow;
-			
-			// Solo guardamos los datos, no decidimos nada sobre los botones aquí
-			selectedSubscriberData = {
-				subscriberKey: clickedRow.dataset.subscriberKey,
-				isSubscriber: clickedRow.dataset.isSubscriber === 'true'
-			};
-		});
-
 		showQueryTextCheckbox.addEventListener('change', () => {
 			const isChecked = showQueryTextCheckbox.checked;
-			const displayStyle = isChecked ? '' : 'none'; // Usa '' para volver al estilo por defecto de la hoja CSS
+			const displayStyle = isChecked ? '' : 'none';
 			const table = document.getElementById('query-search-results-table');
-			
-			// Selecciona la cuarta cabecera (th) y todas las cuartas celdas del cuerpo (td)
-			const cellsToToggle = table.querySelectorAll('thead th:nth-child(4), tbody td:nth-child(4)');
-			
-			// Aplica el estilo a todas las celdas encontradas
-			cellsToToggle.forEach(cell => {
+			table.querySelectorAll('thead th:nth-child(4), tbody td:nth-child(4)').forEach(cell => {
 				cell.style.display = displayStyle;
 			});
 		});
 
-        // Listeners para los de Envios y Journeys
-        getCustomerSendsBtn.addEventListener('click', () => {
-			if (selectedSubscriberData) {
-				customerJourneysResultsBlock.classList.add('hidden');
-				customerSendsResultsBlock.classList.remove('hidden');
-				macroGetCustomerSends(); // Llama a la nueva macro
+		// --- Listeners del Calendario ---
+		calendarYearSelect.addEventListener('change', generateCalendar);
+		calendarGrid.addEventListener('click', (e) => {
+			if (e.target.tagName === 'TD' && e.target.dataset.date) {
+				document.querySelectorAll('.calendar-month td.selected').forEach(c => c.classList.remove('selected'));
+				e.target.classList.add('selected');
+				filterAutomationsForDay(e.target.dataset.date);
 			}
 		});
-
-		getCustomerJourneysBtn.addEventListener('click', () => {
-			if (selectedSubscriberData) {
-				customerSendsResultsBlock.classList.add('hidden');
-				macroGetCustomerJourneys(); 
-			}
-		});
-		// Listener para el título del calendario
-        automationListHeader.addEventListener('click', () => {
+		automationListHeader.addEventListener('click', () => {
             if (automationListHeader.classList.contains('clickable')) {
-                // Buscamos los detalles completos de los automatismos filtrados
-                const detailedAutomations = fullAutomationList.filter(fullAuto => 
-                    dailyFilteredAutomations.some(dailyAuto => dailyAuto.name === fullAuto.name)
-                );
+                const detailedAutomations = fullAutomationList.filter(fullAuto => dailyFilteredAutomations.some(dailyAuto => dailyAuto.name === fullAuto.name));
                 viewAutomations(detailedAutomations);
             }
         });
 
-        // Listener para la selección de filas en la nueva tabla de automatismos
-        automationsTbody.addEventListener('click', (e) => {
+		// --- Listeners de Búsqueda de Clientes ---
+		customerSearchTbody.addEventListener('click', (e) => {
+			const clickedRow = e.target.closest('tr');
+			if (!clickedRow || !clickedRow.dataset.subscriberKey) return;
+			if (selectedCustomerRow) selectedCustomerRow.classList.remove('selected');
+			clickedRow.classList.add('selected');
+			selectedCustomerRow = clickedRow;
+			selectedSubscriberData = { subscriberKey: clickedRow.dataset.subscriberKey, isSubscriber: clickedRow.dataset.isSubscriber === 'true' };
+			getCustomerJourneysBtn.disabled = false;
+			getCustomerSendsBtn.disabled = !selectedSubscriberData.isSubscriber;
+			customerJourneysResultsBlock.classList.add('hidden');
+			customerSendsResultsBlock.classList.add('hidden');
+		});
+
+		// --- Listeners de Gestión de Automatismos ---
+		automationsTbody.addEventListener('click', (e) => {
             const clickedRow = e.target.closest('tr');
             if (!clickedRow || !clickedRow.dataset.automationId) return;
-
-            // Paso 1: Alterna la clase 'selected' en la fila clicada.
             clickedRow.classList.toggle('selected');
-            
-            // Paso 2: Llama a la función central para que ella SOLA decida el estado de los botones.
-            // NO hay más lógica de habilitación aquí.
             updateAutomationButtonsState();
         });
-
-        // Listeners para los botones de acción (con funcionalidad placeholder)
-		activateAutomationBtn.addEventListener('click', () => {
-            macroPerformAutomationAction('activate');
+		activateAutomationBtn.addEventListener('click', () => macroPerformAutomationAction('activate'));
+        runAutomationBtn.addEventListener('click', () => macroPerformAutomationAction('run'));
+        stopAutomationBtn.addEventListener('click', () => macroPerformAutomationAction('pause'));
+		refreshAutomationsTableBtn.addEventListener('click', () => {
+			startLogBuffering();
+			try {
+				logMessage("Refrescando lista de automatismos...");
+				fullAutomationList = [];
+				automationNameFilter.value = '';
+				automationStatusFilter.value = '';
+				viewAutomations();
+			} finally {
+				endLogBuffering();
+			}
         });
-         runAutomationBtn.addEventListener('click', () => {
-            macroPerformAutomationAction('run');
-        });
-        stopAutomationBtn.addEventListener('click', () => {
-            macroPerformAutomationAction('pause');
-        });
-
-		refreshAutomationsTableBtn.addEventListener('click', async () => {
-            logMessage("Refrescando lista de automatismos...");
-            fullAutomationList = []; // Limpia la caché para forzar la recarga
-			automationNameFilter.value = '';
-            automationStatusFilter.value = '';
-            await viewAutomations();
-        });
-
-		// Listener para la cabecera de la tabla de automatismos (para ordenar)
-        document.querySelector('#automations-table thead').addEventListener('click', (e) => {
+		document.querySelector('#automations-table thead').addEventListener('click', (e) => {
             const header = e.target.closest('.sortable-header');
             if (!header) return;
-
             const newSortColumn = header.dataset.sortBy;
-            
-            // Si se hace clic en la misma columna, invierte la dirección.
-            // Si es una columna nueva, la establece y resetea la dirección a 'asc'.
             if (currentSortColumn === newSortColumn) {
                 currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
             } else {
                 currentSortColumn = newSortColumn;
                 currentSortDirection = 'asc';
             }
-
-            // Vuelve a renderizar la tabla con la nueva ordenación
-            renderAutomationsTable(fullAutomationList);
-        });
-
-        // Listener para el título del calendario (MODIFICADO LIGERAMENTE)
-        automationListHeader.addEventListener('click', () => {
-            if (automationListHeader.classList.contains('clickable')) {
-                const detailedAutomations = fullAutomationList.filter(fullAuto => 
-                    dailyFilteredAutomations.some(dailyAuto => dailyAuto.name === fullAuto.name)
-                );
-                // ¡Importante! No se llama a viewAutomations, sino directamente a render
-                // para evitar una recarga innecesaria y mostrar solo la selección del día.
-                showSection('gestion-automatismos-section');
-                renderAutomationsTable(detailedAutomations);
-            }
+            applyFiltersAndRender();
         });
 		automationNameFilter.addEventListener('input', applyFiltersAndRender);
         automationStatusFilter.addEventListener('change', applyFiltersAndRender);
 	}
 
-	/** Función principal que inicializa el estado de la aplicación al cargar. */
-	function initializeApp() {
-		// Restaura el estado colapsado del log si estaba guardado.
-		if (localStorage.getItem('logCollapsedState') === 'true') appContainer.classList.add('log-collapsed');
-		// Carga todas las configuraciones guardadas en los selectores.
-		loadConfigsIntoSelect();
-		
-		// Asegura que al iniciar la app, ningún cliente esté seleccionado.
-		setClientConfigForm({}); // Limpia todos los formularios
-		clientNameInput.value = '';
-		savedConfigsSelect.value = '';
-		sidebarClientSelect.value = '';
-		updateLoginStatus(false); // Pone el indicador en "Sesión no iniciada"
 
-		// Prepara la tabla de campos.
+	// ==========================================================
+	// --- 8. INICIALIZACIÓN DE LA APLICACIÓN ---
+	// ==========================================================
+	
+	/**
+	 * Función principal que se ejecuta al cargar la página.
+	 * Inicializa el estado de la aplicación.
+	 */
+	function initializeApp() {
+		startLogBuffering();
+		if (localStorage.getItem('logCollapsedState') === 'true') appContainer.classList.add('log-collapsed');
+		loadConfigsIntoSelect();
+		loadAndSyncClientConfig(''); // Inicia sin ningún cliente seleccionado.
 		clearFieldsTable();
 		observer.observe(fieldsTableBody, observerConfig);
-		// Restaura el estado de los menús colapsables.
 		initializeCollapsibleMenus();
-		// Activa todos los listeners.
 		setupEventListeners();
 		logMessage("Aplicación lista. Selecciona un cliente o configura uno nuevo.");
+		endLogBuffering();
 	}
 
 	// Inicia la aplicación.

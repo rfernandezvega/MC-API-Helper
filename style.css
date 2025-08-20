@@ -5,10 +5,10 @@
    ÍNDICE:
    -------------------------------------------------------------------
    1. ESTILOS GLOBALES Y LAYOUT PRINCIPAL
-      - body, app-container, panel-base, estado de carga.
+      - body, app-container, estado de carga.
 
    2. BARRA LATERAL IZQUIERDA (NAVEGACIÓN)
-      - Contenedor principal, header.
+      - Contenedor principal.
       - Selector de cliente e indicador de login.
       - Menús colapsables (acordeón).
       - Items de menú.
@@ -39,44 +39,48 @@
    1. ESTILOS GLOBALES Y LAYOUT PRINCIPAL
    ========================================================== */
 
+/* Estilos base para toda la aplicación */
 body {
   margin: 0;
-  background-color: #f0f6fc;
+  background-color: #f0f6fc; /* Un azul muy claro como fondo general */
   font-family: Arial, sans-serif;
-  box-sizing: border-box;
+  box-sizing: border-box; /* Asegura que padding y border se incluyan en el ancho/alto total */
 }
 
+/* Hereda el box-sizing a todos los elementos para un comportamiento predecible */
 *, *::before, *::after {
   box-sizing: inherit;
 }
 
-/* Layout principal de la aplicación con 3 columnas */
+/* Layout principal de la aplicación con 3 columnas usando CSS Grid */
 .app-container {
   display: grid;
-  grid-template-columns: 220px 1fr 360px; /* Sidebar Izq | Contenido | Sidebar Der */
+  grid-template-columns: 220px 1fr 360px; /* Sidebar Izq | Contenido Principal | Sidebar Der */
   gap: 20px;
   padding: 20px;
   min-height: 100vh;
-  transition: grid-template-columns 0.35s ease-in-out, opacity 0.2s ease-in-out;
-  align-items: start;
+  transition: grid-template-columns 0.35s ease-in-out; /* Animación suave al colapsar el log */
+  align-items: start; /* Alinea los paneles al inicio del contenedor */
 }
 
-/* Clase para bloquear la UI durante operaciones asíncronas */
+/* Clase para bloquear la UI durante operaciones asíncronas (llamadas API) */
 .app-container.is-updating {
   pointer-events: none; /* Deshabilita interacciones con el ratón */
   opacity: 0.6;        /* Indica visualmente que la app está ocupada */
+  cursor: wait;        /* Cambia el cursor a modo de espera */
 }
-.app-container.is-updating body {
-    cursor: wait; /* Cambia el cursor a modo de espera */
+.app-container.is-updating * {
+  cursor: wait !important; /* Asegura que todos los elementos hijos también muestren el cursor de espera */
 }
 
-/* Estilo base para los 3 paneles principales */
+/* Estilo base compartido por los 3 paneles principales (barras laterales y contenido) */
 #macros-sidebar, #main-content, #log-sidebar {
   background-color: #fff;
   border-radius: 10px;
   padding: 20px;
 }
 
+/* Evita que el contenido de las barras laterales se desborde visualmente */
 #macros-sidebar, #log-sidebar {
     overflow: hidden;
 }
@@ -114,6 +118,7 @@ body {
   margin-top: 5px;
 }
 
+/* Indicador visual del estado de la sesión (activo/inactivo) */
 .login-status {
     font-size: 0.85em;
     font-weight: bold;
@@ -121,37 +126,38 @@ body {
     margin: 10px 0 0 0;
     padding: 5px;
     border-radius: 4px;
-    line-height: 1.4; /* Mejora la legibilidad si hay dos líneas */
+    line-height: 1.4; /* Mejora la legibilidad si el texto ocupa dos líneas */
 }
 .login-status.active {
-    color: #1c7430;
-    background-color: #d4edda;
+    color: #1c7430; /* Verde oscuro */
+    background-color: #d4edda; /* Verde claro */
 }
 .login-status.inactive {
-    color: #721c24;
-    background-color: #f8d7da;
+    color: #721c24; /* Rojo oscuro */
+    background-color: #f8d7da; /* Rojo claro */
 }
 
 /* --- Menús Colapsables (Acordeón) --- */
 .collapsible-header {
   color: #558ac7;
-  margin-top: 20px;
-  margin-bottom: 10px;
+  margin: 20px 0 10px 0;
   font-size: 1.1em;
   cursor: pointer;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 5px 0;
-  user-select: none;
+  user-select: none; /* Evita que el texto se seleccione al hacer clic */
 }
 
+/* Crea el indicador de flecha (▶) usando un pseudo-elemento */
 .collapsible-header::after {
   content: '▶';
   font-size: 0.7em;
   transition: transform 0.3s ease;
 }
 
+/* Rota la flecha 90 grados cuando el menú está activo (expandido) */
 .collapsible-header.active::after {
   transform: rotate(90deg);
 }
@@ -162,7 +168,7 @@ body {
   margin: 0;
   max-height: 0; /* Colapsado por defecto */
   overflow: hidden;
-  transition: max-height 0.3s ease-in-out;
+  transition: max-height 0.3s ease-in-out; /* Animación suave de despliegue */
 }
 
 /* --- Ítems de Menú (Enlaces a funcionalidades) --- */
@@ -188,9 +194,10 @@ body {
    3. CONTENIDO PRINCIPAL (CENTRO)
    ========================================================== */
 
+/* Permite el scroll vertical si el contenido es más alto que la ventana */
 #main-content {
     overflow-y: auto;
-    height: calc(100vh - 40px);
+    height: calc(100vh - 40px); /* Ocupa toda la altura de la ventana menos el padding */
 }
 
 /* --- 3.1. Menú de Bienvenida --- */
@@ -219,17 +226,18 @@ body {
 }
 .menu-buttons-container {
     display: flex;
-    flex-direction: column; /* CORRECCIÓN: Asegura que el texto de bienvenida se apile verticalmente */
+    flex-direction: column;
     justify-content: center;
     gap: 15px;
 }
 
 /* --- 3.2. Estructura de Secciones, Formularios y Bloques --- */
+
+/* Estilo base para cada vista de funcionalidad (oculta por defecto) */
 .section {
     display: none;
-    width: 100%;
     flex-direction: column;
-    flex-grow: 1;
+    flex-grow: 1; /* Permite que la sección ocupe el espacio disponible */
 }
 .section h2, .tab-content h2 {
     color: #69a3db;
@@ -238,7 +246,7 @@ body {
     margin-bottom: 20px;
 }
 
-/* Contenedor principal para vistas con formularios */
+/* Contenedor para bloques de configuración con fondo y borde */
 .config-section-container .config-block {
     background-color: #f8f9fa;
     border: 1px solid #e9ecef;
@@ -296,7 +304,7 @@ body {
     width: auto; 
 }
 
-/* Contenedor para gestión de clientes */
+/* Contenedor para la gestión de clientes en la vista de Configuración */
 .client-management {
     display: flex;
     gap: 10px;
@@ -304,9 +312,10 @@ body {
     margin-bottom: 20px;
 }
 .client-management input, .client-management select { 
-    flex-grow: 1; 
+    flex-grow: 1; /* Hace que el input y el select ocupen el espacio disponible */
 }
 
+/* Texto informativo con estilo sutil */
 .info-text { 
     font-size: 0.9em; 
     color: #6c757d; 
@@ -315,131 +324,102 @@ body {
 }
 
 /* --- 3.3. Botones (de acción, atrás, deshabilitados) --- */
+
+/* Contenedor para el botón "Atrás" y los botones de acción en la cabecera de una sección */
 .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    width: 100%;
     margin-bottom: 20px;
 }
 .header-actions {
     display: flex;
     gap: 10px;
-    flex-wrap: wrap;
+    flex-wrap: wrap; /* Permite que los botones pasen a la siguiente línea si no caben */
     justify-content: flex-end;
 }
 
+/* Estilo base para todos los botones principales */
 .action-button, .back-button {
-    background-color: #69a3db;
+    background-color: #69a3db; /* Azul por defecto */
     color: #fff;
     border: none;
     border-radius: 5px;
     padding: 10px 15px;
     cursor: pointer;
     transition: background-color 0.2s;
-    flex-shrink: 0; 
+    font-weight: bold;
 }
 .action-button:hover { 
-    background-color: #558ac7; 
+    background-color: #558ac7; /* Azul más oscuro al pasar el ratón */
 }
 
-.action-button.activate-btn { 
-    background-color: #28a745; 
-}
-.action-button.activate-btn:hover { 
-    background-color: #218838; 
-}
-
-#saveConfigBtn {
-    background-color: #28a745; 
-}
-#saveConfigBtn:hover {
-    background-color: #218838;
-}
-
-/* Aplica el color naranja SOLO si el botón NO está deshabilitado */
-#runAutomationBtn:not([disabled]) {
-    background-color: #f39c12; /* Naranja */
-    border-color: #f39c12;
-}
-
-/* El efecto hover también se aplica solo si NO está deshabilitado */
-#runAutomationBtn:hover:not([disabled]) {
-    background-color: #e67e22; /* Naranja más oscuro */
-    border-color: #d35400;
-}
-/* ESTILO PARA BOTONES DESHABILITADOS */
-.action-button[disabled] {
-  background-color: #cccccc !important;
-  border-color: #cccccc !important;
-  cursor: not-allowed !important;
-  opacity: 0.6 !important;
-}
-
-/* Reglas específicas para cada tipo de botón, por si acaso */
-#runAutomationBtn[disabled],
-.action-button.activate-btn[disabled],
-.action-button.delete-btn[disabled] {
-  background-color: #cccccc !important;
-  border-color: #cccccc !important;
-}
-
-/* Suprime el efecto hover en TODOS los botones deshabilitados */
-#runAutomationBtn:hover[disabled],
-.action-button:hover[disabled] {
-    background-color: #cccccc !important;
-}
-.action-button[disabled]:hover {
-  background-color: #cccccc;
-}
-
-/* Suprime el efecto hover específicamente para los botones rojos cuando están deshabilitados */
-.action-button.delete-btn[disabled]:hover {
-    background-color: #cccccc;
-}
-
-.action-button.delete-btn[disabled] {
-  background-color: #cccccc;
-}
-
+/* Botón de "Atrás" (gris) */
 .back-button { 
     background-color: #6c757d; 
 }
 .back-button:hover { 
     background-color: #5a6268; 
 }
+
+/* Botones de acción positiva/guardado (verde) */
+.action-button.activate-btn,
+#saveConfigBtn { 
+    background-color: #28a745; 
+}
+.action-button.activate-btn:hover,
+#saveConfigBtn:hover { 
+    background-color: #218838; 
+}
+
+/* Botones de acción destructiva/borrado (rojo) */
 .action-button.delete-btn { 
     background-color: #dc3545; 
 }
 .action-button.delete-btn:hover { 
     background-color: #c82333; 
 }
+
+/* Botón de "Ejecutar" (naranja) */
+#runAutomationBtn:not([disabled]) {
+    background-color: #f39c12;
+}
+#runAutomationBtn:hover:not([disabled]) {
+    background-color: #e67e22;
+}
+
+/* Estilo general para CUALQUIER botón deshabilitado */
+.action-button[disabled] {
+  background-color: #cccccc !important;
+  color: #888888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.7 !important;
+}
+
+/* Contenedor para los filtros de la tabla de automatismos */
 .header-filters {
     display: flex;
     gap: 10px;
     align-items: center;
-    flex-grow: 1; /* Permite que los filtros ocupen el espacio disponible */
+    margin-bottom: 20px;
 }
-
 .filter-input {
     padding: 8px;
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 0.9em;
 }
-
 #automationNameFilter {
     min-width: 200px;
 }
+
 /* --- 3.4. Tablas de Datos --- */
+
+/* Contenedor que permite el scroll horizontal de la tabla */
 .table-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
     width: 100%;
     overflow-x: auto;
     margin-top: 20px;
-    padding-right: 40px; /* Espacio para botones de control */
 }
 table {
     border-collapse: collapse;
@@ -447,51 +427,38 @@ table {
 }
 th, td {
     border: 1px solid #b9d4e7;
-    padding: 8px;
+    padding: 10px;
     text-align: center;
+    vertical-align: middle;
 }
 th {
     background-color: #69a3db;
     color: #fff;
-    position: sticky;
+    position: sticky; /* Fija la cabecera en la parte superior al hacer scroll vertical */
     top: 0;
     z-index: 2;
 }
 
-/* Estilos para filas interactivas */
-#myTable tbody tr {
-    position: relative; /* Para el botón de borrado */
-}
-#customer-search-table tbody tr {
-    cursor: pointer; /* Indica que la fila es clicable */
-}
-tr.selected, #customer-search-table tbody tr.selected { 
-    background-color: #c5dce6; 
-}
-
+/* Filas interactivas (seleccionables con el ratón) */
 #customer-search-table tbody tr,
 #automations-table tbody tr {
-    cursor: pointer; /* Indica que la fila es clicable */
+    cursor: pointer;
+}
+tr.selected { 
+    background-color: #c5dce6 !important; /* Estilo para la fila seleccionada */
 }
 
-tr.selected, 
-#customer-search-table tbody tr.selected,
-#automations-table tbody tr.selected { 
-    background-color: #c5dce6; 
-}
-
-/* Estilos para las cabeceras de tabla que se pueden ordenar */
+/* Estilos para las cabeceras de tabla que permiten ordenar */
 .sortable-header {
   cursor: pointer;
-  position: relative; /* Necesario para el pseudo-elemento ::after */
-  user-select: none; /* Evita que el texto se seleccione al hacer clic */
+  position: relative;
+  user-select: none;
 }
-
 .sortable-header:hover {
-  background-color: #558ac7; /* Un poco más oscuro al pasar el ratón */
+  background-color: #558ac7;
 }
 
-/* Estilos para los indicadores de ordenación (flechas) */
+/* Crea las flechas de ordenación (asc/desc) usando pseudo-elementos */
 .sortable-header::after {
   content: '';
   position: absolute;
@@ -499,20 +466,24 @@ tr.selected,
   top: 50%;
   transform: translateY(-50%);
   border: 4px solid transparent;
-  opacity: 0.5;
+  opacity: 0.5; /* Flecha gris por defecto */
 }
-
 .sortable-header.sort-asc::after {
-  border-bottom-color: #fff;
+  border-bottom-color: #fff; /* Flecha hacia arriba */
   opacity: 1;
 }
-
 .sortable-header.sort-desc::after {
-  border-top-color: #fff;
+  border-top-color: #fff; /* Flecha hacia abajo */
   opacity: 1;
 }
 
-/* Controles de tabla (Subir/Bajar/Eliminar fila) */
+/* Controles para la tabla de campos (Subir/Bajar fila) */
+#campos-section .table-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-right: 40px; /* Espacio para los botones */
+}
 .control-buttons {
     display: flex;
     flex-direction: column;
@@ -521,16 +492,24 @@ tr.selected,
 }
 .control-buttons button {
     width: 100px;
-    background-color: #69a3db;
+    background-color: #6c757d;
     color: #fff;
     border: none;
     border-radius: 5px;
     padding: 8px;
     cursor: pointer;
 }
+.control-buttons button:hover {
+    background-color: #5a6268;
+}
+
+/* Botón de borrado que aparece al lado de una fila de campo seleccionada */
+#myTable tbody tr {
+    position: relative; /* Necesario para posicionar el botón de borrado */
+}
 .delete-row-btn {
   position: absolute;
-  right: -35px;
+  right: -35px; /* Posicionado fuera de la tabla */
   top: 50%;
   transform: translateY(-50%);
   background-color: #fce8e6;
@@ -543,28 +522,28 @@ tr.selected,
   text-align: center;
   font-weight: bold;
   cursor: pointer;
-  opacity: 0;
+  opacity: 0; /* Oculto por defecto */
   pointer-events: none;
   transition: all 0.2s;
 }
 #myTable tbody tr.selected .delete-row-btn {
-  opacity: 1;
+  opacity: 1; /* Se muestra solo en la fila seleccionada */
   pointer-events: auto;
 }
 .delete-row-btn:hover {
   background-color: #dc3545;
   color: #fff;
-  transform: translateY(-50%) scale(1.1);
 }
 
+/* Estilo para los enlaces dentro de las celdas de la tabla */
 td a {
-  color: #005A9C; /* Un azul estándar para enlaces */
-  text-decoration: underline;
+  color: #005A9C;
+  text-decoration: none;
   font-weight: bold;
 }
-
 td a:hover {
-  color: #003366; /* Un azul más oscuro al pasar el ratón */
+  color: #003366;
+  text-decoration: underline;
 }
 
 
@@ -575,7 +554,7 @@ td a:hover {
 #log-sidebar {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 40px);
+  height: calc(100vh - 40px); /* Ocupa toda la altura de la ventana */
 }
 .log-header {
   display: flex;
@@ -600,6 +579,7 @@ td a:hover {
   padding: 0;
   position: relative;
 }
+/* Crea la flecha del botón con pseudo-elementos */
 #toggleLogBtn::after {
   content: '';
   display: inline-block;
@@ -611,7 +591,7 @@ td a:hover {
   position: absolute;
   top: 8px;
   left: 6px;
-  transform: rotate(-45deg);
+  transform: rotate(-45deg); /* Apunta a la izquierda (colapsar) */
 }
 #toggleLogBtn:hover::after {
   border-color: #dc3545;
@@ -622,8 +602,9 @@ td a:hover {
   margin-top: 15px;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  min-height: 0; /* Permite que los bloques se encojan si es necesario */
 }
+/* Distribución del espacio vertical entre los bloques de log */
 #log-message-block { flex: 0 1 25%; }
 #log-request-block,
 #log-response-block { flex: 1 1 37.5%; }
@@ -632,6 +613,7 @@ td a:hover {
   margin: 0 0 8px 0;
   color: #558ac7;
 }
+/* Área de texto preformateado para mostrar logs y código */
 .log-block pre {
   flex-grow: 1;
   background-color: #e9ecef;
@@ -639,7 +621,7 @@ td a:hover {
   border-radius: 5px;
   margin: 0;
   overflow-y: auto;
-  white-space: pre-wrap;
+  white-space: pre-wrap; /* Permite que el texto largo se ajuste */
   word-break: break-all;
   font-size: 0.8em;
   height: 100%;
@@ -647,14 +629,14 @@ td a:hover {
 
 /* Estado de log colapsado */
 .app-container.log-collapsed {
-  grid-template-columns: 220px 1fr 65px;
+  grid-template-columns: 220px 1fr 65px; /* Reduce el ancho de la columna del log */
 }
 .app-container.log-collapsed .log-header h2,
 .app-container.log-collapsed .log-block {
-  display: none;
+  display: none; /* Oculta el contenido del log */
 }
 .app-container.log-collapsed #toggleLogBtn::after {
-  transform: rotate(135deg);
+  transform: rotate(135deg); /* La flecha apunta a la derecha (expandir) */
   left: 10px;
 }
 .app-container.log-collapsed #toggleLogBtn:hover::after {
@@ -686,19 +668,19 @@ td a:hover {
   transition: all 0.2s ease-in-out;
 }
 .tab-button.active {
-  border-bottom-color: #69a3db;
+  border-bottom-color: #69a3db; /* Línea azul para la pestaña activa */
   font-weight: bold;
 }
 .tab-button:hover {
   background-color: #f8f9fa;
 }
 .tab-content {
-  display: none;
+  display: none; /* Oculto por defecto */
   padding: 0 10px;
   line-height: 1.6;
 }
 .tab-content.active {
-  display: block;
+  display: block; /* Visible cuando está activo */
 }
 .tab-content ul, .tab-content ol { 
     padding-left: 20px; 
@@ -706,6 +688,7 @@ td a:hover {
 .tab-content li { 
     margin-bottom: 10px; 
 }
+/* Estilo para el código en línea dentro de la documentación */
 .tab-content code {
   background-color: #e9ecef;
   padding: 2px 5px;
@@ -715,12 +698,12 @@ td a:hover {
 
 /* --- 5.2. Modal de Importación --- */
 .modal-overlay {
-  display: none;
+  display: none; /* Oculto por defecto */
   position: fixed;
   z-index: 1000;
   left: 0; top: 0;
   width: 100%; height: 100%;
-  background-color: rgba(0,0,0,0.5);
+  background-color: rgba(0,0,0,0.5); /* Fondo semitransparente */
   justify-content: center;
   align-items: center;
 }
@@ -774,35 +757,26 @@ td a:hover {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-left: auto;
+    margin-left: auto; /* Empuja los controles a la derecha de la cabecera */
 }
 .calendar-container {
     display: flex;
-    flex-direction: row;
     gap: 20px;
     width: 100%;
-    flex-grow: 1;
 }
 .calendar-main-view {
-    flex: 3;
-    display: flex;
-    flex-direction: column;
-    padding-right: 10px;
+    flex: 3; /* Ocupa 3/4 del espacio */
 }
 .calendar-sidebar {
-    flex: 1;
+    flex: 1; /* Ocupa 1/4 del espacio */
     border-left: 1px solid #eee;
     padding-left: 20px;
-    position: sticky;
-    top: 0;
 }
 .calendar-grid {
     display: grid;
+    /* Crea una rejilla responsive con columnas de al menos 280px */
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
-}
-.calendar-month { 
-    margin-bottom: 20px; 
 }
 .calendar-month h3 { 
     text-align: center; 
@@ -810,37 +784,28 @@ td a:hover {
     margin-top: 0; 
 }
 .calendar-month table { 
-    width: 100%; 
-    border-collapse: collapse; 
     font-size: 12px; 
 }
-.calendar-month th { 
-    background-color: #69a3db; 
-    color: white; 
-}
 .calendar-month td {
-    border: 1px solid #ddd;
     cursor: pointer;
     transition: background-color 0.2s;
-    text-align: center;
-    padding: 6px;
 }
 .calendar-month td.weekend { background-color: #f8f9fa; }
 .calendar-month td.has-automation { background-color: #a2d9ff; font-weight: bold; }
 .calendar-month td.selected { background-color: #558ac7; color: white; }
 .calendar-month td:hover { background-color: #e0e7ef; }
 
+/* Estilo para el título de la lista de automatismos cuando es clicable */
 #automation-list-header.clickable {
     cursor: pointer;
     color: #005A9C;
     text-decoration: underline;
-    transition: color 0.2s;
 }
-
 #automation-list-header.clickable:hover {
     color: #003366;
 }
 
+/* Estilo para cada item en la lista de automatismos del día */
 #automation-list .automation-item {
     background-color: #f8f9fa;
     border: 1px solid #e9ecef;
@@ -874,21 +839,20 @@ td a:hover {
    ========================================================== */
 
 @media (max-width: 1024px) {
+  /* En pantallas más pequeñas, apila los 3 paneles en una sola columna */
   .app-container {
     grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto; /* Navegación | Contenido | Log */
   }
+
+  /* Ajusta la altura del log para que no ocupe toda la pantalla */
   #log-sidebar {
     height: auto;
     max-height: 500px;
   }
+  
+  /* Se deshabilita la funcionalidad de colapsar/expandir el log en pantallas pequeñas */
   .app-container.log-collapsed {
     grid-template-columns: 1fr;
   }
-  .app-container.log-collapsed .log-header h2,
-  .app-container.log-collapsed .log-block {
-    display: flex;
-  }
-  #toggleLogBtn {
-    display: none;
-  }
-}
+  .app-container.lo
