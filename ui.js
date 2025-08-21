@@ -25,6 +25,7 @@
 //    - 6.2. Calendario
 //    - 6.3. Modal de Importación
 //    - 6.4. Menús Colapsables
+//    - 6.5. Configuración de APIs
 // 7. EVENT LISTENERS
 // 8. INICIALIZACIÓN DE LA APLICACIÓN
 // ===================================================================
@@ -43,6 +44,8 @@ document.addEventListener('DOMContentLoaded', function () {
 	let selectedSubscriberData = null; // Datos del suscriptor seleccionado.
 	let navigationHistory = ['main-menu']; // Historial para el botón "Atrás".
 	let allAutomations = [];         // Caché de automatismos para el calendario.
+	let currentClientConfig = null;  // Guardará la config completa del cliente activo
+	let selectedConfigRow = null;    // Para la selección de filas en la tabla de config
 	let fullAutomationList = [];     // Caché de todos los automatismos para la vista de gestión.
 	let dailyFilteredAutomations = [];// Automatismos filtrados para un día específico en el calendario.
 	let calendarDataForClient = '';  // Cliente para el que se han cargado los datos del calendario.
@@ -81,10 +84,9 @@ document.addEventListener('DOMContentLoaded', function () {
 	const saveConfigBtn = document.getElementById('saveConfigBtn');
 	const loginBtn = document.getElementById('loginBtn');
 	const logoutBtn = document.getElementById('logoutBtn');
-	const dvSentInput = document.getElementById('dvSent');
-    const dvOpenInput = document.getElementById('dvOpen');
-    const dvClickInput = document.getElementById('dvClick');
-    const dvBounceInput = document.getElementById('dvBounce');
+	const sendsConfigTbody = document.getElementById('sends-config-tbody');
+	const addSendConfigRowBtn = document.getElementById('add-send-config-row-btn');
+	const sendsResultsContainer = document.getElementById('sends-results-container');
 
 	// --- Creación de Data Extensions ---
 	const deNameInput = document.getElementById('deName');
@@ -126,15 +128,11 @@ document.addEventListener('DOMContentLoaded', function () {
 	const dataSourcesTbody = document.getElementById('data-sources-tbody');
     const customerSearchValue = document.getElementById('customerSearchValue');
     const customerSearchTbody = document.getElementById('customer-search-tbody');
-	const getCustomerSendsBtn = document.getElementById('getCustomerSendsBtn');
+	const getDEsBtn = document.getElementById('getDEsBtn');
     const getCustomerJourneysBtn = document.getElementById('getCustomerJourneysBtn');
 	const customerJourneysResultsBlock = document.getElementById('customer-journeys-results-block');
     const customerJourneysTbody = document.getElementById('customer-journeys-tbody');
 	const customerSendsResultsBlock = document.getElementById('customer-sends-results-block');
-	const sendsTableContainer = document.getElementById('sends-table-container');
-    const opensTableContainer = document.getElementById('opens-table-container');
-    const clicksTableContainer = document.getElementById('clicks-table-container');
-    const bouncesTableContainer = document.getElementById('bounces-table-container');
 	const querySearchText = document.getElementById('querySearchText');
     const querySearchResultsTbody = document.getElementById('query-search-results-tbody');
 	const showQueryTextCheckbox = document.getElementById('showQueryTextCheckbox');
@@ -293,10 +291,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		businessUnit: businessUnitInput.value,
 		clientId: clientIdInput.value,
 		stackKey: stackKeyInput.value,
-		dvSent: dvSentInput.value,
-        dvOpen: dvOpenInput.value,
-        dvClick: dvClickInput.value,
-        dvBounce: dvBounceInput.value
+		dvConfigs: getDvConfigsFromTable()
 	});
 
 	/**
@@ -308,10 +303,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		authUriInput.value = config.authUri || '';
 		clientIdInput.value = config.clientId || '';
 		stackKeyInput.value = config.stackKey || '';
-        dvSentInput.value = config.dvSent || '';
-        dvOpenInput.value = config.dvOpen || '';
-        dvClickInput.value = config.dvClick || '';
-        dvBounceInput.value = config.dvBounce || '';
+		populateDvConfigsTable(config.dvConfigs); 
 		tokenField.value = '';
 		soapUriInput.value = '';
 		restUriInput.value = '';
@@ -353,9 +345,12 @@ document.addEventListener('DOMContentLoaded', function () {
 			renderAutomationsTable([]);
 			updateAutomationButtonsState();
 
+			currentClientConfig = null; 
+
 			if (clientName) {
 				blockUI();
 				const configToLoad = configs[clientName] || {};
+				currentClientConfig = configToLoad;
 				setClientConfigForm(configToLoad);
 				clientNameInput.value = clientName;
 				savedConfigsSelect.value = clientName;
@@ -682,7 +677,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (selectedCustomerRow) selectedCustomerRow.classList.remove('selected');
 		selectedCustomerRow = null;
 		selectedSubscriberData = null;
-		getCustomerSendsBtn.disabled = true;
+		getDEsBtn.disabled = false;
 		getCustomerJourneysBtn.disabled = true;
 		customerJourneysResultsBlock.classList.add('hidden');
 		customerSendsResultsBlock.classList.add('hidden');
@@ -795,39 +790,64 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (!selectedSubscriberData?.subscriberKey) return;
 		blockUI();
 		startLogBuffering();
+		
 		customerSendsResultsBlock.classList.remove('hidden');
+		sendsResultsContainer.innerHTML = ''; // Limpiamos resultados anteriores
+
 		try {
 			const apiConfig = await getAuthenticatedConfig();
-			const subscriberKey = selectedSubscriberData.subscriberKey;
-			const customDataViews = { Sent: dvSentInput.value.trim(), Open: dvOpenInput.value.trim(), Click: dvClickInput.value.trim(), Bounce: dvBounceInput.value.trim() };
-			const containers = { 'Sent': sendsTableContainer, 'Open': opensTableContainer, 'Click': clicksTableContainer, 'Bounce': bouncesTableContainer };
-			Object.values(containers).forEach(c => c.innerHTML = '');
-			logMessage(`Iniciando búsqueda de envíos para: ${subscriberKey}`);
-			for (const viewType in customDataViews) {
-                const container = containers[viewType];
-                const dataViewKey = customDataViews[viewType];
-                if (!dataViewKey) {
-                    container.innerHTML = `<p>Data View para '${viewType}' no configurada.</p>`;
-                    continue;
-                }
-				container.innerHTML = `<p>Buscando en ${viewType} ('${dataViewKey}')...</p>`;
-				logMessage(`Consultando Data View: ${dataViewKey}...`);
-				const filter = encodeURIComponent(`"SubscriberKey"='${subscriberKey}'`);
-				const url = `${apiConfig.restUri}data/v1/customobjectdata/key/${dataViewKey}/rowset?$filter=${filter}`;
-				logApiCall({ endpoint: url, method: 'GET' });
-				const response = await fetch(url, { method: 'GET', headers: { 'Authorization': `Bearer ${apiConfig.accessToken}` } });
-				const responseData = await response.json();
-				logApiResponse({ request: url, response: responseData });
-				if (!response.ok) {
-					container.innerHTML = `<p style="color: red;">Error al consultar ${viewType}: ${responseData.message || response.statusText}</p>`;
-					continue; 
-				}
-				renderDataViewTable(container, responseData.items);
+			const searchValue = selectedSubscriberData.subscriberKey;
+			
+			// Leemos la configuración guardada del cliente activo
+			const configs = currentClientConfig?.dvConfigs?.filter(c => c.deKey && c.field) || [];
+
+			if (configs.length === 0) {
+				sendsResultsContainer.innerHTML = '<p>No hay Data Extensions configuradas para la búsqueda. Ve a "Configuración de APIs" para definirlas y guardarlas.</p>';
+				return;
 			}
+			
+			logMessage(`Iniciando búsqueda para '${searchValue}' en ${configs.length} DE(s).`);
+
+			// Iteramos sobre cada configuración y ejecutamos la búsqueda
+			for (const config of configs) {
+				const resultBlock = document.createElement('div');
+				resultBlock.className = 'sends-dataview-block';
+				resultBlock.innerHTML = `
+					<h4>${config.title} <small>(${config.deKey})</small></h4>
+					<div class="table-container">
+						<p>Buscando...</p>
+					</div>
+				`;
+				sendsResultsContainer.appendChild(resultBlock);
+				const container = resultBlock.querySelector('.table-container');
+
+				try {
+					logMessage(`Consultando DE: ${config.deKey} con el campo "${config.field}"...`);
+					const filter = encodeURIComponent(`"${config.field}"='${searchValue}'`);
+					const url = `${apiConfig.restUri}data/v1/customobjectdata/key/${config.deKey}/rowset?$filter=${filter}`;
+					
+					logApiCall({ endpoint: url, method: 'GET' });
+					const response = await fetch(url, { method: 'GET', headers: { 'Authorization': `Bearer ${apiConfig.accessToken}` } });
+					const responseData = await response.json();
+					logApiResponse({ request: url, response: responseData });
+
+					if (!response.ok) {
+						throw new Error(responseData.message || response.statusText);
+					}
+					
+					renderDEs(container, responseData.items);
+				
+				} catch (error) {
+					logMessage(`Error consultando ${config.deKey}: ${error.message}`);
+					container.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+				}
+			}
+			
 			logMessage("Búsqueda de envíos completada.");
+
 		} catch (error) {
 			logMessage(`Error fatal durante la búsqueda de envíos: ${error.message}`);
-			Object.values(sendsTableContainer.parentNode.children).forEach(c => c.innerHTML = `<p style="color: red;">${error.message}</p>`);
+			sendsResultsContainer.innerHTML = `<p style="color: red;">${error.message}</p>`;
 		} finally {
 			unblockUI();
 			endLogBuffering();
@@ -1337,7 +1357,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		customerSearchTbody.innerHTML = '';
 		selectedCustomerRow = null;
 		selectedSubscriberData = null;
-		getCustomerSendsBtn.disabled = true;
+		getDEsBtn.disabled = false;
 		getCustomerJourneysBtn.disabled = true;
 		if (!results || results.length === 0) {
 			customerSearchTbody.innerHTML = '<tr><td colspan="6">No se encontraron clientes con ese criterio.</td></tr>';
@@ -1353,7 +1373,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				selectedCustomerRow = row;
 				selectedSubscriberData = { subscriberKey: sub.subscriberKey, isSubscriber: sub.isSubscriber };
 				getCustomerJourneysBtn.disabled = false;
-				if (sub.isSubscriber) getCustomerSendsBtn.disabled = false;
+				getDEsBtn.disabled = false;
 			}
 			customerSearchTbody.appendChild(row);
 		});
@@ -1381,7 +1401,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * @param {HTMLElement} containerElement - El div donde se inyectará la tabla.
 	 * @param {Array} items - El array de 'items' de la respuesta de la API.
 	 */
-	function renderDataViewTable(containerElement, items) {
+	function renderDEs(containerElement, items) {
 		containerElement.innerHTML = '';
 		if (!items || items.length === 0) {
 			containerElement.innerHTML = '<p>No se encontraron registros.</p>';
@@ -1889,6 +1909,51 @@ document.addEventListener('DOMContentLoaded', function () {
         renderAutomationsTable(dataToRender);
     }
 
+	// --- 6.5. Configuración de APIs ---
+	/**
+	 * Lee la configuración de la tabla de búsqueda de envíos y la devuelve como un array.
+	 * @returns {Array<object>}
+	 */
+	function getDvConfigsFromTable() {
+		return Array.from(sendsConfigTbody.querySelectorAll('tr')).map(row => {
+			const cells = row.querySelectorAll('td');
+			return {
+				title: cells[0].textContent.trim(),
+				deKey: cells[1].textContent.trim(),
+				field: cells[2].textContent.trim()
+			};
+		});
+	}
+
+	/**
+	 * Rellena la tabla de configuración de búsqueda de envíos con datos guardados.
+	 * @param {Array<object>} configs - El array de configuraciones a pintar.
+	 */
+	function populateDvConfigsTable(configs = []) {
+		sendsConfigTbody.innerHTML = ''; // Limpia la tabla
+		if (!configs || configs.length === 0) {
+			// Si no hay configs guardadas, crea 4 filas por defecto
+			configs = [
+				{ title: '', deKey: '', field: '' },,
+			];
+		}
+		
+		configs.forEach(config => {
+			const newRow = sendsConfigTbody.insertRow();
+			// Creamos las celdas editables
+			newRow.innerHTML = `
+				<td contenteditable="true">${config.title}</td>
+				<td contenteditable="true">${config.deKey}</td>
+				<td contenteditable="true">${config.field}</td>
+			`;
+			// Creamos y añadimos el botón de borrado fuera de las celdas
+			const deleteButton = document.createElement('button');
+			deleteButton.className = 'delete-row-btn';
+			deleteButton.title = 'Eliminar fila';
+			deleteButton.textContent = '×';
+			newRow.appendChild(deleteButton);
+		});
+	}
 
 	// ==========================================================
 	// --- 7. EVENT LISTENERS ---
@@ -2000,6 +2065,38 @@ document.addEventListener('DOMContentLoaded', function () {
 			});
 		});
 
+		// --- Listeners de la Tabla de Configuración de Envíos ---
+		addSendConfigRowBtn.addEventListener('click', () => {
+			const newRow = sendsConfigTbody.insertRow();
+			newRow.innerHTML = `
+				<td contenteditable="true"></td>
+				<td contenteditable="true"></td>
+				<td contenteditable="true"></td>
+			`;
+			const deleteButton = document.createElement('button');
+			deleteButton.className = 'delete-row-btn';
+			deleteButton.title = 'Eliminar fila';
+			deleteButton.textContent = '×';
+			newRow.appendChild(deleteButton);
+		});
+
+		sendsConfigTbody.addEventListener('click', (e) => {
+			const targetRow = e.target.closest('tr');
+			if (!targetRow) return;
+
+			// Si se hace clic en el botón de borrar
+			if (e.target.matches('.delete-row-btn')) {
+				if (targetRow === selectedConfigRow) selectedConfigRow = null;
+				targetRow.remove();
+			} else { // Si se hace clic en cualquier otra parte de la fila para seleccionarla
+				if (targetRow !== selectedConfigRow) {
+					if (selectedConfigRow) selectedConfigRow.classList.remove('selected');
+					targetRow.classList.add('selected');
+					selectedConfigRow = targetRow;
+				}
+			}
+		});
+
 		// --- Listeners de Botones de Macros ---
 		createDEBtn.addEventListener('click', macroCreateDE);
 		createFieldsBtn.addEventListener('click', macroCreateFields);
@@ -2010,7 +2107,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		findDataSourcesBtn.addEventListener('click', macroFindDataSources);
 		searchCustomerBtn.addEventListener('click', macroSearchCustomer);
 		searchQueriesByTextBtn.addEventListener('click', macroSearchQueriesByText);
-		getCustomerSendsBtn.addEventListener('click', () => { if (selectedSubscriberData) macroGetCustomerSends(); });
+		getDEsBtn.addEventListener('click', () => { if (selectedSubscriberData) macroGetCustomerSends(); });
 		getCustomerJourneysBtn.addEventListener('click', () => { if (selectedSubscriberData) macroGetCustomerJourneys(); });
 
 		// --- Listeners de la Tabla de Campos ---
@@ -2141,7 +2238,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			selectedCustomerRow = clickedRow;
 			selectedSubscriberData = { subscriberKey: clickedRow.dataset.subscriberKey, isSubscriber: clickedRow.dataset.isSubscriber === 'true' };
 			getCustomerJourneysBtn.disabled = false;
-			getCustomerSendsBtn.disabled = !selectedSubscriberData.isSubscriber;
+			getDEsBtn.disabled = !selectedSubscriberData.isSubscriber;
 			customerJourneysResultsBlock.classList.add('hidden');
 			customerSendsResultsBlock.classList.add('hidden');
 		});

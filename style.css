@@ -55,7 +55,7 @@ body {
 /* Layout principal de la aplicación con 3 columnas usando CSS Grid */
 .app-container {
   display: grid;
-  grid-template-columns: 220px 1fr 360px; /* Sidebar Izq | Contenido Principal | Sidebar Der */
+  grid-template-columns: 220px minmax(0, 1fr) 360px; /* Sidebar Izq | Contenido Principal | Sidebar Der */
   gap: 20px;
   padding: 20px;
   min-height: 100vh;
@@ -552,9 +552,14 @@ tr.selected {
   pointer-events: none;
   transition: all 0.2s;
 }
-#myTable tbody tr.selected .delete-row-btn {
-  opacity: 1; /* Se muestra solo en la fila seleccionada */
+#myTable tbody tr.selected .delete-row-btn,
+#sends-config-table tbody tr.selected .delete-row-btn { 
+  opacity: 1;
   pointer-events: auto;
+}
+#sends-config-table tbody tr {
+    position: relative;
+    cursor: pointer;
 }
 .delete-row-btn:hover {
   background-color: #dc3545;
@@ -655,7 +660,7 @@ td a:hover {
 
 /* Estado de log colapsado */
 .app-container.log-collapsed {
-  grid-template-columns: 220px 1fr 65px; /* Reduce el ancho de la columna del log */
+  grid-template-columns: 220px minmax(0, 1fr) 65px; /* Reduce el ancho de la columna del log */
 }
 .app-container.log-collapsed .log-header h2,
 .app-container.log-collapsed .log-block {
@@ -863,7 +868,7 @@ td a:hover {
     color: #6c757d; 
 }
 
-/* --- 5.4. Bloques de Data View (Envíos) --- */
+/* --- 5.4. Bloques de DEs --- */
 .sends-dataview-block {
     margin-top: 20px;
     border-top: 1px solid #e0e7ef;
@@ -873,7 +878,15 @@ td a:hover {
     margin: 0 0 10px 0;
     color: #558ac7;
 }
-
+/*
+  Asegura que las tablas generadas dinámicamente en los resultados de envíos
+  no fuercen a su contenedor a expandirse.
+*/
+#sends-results-container .table-container table {
+    table-layout: auto; /* Permite que las columnas se ajusten al contenido */
+    width: auto;      /* Evita que la tabla intente ocupar más del 100% del contenedor */
+    min-width: 100%;  /* Asegura que la tabla ocupe al menos todo el ancho disponible */
+}
 
 /* ==========================================================
    6. DISEÑO RESPONSIVE
