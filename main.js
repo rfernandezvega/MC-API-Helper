@@ -49,52 +49,9 @@ app.disableHardwareAcceleration();
 app.whenReady().then(() => {
   createWindow();
 
-  // --- LÓGICA DE AUTO-ACTUALIZACIÓN DEFINITIVA PARA PRUEBAS ---
-  console.log('Iniciando proceso de actualización...');
-
-  // Log para verificar si el token de GitHub está presente en el entorno
-  if (process.env.GH_TOKEN) {
-    console.log('[Updater] Token de GitHub (GH_TOKEN) encontrado.');
-  } else {
-    console.warn('[Updater] ADVERTENCIA: No se encontró la variable de entorno GH_TOKEN. La actualización fallará si el repositorio es privado.');
-  }
-
-  // Solo ejecutamos la lógica de actualización en desarrollo si no está empaquetado
-  if (!app.isPackaged) {
-    const devUpdateConfigPath = path.join(__dirname, 'dev-app-update.yml');
-    
-    // Establecemos la ruta al archivo de configuración de desarrollo
-    autoUpdater.updateConfigPath = devUpdateConfigPath;
-    
-    // Forzamos al actualizador a usar la configuración
-    autoUpdater.forceDevUpdateConfig = true;
-
-    console.log('MODO DESARROLLO: Forzando el uso de la configuración de actualización.');
-    console.log('Ruta de configuración establecida en:', devUpdateConfigPath);
-  }
-
-  // --- Listeners para ver el proceso en la consola ---
-  autoUpdater.on('checking-for-update', () => {
-    console.log('[Updater] Buscando actualizaciones...');
-  });
-  autoUpdater.on('update-available', (info) => {
-    console.log('[Updater] ¡Actualización disponible!', info);
-  });
-  autoUpdater.on('update-not-available', (info) => {
-    console.log('[Updater] No hay actualizaciones disponibles.', info);
-  });
-  autoUpdater.on('error', (err) => {
-    console.error('[Updater] Error en el actualizador automático:', err.message);
-  });
-  autoUpdater.on('download-progress', (progressObj) => {
-    console.log(`[Updater] Descargado ${progressObj.percent.toFixed(2)}%`);
-  });
-  autoUpdater.on('update-downloaded', (info) => {
-    console.log('[Updater] ¡Actualización descargada! Se mostrará notificación en breve.');
-  });
-  // --- Fin de Listeners ---
-
-  // Finalmente, iniciamos la comprobación.
+  // --- LÓGICA DE AUTO-ACTUALIZACIÓN PARA PRODUCCIÓN ---
+  // Esta línea buscará actualizaciones y, si las encuentra, las descargará
+  // y notificará al usuario para que reinicie e instale.
   autoUpdater.checkForUpdatesAndNotify();
 });
 app.on('window-all-closed', () => {

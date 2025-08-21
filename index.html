@@ -370,10 +370,20 @@
                     <button id="searchDEBtn" class="action-button">Buscar</button>
                 </div>
             </div>
-            <div class="config-block">
-                <h3>Resultados</h3>
-                <pre id="de-search-results">La ruta de la Data Extension aparecerá aquí.</pre>
-            </div>
+             <div class="config-block" style="flex-grow: 1;">
+                  <h3>Resultados</h3>
+                  <div class="table-container">
+                      <table id="de-search-results-table">
+                          <thead>
+                              <tr>
+                                  <th>Nombre Data Extension</th>
+                                  <th>Ruta de Carpeta</th>
+                              </tr>
+                          </thead>
+                          <tbody id="de-search-results-tbody"></tbody>
+                      </table>
+                  </div>
+              </div>
         </div>
 
         <!-- Pestaña: Buscador de Orígenes de Datos -->

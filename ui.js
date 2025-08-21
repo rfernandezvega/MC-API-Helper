@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	// --- Buscadores ---
 	const deSearchProperty = document.getElementById('deSearchProperty');
 	const deSearchValue = document.getElementById('deSearchValue');
-	const deSearchResults = document.getElementById('de-search-results');
+	const deSearchResultsTbody = document.querySelector('#de-search-results-tbody');
 	const deNameToFindInput = document.getElementById('deNameToFind');
 	const dataSourcesTbody = document.getElementById('data-sources-tbody');
     const customerSearchValue = document.getElementById('customerSearchValue');
@@ -565,27 +565,46 @@ document.addEventListener('DOMContentLoaded', function () {
 	async function macroSearchDE() {
 		blockUI();
 		startLogBuffering();
-		deSearchResults.textContent = 'Buscando...';
+		deSearchResultsTbody.innerHTML = '<tr><td colspan="2">Buscando...</td></tr>';
 		try {
 			const apiConfig = await getAuthenticatedConfig();
 			const property = deSearchProperty.value;
 			const value = deSearchValue.value.trim();
 			if (!value) throw new Error("El campo 'Valor' no puede estar vacío.");
-			logMessage(`Buscando DE por ${property}: ${value}`);
-			const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>Name</Properties><Properties>CategoryID</Properties><Filter xsi:type="SimpleFilterPart"><Property>${property}</Property><SimpleOperator>equals</SimpleOperator><Value>${value}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+
+			logMessage(`Buscando DE por ${property} que contenga: ${value}`);
+			
+			// Usamos 'like' y envolvemos el valor con '%' para buscar coincidencias parciales
+			const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>Name</Properties><Properties>CategoryID</Properties><Filter xsi:type="SimpleFilterPart"><Property>${property}</Property><SimpleOperator>like</SimpleOperator><Value>%${value}%</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+			
 			const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload, "Búsqueda de DE completada.");
-			const deInfo = await parseDESearchResponse(responseText);
-			if (deInfo.error) throw new Error(deInfo.error);
-			if (!deInfo.categoryId || parseInt(deInfo.categoryId) === 0) {
-				deSearchResults.textContent = `Data Extensions > ${deInfo.deName}`;
+			const deList = await parseDESearchResponse(responseText);
+
+			if (deList.length === 0) {
+				renderDESearchResultsTable([]); // Renderiza la tabla vacía con mensaje
+				logMessage("No se encontraron resultados.");
 				return;
 			}
-			logMessage(`DE encontrada. Carpeta ID: ${deInfo.categoryId}. Recuperando ruta...`);
-			const folderPath = await getFolderPath(deInfo.categoryId, apiConfig);
-			deSearchResults.textContent = `${folderPath} > ${deInfo.deName}`;
+
+			logMessage(`Se encontraron ${deList.length} Data Extensions. Obteniendo rutas de carpeta...`);
+
+			// Usamos Promise.all para obtener todas las rutas de carpeta en paralelo, mucho más rápido.
+			const pathPromises = deList.map(async (deInfo) => {
+				if (!deInfo.categoryId || parseInt(deInfo.categoryId) === 0) {
+					return { name: deInfo.deName, path: 'Data Extensions' }; // DE en la raíz
+				}
+				const folderPath = await getFolderPath(deInfo.categoryId, apiConfig);
+				return { name: deInfo.deName, path: folderPath || 'Data Extensions' };
+			});
+
+			const resultsWithPaths = await Promise.all(pathPromises);
+			
+			renderDESearchResultsTable(resultsWithPaths);
+			logMessage("Visualización de resultados completada.");
+
 		} catch (error) {
 			logMessage(`Error al buscar la DE: ${error.message}`);
-			deSearchResults.textContent = `Error: ${error.message}`;
+			deSearchResultsTbody.innerHTML = `<tr><td colspan="2" style="color: red;">Error: ${error.message}</td></tr>`;
 		} finally {
 			unblockUI();
 			endLogBuffering();
@@ -1142,13 +1161,19 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	function parseDESearchResponse(xmlString) {
 		return new Promise(resolve => {
-			const xmlDoc = new DOMParser().parseFromString(xmlString, "application/xml");
-			if (xmlDoc.querySelector("OverallStatus")?.textContent !== 'OK') {
-				return resolve({ error: xmlDoc.querySelector("StatusMessage")?.textContent || 'Error desconocido.' });
+			const parser = new DOMParser();
+			const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+			if (xmlDoc.querySelector("OverallStatus")?.textContent.includes('Error')) {
+				throw new Error(xmlDoc.querySelector("StatusMessage")?.textContent || 'Error desconocido en la respuesta SOAP.');
 			}
-			const resultNode = xmlDoc.querySelector("Results");
-			if (!resultNode) return resolve({ error: "No se encontró la Data Extension." });
-			resolve({ categoryId: resultNode.querySelector("CategoryID")?.textContent, deName: resultNode.querySelector("Name")?.textContent });
+			
+			const resultNodes = xmlDoc.querySelectorAll("Results");
+			const deList = Array.from(resultNodes).map(node => ({
+				categoryId: node.querySelector("CategoryID")?.textContent,
+				deName: node.querySelector("Name")?.textContent
+			}));
+			
+			resolve(deList);
 		});
 	}
 	
@@ -1170,7 +1195,26 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 
 	// --- 5.3. Renderizadores de Tablas ---
-	
+	/**
+	 * Dibuja la tabla de resultados para el buscador de Data Extensions.
+	 * @param {Array} results - Array de objetos con { name, path }.
+	 */
+	function renderDESearchResultsTable(results) {
+		deSearchResultsTbody.innerHTML = '';
+		if (!results || results.length === 0) {
+			deSearchResultsTbody.innerHTML = '<tr><td colspan="2">No se encontraron Data Extensions con ese criterio.</td></tr>';
+			return;
+		}
+
+		// Ordenamos los resultados alfabéticamente por la ruta completa para agrupar carpetas
+		results.sort((a, b) => (a.path + a.name).localeCompare(b.path + b.name));
+
+		results.forEach(result => {
+			const row = deSearchResultsTbody.insertRow();
+			row.innerHTML = `<td>${result.name}</td><td>${result.path}</td>`;
+		});
+	}
+
 	/**
 	 * Dibuja la tabla de resultados para el buscador de orígenes de datos.
 	 * @param {Array} sources - Array de actividades (imports, queries) encontradas.
