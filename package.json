@@ -1,10 +1,10 @@
 {
   "name": "mc-api-desktop",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "description": "Herramienta para interactuar con la API de Marketing Cloud",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "cross-env NODE_ENV=development electron .",
     "build": "electron-packager . MC-API-Helper --platform=win32 --arch=x64 --icon=icon.ico --out=dist --overwrite",
     "dist": "electron-builder"
   },
@@ -24,6 +24,7 @@
   "build": {
     "appId": "com.seidor.mc-api-desktop",
     "productName": "MC API Helper",
+    "artifactName": "${productName}-Setup-${version}.${ext}",
     "forceCodeSigning": false,
     "win": {
       "target": [
@@ -45,7 +46,8 @@
     "publish": { 
       "provider": "github",
       "owner": "rfernandezvega", 
-      "repo": "rfernandezvega"
+      "repo": "MC-API-Helper",
+      "private": true
     }
   }
 }
