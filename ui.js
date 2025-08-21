@@ -811,10 +811,9 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * @returns {Promise<Array>} Una promesa que resuelve a la lista de automatismos.
 	 */
 	async function macroFetchAllAutomations() {
-		blockUI();
-		startLogBuffering();
-		logMessage("Recuperando todas las definiciones de automatismos...");
+		// Esta función ahora solo realiza la lógica de fetching, no gestiona UI ni logs.
 		try {
+			logMessage("Recuperando todas las definiciones de automatismos...");
 			const apiConfig = await getAuthenticatedConfig();
 			const url = `${apiConfig.restUri}/legacy/v1/beta/bulk/automations/automation/definition/`;
 			logApiCall({ endpoint: url, method: 'GET' });
@@ -828,10 +827,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		} catch (error) {
 			logMessage(`Error al recuperar automatismos: ${error.message}`);
 			alert(`Error: ${error.message}`);
-			return [];
-		} finally {
-			unblockUI();
-			endLogBuffering();
+			return []; // Devuelve un array vacío en caso de error para no romper el flujo.
 		}
 	}
 
@@ -1873,8 +1869,6 @@ document.addEventListener('DOMContentLoaded', function () {
 		findDataSourcesBtn.addEventListener('click', macroFindDataSources);
 		searchCustomerBtn.addEventListener('click', macroSearchCustomer);
 		searchQueriesByTextBtn.addEventListener('click', macroSearchQueriesByText);
-		refreshAutomationsBtn.addEventListener('click', macroGetAutomations);
-		refreshJourneyAutomationsBtn.addEventListener('click', macroGetJourneyAutomations);
 		getCustomerSendsBtn.addEventListener('click', () => { if (selectedSubscriberData) macroGetCustomerSends(); });
 		getCustomerJourneysBtn.addEventListener('click', () => { if (selectedSubscriberData) macroGetCustomerJourneys(); });
 
@@ -1950,6 +1944,32 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 
 		// --- Listeners del Calendario ---
+		refreshAutomationsBtn.addEventListener('click', async () => {
+			blockUI();
+			startLogBuffering();
+			try {
+				await macroGetAutomations();
+			} catch (e) {
+				logMessage(`Error al refrescar automatismos del calendario: ${e.message}`);
+				alert(`Error: ${e.message}`);
+			} finally {
+				unblockUI();
+				endLogBuffering();
+			}
+		});
+		refreshJourneyAutomationsBtn.addEventListener('click', async () => {
+			blockUI();
+			startLogBuffering();
+			try {
+				await macroGetJourneyAutomations();
+			} catch (e) {
+				logMessage(`Error al refrescar journeys del calendario: ${e.message}`);
+				alert(`Error: ${e.message}`);
+			} finally {
+				unblockUI();
+				endLogBuffering();
+			}
+		});
 		calendarYearSelect.addEventListener('change', generateCalendar);
 		calendarGrid.addEventListener('click', (e) => {
 			if (e.target.tagName === 'TD' && e.target.dataset.date) {
@@ -1989,15 +2009,17 @@ document.addEventListener('DOMContentLoaded', function () {
 		activateAutomationBtn.addEventListener('click', () => macroPerformAutomationAction('activate'));
         runAutomationBtn.addEventListener('click', () => macroPerformAutomationAction('run'));
         stopAutomationBtn.addEventListener('click', () => macroPerformAutomationAction('pause'));
-		refreshAutomationsTableBtn.addEventListener('click', () => {
+		refreshAutomationsTableBtn.addEventListener('click', async () => {
+			blockUI();
 			startLogBuffering();
 			try {
 				logMessage("Refrescando lista de automatismos...");
 				fullAutomationList = [];
 				automationNameFilter.value = '';
 				automationStatusFilter.value = '';
-				viewAutomations();
+				await viewAutomations();
 			} finally {
+				unblockUI();
 				endLogBuffering();
 			}
         });
