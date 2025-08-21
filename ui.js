@@ -675,8 +675,10 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	async function macroSearchCustomer() {
 		blockUI();
-		startLogBuffering();
+		startLogBuffering(); // <-- Adaptado a la nueva estructura de logs
 		customerSearchTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
+		
+		// Resetea el estado completo de la UI
 		if (selectedCustomerRow) selectedCustomerRow.classList.remove('selected');
 		selectedCustomerRow = null;
 		selectedSubscriberData = null;
@@ -684,25 +686,59 @@ document.addEventListener('DOMContentLoaded', function () {
 		getCustomerJourneysBtn.disabled = true;
 		customerJourneysResultsBlock.classList.add('hidden');
 		customerSendsResultsBlock.classList.add('hidden');
+
 		try {
 			const apiConfig = await getAuthenticatedConfig();
 			const value = customerSearchValue.value.trim();
 			if (!value) throw new Error("El campo de búsqueda no puede estar vacío.");
+			
 			let finalResults = [];
-			logMessage(`Paso 1: Buscando como Suscriptor por ID: ${value}`);
+
+			// --- PASO 1: Búsqueda como Subscriber por ID (SubscriberKey) ---
+			logMessage(`Paso 1/3: Buscando como Suscriptor por ID: ${value}`);
 			finalResults = await searchSubscriberByProperty('SubscriberKey', value, apiConfig);
+
+			// --- PASO 2: Si no hay resultados, busca como Subscriber por Email ---
 			if (finalResults.length === 0) {
-				logMessage(`Paso 2: No encontrado. Buscando como Suscriptor por Email: ${value}`);
+				logMessage(`Paso 2/3: No encontrado por ID. Buscando como Suscriptor por Email: ${value}`);
 				finalResults = await searchSubscriberByProperty('EmailAddress', value, apiConfig);
 			}
+
+			// --- PASO 3: Si sigue sin haber resultados, busca como Contact ---
+			if (finalResults.length === 0) {
+				logMessage(`Paso 3/3: No encontrado como Suscriptor. Buscando como Contacto por ContactKey: ${value}`);
+				
+				const contactUrl = `${apiConfig.restUri}contacts/v1/addresses/search/ContactKey`;
+				const contactPayload = { "filterConditionOperator": "Is", "filterConditionValue": value };
+
+				logApiCall({ endpoint: contactUrl, body: contactPayload });
+
+				const contactResponse = await fetch(contactUrl, {
+					method: 'POST',
+					headers: { 'Authorization': `Bearer ${apiConfig.accessToken}`, 'Content-Type': 'application/json' },
+					body: JSON.stringify(contactPayload)
+				});
+				
+				const contactData = await contactResponse.json();
+				logApiResponse(contactData);
+
+				if (!contactResponse.ok) {
+					const errorMessage = contactData.message || `Error API al buscar contactos: ${contactResponse.statusText}`;
+					throw new Error(errorMessage);
+				}
+				
+				finalResults = parseContactAddressSearchResponse(contactData);
+			}
+
 			renderCustomerSearchResults(finalResults);
 			logMessage(`Búsqueda completada. Se encontraron ${finalResults.length} resultado(s).`);
+
 		} catch (error) {
 			logMessage(`Error al buscar clientes: ${error.message}`);
 			customerSearchTbody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${error.message}</td></tr>`;
 		} finally {
 			unblockUI();
-			endLogBuffering();
+			endLogBuffering(); // <-- Adaptado a la nueva estructura de logs
 		}
 	}
 
@@ -879,6 +915,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	async function macroGetJourneyAutomations() {
 		const allItems = await macroFetchAllAutomations();
+		fullAutomationList = allItems; 
 		const scheduledItems = allItems.filter(item => item.status === 'Scheduled' && item.scheduledTime);
 		const journeyAutomations = scheduledItems.filter(auto => auto.processes?.some(proc => proc.workerCounts?.some(wc => wc.objectTypeId === 952)));
 		logMessage(`Se encontraron ${journeyAutomations.length} automatismos de Journeys programados.`);
@@ -1185,13 +1222,73 @@ document.addEventListener('DOMContentLoaded', function () {
 	function parseCustomerSearchResponse(xmlString) {
 		const parser = new DOMParser();
 		const xmlDoc = parser.parseFromString(xmlString, "application/xml");
-		if (xmlDoc.querySelector("OverallStatus")?.textContent.includes('Error')) {
+		
+		const overallStatus = xmlDoc.querySelector("OverallStatus")?.textContent;
+
+		// Si el estado NO es OK y NO es MoreDataAvailable, es un error.
+		if (overallStatus !== 'OK' && overallStatus !== 'MoreDataAvailable') {
 			throw new Error(xmlDoc.querySelector("StatusMessage")?.textContent || 'Error desconocido en la respuesta SOAP.');
 		}
+		
 		return Array.from(xmlDoc.querySelectorAll("Results")).map(node => {
 			const getText = (tagName) => node.querySelector(tagName)?.textContent || null;
-			return { subscriberKey: getText("SubscriberKey") || '---', emailAddress: getText("EmailAddress") || '---', status: getText("Status") || '---', createdDate: getText("CreatedDate") ? new Date(getText("CreatedDate")).toLocaleString() : '---', unsubscribedDate: getText("UnsubscribedDate") ? new Date(getText("UnsubscribedDate")).toLocaleString() : '---', isSubscriber: true };
+			return { 
+				subscriberKey: getText("SubscriberKey") || '---', 
+				emailAddress: getText("EmailAddress") || '---', 
+				status: getText("Status") || '---', 
+				createdDate: getText("CreatedDate") ? new Date(getText("CreatedDate")).toLocaleString() : '---', 
+				unsubscribedDate: getText("UnsubscribedDate") ? new Date(getText("UnsubscribedDate")).toLocaleString() : '---', 
+				isSubscriber: true 
+			};
 		});
+	}
+
+	/**
+	 * Parsea la respuesta de la búsqueda de direcciones de contacto (REST API) y la convierte en un array de objetos.
+	 * @param {object} responseData - La respuesta JSON de la API.
+	 * @returns {Array} Un array de objetos de contacto.
+	 */
+	function parseContactAddressSearchResponse(responseData) {
+		// La información está dentro del array 'addresses'. Si no existe o está vacío, no hay resultados.
+		const addresses = responseData?.addresses;
+		if (!addresses || addresses.length === 0) {
+			return [];
+		}
+
+		// Normalmente, al buscar por una clave única, solo nos interesa el primer resultado.
+		const contactData = addresses[0];
+
+		// Extraemos el ContactKey de su objeto anidado.
+		const contactKey = contactData.contactKey?.value || '---';
+
+		// Para encontrar la fecha de creación, tenemos que navegar por la estructura anidada.
+		let createdDate = '---';
+		
+		// 1. Buscamos el 'valueSet' que corresponde a los atributos primarios.
+		const primaryValueSet = contactData.valueSets?.find(vs => vs.definitionKey === 'Primary');
+		
+		if (primaryValueSet) {
+			// 2. Dentro de ese set, buscamos el objeto 'value' cuya clave de definición es 'CreatedDate'.
+			const createdDateValueObject = primaryValueSet.values?.find(v => v.definitionKey === 'CreatedDate');
+			
+			// 3. Si lo encontramos, extraemos el valor real de 'innerValue'.
+			if (createdDateValueObject?.innerValue) {
+				createdDate = new Date(createdDateValueObject.innerValue).toLocaleString();
+			}
+		}
+
+		// Construimos el objeto final con el formato que espera nuestra tabla.
+		const result = {
+			subscriberKey: contactKey,
+			emailAddress: '---', // Esta API específica no devuelve el email.
+			status: '---',
+			createdDate: createdDate,
+			unsubscribedDate: '---',
+			isSubscriber: false // Marcamos que NO es un suscriptor, solo un contacto.
+		};
+		
+		// Devolvemos el resultado dentro de un array para mantener la consistencia con el otro parser.
+		return [result];
 	}
 
 	// --- 5.3. Renderizadores de Tablas ---
@@ -1989,6 +2086,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		// --- Listeners del Calendario ---
 		refreshAutomationsBtn.addEventListener('click', async () => {
+			automationList.innerHTML = '<p>Selecciona un día para ver los detalles.</p>';
+			document.querySelectorAll('.calendar-month td.selected').forEach(c => c.classList.remove('selected'));
+
 			blockUI();
 			startLogBuffering();
 			try {
@@ -2002,6 +2102,9 @@ document.addEventListener('DOMContentLoaded', function () {
 			}
 		});
 		refreshJourneyAutomationsBtn.addEventListener('click', async () => {
+			automationList.innerHTML = '<p>Selecciona un día para ver los detalles.</p>';
+			document.querySelectorAll('.calendar-month td.selected').forEach(c => c.classList.remove('selected'));
+
 			blockUI();
 			startLogBuffering();
 			try {
