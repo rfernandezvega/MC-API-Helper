@@ -3,6 +3,7 @@
 
 // --- 1. MÓDulos REQUERIDOS ---
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const axios = require('axios');
 const keytar = require('keytar'); // Librería para el llavero seguro
@@ -43,7 +44,16 @@ function createWindow() {
 // Desactiva la aceleración de hardware (intenta evitar input text congelados aleatoriamente)
 app.disableHardwareAcceleration();
 
-app.whenReady().then(createWindow);
+// Fichero: main.js
+
+app.whenReady().then(() => {
+  createWindow();
+
+  // --- LÓGICA DE AUTO-ACTUALIZACIÓN PARA PRODUCCIÓN ---
+  // Esta línea buscará actualizaciones y, si las encuentra, las descargará
+  // y notificará al usuario para que reinicie e instale.
+  autoUpdater.checkForUpdatesAndNotify();
+});
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
 });

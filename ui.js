@@ -25,6 +25,7 @@
 //    - 6.2. Calendario
 //    - 6.3. Modal de Importación
 //    - 6.4. Menús Colapsables
+//    - 6.5. Configuración de APIs
 // 7. EVENT LISTENERS
 // 8. INICIALIZACIÓN DE LA APLICACIÓN
 // ===================================================================
@@ -43,6 +44,8 @@ document.addEventListener('DOMContentLoaded', function () {
 	let selectedSubscriberData = null; // Datos del suscriptor seleccionado.
 	let navigationHistory = ['main-menu']; // Historial para el botón "Atrás".
 	let allAutomations = [];         // Caché de automatismos para el calendario.
+	let currentClientConfig = null;  // Guardará la config completa del cliente activo
+	let selectedConfigRow = null;    // Para la selección de filas en la tabla de config
 	let fullAutomationList = [];     // Caché de todos los automatismos para la vista de gestión.
 	let dailyFilteredAutomations = [];// Automatismos filtrados para un día específico en el calendario.
 	let calendarDataForClient = '';  // Cliente para el que se han cargado los datos del calendario.
@@ -81,10 +84,9 @@ document.addEventListener('DOMContentLoaded', function () {
 	const saveConfigBtn = document.getElementById('saveConfigBtn');
 	const loginBtn = document.getElementById('loginBtn');
 	const logoutBtn = document.getElementById('logoutBtn');
-	const dvSentInput = document.getElementById('dvSent');
-    const dvOpenInput = document.getElementById('dvOpen');
-    const dvClickInput = document.getElementById('dvClick');
-    const dvBounceInput = document.getElementById('dvBounce');
+	const sendsConfigTbody = document.getElementById('sends-config-tbody');
+	const addSendConfigRowBtn = document.getElementById('add-send-config-row-btn');
+	const sendsResultsContainer = document.getElementById('sends-results-container');
 
 	// --- Creación de Data Extensions ---
 	const deNameInput = document.getElementById('deName');
@@ -121,20 +123,16 @@ document.addEventListener('DOMContentLoaded', function () {
 	// --- Buscadores ---
 	const deSearchProperty = document.getElementById('deSearchProperty');
 	const deSearchValue = document.getElementById('deSearchValue');
-	const deSearchResults = document.getElementById('de-search-results');
+	const deSearchResultsTbody = document.querySelector('#de-search-results-tbody');
 	const deNameToFindInput = document.getElementById('deNameToFind');
 	const dataSourcesTbody = document.getElementById('data-sources-tbody');
     const customerSearchValue = document.getElementById('customerSearchValue');
     const customerSearchTbody = document.getElementById('customer-search-tbody');
-	const getCustomerSendsBtn = document.getElementById('getCustomerSendsBtn');
+	const getDEsBtn = document.getElementById('getDEsBtn');
     const getCustomerJourneysBtn = document.getElementById('getCustomerJourneysBtn');
 	const customerJourneysResultsBlock = document.getElementById('customer-journeys-results-block');
     const customerJourneysTbody = document.getElementById('customer-journeys-tbody');
 	const customerSendsResultsBlock = document.getElementById('customer-sends-results-block');
-	const sendsTableContainer = document.getElementById('sends-table-container');
-    const opensTableContainer = document.getElementById('opens-table-container');
-    const clicksTableContainer = document.getElementById('clicks-table-container');
-    const bouncesTableContainer = document.getElementById('bounces-table-container');
 	const querySearchText = document.getElementById('querySearchText');
     const querySearchResultsTbody = document.getElementById('query-search-results-tbody');
 	const showQueryTextCheckbox = document.getElementById('showQueryTextCheckbox');
@@ -293,10 +291,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		businessUnit: businessUnitInput.value,
 		clientId: clientIdInput.value,
 		stackKey: stackKeyInput.value,
-		dvSent: dvSentInput.value,
-        dvOpen: dvOpenInput.value,
-        dvClick: dvClickInput.value,
-        dvBounce: dvBounceInput.value
+		dvConfigs: getDvConfigsFromTable()
 	});
 
 	/**
@@ -308,10 +303,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		authUriInput.value = config.authUri || '';
 		clientIdInput.value = config.clientId || '';
 		stackKeyInput.value = config.stackKey || '';
-        dvSentInput.value = config.dvSent || '';
-        dvOpenInput.value = config.dvOpen || '';
-        dvClickInput.value = config.dvClick || '';
-        dvBounceInput.value = config.dvBounce || '';
+		populateDvConfigsTable(config.dvConfigs); 
 		tokenField.value = '';
 		soapUriInput.value = '';
 		restUriInput.value = '';
@@ -353,9 +345,12 @@ document.addEventListener('DOMContentLoaded', function () {
 			renderAutomationsTable([]);
 			updateAutomationButtonsState();
 
+			currentClientConfig = null; 
+
 			if (clientName) {
 				blockUI();
 				const configToLoad = configs[clientName] || {};
+				currentClientConfig = configToLoad;
 				setClientConfigForm(configToLoad);
 				clientNameInput.value = clientName;
 				savedConfigsSelect.value = clientName;
@@ -565,27 +560,46 @@ document.addEventListener('DOMContentLoaded', function () {
 	async function macroSearchDE() {
 		blockUI();
 		startLogBuffering();
-		deSearchResults.textContent = 'Buscando...';
+		deSearchResultsTbody.innerHTML = '<tr><td colspan="2">Buscando...</td></tr>';
 		try {
 			const apiConfig = await getAuthenticatedConfig();
 			const property = deSearchProperty.value;
 			const value = deSearchValue.value.trim();
 			if (!value) throw new Error("El campo 'Valor' no puede estar vacío.");
-			logMessage(`Buscando DE por ${property}: ${value}`);
-			const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>Name</Properties><Properties>CategoryID</Properties><Filter xsi:type="SimpleFilterPart"><Property>${property}</Property><SimpleOperator>equals</SimpleOperator><Value>${value}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+
+			logMessage(`Buscando DE por ${property} que contenga: ${value}`);
+			
+			// Usamos 'like' y envolvemos el valor con '%' para buscar coincidencias parciales
+			const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>Name</Properties><Properties>CategoryID</Properties><Filter xsi:type="SimpleFilterPart"><Property>${property}</Property><SimpleOperator>like</SimpleOperator><Value>%${value}%</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+			
 			const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload, "Búsqueda de DE completada.");
-			const deInfo = await parseDESearchResponse(responseText);
-			if (deInfo.error) throw new Error(deInfo.error);
-			if (!deInfo.categoryId || parseInt(deInfo.categoryId) === 0) {
-				deSearchResults.textContent = `Data Extensions > ${deInfo.deName}`;
+			const deList = await parseDESearchResponse(responseText);
+
+			if (deList.length === 0) {
+				renderDESearchResultsTable([]); // Renderiza la tabla vacía con mensaje
+				logMessage("No se encontraron resultados.");
 				return;
 			}
-			logMessage(`DE encontrada. Carpeta ID: ${deInfo.categoryId}. Recuperando ruta...`);
-			const folderPath = await getFolderPath(deInfo.categoryId, apiConfig);
-			deSearchResults.textContent = `${folderPath} > ${deInfo.deName}`;
+
+			logMessage(`Se encontraron ${deList.length} Data Extensions. Obteniendo rutas de carpeta...`);
+
+			// Usamos Promise.all para obtener todas las rutas de carpeta en paralelo, mucho más rápido.
+			const pathPromises = deList.map(async (deInfo) => {
+				if (!deInfo.categoryId || parseInt(deInfo.categoryId) === 0) {
+					return { name: deInfo.deName, path: 'Data Extensions' }; // DE en la raíz
+				}
+				const folderPath = await getFolderPath(deInfo.categoryId, apiConfig);
+				return { name: deInfo.deName, path: folderPath || 'Data Extensions' };
+			});
+
+			const resultsWithPaths = await Promise.all(pathPromises);
+			
+			renderDESearchResultsTable(resultsWithPaths);
+			logMessage("Visualización de resultados completada.");
+
 		} catch (error) {
 			logMessage(`Error al buscar la DE: ${error.message}`);
-			deSearchResults.textContent = `Error: ${error.message}`;
+			deSearchResultsTbody.innerHTML = `<tr><td colspan="2" style="color: red;">Error: ${error.message}</td></tr>`;
 		} finally {
 			unblockUI();
 			endLogBuffering();
@@ -656,34 +670,70 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	async function macroSearchCustomer() {
 		blockUI();
-		startLogBuffering();
+		startLogBuffering(); // <-- Adaptado a la nueva estructura de logs
 		customerSearchTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
+		
+		// Resetea el estado completo de la UI
 		if (selectedCustomerRow) selectedCustomerRow.classList.remove('selected');
 		selectedCustomerRow = null;
 		selectedSubscriberData = null;
-		getCustomerSendsBtn.disabled = true;
+		getDEsBtn.disabled = false;
 		getCustomerJourneysBtn.disabled = true;
 		customerJourneysResultsBlock.classList.add('hidden');
 		customerSendsResultsBlock.classList.add('hidden');
+
 		try {
 			const apiConfig = await getAuthenticatedConfig();
 			const value = customerSearchValue.value.trim();
 			if (!value) throw new Error("El campo de búsqueda no puede estar vacío.");
+			
 			let finalResults = [];
-			logMessage(`Paso 1: Buscando como Suscriptor por ID: ${value}`);
+
+			// --- PASO 1: Búsqueda como Subscriber por ID (SubscriberKey) ---
+			logMessage(`Paso 1/3: Buscando como Suscriptor por ID: ${value}`);
 			finalResults = await searchSubscriberByProperty('SubscriberKey', value, apiConfig);
+
+			// --- PASO 2: Si no hay resultados, busca como Subscriber por Email ---
 			if (finalResults.length === 0) {
-				logMessage(`Paso 2: No encontrado. Buscando como Suscriptor por Email: ${value}`);
+				logMessage(`Paso 2/3: No encontrado por ID. Buscando como Suscriptor por Email: ${value}`);
 				finalResults = await searchSubscriberByProperty('EmailAddress', value, apiConfig);
 			}
+
+			// --- PASO 3: Si sigue sin haber resultados, busca como Contact ---
+			if (finalResults.length === 0) {
+				logMessage(`Paso 3/3: No encontrado como Suscriptor. Buscando como Contacto por ContactKey: ${value}`);
+				
+				const contactUrl = `${apiConfig.restUri}contacts/v1/addresses/search/ContactKey`;
+				const contactPayload = { "filterConditionOperator": "Is", "filterConditionValue": value };
+
+				logApiCall({ endpoint: contactUrl, body: contactPayload });
+
+				const contactResponse = await fetch(contactUrl, {
+					method: 'POST',
+					headers: { 'Authorization': `Bearer ${apiConfig.accessToken}`, 'Content-Type': 'application/json' },
+					body: JSON.stringify(contactPayload)
+				});
+				
+				const contactData = await contactResponse.json();
+				logApiResponse(contactData);
+
+				if (!contactResponse.ok) {
+					const errorMessage = contactData.message || `Error API al buscar contactos: ${contactResponse.statusText}`;
+					throw new Error(errorMessage);
+				}
+				
+				finalResults = parseContactAddressSearchResponse(contactData);
+			}
+
 			renderCustomerSearchResults(finalResults);
 			logMessage(`Búsqueda completada. Se encontraron ${finalResults.length} resultado(s).`);
+
 		} catch (error) {
 			logMessage(`Error al buscar clientes: ${error.message}`);
 			customerSearchTbody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${error.message}</td></tr>`;
 		} finally {
 			unblockUI();
-			endLogBuffering();
+			endLogBuffering(); // <-- Adaptado a la nueva estructura de logs
 		}
 	}
 
@@ -740,39 +790,64 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (!selectedSubscriberData?.subscriberKey) return;
 		blockUI();
 		startLogBuffering();
+		
 		customerSendsResultsBlock.classList.remove('hidden');
+		sendsResultsContainer.innerHTML = ''; // Limpiamos resultados anteriores
+
 		try {
 			const apiConfig = await getAuthenticatedConfig();
-			const subscriberKey = selectedSubscriberData.subscriberKey;
-			const customDataViews = { Sent: dvSentInput.value.trim(), Open: dvOpenInput.value.trim(), Click: dvClickInput.value.trim(), Bounce: dvBounceInput.value.trim() };
-			const containers = { 'Sent': sendsTableContainer, 'Open': opensTableContainer, 'Click': clicksTableContainer, 'Bounce': bouncesTableContainer };
-			Object.values(containers).forEach(c => c.innerHTML = '');
-			logMessage(`Iniciando búsqueda de envíos para: ${subscriberKey}`);
-			for (const viewType in customDataViews) {
-                const container = containers[viewType];
-                const dataViewKey = customDataViews[viewType];
-                if (!dataViewKey) {
-                    container.innerHTML = `<p>Data View para '${viewType}' no configurada.</p>`;
-                    continue;
-                }
-				container.innerHTML = `<p>Buscando en ${viewType} ('${dataViewKey}')...</p>`;
-				logMessage(`Consultando Data View: ${dataViewKey}...`);
-				const filter = encodeURIComponent(`"SubscriberKey"='${subscriberKey}'`);
-				const url = `${apiConfig.restUri}data/v1/customobjectdata/key/${dataViewKey}/rowset?$filter=${filter}`;
-				logApiCall({ endpoint: url, method: 'GET' });
-				const response = await fetch(url, { method: 'GET', headers: { 'Authorization': `Bearer ${apiConfig.accessToken}` } });
-				const responseData = await response.json();
-				logApiResponse({ request: url, response: responseData });
-				if (!response.ok) {
-					container.innerHTML = `<p style="color: red;">Error al consultar ${viewType}: ${responseData.message || response.statusText}</p>`;
-					continue; 
-				}
-				renderDataViewTable(container, responseData.items);
+			const searchValue = selectedSubscriberData.subscriberKey;
+			
+			// Leemos la configuración guardada del cliente activo
+			const configs = currentClientConfig?.dvConfigs?.filter(c => c.deKey && c.field) || [];
+
+			if (configs.length === 0) {
+				sendsResultsContainer.innerHTML = '<p>No hay Data Extensions configuradas para la búsqueda. Ve a "Configuración de APIs" para definirlas y guardarlas.</p>';
+				return;
 			}
+			
+			logMessage(`Iniciando búsqueda para '${searchValue}' en ${configs.length} DE(s).`);
+
+			// Iteramos sobre cada configuración y ejecutamos la búsqueda
+			for (const config of configs) {
+				const resultBlock = document.createElement('div');
+				resultBlock.className = 'sends-dataview-block';
+				resultBlock.innerHTML = `
+					<h4>${config.title} <small>(${config.deKey})</small></h4>
+					<div class="table-container">
+						<p>Buscando...</p>
+					</div>
+				`;
+				sendsResultsContainer.appendChild(resultBlock);
+				const container = resultBlock.querySelector('.table-container');
+
+				try {
+					logMessage(`Consultando DE: ${config.deKey} con el campo "${config.field}"...`);
+					const filter = encodeURIComponent(`"${config.field}"='${searchValue}'`);
+					const url = `${apiConfig.restUri}data/v1/customobjectdata/key/${config.deKey}/rowset?$filter=${filter}`;
+					
+					logApiCall({ endpoint: url, method: 'GET' });
+					const response = await fetch(url, { method: 'GET', headers: { 'Authorization': `Bearer ${apiConfig.accessToken}` } });
+					const responseData = await response.json();
+					logApiResponse({ request: url, response: responseData });
+
+					if (!response.ok) {
+						throw new Error(responseData.message || response.statusText);
+					}
+					
+					renderDEs(container, responseData.items);
+				
+				} catch (error) {
+					logMessage(`Error consultando ${config.deKey}: ${error.message}`);
+					container.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+				}
+			}
+			
 			logMessage("Búsqueda de envíos completada.");
+
 		} catch (error) {
 			logMessage(`Error fatal durante la búsqueda de envíos: ${error.message}`);
-			Object.values(sendsTableContainer.parentNode.children).forEach(c => c.innerHTML = `<p style="color: red;">${error.message}</p>`);
+			sendsResultsContainer.innerHTML = `<p style="color: red;">${error.message}</p>`;
 		} finally {
 			unblockUI();
 			endLogBuffering();
@@ -860,6 +935,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	async function macroGetJourneyAutomations() {
 		const allItems = await macroFetchAllAutomations();
+		fullAutomationList = allItems; 
 		const scheduledItems = allItems.filter(item => item.status === 'Scheduled' && item.scheduledTime);
 		const journeyAutomations = scheduledItems.filter(auto => auto.processes?.some(proc => proc.workerCounts?.some(wc => wc.objectTypeId === 952)));
 		logMessage(`Se encontraron ${journeyAutomations.length} automatismos de Journeys programados.`);
@@ -1142,13 +1218,19 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	function parseDESearchResponse(xmlString) {
 		return new Promise(resolve => {
-			const xmlDoc = new DOMParser().parseFromString(xmlString, "application/xml");
-			if (xmlDoc.querySelector("OverallStatus")?.textContent !== 'OK') {
-				return resolve({ error: xmlDoc.querySelector("StatusMessage")?.textContent || 'Error desconocido.' });
+			const parser = new DOMParser();
+			const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+			if (xmlDoc.querySelector("OverallStatus")?.textContent.includes('Error')) {
+				throw new Error(xmlDoc.querySelector("StatusMessage")?.textContent || 'Error desconocido en la respuesta SOAP.');
 			}
-			const resultNode = xmlDoc.querySelector("Results");
-			if (!resultNode) return resolve({ error: "No se encontró la Data Extension." });
-			resolve({ categoryId: resultNode.querySelector("CategoryID")?.textContent, deName: resultNode.querySelector("Name")?.textContent });
+			
+			const resultNodes = xmlDoc.querySelectorAll("Results");
+			const deList = Array.from(resultNodes).map(node => ({
+				categoryId: node.querySelector("CategoryID")?.textContent,
+				deName: node.querySelector("Name")?.textContent
+			}));
+			
+			resolve(deList);
 		});
 	}
 	
@@ -1160,17 +1242,96 @@ document.addEventListener('DOMContentLoaded', function () {
 	function parseCustomerSearchResponse(xmlString) {
 		const parser = new DOMParser();
 		const xmlDoc = parser.parseFromString(xmlString, "application/xml");
-		if (xmlDoc.querySelector("OverallStatus")?.textContent.includes('Error')) {
+		
+		const overallStatus = xmlDoc.querySelector("OverallStatus")?.textContent;
+
+		// Si el estado NO es OK y NO es MoreDataAvailable, es un error.
+		if (overallStatus !== 'OK' && overallStatus !== 'MoreDataAvailable') {
 			throw new Error(xmlDoc.querySelector("StatusMessage")?.textContent || 'Error desconocido en la respuesta SOAP.');
 		}
+		
 		return Array.from(xmlDoc.querySelectorAll("Results")).map(node => {
 			const getText = (tagName) => node.querySelector(tagName)?.textContent || null;
-			return { subscriberKey: getText("SubscriberKey") || '---', emailAddress: getText("EmailAddress") || '---', status: getText("Status") || '---', createdDate: getText("CreatedDate") ? new Date(getText("CreatedDate")).toLocaleString() : '---', unsubscribedDate: getText("UnsubscribedDate") ? new Date(getText("UnsubscribedDate")).toLocaleString() : '---', isSubscriber: true };
+			return { 
+				subscriberKey: getText("SubscriberKey") || '---', 
+				emailAddress: getText("EmailAddress") || '---', 
+				status: getText("Status") || '---', 
+				createdDate: getText("CreatedDate") ? new Date(getText("CreatedDate")).toLocaleString() : '---', 
+				unsubscribedDate: getText("UnsubscribedDate") ? new Date(getText("UnsubscribedDate")).toLocaleString() : '---', 
+				isSubscriber: true 
+			};
 		});
 	}
 
+	/**
+	 * Parsea la respuesta de la búsqueda de direcciones de contacto (REST API) y la convierte en un array de objetos.
+	 * @param {object} responseData - La respuesta JSON de la API.
+	 * @returns {Array} Un array de objetos de contacto.
+	 */
+	function parseContactAddressSearchResponse(responseData) {
+		// La información está dentro del array 'addresses'. Si no existe o está vacío, no hay resultados.
+		const addresses = responseData?.addresses;
+		if (!addresses || addresses.length === 0) {
+			return [];
+		}
+
+		// Normalmente, al buscar por una clave única, solo nos interesa el primer resultado.
+		const contactData = addresses[0];
+
+		// Extraemos el ContactKey de su objeto anidado.
+		const contactKey = contactData.contactKey?.value || '---';
+
+		// Para encontrar la fecha de creación, tenemos que navegar por la estructura anidada.
+		let createdDate = '---';
+		
+		// 1. Buscamos el 'valueSet' que corresponde a los atributos primarios.
+		const primaryValueSet = contactData.valueSets?.find(vs => vs.definitionKey === 'Primary');
+		
+		if (primaryValueSet) {
+			// 2. Dentro de ese set, buscamos el objeto 'value' cuya clave de definición es 'CreatedDate'.
+			const createdDateValueObject = primaryValueSet.values?.find(v => v.definitionKey === 'CreatedDate');
+			
+			// 3. Si lo encontramos, extraemos el valor real de 'innerValue'.
+			if (createdDateValueObject?.innerValue) {
+				createdDate = new Date(createdDateValueObject.innerValue).toLocaleString();
+			}
+		}
+
+		// Construimos el objeto final con el formato que espera nuestra tabla.
+		const result = {
+			subscriberKey: contactKey,
+			emailAddress: '---', // Esta API específica no devuelve el email.
+			status: '---',
+			createdDate: createdDate,
+			unsubscribedDate: '---',
+			isSubscriber: false // Marcamos que NO es un suscriptor, solo un contacto.
+		};
+		
+		// Devolvemos el resultado dentro de un array para mantener la consistencia con el otro parser.
+		return [result];
+	}
+
 	// --- 5.3. Renderizadores de Tablas ---
-	
+	/**
+	 * Dibuja la tabla de resultados para el buscador de Data Extensions.
+	 * @param {Array} results - Array de objetos con { name, path }.
+	 */
+	function renderDESearchResultsTable(results) {
+		deSearchResultsTbody.innerHTML = '';
+		if (!results || results.length === 0) {
+			deSearchResultsTbody.innerHTML = '<tr><td colspan="2">No se encontraron Data Extensions con ese criterio.</td></tr>';
+			return;
+		}
+
+		// Ordenamos los resultados alfabéticamente por la ruta completa para agrupar carpetas
+		results.sort((a, b) => (a.path + a.name).localeCompare(b.path + b.name));
+
+		results.forEach(result => {
+			const row = deSearchResultsTbody.insertRow();
+			row.innerHTML = `<td>${result.name}</td><td>${result.path}</td>`;
+		});
+	}
+
 	/**
 	 * Dibuja la tabla de resultados para el buscador de orígenes de datos.
 	 * @param {Array} sources - Array de actividades (imports, queries) encontradas.
@@ -1196,7 +1357,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		customerSearchTbody.innerHTML = '';
 		selectedCustomerRow = null;
 		selectedSubscriberData = null;
-		getCustomerSendsBtn.disabled = true;
+		getDEsBtn.disabled = false;
 		getCustomerJourneysBtn.disabled = true;
 		if (!results || results.length === 0) {
 			customerSearchTbody.innerHTML = '<tr><td colspan="6">No se encontraron clientes con ese criterio.</td></tr>';
@@ -1212,7 +1373,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				selectedCustomerRow = row;
 				selectedSubscriberData = { subscriberKey: sub.subscriberKey, isSubscriber: sub.isSubscriber };
 				getCustomerJourneysBtn.disabled = false;
-				if (sub.isSubscriber) getCustomerSendsBtn.disabled = false;
+				getDEsBtn.disabled = false;
 			}
 			customerSearchTbody.appendChild(row);
 		});
@@ -1240,7 +1401,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * @param {HTMLElement} containerElement - El div donde se inyectará la tabla.
 	 * @param {Array} items - El array de 'items' de la respuesta de la API.
 	 */
-	function renderDataViewTable(containerElement, items) {
+	function renderDEs(containerElement, items) {
 		containerElement.innerHTML = '';
 		if (!items || items.length === 0) {
 			containerElement.innerHTML = '<p>No se encontraron registros.</p>';
@@ -1748,6 +1909,51 @@ document.addEventListener('DOMContentLoaded', function () {
         renderAutomationsTable(dataToRender);
     }
 
+	// --- 6.5. Configuración de APIs ---
+	/**
+	 * Lee la configuración de la tabla de búsqueda de envíos y la devuelve como un array.
+	 * @returns {Array<object>}
+	 */
+	function getDvConfigsFromTable() {
+		return Array.from(sendsConfigTbody.querySelectorAll('tr')).map(row => {
+			const cells = row.querySelectorAll('td');
+			return {
+				title: cells[0].textContent.trim(),
+				deKey: cells[1].textContent.trim(),
+				field: cells[2].textContent.trim()
+			};
+		});
+	}
+
+	/**
+	 * Rellena la tabla de configuración de búsqueda de envíos con datos guardados.
+	 * @param {Array<object>} configs - El array de configuraciones a pintar.
+	 */
+	function populateDvConfigsTable(configs = []) {
+		sendsConfigTbody.innerHTML = ''; // Limpia la tabla
+		if (!configs || configs.length === 0) {
+			// Si no hay configs guardadas, crea 4 filas por defecto
+			configs = [
+				{ title: '', deKey: '', field: '' },,
+			];
+		}
+		
+		configs.forEach(config => {
+			const newRow = sendsConfigTbody.insertRow();
+			// Creamos las celdas editables
+			newRow.innerHTML = `
+				<td contenteditable="true">${config.title}</td>
+				<td contenteditable="true">${config.deKey}</td>
+				<td contenteditable="true">${config.field}</td>
+			`;
+			// Creamos y añadimos el botón de borrado fuera de las celdas
+			const deleteButton = document.createElement('button');
+			deleteButton.className = 'delete-row-btn';
+			deleteButton.title = 'Eliminar fila';
+			deleteButton.textContent = '×';
+			newRow.appendChild(deleteButton);
+		});
+	}
 
 	// ==========================================================
 	// --- 7. EVENT LISTENERS ---
@@ -1859,6 +2065,38 @@ document.addEventListener('DOMContentLoaded', function () {
 			});
 		});
 
+		// --- Listeners de la Tabla de Configuración de Envíos ---
+		addSendConfigRowBtn.addEventListener('click', () => {
+			const newRow = sendsConfigTbody.insertRow();
+			newRow.innerHTML = `
+				<td contenteditable="true"></td>
+				<td contenteditable="true"></td>
+				<td contenteditable="true"></td>
+			`;
+			const deleteButton = document.createElement('button');
+			deleteButton.className = 'delete-row-btn';
+			deleteButton.title = 'Eliminar fila';
+			deleteButton.textContent = '×';
+			newRow.appendChild(deleteButton);
+		});
+
+		sendsConfigTbody.addEventListener('click', (e) => {
+			const targetRow = e.target.closest('tr');
+			if (!targetRow) return;
+
+			// Si se hace clic en el botón de borrar
+			if (e.target.matches('.delete-row-btn')) {
+				if (targetRow === selectedConfigRow) selectedConfigRow = null;
+				targetRow.remove();
+			} else { // Si se hace clic en cualquier otra parte de la fila para seleccionarla
+				if (targetRow !== selectedConfigRow) {
+					if (selectedConfigRow) selectedConfigRow.classList.remove('selected');
+					targetRow.classList.add('selected');
+					selectedConfigRow = targetRow;
+				}
+			}
+		});
+
 		// --- Listeners de Botones de Macros ---
 		createDEBtn.addEventListener('click', macroCreateDE);
 		createFieldsBtn.addEventListener('click', macroCreateFields);
@@ -1869,7 +2107,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		findDataSourcesBtn.addEventListener('click', macroFindDataSources);
 		searchCustomerBtn.addEventListener('click', macroSearchCustomer);
 		searchQueriesByTextBtn.addEventListener('click', macroSearchQueriesByText);
-		getCustomerSendsBtn.addEventListener('click', () => { if (selectedSubscriberData) macroGetCustomerSends(); });
+		getDEsBtn.addEventListener('click', () => { if (selectedSubscriberData) macroGetCustomerSends(); });
 		getCustomerJourneysBtn.addEventListener('click', () => { if (selectedSubscriberData) macroGetCustomerJourneys(); });
 
 		// --- Listeners de la Tabla de Campos ---
@@ -1945,6 +2183,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		// --- Listeners del Calendario ---
 		refreshAutomationsBtn.addEventListener('click', async () => {
+			automationList.innerHTML = '<p>Selecciona un día para ver los detalles.</p>';
+			document.querySelectorAll('.calendar-month td.selected').forEach(c => c.classList.remove('selected'));
+
 			blockUI();
 			startLogBuffering();
 			try {
@@ -1958,6 +2199,9 @@ document.addEventListener('DOMContentLoaded', function () {
 			}
 		});
 		refreshJourneyAutomationsBtn.addEventListener('click', async () => {
+			automationList.innerHTML = '<p>Selecciona un día para ver los detalles.</p>';
+			document.querySelectorAll('.calendar-month td.selected').forEach(c => c.classList.remove('selected'));
+
 			blockUI();
 			startLogBuffering();
 			try {
@@ -1994,7 +2238,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			selectedCustomerRow = clickedRow;
 			selectedSubscriberData = { subscriberKey: clickedRow.dataset.subscriberKey, isSubscriber: clickedRow.dataset.isSubscriber === 'true' };
 			getCustomerJourneysBtn.disabled = false;
-			getCustomerSendsBtn.disabled = !selectedSubscriberData.isSubscriber;
+			getDEsBtn.disabled = !selectedSubscriberData.isSubscriber;
 			customerJourneysResultsBlock.classList.add('hidden');
 			customerSendsResultsBlock.classList.add('hidden');
 		});

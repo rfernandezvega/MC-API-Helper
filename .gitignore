@@ -10,3 +10,6 @@ Thumbs.db
 
 # Ficheros de log
 npm-debug.log*
+
+# Pruebas de actualizaciones
+dev-app-update.yml

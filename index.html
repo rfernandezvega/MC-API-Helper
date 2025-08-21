@@ -83,84 +83,144 @@
     <!-- 2. SECCIÓN: DOCUMENTACIÓN -->
     <div id="documentacion-section" class="section">
       <div class="section-header"><button class="back-button">← Atrás</button></div>
-      <h2>Documentación</h2>
-      <!-- Contenedor de Pestañas para organizar la información -->
-      <div class="tabs-container">
+      <h2>Documentación y Guía de Uso</h2>
+      
+      <div class="tabs-container docu-container">
         <div class="tab-buttons">
-          <button class="tab-button active" data-tab="configuracion-principal">Configuración Principal</button>
+          <button class="tab-button active" data-tab="configuracion-principal">Primeros Pasos</button>
           <button class="tab-button" data-tab="guia-rapida">Guía Rápida</button>
           <button class="tab-button" data-tab="errores-comunes">Errores Comunes</button>
-          <button class="tab-button" data-tab="comentarios-adicionales">Comentarios Adicionales</button>
+          <button class="tab-button" data-tab="comentarios-adicionales">Comentarios</button>
         </div>
         
-        <!-- Pestaña: Configuración Principal -->
+        <!-- Pestaña: Primeros Pasos -->
         <div id="configuracion-principal" class="tab-content active">
-          <h3>Configuración Principal</h3>
-          <ul>
-            <li><strong>Configurar aplicación en MC:</strong>
+          <h3>Configuración Inicial</h3>
+          <ul class="docu-list">
+            <li>
+              <div class="docu-item-header">
+                <span class="docu-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z" /><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /></svg>
+                </span>
+                <strong>Paso 1: Configurar la Aplicación en Marketing Cloud</strong>
+              </div>
               <ul>
-                <li>Entrar en Setup → Apps → Installed Packages.</li>
-                <li>Crear un nuevo paquete de tipo <b>Server-to-Server</b> o <b>Web App</b>.</li>
-                <li>Para <b>Web App</b>, configurar el callback URI como <b>https://127.0.0.1:8443/callback</b>.</li>
-                <li>Asignar los siguientes permisos en el componente de la API:
-                  <ul>
-                    <li>Email: Read, Write</li>  
-                    <li>Automations: Read, Write, Execute</li>  
-                    <li>Journeys: Read</li>    
-                    <li>Audiences: Read, Write</li>  
-                    <li>List and Subscribers: Read, Write</li>  
-                    <li>Data Extensions: Read, Write</li>              
+                <li>Ve a <b>Setup → Apps → Installed Packages</b>.</li>
+                <li>Crea un nuevo paquete de tipo <b>Server-to-Server</b> o <b>Web App</b>.</li>
+                <li>Si es <b>Web App</b>, el Callback URI debe ser <code>https://127.0.0.1:8443/callback</code>.</li>
+                <li>En el componente de API, asigna estos permisos:
+                  <ul class="docu-permissions">
+                    <li><b>Email:</b> Read, Write</li>
+                    <li><b>Automations:</b> Read, Write, Execute</li>
+                    <li><b>Journeys:</b> Read</li>
+                    <li><b>Audiences:</b> Read, Write</li>
+                    <li><b>List and Subscribers:</b> Read, Write</li>
+                    <li><b>Data Extensions:</b> Read, Write</li>
                   </ul>
                 </li>
-                <li><b>IMPORTANTE:</b> Después de crear la aplicación, puede tardar 5-10 minutos en estar plenamente operativa.</li>
+                <div class="docu-callout info">
+                  <b>IMPORTANTE:</b> La aplicación en Marketing Cloud puede tardar hasta 10 minutos en estar completamente operativa después de guardarla.
+                </div>
               </ul>
             </li>
-            <li><strong>Configurar un Cliente en la App:</strong> 
-                <ul>
-                  <li>Ir a <em>Configuración de APIs</em>.</li>
-                  <li>Introducir un nombre, rellenar los datos de la app de MC (MID, Auth URI, etc.) y pulsar "Guardar".</li>
-                  <li>Pulsar "Login" para iniciar la sesión. Saltará una ventana para autenticarse en Marketing Cloud.</li>
-                  <li>Si se quiere hacer uso de la búsqueda de envíos de un cliente, rellenar las External Keys de las Data Views de tracking.</li>
-                </ul> 
+            <li>
+              <div class="docu-item-header">
+                <span class="docu-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 7h1" /><path d="M9 13h6" /><path d="M9 17h6" /></svg>
+                </span>
+                <strong>Paso 2: Configurar un Cliente en esta App</strong>
+              </div>
+              <ul>
+                <li>Ve a la vista de <b>Configuración de APIs</b>.</li>
+                <li>Introduce un nombre para el cliente (ej: "Cliente X - Producción").</li>
+                <li>Rellena los datos (MID, Auth URI, Client ID, etc.) obtenidos del paso anterior.</li>
+                <li>Pulsa <b>"Guardar"</b>. La configuración quedará almacenada en tu equipo.</li>
+                <li>Pulsa <b>"Login"</b> para iniciar la sesión. Se abrirá una ventana de Salesforce para que te autentiques.</li>
+              </ul>
             </li>
-            <li><strong>Almacenamiento:</strong> La configuración (sin el Client Secret) se guarda en el almacenamiento local del navegador. Las credenciales seguras (refresh token, etc.) se guardan en el gestor de credenciales del sistema operativo.</li>
-            <li><strong>Gestión de Sesión:</strong> "Login" inicia la autenticación. "Logout / Borrar" cierra la sesión activa y elimina toda la configuración y credenciales guardadas para ese cliente.</li>
           </ul>
         </div>
 
         <!-- Pestaña: Guía Rápida -->
         <div id="guia-rapida" class="tab-content">
           <h3>Guía Rápida de Funcionalidades</h3>
-          <ol>
-              <li><b>Configuración de DE:</b> Define nombre, descripción, carpeta y si es Sendable.</li>
-              <li><b>Campos:</b> Añade campos manualmente, con el botón de ejemplo o importando desde el portapapeles.</li>
-              <li><b>Crear DE / Campos:</b> Usa los botones "Crear Data Extension" o "Crear/Actualizar Campos" para ejecutar la acción.</li>
-              <li><b>Gestión de Campos:</b> Recupera o borra campos de una DE existente. Útil para campos en Attribute Groups que no se pueden borrar por la interfaz.</li>
-              <li><b>Calendario:</b> Visualiza las automatizaciones y Journeys programados.</li>
-              <li><b>Validador de Emails:</b> Valida una dirección de email contra los validadores de Marketing Cloud.</li>
-              <li><b>Buscadores:</b> Busca Data Extensions, el origen de sus datos, texto en queries y suscriptores (con sus envíos y Journeys).</li>
-              <li><b>Gestión de automatismos:</b> Permite buscar, filtrar y realizar acciones masivas (Activar, Ejecutar, Parar) sobre los automatismos.</li>
+          <ol class="docu-list ordered">
+            <li><b>Configuración de DE:</b> Define el nombre, carpeta y si será "Sendable".</li>
+            <li><b>Campos:</b> Añade campos manualmente, con el botón de ejemplos o importando desde Excel/Sheets.</li>
+            <li><b>Crear DE / Campos:</b> Usa "Crear Data Extension" para DEs nuevas o "Crear/Actualizar Campos" para modificar una existente.</li>
+            <li><b>Gestión de Campos:</b> Herramienta para recuperar o eliminar campos de una DE. Muy útil para campos en Attribute Groups que no se pueden borrar desde la interfaz de MC.</li>
+            <li><b>Calendario:</b> Visualiza los automatismos programados. Un botón muestra todos, y el otro filtra solo los que contienen un Journey.</li>
+            <li><b>Buscadores:</b> Un potente conjunto de herramientas para encontrar DEs por su nombre (incluso parcial), el origen de sus datos, buscar texto dentro de todas las Queries, y localizar clientes.</li>
+            <li><b>Gestión de automatismos:</b> Permite buscar, filtrar y realizar acciones masivas (Activar, Ejecutar, Parar) sobre los automatismos.</li>
           </ol>
         </div>
 
         <!-- Pestaña: Errores Comunes -->
         <div id="errores-comunes" class="tab-content">
-            <h3>Errores Comunes</h3>
-            <ul>
-                <li><strong>Error de autenticación:</strong> Revisa que el MID, Client ID y Client Secret sean correctos. La URI de autenticación debe terminar en `/v2/token`.</li>
-                <li><strong>La DE se crea en la raíz:</strong> Para crear una DE en una carpeta, debes usar el <strong>ID de la Carpeta</strong> (un número), no su nombre.</li>
-                <li><strong>DE Sendable sin Subscriber Key:</strong> Es <strong>obligatorio</strong> seleccionar un campo como Subscriber Key en la configuración "Sendable".</li>
-            </ul>
+          <h3>Solución de Errores Comunes</h3>
+          <ul class="docu-list">
+            <li>
+              <div class="docu-item-header">
+                <span class="docu-icon warning">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4" /><path d="M10.36 15.64a2 2 0 1 1 3.28 0" /><path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9 -9 9s-9 -1.8 -9 -9s1.8 -9 9 -9z" /></svg>
+                </span>
+                <strong>Error de autenticación</strong>
+              </div>
+              <p>Revisa que el MID, Client ID y Client Secret sean correctos. La URI de autenticación debe terminar en <code>/v2/token</code>.</p>
+            </li>
+            <li>
+              <div class="docu-item-header">
+                <span class="docu-icon warning">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4" /><path d="M10.36 15.64a2 2 0 1 1 3.28 0" /><path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9 -9 9s-9 -1.8 -9 -9s1.8 -9 9 -9z" /></svg>
+                </span>
+                <strong>La DE se crea en la carpeta raíz</strong>
+              </div>
+              <p>Para crear una DE en una carpeta específica, debes usar su <b>ID numérico</b>, no su nombre.</p>
+            </li>
+            <li>
+              <div class="docu-item-header">
+                <span class="docu-icon warning">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4" /><path d="M10.36 15.64a2 2 0 1 1 3.28 0" /><path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9 -9 9s-9 -1.8 -9 -9s1.8 -9 9 -9z" /></svg>
+                </span>
+                <strong>DE Sendable sin Subscriber Key</strong>
+              </div>
+              <p>Es <b>obligatorio</b> seleccionar un campo como "Campo SubscriberKey" si marcas la casilla "Es Sendable".</p>
+            </li>
+          </ul>
         </div>
         
         <!-- Pestaña: Comentarios Adicionales -->
         <div id="comentarios-adicionales" class="tab-content">
-            <h3>Comentarios Adicionales</h3>
-            <ul>
-              <li><strong>Permisos:</strong> Asegúrate de que la aplicación API en MC tiene permisos de Lectura y Escritura para los objetos que quieres gestionar.</li>
-              <li><strong>"Crear/Actualizar campos" es un "upsert":</strong> Esta acción actualiza campos existentes o crea nuevos si no existen en la DE.</li>
-              <li><strong>Longitud en Decimales:</strong> Para campos de tipo Decimal, usa el formato "total_dígitos,número_decimales", por ejemplo, <code>18,2</code>.</li>
-            </ul>
+          <h3>Comentarios y Buenas Prácticas</h3>
+          <ul class="docu-list">
+            <li>
+              <div class="docu-item-header">
+                <span class="docu-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 11h-2a2 2 0 1 0 0 4h2v-4z" /><path d="M18 11h-2a2 2 0 1 0 0 4h2v-4z" /><path d="M3 11v4" /><path d="M21 11v4" /><path d="M13 11v4" /><path d="M5 15v-2a3 3 0 0 1 3 -3h8a3 3 0 0 1 3 3v2" /><path d="M12 5m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /></svg>
+                </span>
+                <strong>Permisos de API</strong>
+              </div>
+              <p>Asegúrate de que la aplicación API en Marketing Cloud tenga permisos de <b>Lectura y Escritura</b> para los objetos que quieres gestionar.</p>
+            </li>
+            <li>
+              <div class="docu-item-header">
+                <span class="docu-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 12l5 5l10 -10" /><path d="M2 12l5 5m5 -5l5 -5" /></svg>
+                </span>
+                <strong>"Crear/Actualizar campos" es un "upsert"</strong>
+              </div>
+              <p>Esta acción actualiza campos que ya existen o crea los que son nuevos, sin borrar los que no están en la tabla.</p>
+            </li>
+            <li>
+              <div class="docu-item-header">
+                <span class="docu-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-decimal" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 15h-5a2 2 0 1 0 0 4h5" /><path d="M12 11v8" /><path d="M8 10h.01" /></svg>
+                </span>
+                <strong>Longitud en campos Decimales</strong>
+              </div>
+              <p>Para campos de tipo Decimal, usa el formato "total_dígitos,número_decimales", por ejemplo, <code>18,2</code>.</p>
+            </li>
+          </ul>
         </div>
       </div>
     </div>
@@ -197,15 +257,28 @@
         </div>
         <!-- Configuración de Data Views para el buscador de envíos -->
         <div class="config-block">
-            <h3>Data Views</h3>
-            <p class="info-text" style="text-align: left; margin: 0 0 15px;">
-                Introduce la <strong>External Key completa</strong> de las Data Extensions que replican las Data Views de tracking.
-            </p>
-            <div class="form-group"><label for="dvSent">Sent</label><input type="text" id="dvSent" placeholder="Ej: DE_SentLog_ClienteX"></div>
-            <div class="form-group"><label for="dvOpen">Open</label><input type="text" id="dvOpen" placeholder="Ej: DE_OpenLog_ClienteX"></div>
-            <div class="form-group"><label for="dvClick">Click</label><input type="text" id="dvClick" placeholder="Ej: DE_ClickLog_ClienteX"></div>
-            <div class="form-group"><label for="dvBounce">Bounce</label><input type="text" id="dvBounce" placeholder="Ej: DE_BounceLog_ClienteX"></div>
-        </div>
+          <h3>Búsqueda Dinámica en Data Extensions</h3>
+          <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+              Configura las tablas donde se buscará al cliente al pulsar el botón "DEs". Los cambios se guardan junto con el resto de la configuración.
+          </p>
+          <div class="table-container">
+              <table id="sends-config-table">
+                  <thead>
+                      <tr>
+                          <th>Nombre</th>
+                          <th>External Key</th>
+                          <th>Campo de Búsqueda</th>
+                      </tr>
+                  </thead>
+                  <tbody id="sends-config-tbody">
+                      <!-- Las filas se añadirán/cargarán dinámicamente aquí -->
+                  </tbody>
+              </table>
+          </div>
+          <div class="header-actions" style="justify-content: flex-start; margin-top: 15px;">
+              <button id="add-send-config-row-btn" class="action-button">Añadir Fila</button>
+          </div>
+      </div>
     </div>
 
     <!-- 4. SECCIÓN: CONFIGURACIÓN DE DATA EXTENSION (Creación) -->
@@ -370,10 +443,20 @@
                     <button id="searchDEBtn" class="action-button">Buscar</button>
                 </div>
             </div>
-            <div class="config-block">
-                <h3>Resultados</h3>
-                <pre id="de-search-results">La ruta de la Data Extension aparecerá aquí.</pre>
-            </div>
+             <div class="config-block" style="flex-grow: 1;">
+                  <h3>Resultados</h3>
+                  <div class="table-container">
+                      <table id="de-search-results-table">
+                          <thead>
+                              <tr>
+                                  <th>Nombre Data Extension</th>
+                                  <th>Ruta de Carpeta</th>
+                              </tr>
+                          </thead>
+                          <tbody id="de-search-results-tbody"></tbody>
+                      </table>
+                  </div>
+              </div>
         </div>
 
         <!-- Pestaña: Buscador de Orígenes de Datos -->
@@ -421,7 +504,7 @@
                 <div class="config-block-header">
                     <h3>Resultados</h3>
                     <div class="header-actions">
-                        <button id="getCustomerSendsBtn" class="action-button" disabled>Envíos</button>
+                        <button id="getDEsBtn" class="action-button" disabled>DEs</button>
                         <button id="getCustomerJourneysBtn" class="action-button" disabled>Journeys</button>
                     </div>
                 </div>
@@ -454,22 +537,9 @@
             </div>
             <!-- Bloque de Resultados de Envíos (oculto por defecto) -->
             <div id="customer-sends-results-block" class="config-block hidden">
-                <h3>Envíos del Cliente Seleccionado</h3>
-                <div class="sends-dataview-block">
-                    <h4>Enviados (Sent)</h4>
-                    <div id="sends-table-container" class="table-container"></div>
-                </div>
-                <div class="sends-dataview-block">
-                    <h4>Aperturas (Open)</h4>
-                    <div id="opens-table-container" class="table-container"></div>
-                </div>
-                <div class="sends-dataview-block">
-                    <h4>Clics (Click)</h4>
-                    <div id="clicks-table-container" class="table-container"></div>
-                </div>
-                <div class="sends-dataview-block">
-                    <h4>Rebotes (Bounce)</h4>
-                    <div id="bounces-table-container" class="table-container"></div>
+                <h3>Resultados de Búsqueda en Data Extensions</h3>
+                <div id="sends-results-container">
+                    <!-- Los resultados se inyectarán aquí dinámicamente -->
                 </div>
             </div>
         </div>
