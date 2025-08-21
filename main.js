@@ -10,7 +10,7 @@ const keytar = require('keytar'); // Librería para el llavero seguro
 
 // --- Configuración Inicial ---
 // Asigna un App User Model ID explícito. Esto arregla el nombre en las notificaciones de Windows.
-app.setAppUserModelId("com.seidor.mc-api-desktop");
+app.setAppUserModelId("com.seidor.mc-api-helper");
 // Desactiva la aceleración de hardware para evitar problemas de renderizado.
 app.disableHardwareAcceleration();
 
