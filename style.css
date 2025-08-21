@@ -1,41 +1,93 @@
+/* ===================================================================
+   style.css
+   Hoja de estilos principal para la aplicación Marketing Cloud API Helper.
+   
+   ÍNDICE:
+   -------------------------------------------------------------------
+   1. ESTILOS GLOBALES Y LAYOUT PRINCIPAL
+      - body, app-container, estado de carga.
+
+   2. BARRA LATERAL IZQUIERDA (NAVEGACIÓN)
+      - Contenedor principal.
+      - Selector de cliente e indicador de login.
+      - Menús colapsables (acordeón).
+      - Items de menú.
+
+   3. CONTENIDO PRINCIPAL (CENTRO)
+      - Contenedor principal.
+      - 3.1. Menú de Bienvenida.
+      - 3.2. Estructura de Secciones (formularios, bloques, etc.).
+      - 3.3. Botones (de acción, atrás, deshabilitados).
+      - 3.4. Tablas de Datos (estilos generales y específicos).
+
+   4. BARRA LATERAL DERECHA (LOG)
+      - Contenedor, header, botón de colapso.
+      - Bloques de log y estado colapsado.
+
+   5. COMPONENTES REUTILIZABLES
+      - 5.1. Pestañas (Tabs).
+      - 5.2. Modal de Importación.
+      - 5.3. Calendario.
+      - 5.4. Bloques de Data View (Envíos).
+
+   6. DISEÑO RESPONSIVE
+      - Ajustes para pantallas pequeñas.
+   =================================================================== */
+
+
 /* ==========================================================
-   GLOBAL & LAYOUT
+   1. ESTILOS GLOBALES Y LAYOUT PRINCIPAL
    ========================================================== */
 
+/* Estilos base para toda la aplicación */
 body {
   margin: 0;
-  background-color: #f0f6fc;
+  background-color: #f0f6fc; /* Un azul muy claro como fondo general */
   font-family: Arial, sans-serif;
+  box-sizing: border-box; /* Asegura que padding y border se incluyan en el ancho/alto total */
 }
 
+/* Hereda el box-sizing a todos los elementos para un comportamiento predecible */
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+
+/* Layout principal de la aplicación con 3 columnas usando CSS Grid */
 .app-container {
   display: grid;
-  grid-template-columns: 220px 1fr 360px; 
+  grid-template-columns: 220px 1fr 360px; /* Sidebar Izq | Contenido Principal | Sidebar Der */
   gap: 20px;
   padding: 20px;
   min-height: 100vh;
-  box-sizing: border-box;
-  transition: grid-template-columns 0.35s ease-in-out, opacity 0.2s ease-in-out;
+  transition: grid-template-columns 0.35s ease-in-out; /* Animación suave al colapsar el log */
+  align-items: start; /* Alinea los paneles al inicio del contenedor */
 }
 
+/* Clase para bloquear la UI durante operaciones asíncronas (llamadas API) */
 .app-container.is-updating {
-  pointer-events: none;
-  opacity: 0.6;
+  pointer-events: none; /* Deshabilita interacciones con el ratón */
+  opacity: 0.6;        /* Indica visualmente que la app está ocupada */
+  cursor: wait;        /* Cambia el cursor a modo de espera */
 }
-.app-container.is-updating body {
-    cursor: wait;
+.app-container.is-updating * {
+  cursor: wait !important; /* Asegura que todos los elementos hijos también muestren el cursor de espera */
 }
 
+/* Estilo base compartido por los 3 paneles principales (barras laterales y contenido) */
 #macros-sidebar, #main-content, #log-sidebar {
   background-color: #fff;
   border-radius: 10px;
   padding: 20px;
-  box-sizing: border-box;
-  overflow: hidden; 
 }
 
+/* Evita que el contenido de las barras laterales se desborde visualmente */
+#macros-sidebar, #log-sidebar {
+    overflow: hidden;
+}
+
+
 /* ==========================================================
-   1. BARRA LATERAL IZQUIERDA (FUNCIONALIDADES)
+   2. BARRA LATERAL IZQUIERDA (NAVEGACIÓN)
    ========================================================== */
 
 #macros-sidebar {
@@ -51,39 +103,7 @@ body {
   padding-bottom: 10px;
 }
 
-/* --- ESTILOS PARA MENÚS COLAPSABLES --- */
-.collapsible-header {
-  color: #558ac7;
-  margin-top: 20px;
-  margin-bottom: 10px;
-  font-size: 1.1em;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 5px 0;
-  user-select: none;
-}
-
-.collapsible-header::after {
-  content: '▶';
-  font-size: 0.7em;
-  transition: transform 0.3s ease;
-}
-
-.collapsible-header.active::after {
-  transform: rotate(90deg);
-}
-
-.collapsible-content {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s ease-in-out;
-}
-
+/* --- Selector de Cliente e Indicador de Login --- */
 .sidebar-client-selector {
   padding-bottom: 15px;
   border-bottom: 2px solid #f0f6fc;
@@ -95,10 +115,63 @@ body {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  box-sizing: border-box;
   margin-top: 5px;
 }
 
+/* Indicador visual del estado de la sesión (activo/inactivo) */
+.login-status {
+    font-size: 0.85em;
+    font-weight: bold;
+    text-align: center;
+    margin: 10px 0 0 0;
+    padding: 5px;
+    border-radius: 4px;
+    line-height: 1.4; /* Mejora la legibilidad si el texto ocupa dos líneas */
+}
+.login-status.active {
+    color: #1c7430; /* Verde oscuro */
+    background-color: #d4edda; /* Verde claro */
+}
+.login-status.inactive {
+    color: #721c24; /* Rojo oscuro */
+    background-color: #f8d7da; /* Rojo claro */
+}
+
+/* --- Menús Colapsables (Acordeón) --- */
+.collapsible-header {
+  color: #558ac7;
+  margin: 20px 0 10px 0;
+  font-size: 1.1em;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  user-select: none; /* Evita que el texto se seleccione al hacer clic */
+}
+
+/* Crea el indicador de flecha (▶) usando un pseudo-elemento */
+.collapsible-header::after {
+  content: '▶';
+  font-size: 0.7em;
+  transition: transform 0.3s ease;
+}
+
+/* Rota la flecha 90 grados cuando el menú está activo (expandido) */
+.collapsible-header.active::after {
+  transform: rotate(90deg);
+}
+
+.collapsible-content {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 0; /* Colapsado por defecto */
+  overflow: hidden;
+  transition: max-height 0.3s ease-in-out; /* Animación suave de despliegue */
+}
+
+/* --- Ítems de Menú (Enlaces a funcionalidades) --- */
 #macros-sidebar .macro-item {
   display: block;
   padding: 10px 12px;
@@ -116,92 +189,327 @@ body {
   cursor: pointer;
 }
 
+
 /* ==========================================================
-   2. CONTENIDO PRINCIPAL (CENTRO)
+   3. CONTENIDO PRINCIPAL (CENTRO)
    ========================================================== */
 
+/* Permite el scroll vertical si el contenido es más alto que la ventana */
 #main-content {
-  display: flex;
-  flex-direction: column;
+    overflow-y: auto;
+    height: calc(100vh - 40px); /* Ocupa toda la altura de la ventana menos el padding */
 }
 
-/* --- Estilos del Menú Principal (Botones más pequeños) --- */
-.main-menu-container { display: flex; flex-direction: column; align-items: center; gap: 30px; width: 100%;}
-.menu-group { width: 90%; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
-.menu-group h3 { color: #558ac7; margin-top: 0; margin-bottom: 20px; text-align: center; border-bottom: 2px solid #e0e7ef; padding-bottom: 10px; }
-.menu-buttons-container { display: flex; justify-content: center; flex-wrap: wrap; gap: 15px; }
-.menu-button { 
-  background-color: #69a3db; 
-  color: #fff; 
-  border: none; 
-  border-radius: 8px;  
-  padding: 12px 15px; 
-  cursor: pointer; 
-  font-size: 1em; 
-  width: 220px; 
-  height: 60px; 
-  display: flex; 
-  justify-content: center; 
-  align-items: center; 
-  text-align: center; 
-  transition: background-color 0.3s; 
+/* --- 3.1. Menú de Bienvenida --- */
+.main-menu-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+    width: 100%;
 }
-.menu-button:hover { background-color: #558ac7; }
-
-/* --- Estilos de las Secciones Interiores --- */
-.section { display: none; width: 100%; flex-direction: column; }
-.section h2 { color: #69a3db; text-align: center; margin-top: 0; margin-bottom: 20px; }
-.back-button { background-color: #6c757d; color: #fff; border: none; border-radius: 5px; padding: 10px 15px; cursor: pointer; align-self: flex-start; }
-
-/* --- Estilos para Secciones con Formularios --- */
-.config-section-container .config-block {  background-color: #f8f9fa;  border: 1px solid #e9ecef;  border-radius: 8px;  padding: 20px;  margin-bottom: 20px;  }
-.config-section-container h3 { color: #558ac7; margin-top: 0; }
-.config-section-container .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
-.config-section-container label { font-weight: bold; margin-bottom: 5px; color: #333; }
-.config-section-container input[type="text"], .config-section-container input[type="password"], .config-section-container select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-.config-section-container input[disabled] { background-color: #e9ecef; cursor: not-allowed; }
-.config-section-container .checkbox-group { flex-direction: row; align-items: center; justify-content: flex-start; }
-.config-section-container .checkbox-group label { font-weight: bold; margin-bottom: 0; margin-right: 8px; }
-.config-section-container .checkbox-group input[type="checkbox"] { width: auto; }
-.client-management { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
-.client-management input, .client-management select { flex-grow: 1; }
-.client-management button { background-color: #69a3db; color: #fff; border: none;  border-radius: 5px;  padding: 10px 15px;  cursor: pointer; }
-.client-management .delete-btn { background-color: #dc3545; }
-.info-text { font-size: 0.9em; color: #6c757d; text-align: center; margin-top: 20px; }
-
-/* --- Estilos de la Sección de Campos --- */
-.section-header { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 20px; }
-.section-header .back-button { margin-bottom: 0; }
-.header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-.action-button { background-color: #69a3db; color: #fff; border: none; border-radius: 5px; padding: 10px 15px; cursor: pointer; transition: background-color 0.2s; }
-.action-button:hover { background-color: #558ac7; }
-.action-button.delete-btn { background-color: #6c757d; }
-.action-button.delete-btn:hover { background-color: #5a6268; }
-.table-container { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; overflow-x: auto; margin-top: 20px; padding-right: 40px; }
-table { border-collapse: collapse; width: 100%; }
-th, td { border: 1px solid #b9d4e7; padding: 8px; text-align: center; }
-th { background-color: #69a3db; color: #fff; position: sticky; top: 0; z-index: 2; }
-tr.selected { background-color: #c5dce6; }
-.control-buttons { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-left: 15px; }
-.control-buttons button { width: 100px; background-color: #69a3db; color: #fff; border: none; border-radius: 5px; padding: 8px; cursor: pointer; }
-.editable { outline: none; border-bottom: 1px dashed #ccc; }
-
-td input[type="text"].cell-input {
-  width: 95%;
-  box-sizing: border-box; 
-  text-align: center;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  padding: 4px;
+.menu-group {
+    width: 90%;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+.menu-group h3 {
+    color: #558ac7;
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-align: center;
+    border-bottom: 2px solid #e0e7ef;
+    padding-bottom: 10px;
+}
+.menu-buttons-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 15px;
 }
 
-#myTable tbody tr {
+/* --- 3.2. Estructura de Secciones, Formularios y Bloques --- */
+
+/* Estilo base para cada vista de funcionalidad (oculta por defecto) */
+.section {
+    display: none;
+    flex-direction: column;
+    flex-grow: 1; /* Permite que la sección ocupe el espacio disponible */
+}
+.section h2, .tab-content h2 {
+    color: #69a3db;
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+/* Contenedor para bloques de configuración con fondo y borde */
+.config-section-container .config-block {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+.config-section-container h3 { 
+    color: #558ac7; 
+    margin-top: 0; 
+}
+
+/* Cabecera dentro de un bloque de configuración (para título y botones) */
+.config-block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+.config-block-header h3 {
+    margin: 0;
+}
+
+/* Estilos de Formularios */
+.config-section-container .form-group { 
+    margin-bottom: 15px; 
+    display: flex; 
+    flex-direction: column; 
+}
+.config-section-container label { 
+    font-weight: bold; 
+    margin-bottom: 5px; 
+    color: #333; 
+}
+.config-section-container input[type="text"],
+.config-section-container input[type="password"],
+.config-section-container select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+.config-section-container input[disabled] { 
+    background-color: #e9ecef; 
+    cursor: not-allowed; 
+}
+.config-section-container .checkbox-group {
+    flex-direction: row;
+    align-items: center;
+}
+.config-section-container .checkbox-group label { 
+    margin: 0 8px 0 0; 
+}
+.config-section-container .checkbox-group input[type="checkbox"] { 
+    width: auto; 
+}
+
+/* Contenedor para la gestión de clientes en la vista de Configuración */
+.client-management {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.client-management input, .client-management select { 
+    flex-grow: 1; /* Hace que el input y el select ocupen el espacio disponible */
+}
+
+/* Texto informativo con estilo sutil */
+.info-text { 
+    font-size: 0.9em; 
+    color: #6c757d; 
+    text-align: center; 
+    margin-top: 20px; 
+}
+
+/* --- 3.3. Botones (de acción, atrás, deshabilitados) --- */
+
+/* Contenedor para el botón "Atrás" y los botones de acción en la cabecera de una sección */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.header-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap; /* Permite que los botones pasen a la siguiente línea si no caben */
+    justify-content: flex-end;
+}
+
+/* Estilo base para todos los botones principales */
+.action-button, .back-button {
+    background-color: #69a3db; /* Azul por defecto */
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-weight: bold;
+}
+.action-button:hover { 
+    background-color: #558ac7; /* Azul más oscuro al pasar el ratón */
+}
+
+/* Botón de "Atrás" (gris) */
+.back-button { 
+    background-color: #6c757d; 
+}
+.back-button:hover { 
+    background-color: #5a6268; 
+}
+
+/* Botones de acción positiva/guardado (verde) */
+.action-button.activate-btn,
+#saveConfigBtn { 
+    background-color: #28a745; 
+}
+.action-button.activate-btn:hover,
+#saveConfigBtn:hover { 
+    background-color: #218838; 
+}
+
+/* Botones de acción destructiva/borrado (rojo) */
+.action-button.delete-btn { 
+    background-color: #dc3545; 
+}
+.action-button.delete-btn:hover { 
+    background-color: #c82333; 
+}
+
+/* Botón de "Ejecutar" (naranja) */
+#runAutomationBtn:not([disabled]) {
+    background-color: #f39c12;
+}
+#runAutomationBtn:hover:not([disabled]) {
+    background-color: #e67e22;
+}
+
+/* Estilo general para CUALQUIER botón deshabilitado */
+.action-button[disabled] {
+  background-color: #cccccc !important;
+  color: #888888 !important;
+  cursor: not-allowed !important;
+  opacity: 0.7 !important;
+}
+
+/* Contenedor para los filtros de la tabla de automatismos */
+.header-filters {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.filter-input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+#automationNameFilter {
+    min-width: 200px;
+}
+
+/* --- 3.4. Tablas de Datos --- */
+
+/* Contenedor que permite el scroll horizontal de la tabla */
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+    margin-top: 20px;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+th, td {
+    border: 1px solid #b9d4e7;
+    padding: 10px;
+    text-align: center;
+    vertical-align: middle;
+}
+th {
+    background-color: #69a3db;
+    color: #fff;
+    position: sticky; /* Fija la cabecera en la parte superior al hacer scroll vertical */
+    top: 0;
+    z-index: 2;
+}
+
+/* Filas interactivas (seleccionables con el ratón) */
+#customer-search-table tbody tr,
+#automations-table tbody tr {
+    cursor: pointer;
+}
+tr.selected { 
+    background-color: #c5dce6 !important; /* Estilo para la fila seleccionada */
+}
+
+/* Estilos para las cabeceras de tabla que permiten ordenar */
+.sortable-header {
+  cursor: pointer;
   position: relative;
+  user-select: none;
+}
+.sortable-header:hover {
+  background-color: #558ac7;
 }
 
+/* Crea las flechas de ordenación (asc/desc) usando pseudo-elementos */
+.sortable-header::after {
+  content: '';
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 4px solid transparent;
+  opacity: 0.5; /* Flecha gris por defecto */
+}
+.sortable-header.sort-asc::after {
+  border-bottom-color: #fff; /* Flecha hacia arriba */
+  opacity: 1;
+}
+.sortable-header.sort-desc::after {
+  border-top-color: #fff; /* Flecha hacia abajo */
+  opacity: 1;
+}
+
+/* Controles para la tabla de campos (Subir/Bajar fila) */
+#campos-section .table-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-right: 40px; /* Espacio para los botones */
+}
+.control-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-left: 15px;
+}
+.control-buttons button {
+    width: 100px;
+    background-color: #6c757d;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 8px;
+    cursor: pointer;
+}
+.control-buttons button:hover {
+    background-color: #5a6268;
+}
+
+/* Botón de borrado que aparece al lado de una fila de campo seleccionada */
+#myTable tbody tr {
+    position: relative; /* Necesario para posicionar el botón de borrado */
+}
 .delete-row-btn {
   position: absolute;
-  right: -35px;
+  right: -35px; /* Posicionado fuera de la tabla */
   top: 50%;
   transform: translateY(-50%);
   background-color: #fce8e6;
@@ -211,48 +519,56 @@ td input[type="text"].cell-input {
   width: 24px;
   height: 24px;
   line-height: 22px;
+  text-align: center;
   font-weight: bold;
   cursor: pointer;
-  transition: all 0.2s;
-  opacity: 0;
+  opacity: 0; /* Oculto por defecto */
   pointer-events: none;
+  transition: all 0.2s;
 }
-
 #myTable tbody tr.selected .delete-row-btn {
-  opacity: 1;
+  opacity: 1; /* Se muestra solo en la fila seleccionada */
   pointer-events: auto;
 }
-
 .delete-row-btn:hover {
   background-color: #dc3545;
   color: #fff;
-  border-color: #c5221f;
-  transform: translateY(-50%) scale(1.1);
 }
 
+/* Estilo para los enlaces dentro de las celdas de la tabla */
+td a {
+  color: #005A9C;
+  text-decoration: none;
+  font-weight: bold;
+}
+td a:hover {
+  color: #003366;
+  text-decoration: underline;
+}
+
+
 /* ==========================================================
-   3. BARRA LATERAL DERECHA (LOG)
+   4. BARRA LATERAL DERECHA (LOG)
    ========================================================== */
 
 #log-sidebar {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 40px);
+  height: calc(100vh - 40px); /* Ocupa toda la altura de la ventana */
 }
-
 .log-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-bottom: 2px solid #f0f6fc;
 }
-
 .log-header h2 {
   padding-bottom: 10px;
   margin-bottom: 0;
   border-bottom: none; 
 }
 
+/* Botón para colapsar/expandir el log */
 #toggleLogBtn {
   background: transparent;
   border: none;
@@ -261,10 +577,9 @@ td input[type="text"].cell-input {
   height: 28px;
   cursor: pointer;
   padding: 0;
-  flex-shrink: 0;
   position: relative;
 }
-
+/* Crea la flecha del botón con pseudo-elementos */
 #toggleLogBtn::after {
   content: '';
   display: inline-block;
@@ -276,28 +591,29 @@ td input[type="text"].cell-input {
   position: absolute;
   top: 8px;
   left: 6px;
+  transform: rotate(-45deg); /* Apunta a la izquierda (colapsar) */
+}
+#toggleLogBtn:hover::after {
+  border-color: #dc3545;
 }
 
+/* Bloques de contenido del log */
 .log-block {
   margin-top: 15px;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  min-height: 0; /* Permite que los bloques se encojan si es necesario */
 }
-
-#log-message-block {
-  flex: 0 1 25%;
-}
+/* Distribución del espacio vertical entre los bloques de log */
+#log-message-block { flex: 0 1 25%; }
 #log-request-block,
-#log-response-block {
-  flex: 1 1 37.5%;
-}
+#log-response-block { flex: 1 1 37.5%; }
 
 .log-block h4 {
   margin: 0 0 8px 0;
   color: #558ac7;
 }
-
+/* Área de texto preformateado para mostrar logs y código */
 .log-block pre {
   flex-grow: 1;
   background-color: #e9ecef;
@@ -305,39 +621,34 @@ td input[type="text"].cell-input {
   border-radius: 5px;
   margin: 0;
   overflow-y: auto;
-  white-space: pre-wrap;
+  white-space: pre-wrap; /* Permite que el texto largo se ajuste */
   word-break: break-all;
   font-size: 0.8em;
   height: 100%;
 }
 
-/* --- Lógica de Colapso para el Log (con Flechas) --- */
-#toggleLogBtn::after {
-  transform: rotate(-45deg);
-}
-#toggleLogBtn:hover::after {
-  border-color: #dc3545;
-}
+/* Estado de log colapsado */
 .app-container.log-collapsed {
-  grid-template-columns: 220px 1fr 65px;
+  grid-template-columns: 220px 1fr 65px; /* Reduce el ancho de la columna del log */
 }
 .app-container.log-collapsed .log-header h2,
 .app-container.log-collapsed .log-block {
-  display: none;
+  display: none; /* Oculta el contenido del log */
 }
 .app-container.log-collapsed #toggleLogBtn::after {
-  transform: rotate(135deg);
+  transform: rotate(135deg); /* La flecha apunta a la derecha (expandir) */
   left: 10px;
 }
 .app-container.log-collapsed #toggleLogBtn:hover::after {
   border-color: #28a745;
 }
 
+
 /* ==========================================================
-   4. RESPONSIVE Y ESTILOS DE COMPONENTES
+   5. COMPONENTES REUTILIZABLES
    ========================================================== */
 
-/* --- Estilos para Pestañas --- */
+/* --- 5.1. Pestañas (Tabs) --- */
 .tabs-container {
   width: 100%;
 }
@@ -357,30 +668,27 @@ td input[type="text"].cell-input {
   transition: all 0.2s ease-in-out;
 }
 .tab-button.active {
-  border-bottom-color: #69a3db;
+  border-bottom-color: #69a3db; /* Línea azul para la pestaña activa */
   font-weight: bold;
 }
 .tab-button:hover {
   background-color: #f8f9fa;
 }
 .tab-content {
-  display: none;
+  display: none; /* Oculto por defecto */
   padding: 0 10px;
   line-height: 1.6;
 }
 .tab-content.active {
-  display: block;
+  display: block; /* Visible cuando está activo */
 }
-.tab-content h3 {
-  color: #558ac7;
-  margin-top: 0;
+.tab-content ul, .tab-content ol { 
+    padding-left: 20px; 
 }
-.tab-content ul, .tab-content ol {
-  padding-left: 20px;
+.tab-content li { 
+    margin-bottom: 10px; 
 }
-.tab-content li {
-  margin-bottom: 10px;
-}
+/* Estilo para el código en línea dentro de la documentación */
 .tab-content code {
   background-color: #e9ecef;
   padding: 2px 5px;
@@ -388,41 +696,31 @@ td input[type="text"].cell-input {
   font-family: monospace;
 }
 
-/* --- Estilos para Modal de Importación --- */
+/* --- 5.2. Modal de Importación --- */
 .modal-overlay {
-  display: none;
+  display: none; /* Oculto por defecto */
   position: fixed;
   z-index: 1000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgba(0,0,0,0.5);
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  background-color: rgba(0,0,0,0.5); /* Fondo semitransparente */
   justify-content: center;
   align-items: center;
 }
 .modal-content {
   background-color: #fefefe;
   padding: 20px;
-  border: 1px solid #888;
   border-radius: 10px;
   width: 80%;
   max-width: 500px;
   box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
-.modal-content h3 {
-  margin-top: 0;
-  color: #558ac7;
-}
-.modal-content p {
-  font-size: 0.9em;
-  line-height: 1.4;
-  margin-bottom: 15px;
+.modal-content h3 { 
+    margin-top: 0; 
+    color: #558ac7; 
 }
 .modal-content textarea {
   width: 100%;
-  box-sizing: border-box;
   padding: 8px;
   border-radius: 4px;
   border: 1px solid #ccc;
@@ -439,88 +737,56 @@ td input[type="text"].cell-input {
     align-items: center;
     gap: 10px;
     margin-bottom: 15px;
-    flex-wrap: wrap;
 }
-.delimiter-selector label {
-    font-weight: bold;
-    color: #333;
-}
-.delimiter-selector select {
+.delimiter-selector select, .delimiter-selector input {
     padding: 6px;
     border-radius: 4px;
     border: 1px solid #ccc;
 }
-.delimiter-selector input {
-    padding: 6px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    width: 40px;
-    text-align: center;
+.delimiter-selector input { 
+    width: 40px; 
+    text-align: center; 
 }
-.hidden {
-    display: none;
+.hidden { 
+    display: none; 
 }
 
-/* --- ESTILOS PARA LA SECCIÓN DE CALENDARIO --- */
+
+/* --- 5.3. Calendario --- */
 .calendar-controls {
     display: flex;
     align-items: center;
     gap: 10px;
+    margin-left: auto; /* Empuja los controles a la derecha de la cabecera */
 }
 .calendar-container {
     display: flex;
-    flex-direction: row;
     gap: 20px;
     width: 100%;
-    height: 100%;
-    overflow: hidden;
-    flex-grow: 1;
 }
 .calendar-main-view {
-    flex: 3;
-    overflow-y: auto;
-    padding-right: 10px;
+    flex: 3; /* Ocupa 3/4 del espacio */
 }
 .calendar-sidebar {
-    flex: 1;
+    flex: 1; /* Ocupa 1/4 del espacio */
     border-left: 1px solid #eee;
     padding-left: 20px;
-    overflow-y: auto;
-    /* --- MEJORA DE USABILIDAD --- */
-    position: sticky;
-    top: 0;
-    align-self: flex-start; /* Necesario para que sticky funcione en un contenedor flex */
-    height: calc(100vh - 120px); /* Ajustar altura para que no ocupe más de la ventana */
 }
 .calendar-grid {
     display: grid;
+    /* Crea una rejilla responsive con columnas de al menos 280px */
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
 }
-.calendar-month {
-    margin-bottom: 20px;
+.calendar-month h3 { 
+    text-align: center; 
+    color: #558ac7; 
+    margin-top: 0; 
 }
-.calendar-month h3 {
-    text-align: center;
-    color: #558ac7;
-    margin-top: 0;
-}
-.calendar-month table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-}
-.calendar-month th, .calendar-month td {
-    width: 14.28%;
-    text-align: center;
-    padding: 6px;
-}
-.calendar-month th {
-    background-color: #69a3db;
-    color: white;
+.calendar-month table { 
+    font-size: 12px; 
 }
 .calendar-month td {
-    border: 1px solid #ddd;
     cursor: pointer;
     transition: background-color 0.2s;
 }
@@ -529,6 +795,17 @@ td input[type="text"].cell-input {
 .calendar-month td.selected { background-color: #558ac7; color: white; }
 .calendar-month td:hover { background-color: #e0e7ef; }
 
+/* Estilo para el título de la lista de automatismos cuando es clicable */
+#automation-list-header.clickable {
+    cursor: pointer;
+    color: #005A9C;
+    text-decoration: underline;
+}
+#automation-list-header.clickable:hover {
+    color: #003366;
+}
+
+/* Estilo para cada item en la lista de automatismos del día */
 #automation-list .automation-item {
     background-color: #f8f9fa;
     border: 1px solid #e9ecef;
@@ -536,40 +813,53 @@ td input[type="text"].cell-input {
     padding: 10px;
     margin-bottom: 10px;
 }
-#automation-list .automation-name {
-    font-weight: bold;
-    word-break: break-all;
+#automation-list .automation-name { 
+    font-weight: bold; 
+    word-break: break-all; 
 }
-#automation-list .automation-details {
-    font-size: 0.9em;
-    color: #6c757d;
+#automation-list .automation-details { 
+    font-size: 0.9em; 
+    color: #6c757d; 
 }
 
+/* --- 5.4. Bloques de Data View (Envíos) --- */
+.sends-dataview-block {
+    margin-top: 20px;
+    border-top: 1px solid #e0e7ef;
+    padding-top: 15px;
+}
+.sends-dataview-block h4 {
+    margin: 0 0 10px 0;
+    color: #558ac7;
+}
+
+
+/* ==========================================================
+   6. DISEÑO RESPONSIVE
+   ========================================================== */
 
 @media (max-width: 1024px) {
+  /* En pantallas más pequeñas, apila los 3 paneles en una sola columna */
   .app-container {
     grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto; /* Navegación | Contenido | Log */
   }
+
+  /* Ajusta la altura del log para que no ocupe toda la pantalla */
   #log-sidebar {
     height: auto;
     max-height: 500px;
   }
+  
+  /* Se deshabilita la funcionalidad de colapsar/expandir el log en pantallas pequeñas */
   .app-container.log-collapsed {
     grid-template-columns: 1fr;
   }
   .app-container.log-collapsed .log-header h2,
   .app-container.log-collapsed .log-block {
-    display: flex;
+    display: flex; /* Asegura que el contenido del log sea siempre visible */
   }
   #toggleLogBtn {
-    display: none;
-  }
-  .calendar-container {
-    flex-direction: column;
-  }
-  .calendar-sidebar {
-    position: static; /* Desactiva el modo sticky en pantallas pequeñas */
-    height: auto;
-    max-height: 300px; /* Limita la altura en móvil */
+    display: none; /* Oculta el botón de colapso */
   }
 }
