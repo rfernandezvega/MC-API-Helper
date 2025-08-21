@@ -1,6 +1,6 @@
 {
-  "name": "MC-API-Helper",
-  "version": "1.5.2",
+  "name": "mc-api-helper",
+  "version": "1.5.3",
   "description": "Herramienta para interactuar con la API de Marketing Cloud",
   "main": "main.js",
   "scripts": {
@@ -39,19 +39,18 @@
     },
     "nsis": {
       "oneClick": false,
+      "perMachine": true,
+      "allowElevation": true,
       "allowToChangeInstallationDirectory": true,
       "installerIcon": "icon.ico",
       "uninstallerIcon": "icon.ico",
       "installerHeaderIcon": "icon.ico"
     },
-    "releaseInfo": {
-      "releaseNotes": "Actualización de documentación"
-    },
-    "publish": [{
+    "publish": {
       "provider": "github",
       "owner": "rfernandezvega",
       "repo": "MC-API-Helper",
       "private": true
-    }]
+    }
   }
 }

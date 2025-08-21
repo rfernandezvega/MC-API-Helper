@@ -2,11 +2,17 @@
 // Descripción: Gestiona el ciclo de vida de la aplicación, el flujo de autenticación seguro y las llamadas a la API.
 
 // --- 1. MÓDulos REQUERIDOS ---
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Notification } = require('electron'); // <-- Añadido ", Notification"
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const axios = require('axios');
 const keytar = require('keytar'); // Librería para el llavero seguro
+
+// --- Configuración Inicial ---
+// Asigna un App User Model ID explícito. Esto arregla el nombre en las notificaciones de Windows.
+app.setAppUserModelId("com.seidor.mc-api-desktop");
+// Desactiva la aceleración de hardware para evitar problemas de renderizado.
+app.disableHardwareAcceleration();
 
 // --- Variables de estado ---
 let mainWindow;
@@ -21,9 +27,9 @@ let activeSession = {
 };
 
 // --- Constantes ---
-const KEYTAR_SERVICE_NAME = 'MC-API-Helper'; // Nombre del servicio para el llavero
+const KEYTAR_SERVICE_NAME = 'MC-API-Helper';
 const REDIRECT_URI = 'https://127.0.0.1:8443/callback';
-const TOKEN_EXPIRY_BUFFER = 300; // 5 minutos de margen para refrescar
+const TOKEN_EXPIRY_BUFFER = 300;
 
 // --- 2. FUNCIÓN DE CREACIÓN DE LA VENTANA ---
 function createWindow() {
@@ -40,31 +46,44 @@ function createWindow() {
     mainWindow.loadFile('index.html');
 }
 
-// --- 3. GESTIÓN DEL CICLO DE VIDA ---
-// Desactiva la aceleración de hardware (intenta evitar input text congelados aleatoriamente)
-app.disableHardwareAcceleration();
-
-// Fichero: main.js
-
+// --- 3. GESTIÓN DEL CICLO DE VIDA Y ACTUALIZACIONES ---
 app.whenReady().then(() => {
-  createWindow();
+    createWindow();
 
-  // --- LÓGICA DE AUTO-ACTUALIZACIÓN PARA PRODUCCIÓN ---
-  // Esta línea buscará actualizaciones y, si las encuentra, las descargará
-  // y notificará al usuario para que reinicie e instale.
-  autoUpdater.checkForUpdatesAndNotify();
+    // --- LÓGICA DE AUTO-ACTUALIZACIÓN PERSONALIZADA ---
+    console.log('Aplicación iniciada. Buscando actualizaciones...');
+
+    autoUpdater.on('update-downloaded', (info) => {
+        console.log('[Updater] Actualización descargada. Creando notificación personalizada.');
+        
+        const notification = new Notification({
+            title: 'Actualización Lista para Instalar',
+            body: `La versión ${info.version} de MC API Helper está lista. Haz clic para reiniciar e instalar.`,
+            icon: path.join(__dirname, 'icon.ico')
+        });
+
+        notification.show();
+
+        notification.on('click', () => {
+            console.log('[Updater] Notificación pulsada. Reiniciando para instalar...');
+            autoUpdater.quitAndInstall();
+        });
+    });
+
+    // Inicia la búsqueda. No usamos "...AndNotify()" para tener control sobre la notificación.
+    autoUpdater.checkForUpdates();
 });
+
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
 });
+
 app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 
-// IPC: Abre un enlace en el navegador externo de forma segura
+// --- 4. COMUNICACIÓN IPC ---
 ipcMain.on('open-external-link', (event, url) => {
-
-    // Comprobación de seguridad básica para asegurar que solo se abran enlaces web
     if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
         shell.openExternal(url);
     } else {
@@ -72,12 +91,7 @@ ipcMain.on('open-external-link', (event, url) => {
     }
 });
 
-// --- 4. GESTIÓN DE CREDENCIALES Y TOKENS ---
-
-/**
- * Refresca el access_token usando el refresh_token guardado en el llavero.
- * @param {string} clientName - El nombre del cliente para el que se refresca el token.
- */
+// --- 5. GESTIÓN DE CREDENCIALES Y TOKENS ---
 async function refreshAccessToken(clientName) {
     const refreshToken = await keytar.getPassword(KEYTAR_SERVICE_NAME, `${clientName}-refreshToken`);
     const clientSecret = await keytar.getPassword(KEYTAR_SERVICE_NAME, `${clientName}-clientSecret`);
@@ -104,11 +118,9 @@ async function refreshAccessToken(clientName) {
         let orgInfo = null; 
         try {
             const userInfoUrl = `${authUri.replace('/v2/token', '')}/v2/userinfo`;
-
             const userInfoResponse = await axios.get(userInfoUrl, {
                 headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
             });
-
             userInfo = userInfoResponse.data.user;
             orgInfo = userInfoResponse.data.organization;
         } catch (e) {
@@ -133,17 +145,14 @@ async function refreshAccessToken(clientName) {
     }
 }
 
-// IPC: Proporciona la configuración de API al frontend bajo demanda
 ipcMain.handle('get-api-config', async (event, clientName) => {
     if (!clientName) return null;
 
     let needsRefresh = false;
 
-    // Condición 1: Sesión incorrecta o token expirado
     if (activeSession.clientName !== clientName || !activeSession.accessToken || Date.now() >= activeSession.expiryTimestamp) {
         needsRefresh = true;
     } 
-    // Condición 2: La sesión es "válida" pero le falta información crucial (orgInfo)
     else if (activeSession.accessToken && !activeSession.orgInfo) {
         needsRefresh = true;
     }
@@ -166,8 +175,7 @@ ipcMain.handle('get-api-config', async (event, clientName) => {
     };
 });
 
-// IPC: Inicia el flujo de login
-ipcMain.on('start-login', async (event, config) => { // Asegurarse de que es async
+ipcMain.on('start-login', async (event, config) => {
     const authUrl = new URL(`${config.authUri.replace('/v2/token', '')}/v2/authorize`);
     authUrl.searchParams.append('client_id', config.clientId);
     authUrl.searchParams.append('response_type', 'code');
@@ -187,7 +195,7 @@ ipcMain.on('start-login', async (event, config) => { // Asegurarse de que es asy
     const { webContents } = loginWindow;
     let loginHandled = false;
 
-    const onNavigate = async (evt, navigationUrl) => { // Asegurarse de que es async
+    const onNavigate = async (evt, navigationUrl) => {
         if (navigationUrl.startsWith(REDIRECT_URI)) {
             loginHandled = true;
             const parsedUrl = new URL(navigationUrl);
@@ -215,7 +223,6 @@ ipcMain.on('start-login', async (event, config) => { // Asegurarse de que es asy
                     let orgInfo = null;
                     try {
                         const userInfoUrl = `${config.authUri.replace('/v2/token', '')}/v2/userinfo`;
-
                         const userInfoResponse = await axios.get(userInfoUrl, {
                             headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
                         });
@@ -258,7 +265,6 @@ ipcMain.on('start-login', async (event, config) => { // Asegurarse de que es asy
     });
 });
 
-// IPC: Cierra la sesión (logout)
 ipcMain.on('logout', async (event, clientName) => {
     if (!clientName) return;
     await keytar.deletePassword(KEYTAR_SERVICE_NAME, `${clientName}-refreshToken`);
