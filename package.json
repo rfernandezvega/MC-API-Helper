@@ -1,6 +1,6 @@
 {
   "name": "mc-api-desktop",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "Herramienta para interactuar con la API de Marketing Cloud",
   "main": "main.js",
   "scripts": {
