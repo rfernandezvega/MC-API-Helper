@@ -40,6 +40,9 @@ function createWindow() {
 }
 
 // --- 3. GESTIÓN DEL CICLO DE VIDA ---
+// Desactiva la aceleración de hardware (intenta evitar input text congelados aleatoriamente)
+app.disableHardwareAcceleration();
+
 app.whenReady().then(createWindow);
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();

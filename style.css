@@ -194,10 +194,22 @@ body {
    3. CONTENIDO PRINCIPAL (CENTRO)
    ========================================================== */
 
+/* Esta regla se aplica a todos los contenedores de contenido principales */
+.table-container,
+.calendar-container,
+.config-section-container,
+.tabs-container { /* Añadimos todos los posibles contenedores de contenido */
+    flex-grow: 1; /* Hace que el contenedor ocupe todo el espacio vertical disponible */
+    overflow-y: auto; /* AÑADE EL SCROLL INTERNO */
+    min-height: 0; /* Un truco de Flexbox para que funcione correctamente */
+}
+
 /* Permite el scroll vertical si el contenido es más alto que la ventana */
 #main-content {
-    overflow-y: auto;
-    height: calc(100vh - 40px); /* Ocupa toda la altura de la ventana menos el padding */
+    height: 100vh;
+    padding: 20px;
+    border-radius: 10px;
+    background-color: #fff;
 }
 
 /* --- 3.1. Menú de Bienvenida --- */
@@ -237,7 +249,7 @@ body {
 .section {
     display: none;
     flex-direction: column;
-    flex-grow: 1; /* Permite que la sección ocupe el espacio disponible */
+    height: 100%; 
 }
 .section h2, .tab-content h2 {
     color: #69a3db;
@@ -327,10 +339,22 @@ body {
 
 /* Contenedor para el botón "Atrás" y los botones de acción en la cabecera de una sección */
 .section-header {
+    /* --- Propiedades para el efecto "pegajoso" --- */
+    background-color: #fff; /* Evita que el contenido de abajo se vea a través */
+    
+    /* --- Ajustes de layout y espaciado --- */
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    
+    /* Usamos padding en lugar de margin para evitar saltos en el contenido */
+    padding-bottom: 20px;
+    
+    /* Añadimos un borde sutil para separarlo del contenido cuando está pegado */
+    border-bottom: 1px solid #e9ecef;
+    margin-bottom: 20px; /* Mantenemos el margen inferior para el espaciado inicial */
+
+    flex-shrink: 0; 
 }
 .header-actions {
     display: flex;
@@ -420,6 +444,8 @@ body {
     width: 100%;
     overflow-x: auto;
     margin-top: 20px;
+    position: relative; /* Crea un nuevo contexto de apilamiento */
+    z-index: 1; /* Coloca este contexto (y todo su contenido) debajo del header */
 }
 table {
     border-collapse: collapse;
@@ -762,15 +788,30 @@ td a:hover {
 .calendar-container {
     display: flex;
     gap: 20px;
-    width: 100%;
+    width: 100%;    
 }
 .calendar-main-view {
     flex: 3; /* Ocupa 3/4 del espacio */
+    overflow-y: auto; /* ¡AQUÍ ESTÁ LA CLAVE! Este panel ahora tiene el scroll */
+    min-height: 0; /* Truco de Flexbox para que el scroll funcione correctamente */
 }
-.calendar-sidebar {
-    flex: 1; /* Ocupa 1/4 del espacio */
+#calendar-sidebar {
+    flex: 1; /* Ocupa el espacio restante (esto ya lo tenías) */
     border-left: 1px solid #eee;
     padding-left: 20px;
+    
+    display: flex; /* La convertimos en un contenedor flex... */
+    flex-direction: column; /* ...en dirección vertical. */
+    max-height: 100%; /* Limita su altura a la de su contenedor padre */
+}
+#automation-list {
+    flex-grow: 1; /* Hace que la lista ocupe todo el espacio vertical disponible... */
+    overflow-y: auto; /* ...y si es muy larga, TENDRÁ SU PROPIO SCROLL. */
+    min-height: 0; /* De nuevo, el truco de Flexbox */
+}
+
+#calendar-sidebar h3 {
+    flex-shrink: 0;
 }
 .calendar-grid {
     display: grid;
