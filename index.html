@@ -55,6 +55,7 @@
           <li><a class="macro-item" data-macro="validadorEmail">Validador de Email</a></li>
           <li><a class="macro-item" data-macro="buscadores">Buscadores</a></li>
           <li><a class="macro-item" data-macro="gestionAutomatismos">Gestión de automatismos</a></li> 
+          <li><a class="macro-item" data-macro="gestionJourneys">Gestión de Journeys</a></li> 
         </ul>
     </div>
   </aside>
@@ -608,6 +609,51 @@
         </div>
     </div>
     
+    <!-- 11. SECCIÓN: GESTIÓN DE JOURNEYS -->
+    <div id="gestion-journeys-section" class="section">
+        <div class="section-header">
+            <button class="back-button">← Atrás</button>  
+            <div class="header-actions">
+                <button id="refreshJourneysTableBtn" class="action-button">Refrescar</button>
+                <button id="getCommunicationsBtn" class="action-button activate-btn">Comunicaciones</button>
+            </div>          
+        </div>
+        <h2>Gestión de Journeys</h2>
+        <!-- Filtros para la tabla de journeys -->
+        <div class="header-filters">
+            <input type="text" id="journeyNameFilter" class="filter-input" placeholder="Buscar por nombre...">
+            <select id="journeyTypeFilter" class="filter-input">
+                <option value="">Todos los tipos</option>
+                <!-- Opciones se cargarán dinámicamente -->
+            </select>
+            <select id="journeyStatusFilter" class="filter-input">
+                <option value="">Todos los estados</option>
+                <!-- Opciones se cargarán dinámicamente -->
+            </select>
+            <input type="text" id="journeyDEFilter" class="filter-input" placeholder="Buscar por Data Extension...">
+        </div>
+        <div class="table-container">
+          <table id="journeys-table">
+            <thead>
+              <tr>
+                <th class="sortable-header" data-sort-by="name">Nombre Journey</th>
+                <th class="sortable-header" data-sort-by="version">Versión</th>
+                <th class="sortable-header" data-sort-by="createdDate">Fecha creación</th>
+                <th class="sortable-header" data-sort-by="modifiedDate">Fecha modificación</th>
+                <th class="sortable-header" data-sort-by="eventType">Tipo</th>
+                <th class="sortable-header" data-sort-by="entryMode">TipoEntrada</th>
+                <th class="sortable-header" data-sort-by="status">Estado</th>
+                <th class="sortable-header" data-sort-by="location">Ubicación</th>
+                <th class="sortable-header" data-sort-by="dataExtensionName">Data Extension</th>
+                <th class="sortable-header" data-sort-by="emails">Emails</th>
+                <th class="sortable-header" data-sort-by="sms">SMSs</th>
+                <th class="sortable-header" data-sort-by="pushes">Pushes</th>
+              </tr>
+            </thead>
+            <tbody id="journeys-tbody"></tbody>
+          </table>
+        </div>
+    </div>
   </main> 
   <!-- END: CONTENIDO PRINCIPAL -->
 
