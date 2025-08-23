@@ -615,7 +615,8 @@
             <button class="back-button">← Atrás</button>  
             <div class="header-actions">
                 <button id="refreshJourneysTableBtn" class="action-button">Refrescar</button>
-                <button id="getCommunicationsBtn" class="action-button activate-btn">Comunicaciones</button>
+                <button id="getCommunicationsBtn" class="action-button activate-btn" disabled>Comunicaciones</button>
+                <button id="drawJourneyBtn" class="action-button" disabled>Dibujar</button>
             </div>          
         </div>
         <h2>Gestión de Journeys</h2>
@@ -641,10 +642,10 @@
                 <th class="sortable-header" data-sort-by="createdDate">Fecha creación</th>
                 <th class="sortable-header" data-sort-by="modifiedDate">Fecha modificación</th>
                 <th class="sortable-header" data-sort-by="eventType">Tipo</th>
-                <th class="sortable-header" data-sort-by="entryMode">TipoEntrada</th>
                 <th class="sortable-header" data-sort-by="status">Estado</th>
                 <th class="sortable-header" data-sort-by="location">Ubicación</th>
                 <th class="sortable-header" data-sort-by="dataExtensionName">Data Extension</th>
+                <th class="sortable-header" data-sort-by="hasCommunications">Descargado</th>
                 <th class="sortable-header" data-sort-by="emails">Emails</th>
                 <th class="sortable-header" data-sort-by="sms">SMSs</th>
                 <th class="sortable-header" data-sort-by="pushes">Pushes</th>
@@ -712,6 +713,23 @@
 </div>
 <!-- END: MODAL DE IMPORTACIÓN -->
 
+<!-- ========================================================== -->
+<!-- START: MODAL DE VISUALIZACIÓN DE FLUJO DE JOURNEY -->
+<!-- ========================================================== -->
+<div id="journey-flow-modal" class="modal-overlay">
+    <div class="modal-content modal-lg"> <!-- Añadimos una clase para hacerlo más grande -->
+        <h3>Flujo del Journey</h3>
+        <div class="journey-flow-container">
+            <pre id="journey-flow-content">Cargando flujo...</pre>
+        </div>
+        <div class="modal-actions">
+            <button id="copyFlowBtn" class="action-button">Copiar</button>
+            <button id="close-flow-btn" class="action-button">Cerrar</button>
+        </div>
+    </div>
+</div>
+<!-- END: MODAL DE FLUJO -->
+ 
 <!-- Enlaza el fichero JavaScript al final del body para un rendimiento óptimo -->
 <script src="ui.js"></script>
 </body>

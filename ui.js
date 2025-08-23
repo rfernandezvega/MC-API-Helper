@@ -66,6 +66,13 @@ document.addEventListener('DOMContentLoaded', function () {
 	const getCommunicationsBtn = document.getElementById('getCommunicationsBtn');
 	const journeyStatusFilter = document.getElementById('journeyStatusFilter');
     const journeyDEFilter = document.getElementById('journeyDEFilter');
+	const drawJourneyBtn = document.getElementById('drawJourneyBtn'); 
+
+	 // --- Modal de Flujo de Journey ---
+    const journeyFlowModal = document.getElementById('journey-flow-modal');
+    const journeyFlowContent = document.getElementById('journey-flow-content');
+    const closeFlowBtn = document.getElementById('close-flow-btn');
+	const copyFlowBtn = document.getElementById('copyFlowBtn');
 
 	// Variables de ordenación y filtrado para Journeys
     let currentJourneySortColumn = 'name';
@@ -1046,50 +1053,49 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Es una operación pesada y solo se ejecuta si los datos no están ya en caché.
 	 */
 	async function macroGetJourneyCommunications() {
-		if (fullJourneyList.length === 0) {
-			alert("Primero carga la lista de Journeys (entra en la vista o pulsa Refrescar).");
+        const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
+		if (selectedRows.length === 0) {
+			alert("Por favor, selecciona al menos un journey de la lista.");
 			return;
 		}
 
-		// Comprobar si ya hemos hecho este proceso
-		if (fullJourneyList.every(j => j.hasCommunications)) {
-			logMessage("Los datos de comunicaciones ya han sido cargados para todos los journeys.");
-			alert("Los datos de comunicaciones ya están cargados.");
-			return;
-		}
+        const journeysToProcess = Array.from(selectedRows).map(row => {
+            return fullJourneyList.find(j => j.id === row.dataset.journeyId);
+        }).filter(Boolean); // Filtra por si acaso
 
 		blockUI();
 		startLogBuffering();
 		try {
-			logMessage(`Iniciando obtención de detalles de comunicación para ${fullJourneyList.length} journeys...`);
+			logMessage(`Iniciando obtención de detalles de comunicación para ${journeysToProcess.length} journey(s) seleccionado(s)...`);
 			const apiConfig = await getAuthenticatedConfig();
 			let processedCount = 0;
 
-			for (const journey of fullJourneyList) {
-				// Saltar si ya hemos procesado este journey en una ejecución anterior
+			for (const journey of journeysToProcess) {
+				// Aunque el botón se deshabilita, una doble comprobación no hace daño
 				if (journey.hasCommunications) {
+					logMessage(`Saltando ${journey.name}, ya tiene los datos.`);
 					processedCount++;
 					continue;
 				}
-
-				try {
-					logMessage(`(${processedCount + 1}/${fullJourneyList.length}) Obteniendo actividades para: ${journey.name}`);
+				// ... (el resto del bucle for se mantiene exactamente igual) ...
+                try {
+					logMessage(`(${processedCount + 1}/${journeysToProcess.length}) Obteniendo actividades para: ${journey.name}`);
 					const url = `${apiConfig.restUri}interaction/v1/interactions/${journey.id}`;
 					const response = await fetch(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
 					
 					if (!response.ok) {
 						logMessage(` -> Error ${response.status} al obtener detalles para ${journey.name}.`);
-						continue; // Continuamos con el siguiente journey
+						continue;
 					}
 
 					const journeyDetails = await response.json();
 					const communications = parseJourneyActivities(journeyDetails.activities);
 					
-					// Actualizamos el objeto en la lista principal (la caché)
 					journey.emails = communications.emails;
 					journey.sms = communications.sms;
 					journey.pushes = communications.pushes;
-					journey.hasCommunications = true; // Marcamos como procesado
+					journey.activities = journeyDetails.activities || [];
+					journey.hasCommunications = true;
 
 				} catch (error) {
 					logMessage(` -> Error de red al procesar ${journey.name}: ${error.message}`);
@@ -1099,9 +1105,10 @@ document.addEventListener('DOMContentLoaded', function () {
 			}
 
 			logMessage("Proceso de obtención de comunicaciones finalizado.");
-			alert("Comunicaciones actualizadas. Las nuevas columnas ya están visibles.");
-			// Volver a renderizar la tabla con los datos enriquecidos
-			applyJourneyFiltersAndRender();
+			alert("Comunicaciones actualizadas para los journeys seleccionados.");
+			
+            applyJourneyFiltersAndRender();
+            updateJourneyActionButtonsState(); // Actualizamos el estado de los botones
 
 		} catch (error) {
 			logMessage(`Error fatal durante la obtención de comunicaciones: ${error.message}`);
@@ -1801,6 +1808,9 @@ document.addEventListener('DOMContentLoaded', function () {
 			else if (sortKey === 'version') {
 				compareResult = (parseInt(valA) || 0) - (parseInt(valB) || 0);
 			}
+			else if (sortKey === 'hasCommunications') {
+                compareResult = (valA === valB) ? 0 : valA ? -1 : 1; // Pone 'Sí' (true) primero
+            }
 			else {
 				compareResult = String(valA).localeCompare(String(valB), undefined, { sensitivity: 'base' });
 			}
@@ -2187,9 +2197,6 @@ document.addEventListener('DOMContentLoaded', function () {
 	/**
 	 * Muestra la vista de "Gestión de Journeys" y la puebla con datos si es necesario.
 	 */
-	/**
-	 * Muestra la vista de "Gestión de Journeys" y la puebla con datos si es necesario.
-	 */
 	async function viewJourneys() {
 		showSection('gestion-journeys-section');
 
@@ -2424,6 +2431,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 emails: [],
                 sms: [],
                 pushes: [],
+				activities: null,
                 hasCommunications: false // Flag para saber si ya hemos pedido los detalles
 			};
 		});
@@ -2440,13 +2448,18 @@ document.addEventListener('DOMContentLoaded', function () {
         const sortedData = sortJourneys(journeys);
 
 		if (!sortedData || sortedData.length === 0) {
-            // Actualizamos el colspan para que el mensaje ocupe toda la fila
-			journeysTbody.innerHTML = '<tr><td colspan="12">No se encontraron journeys con los filtros aplicados.</td></tr>';
+			journeysTbody.innerHTML = '<tr><td colspan="12">No se encontraron journeys con los filtros aplicados.</td></tr>'; // Colspan ahora es 12
 			return;
 		}
 
 		sortedData.forEach(journey => {
-			const row = document.createElement('tr');		
+			const row = document.createElement('tr');
+            row.dataset.journeyId = journey.id;
+			
+            // Restaurar el estado visual de selección si la fila estaba seleccionada
+            if (document.querySelector(`#journeys-table tbody tr.selected[data-journey-id="${journey.id}"]`)) {
+                row.classList.add('selected');
+            }
 
 			row.innerHTML = `
 				<td>${journey.name || '---'}</td>
@@ -2454,16 +2467,175 @@ document.addEventListener('DOMContentLoaded', function () {
 				<td>${formatDateToSpanishTime(journey.createdDate)}</td>
 				<td>${formatDateToSpanishTime(journey.modifiedDate)}</td>
 				<td>${journey.eventType || '---'}</td> 
-				<td>${journey.entryMode || '---'}</td>
 				<td>${journey.status || '---'}</td>
 				<td>${journey.location || '---'}</td>
-				<td>${journey.dataExtensionName || '---'}</td>                
+				<td>${journey.dataExtensionName || '---'}</td>
+                <td>${journey.hasCommunications ? 'Sí' : 'No'}</td>
                 <td>${journey.emails && journey.emails.length > 0 ? journey.emails.join(', ') : '---'}</td>
                 <td>${journey.sms && journey.sms.length > 0 ? journey.sms.join(', ') : '---'}</td>
                 <td>${journey.pushes && journey.pushes.length > 0 ? journey.pushes.join(', ') : '---'}</td>
 			`;
 			journeysTbody.appendChild(row);
 		});
+	}
+
+	/**
+	 * Muestra el modal con el flujo del journey en formato de texto.
+	 * @param {string} flowText - El texto preformateado del flujo del journey.
+	 */
+	function showJourneyFlowModal(flowText) {
+		journeyFlowContent.textContent = flowText;
+		journeyFlowModal.style.display = 'flex';
+	}
+
+	/**
+	 * Cierra el modal de visualización del flujo.
+	 */
+	function closeJourneyFlowModal() {
+		journeyFlowModal.style.display = 'none';
+		journeyFlowContent.textContent = 'Cargando flujo...'; // Resetear contenido
+	}
+
+	/**
+	 * Parsea la estructura de un journey y la convierte en una representación textual con indentación.
+	 * @param {object} journey - El objeto de journey completo con su array de 'activities'.
+	 * @returns {string} El flujo del journey formateado como texto.
+	 */
+	function generateJourneyFlowText(journey) {
+		if (!journey || !journey.activities || journey.activities.length === 0) {
+			return "No se han cargado los detalles de las actividades para este journey.";
+		}
+
+		// (El mapa de actividades se mantiene igual)
+		const ACTIVITY_TYPE_MAP = {
+			'EMAILV2': '[EMAIL]', 'SMS': '[SMS]', 'MOBILEPUSH': '[PUSH]', 'PUSHNOTIFICATIONACTIVITY': '[PUSH]',
+			'WHATSAPPACTIVITY': '[WHATSAPP]', 'LINE': '[LINE]', 'INAPP': '[IN-APP MSG]', 'WAIT': '[ESPERA]',
+			'WAITBYDURATION': '[ESPERA]', 'WAITBYATTRIBUTE': '[ESPERA POR ATRIBUTO]', 'WAITBYEVENT': '[ESPERA HASTA EVENTO]',
+			'WAITUNTILDATE': '[ESPERA HASTA FECHA]', 'STOWAIT': '[ESPERA EINSTEIN STO]', 'MULTICRITERIARDECISION': '[DIVISIÓN]',
+			'MULTICRITERIADECISIONV2': '[DIVISIÓN]', 'RANDOMSPLIT': '[DIVISIÓN A/B]', 'RANDOMSPLITV2': '[DIVISIÓN A/B]',
+			'ENGAGEMENTDECISION': '[DIVISIÓN POR ENGAGEMENT]', 'ENGAGEMENTSPLITV2': '[DIVISIÓN POR ENGAGEMENT]',
+			'PATHOPTIMIZER': '[OPTIMIZADOR DE RUTA]', 'UPDATECONTACTDATA': '[ACTUALIZAR CONTACTO]',
+			'UPDATECONTACTDATAV2': '[ACTUALIZAR CONTACTO]', 'ADDAUDIENCE': '[AÑADIR A AUDIENCIA]',
+			'CONTACTUPDATE': '[ACTUALIZAR CONTACTO]', 'EINSTEINSPLIT': '[DIVISIÓN EINSTEIN SCORE]',
+			'EINSTEINMESSAGINGSPLIT': '[DIVISIÓN EINSTEIN INSIGHTS]', 'EINSTEIN_EMAIL_OPEN': '[DIVISIÓN EINSTEIN OPEN]',
+			'EINSTEIN_MC_EMAIL_CLICK': '[DIVISIÓN EINSTEIN CLICK]', 'SALESFORCESALESCLOUDACTIVITY': '[ACCIÓN SALESFORCE]',
+			'OBJECTACTIVITY': '[ACCIÓN OBJETO SALESFORCE]', 'LEAD': '[ACCIÓN LEAD SALESFORCE]',
+			'CAMPAIGNMEMBER': '[ACCIÓN MIEMBRO DE CAMPAÑA]', 'REST': '[API REST (CUSTOM)]', 'SETCONTACTKEY': '[ESTABLECER CONTACT KEY]',
+			'EVENT': '[EVENTO]', 'SMSSYNC': '[SMS]' // Tratamos SMSSYNC como un envío de SMS
+		};
+
+		const activitiesMap = new Map(journey.activities.map(act => [act.key, act]));
+		const activityKeyToLineNum = new Map();
+		const output = [];
+		let lineCounter = 1;
+
+		function processActivity(activityKey, prefix) {
+			if (!activityKey || activityKeyToLineNum.has(activityKey)) return;
+
+			const activity = activitiesMap.get(activityKey);
+			if (!activity) {
+				output.push(`${prefix}Error: Actividad con key '${activityKey}' no encontrada.`);
+				return;
+			}
+
+			const lineNum = lineCounter++;
+			activityKeyToLineNum.set(activityKey, lineNum);
+
+			const type = ACTIVITY_TYPE_MAP[activity.type] || `[${activity.type}]`;
+			const name = activity.name || '*Actividad sin nombre*';
+			let details = '';
+
+			// Detalles mejorados para actividades comunes
+			if (activity.type.startsWith('WAIT')) {
+				const config = activity.configurationArguments;
+				if (config.waitDuration) details = ` (${config.waitDuration} ${config.waitUnit || ''})`;
+				else if (config.waitEndDateAttributeExpression) details = ` (hasta ${config.waitEndDateAttributeExpression.replace(/{{|}}/g, '')})`;
+			} else if (activity.type.includes('ENGAGEMENT')) {
+				const config = activity.configurationArguments;
+				const activityName = config.refActivityName || '';
+				if (config.statsTypeId === 2) details = ` (Open: ${activityName})`;
+				else if (config.statsTypeId === 3) details = ` (Click: ${activityName})`;
+			}
+
+			output.push(`${prefix}${lineNum}. ${type} ${name}${details}`);
+
+			const outcomes = activity.outcomes || [];
+			
+			// LÓGICA MEJORADA: Distinguir entre flujo lineal y ramas
+			if (outcomes.length === 1) {
+				// Flujo lineal (sin ramas), no se muestra "RAMA 1"
+				const nextKey = outcomes[0].next;
+				if (nextKey) {
+					if (activityKeyToLineNum.has(nextKey)) {
+						output.push(`${prefix}   └─> [UNIÓN] ➡️ ${activityKeyToLineNum.get(nextKey)}`);
+					} else {
+						processActivity(nextKey, `${prefix}   `);
+					}
+				} else {
+					output.push(`${prefix}   └─> 🔴`);
+				}
+			} else if (outcomes.length > 1) {
+				// Múltiples ramas, se dibuja el árbol
+				outcomes.forEach((outcome, index) => {
+					const isLastBranch = index === outcomes.length - 1;
+					const branchPrefix = isLastBranch ? '└─' : '├─';
+					const nextPrefix = isLastBranch ? '   ' : '│  ';
+					
+					let branchLabel = `[RAMA ${index + 1}]`;
+					if (outcome.metaData && outcome.metaData.label) {
+						branchLabel = `[RAMA: ${outcome.metaData.label}]`;
+					} else if (activity.type.includes('RANDOMSPLIT') && outcome.arguments.percentage) {
+						branchLabel = `[RAMA: ${outcome.arguments.percentage}%]`;
+					}
+
+					output.push(`${prefix}${branchPrefix} ${branchLabel}`);
+					
+					const nextKey = outcome.next;
+					if (nextKey) {
+						if (activityKeyToLineNum.has(nextKey)) {
+							output.push(`${prefix}${nextPrefix}  └─> [UNIÓN] ➡️ ${activityKeyToLineNum.get(nextKey)}`);
+						} else {
+							processActivity(nextKey, `${prefix}${nextPrefix}`);
+						}
+					} else {
+						output.push(`${prefix}${nextPrefix}  └─> 🔴`);
+					}
+				});
+			}
+		}
+
+		// Lógica de inicio (se mantiene igual)
+		const trigger = journey.triggers ? journey.triggers[0] : null;
+		if (trigger && trigger.outcomes && trigger.outcomes.length > 0 && trigger.outcomes[0].next) {
+			output.push(`[INICIO] Fuente: ${trigger.type || 'Desconocida'}`);
+			processActivity(trigger.outcomes[0].next, '');
+		} else if (journey.activities.length > 0) {
+			output.push(`[INICIO] Fuente: No definida en Trigger (usando primera actividad)`);
+			processActivity(journey.activities[0].key, '');
+		}
+		
+		return output.join('\n');
+	}
+
+	/**
+	 * Actualiza el estado de los botones de acción ("Comunicaciones" y "Dibujar")
+	 * basándose en la selección actual de filas en la tabla de journeys.
+	 */
+	function updateJourneyActionButtonsState() {
+		const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
+		const selectionCount = selectedRows.length;
+
+		// Lógica para el botón "Comunicaciones"
+		getCommunicationsBtn.disabled = selectionCount === 0;
+
+		// Lógica para el botón "Dibujar"
+		if (selectionCount === 1) {
+			const journeyId = selectedRows[0].dataset.journeyId;
+			const journey = fullJourneyList.find(j => j.id === journeyId);
+			drawJourneyBtn.disabled = !(journey && journey.hasCommunications);
+		} else {
+			drawJourneyBtn.disabled = true;
+		}
 	}
 
 	// ==========================================================
@@ -2794,17 +2966,15 @@ document.addEventListener('DOMContentLoaded', function () {
 		automationNameFilter.addEventListener('input', applyFiltersAndRender);
         automationStatusFilter.addEventListener('change', applyFiltersAndRender);
 
-		// --- Listeners de Gestión de Journeys ---
+				// --- Listeners de Gestión de Journeys ---
 		journeyNameFilter.addEventListener('input', applyJourneyFiltersAndRender);
 		journeyTypeFilter.addEventListener('change', applyJourneyFiltersAndRender);
-		journeyStatusFilter.addEventListener('change', applyJourneyFiltersAndRender);
+        journeyStatusFilter.addEventListener('change', applyJourneyFiltersAndRender);
         journeyDEFilter.addEventListener('input', applyJourneyFiltersAndRender);
 
         getCommunicationsBtn.addEventListener('click', macroGetJourneyCommunications);
 
-
-		refreshJourneysTableBtn.addEventListener('click', () => {
-			// 1. Limpiamos la caché y los filtros
+		 refreshJourneysTableBtn.addEventListener('click', () => {
 			fullJourneyList = [];
 			eventDefinitionsMap = {};
 			journeyFolderMap = {};
@@ -2812,10 +2982,22 @@ document.addEventListener('DOMContentLoaded', function () {
 			journeyTypeFilter.value = '';
             journeyStatusFilter.value = '';
             journeyDEFilter.value = '';
-			
-			// 2. Volvemos a llamar a la función principal, que forzará la recarga de datos
+			updateJourneyActionButtonsState(); // Llama a la nueva función que deshabilita ambos botones
 			viewJourneys(); 
 		});
+
+        drawJourneyBtn.addEventListener('click', () => {
+            const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
+            if (selectedRows.length !== 1) return; // Solo funciona si hay exactamente una fila seleccionada
+            
+            const journeyId = selectedRows[0].dataset.journeyId;
+			const journey = fullJourneyList.find(j => j.id === journeyId);
+            
+            if (journey && journey.hasCommunications) {
+				const flowText = generateJourneyFlowText(journey);
+				showJourneyFlowModal(flowText);
+			}
+        });
 
 		document.querySelector('#journeys-table thead').addEventListener('click', (e) => {
             const header = e.target.closest('.sortable-header');
@@ -2829,6 +3011,43 @@ document.addEventListener('DOMContentLoaded', function () {
                 currentJourneySortDirection = 'asc';
             }
             applyJourneyFiltersAndRender();
+        });
+
+        // Listener para multiselección de filas
+		journeysTbody.addEventListener('click', (e) => {
+			const clickedRow = e.target.closest('tr');
+			if (!clickedRow || !clickedRow.dataset.journeyId) return;
+
+            // Simplemente alterna la clase 'selected' en la fila clicada
+			clickedRow.classList.toggle('selected');
+			
+            // Actualiza el estado de los botones después de cualquier cambio en la selección
+			updateJourneyActionButtonsState();
+		});
+
+		// Listeners para cerrar el modal de flujo
+		closeFlowBtn.addEventListener('click', closeJourneyFlowModal);
+		journeyFlowModal.addEventListener('click', (e) => {
+			if (e.target === journeyFlowModal) {
+				closeJourneyFlowModal();
+			}
+		});
+
+        // Listener para el botón "Copiar"
+        copyFlowBtn.addEventListener('click', () => {
+            const textToCopy = journeyFlowContent.textContent;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const originalText = copyFlowBtn.textContent;
+                copyFlowBtn.textContent = '¡Copiado!';
+                copyFlowBtn.classList.add('copied');
+                setTimeout(() => {
+                    copyFlowBtn.textContent = originalText;
+                    copyFlowBtn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Error al intentar copiar al portapapeles:', err);
+                alert('No se pudo copiar el texto. Revisa la consola para más detalles.');
+            });
         });
 	}
 
