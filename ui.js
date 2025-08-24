@@ -1143,6 +1143,8 @@ document.addEventListener('DOMContentLoaded', function () {
 				case 'SMS':
 					communications.sms.push(activity.name);
 					break;
+				case 'INAPP': 
+				case 'INBOX':
 				case 'MOBILEPUSH':
 					communications.pushes.push(activity.name);
 					break;
@@ -2509,7 +2511,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		// (El mapa de actividades se mantiene igual)
 		const ACTIVITY_TYPE_MAP = {
 			'EMAILV2': '[EMAIL]', 'SMS': '[SMS]', 'MOBILEPUSH': '[PUSH]', 'PUSHNOTIFICATIONACTIVITY': '[PUSH]',
-			'WHATSAPPACTIVITY': '[WHATSAPP]', 'LINE': '[LINE]', 'INAPP': '[IN-APP MSG]', 'WAIT': '[ESPERA]',
+			'WHATSAPPACTIVITY': '[WHATSAPP]', 'INBOX': '[INBOX MSG]', 'INAPP': '[IN-APP MSG]', 'WAIT': '[ESPERA]',
 			'WAITBYDURATION': '[ESPERA]', 'WAITBYATTRIBUTE': '[ESPERA POR ATRIBUTO]', 'WAITBYEVENT': '[ESPERA HASTA EVENTO]',
 			'WAITUNTILDATE': '[ESPERA HASTA FECHA]', 'STOWAIT': '[ESPERA EINSTEIN STO]', 'MULTICRITERIARDECISION': '[DIVISIÓN]',
 			'MULTICRITERIADECISIONV2': '[DIVISIÓN]', 'RANDOMSPLIT': '[DIVISIÓN A/B]', 'RANDOMSPLITV2': '[DIVISIÓN A/B]',
