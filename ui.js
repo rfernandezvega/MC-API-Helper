@@ -2009,7 +2009,6 @@ document.addEventListener('DOMContentLoaded', function () {
 		calendarDataForClient = '';
 		if (automationList) automationList.innerHTML = '<p>Selecciona un día para ver los detalles.</p>';
 		if (calendarGrid) generateCalendar();
-		logMessage('Datos del calendario limpiados.');
 	}
 	
 	/**
