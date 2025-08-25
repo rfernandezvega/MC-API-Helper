@@ -39,6 +39,8 @@ document.addEventListener('DOMContentLoaded', function () {
 	// ==========================================================
 	const API_PAGE_SIZE = 500;
 
+	const loaderOverlay = document.getElementById('loader-overlay');
+
 	// --- Variables de Estado Global ---
 	let currentUserInfo = null;      // Almacena la información del usuario logueado.
 	let currentOrgInfo = null;       // Almacena la información de la organización (stack, etc.).
@@ -256,18 +258,25 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 	
 	/**
-	 * Bloquea la interfaz de usuario para prevenir interacciones durante una operación asíncrona.
+	 * Muestra un overlay de carga para prevenir interacciones durante una operación asíncrona.
+	 * @param {string} [message='Cargando...'] - El mensaje a mostrar bajo el spinner.
 	 */
-	function blockUI() {
+	function blockUI(message = 'Cargando...') {
 		if (document.activeElement) document.activeElement.blur();
-		appContainer.classList.add('is-updating');
+		
+		const loaderText = document.getElementById('loader-text');
+		if (loaderText) {
+			loaderText.textContent = message;
+		}
+		
+		loaderOverlay.style.display = 'flex';
 	}
 
 	/**
-	 * Desbloquea la interfaz de usuario una vez que la operación ha finalizado.
+	 * Oculta el overlay de carga una vez que la operación ha finalizado.
 	 */
 	function unblockUI() {
-		appContainer.classList.remove('is-updating');
+		loaderOverlay.style.display = 'none';
 	}
 	
 	/**
@@ -371,10 +380,20 @@ document.addEventListener('DOMContentLoaded', function () {
 			renderAutomationsTable([]);
 			updateAutomationButtonsState();
 
+			fullJourneyList = [];
+            eventDefinitionsMap = {};
+            journeyFolderMap = {};
+            if (journeyNameFilter) journeyNameFilter.value = '';
+            if (journeyTypeFilter) journeyTypeFilter.value = '';
+            if (journeyStatusFilter) journeyStatusFilter.value = '';
+            if (journeyDEFilter) journeyDEFilter.value = '';
+            if (journeysTbody) journeysTbody.innerHTML = ''; // Limpia la tabla visualmente
+            updateJourneyActionButtonsState();
+
 			currentClientConfig = null; 
 
 			if (clientName) {
-				blockUI();
+				blockUI("Cargando configuración de cliente...");
 				const configToLoad = configs[clientName] || {};
 				currentClientConfig = configToLoad;
 				setClientConfigForm(configToLoad);
@@ -456,7 +475,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para crear una Data Extension utilizando la API SOAP.
 	 */
 	async function macroCreateDE() {
-		blockUI();
+		blockUI("Creando Data Extension...");
 		startLogBuffering();
 		try {
 			logMessage("Iniciando creación de Data Extension...");
@@ -497,7 +516,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para crear o actualizar (upsert) campos en una Data Extension existente.
 	 */
 	async function macroCreateFields() {
-		blockUI();
+		blockUI("Creando campos...");
 		startLogBuffering();
 		try {
 			logMessage(`Iniciando creación/actualización de campos...`);
@@ -522,7 +541,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para recuperar todos los campos de una Data Extension y mostrarlos en la tabla.
 	 */
 	async function macroGetFields() {
-		blockUI();
+		blockUI("Recuperando campos...");
 		startLogBuffering();
 		try {
 			const apiConfig = await getAuthenticatedConfig();
@@ -556,7 +575,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para eliminar un campo específico de una Data Extension.
 	 */
 	async function macroDeleteField() {
-		blockUI();
+		blockUI("Borrando campo...");
 		startLogBuffering();
 		try {
 			const apiConfig = await getAuthenticatedConfig();
@@ -584,7 +603,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para buscar una Data Extension y mostrar su ruta de carpetas completa.
 	 */
 	async function macroSearchDE() {
-		blockUI();
+		blockUI("Buscando Data Extension...");
 		startLogBuffering();
 		deSearchResultsTbody.innerHTML = '<tr><td colspan="2">Buscando...</td></tr>';
 		try {
@@ -636,7 +655,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para validar una dirección de email utilizando la API REST.
 	 */
 	async function macroValidateEmail() {
-		blockUI();
+		blockUI("Validando email...");
 		startLogBuffering();
 		emailValidationResults.textContent = 'Validando...';
 		try {
@@ -665,7 +684,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para encontrar todas las actividades que tienen como destino una Data Extension.
 	 */
 	async function macroFindDataSources() {
-		blockUI();
+		blockUI("Buscando origenes de datos...");
 		startLogBuffering();
 		dataSourcesTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
 		try {
@@ -695,7 +714,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para buscar un cliente (suscriptor) por Subscriber Key o Email.
 	 */
 	async function macroSearchCustomer() {
-		blockUI();
+		blockUI("Buscando cliente...");
 		startLogBuffering(); // <-- Adaptado a la nueva estructura de logs
 		customerSearchTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
 		
@@ -768,7 +787,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	async function macroGetCustomerJourneys() {
 		if (!selectedSubscriberData?.subscriberKey) return;
-		blockUI();
+		blockUI("Buscando Journeys...");
 		startLogBuffering();
 		customerJourneysResultsBlock.classList.remove('hidden');
 		customerJourneysTbody.innerHTML = '<tr><td colspan="6">Buscando membresías de Journey...</td></tr>';
@@ -814,7 +833,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	async function macroGetCustomerSends() {
 		if (!selectedSubscriberData?.subscriberKey) return;
-		blockUI();
+		blockUI("Buscando en Data Extensions...");
 		startLogBuffering();
 		
 		customerSendsResultsBlock.classList.remove('hidden');
@@ -884,7 +903,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para buscar en el texto de todas las Query Activities.
 	 */
 	async function macroSearchQueriesByText() {
-		blockUI();
+		blockUI("Buscando Queries...");
 		startLogBuffering();
 		querySearchResultsTbody.innerHTML = '<tr><td colspan="4">Buscando en todas las queries...</td></tr>';
 		try {
@@ -986,7 +1005,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (selectedAutomations.length === 0) return;
 		if (!confirm(`¿Seguro que quieres '${actionName}' ${selectedAutomations.length} automatismo(s)?`)) return;
 		
-		blockUI();
+		blockUI("Realizando acción "+actionName+"...");
 		startLogBuffering();
 		const successes = [];
 		const failures = [];
@@ -1063,7 +1082,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return fullJourneyList.find(j => j.id === row.dataset.journeyId);
         }).filter(Boolean); // Filtra por si acaso
 
-		blockUI();
+		blockUI("Recuperando comunicaciones...");
 		startLogBuffering();
 		try {
 			logMessage(`Iniciando obtención de detalles de comunicación para ${journeysToProcess.length} journey(s) seleccionado(s)...`);
@@ -2138,14 +2157,31 @@ document.addEventListener('DOMContentLoaded', function () {
 	async function viewAutomations(automationsToShow = null) {
         showSection('gestion-automatismos-section');
         document.querySelectorAll('#automations-table tbody tr.selected').forEach(row => row.classList.remove('selected'));
-		let dataToRender;
+        
         if (automationsToShow) {
-            dataToRender = automationsToShow;
+            renderAutomationsTable(automationsToShow);
         } else {
-            if (fullAutomationList.length === 0) await macroGetAllAutomationDetails();
-            dataToRender = fullAutomationList;
+            // Si la lista no está en caché, la cargamos
+            if (fullAutomationList.length === 0) {
+                blockUI("Recuperando automatismos..."); 
+                startLogBuffering();
+                try {
+                    logMessage("Cargando lista de Automatismos por primera vez...");
+                    await macroGetAllAutomationDetails();
+                } catch (error) {
+                    const errorMessage = error.message || "Error desconocido al cargar Automatismos.";
+                    logMessage(`Error: ${errorMessage}`);
+                    alert(`Error al cargar Automatismos: ${errorMessage}`);
+                    automationsTbody.innerHTML = `<tr><td colspan="4" style="color:red;">Error al cargar: ${errorMessage}</td></tr>`;
+                } finally {
+                    unblockUI(); 
+                    endLogBuffering();
+                }
+            } else {
+                // Si ya está en caché, simplemente la mostramos
+                applyFiltersAndRender();
+            }
         }
-        renderAutomationsTable(dataToRender);
     }
 
 	// --- 6.5. Configuración de APIs ---
@@ -2207,7 +2243,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.querySelector(`#journeys-table thead th[data-sort-by="${currentJourneySortColumn}"]`).classList.add(currentJourneySortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
 
 		if (fullJourneyList.length === 0) {
-			blockUI();
+			blockUI("Recuperando Journeys...");
 			startLogBuffering();
 			try {
 				logMessage("Cargando lista de Journeys y dependencias por primera vez...");
@@ -2273,7 +2309,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			const pageItems = data.items || [];
 			allItems = allItems.concat(pageItems);
 			
-			totalPages = data.totalPages || 1;
+			totalPages = data.count ? Math.ceil(data.count / API_PAGE_SIZE) : 1;
 			page++;
 
 			logMessage(`Página ${page - 1} de ${totalPages} recuperada. Items totales: ${allItems.length}`);
@@ -2319,7 +2355,8 @@ document.addEventListener('DOMContentLoaded', function () {
 				}
 			});
 
-			totalPages = data.totalPages || 1;
+			totalPages = data.count ? Math.ceil(data.count / API_PAGE_SIZE) : 1;
+
 			page++;
 		} while (page <= totalPages);
 		
@@ -2606,7 +2643,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			}
 		}
 
-		// Lógica de inicio (se mantiene igual)
+		// Lógica de inicio
 		const trigger = journey.triggers ? journey.triggers[0] : null;
 		if (trigger && trigger.outcomes && trigger.outcomes.length > 0 && trigger.outcomes[0].next) {
 			output.push(`[INICIO] Fuente: ${trigger.type || 'Desconocida'}`);
@@ -2678,7 +2715,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
 				loadConfigsIntoSelect();
 				logMessage("Configuración guardada. Iniciando login...");
-				blockUI();
+				blockUI("Iniciando login...");
 				window.electronAPI.startLogin(config);
 			} finally {
 				endLogBuffering();
@@ -2872,7 +2909,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			automationList.innerHTML = '<p>Selecciona un día para ver los detalles.</p>';
 			document.querySelectorAll('.calendar-month td.selected').forEach(c => c.classList.remove('selected'));
 
-			blockUI();
+			blockUI("Refrescando automatismos...");
 			startLogBuffering();
 			try {
 				await macroGetAutomations();
@@ -2888,7 +2925,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			automationList.innerHTML = '<p>Selecciona un día para ver los detalles.</p>';
 			document.querySelectorAll('.calendar-month td.selected').forEach(c => c.classList.remove('selected'));
 
-			blockUI();
+			blockUI("Refrescando Journeys...");
 			startLogBuffering();
 			try {
 				await macroGetJourneyAutomations();
@@ -2940,7 +2977,7 @@ document.addEventListener('DOMContentLoaded', function () {
         runAutomationBtn.addEventListener('click', () => macroPerformAutomationAction('run'));
         stopAutomationBtn.addEventListener('click', () => macroPerformAutomationAction('pause'));
 		refreshAutomationsTableBtn.addEventListener('click', async () => {
-			blockUI();
+			blockUI("Refrescando automatismos...");
 			startLogBuffering();
 			try {
 				logMessage("Refrescando lista de automatismos...");
