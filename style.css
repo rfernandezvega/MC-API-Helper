@@ -123,6 +123,11 @@ body {
   color: #558ac7;
 }
 
+.app-container.app-locked {
+    filter: blur(5px); /* Difumina el contenido de la aplicación */
+    pointer-events: none; /* Deshabilita cualquier interacción */
+    user-select: none; /* Evita que se pueda seleccionar texto */
+}
 /* ==========================================================
    2. BARRA LATERAL IZQUIERDA (NAVEGACIÓN)
    ========================================================== */
@@ -482,7 +487,18 @@ body {
 #automationNameFilter {
     min-width: 200px;
 }
-
+/* Estilo para textos de error, como en el modal de licencia */
+.error-text {
+    color: #c5221f; /* Rojo oscuro */
+    background-color: #fce8e6; /* Rojo claro */
+    border: 1px solid #f6ccc7;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px 0 15px 0; /* Espaciado vertical */
+    text-align: center;
+    font-size: 0.9em;
+    font-weight: bold;
+}
 /* --- 3.4. Tablas de Datos --- */
 
 /* Contenedor que permite el scroll horizontal de la tabla */

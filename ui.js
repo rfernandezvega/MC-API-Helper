@@ -41,6 +41,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	const loaderOverlay = document.getElementById('loader-overlay');
 
+	const licenseModal = document.getElementById('license-modal-overlay');
+	const licenseForm = document.getElementById('license-form');
+	const licenseEmailInput = document.getElementById('license-email');
+	const licenseKeyInput = document.getElementById('license-key');
+	const licenseErrorEl = document.getElementById('license-error-message'); 
+
 	// --- Variables de Estado Global ---
 	let currentUserInfo = null;      // Almacena la información del usuario logueado.
 	let currentOrgInfo = null;       // Almacena la información de la organización (stack, etc.).
@@ -2676,6 +2682,59 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 	}
 
+	/**
+	 * Gestiona el envío del formulario de licencia.
+	 * Guarda los datos en localStorage y arranca la aplicación.
+	 * @param {Event} event - El evento de envío del formulario.
+	 */
+	async function handleLicenseSubmit(event) {
+		event.preventDefault(); // Evita que la página se recargue
+		const email = licenseEmailInput.value.trim();
+		const key = licenseKeyInput.value.trim();
+		const submitBtn = document.getElementById('license-submit-btn');
+
+		// Ocultamos cualquier error anterior al iniciar la validación
+    	licenseErrorEl.style.display = 'none';
+
+		if (!email || !key) {
+			alert('Por favor, completa ambos campos.');
+			licenseErrorEl.style.display = 'block';
+			return;
+		}
+
+		// Bloqueamos el botón para evitar múltiples envíos
+		submitBtn.disabled = true;
+		submitBtn.textContent = 'Validando...';
+
+		// Llamamos a la función del proceso principal
+		const result = await window.electronAPI.validateLicense({ email, key });
+		
+		// Si el resultado es un objeto, es un error del backend
+		if (result && result.error) {
+			// Mostramos el error de configuración en el modal
+			licenseErrorEl.textContent = `Error de configuración: ${result.error}`;
+			licenseErrorEl.style.display = 'block';
+			submitBtn.disabled = false;
+			submitBtn.textContent = 'Validar y Acceder';
+			return;
+		}
+
+		if (result === true) {
+			// Éxito
+			const licenseData = { email, key };
+			localStorage.setItem('isKeyValid', JSON.stringify(licenseData));
+			appContainer.classList.remove('app-locked');
+			licenseModal.style.display = 'none';
+			startFullApp();
+		} else {
+			// Error de validación
+			licenseErrorEl.textContent = 'El email o la clave de acceso no son válidos, o el usuario no está activo.';
+			licenseErrorEl.style.display = 'block';
+			submitBtn.disabled = false;
+			submitBtn.textContent = 'Validar y Acceder';
+		}
+	}
+
 	// ==========================================================
 	// --- 7. EVENT LISTENERS ---
 	// ==========================================================
@@ -2684,6 +2743,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Configura todos los event listeners de la aplicación una sola vez.
 	 */
 	function setupEventListeners() {
+		licenseForm.addEventListener('submit', handleLicenseSubmit);
 
 		// --- Listeners de Configuración y Sesión ---
 		saveConfigBtn.addEventListener('click', () => {
@@ -3096,9 +3156,70 @@ document.addEventListener('DOMContentLoaded', function () {
 	
 	/**
 	 * Función principal que se ejecuta al cargar la página.
-	 * Inicializa el estado de la aplicación.
+	 * Actúa como un guardián: comprueba si la licencia es válida antes de iniciar la app.
 	 */
-	function initializeApp() {
+	async function initializeApp() {
+		setupEventListeners();
+
+		const licenseInfoRaw = localStorage.getItem('isKeyValid');
+
+		if (licenseInfoRaw) {
+			// --- INICIO CON VALIDACIÓN EXPLÍCITA ---
+
+			// 1. Mostramos el spinner INMEDIATAMENTE. El usuario sabe que algo está pasando.
+			blockUI("Validando licencia...");
+
+			try {
+				const licenseInfo = JSON.parse(licenseInfoRaw);
+				if (!licenseInfo.email || !licenseInfo.key) {
+					// Si los datos están corruptos, lo tratamos como un fallo.
+					throw new Error("Datos de licencia locales corruptos.");
+				}
+
+				// 2. Realizamos la validación. Esta llamada ya no bloquea la ventana,
+				// pero sí esperamos su resultado antes de continuar.
+				const isValid = await window.electronAPI.validateLicense({ email: licenseInfo.email, key: licenseInfo.key });
+				
+				// 3. Actuamos según el resultado.
+				if (isValid === true) {
+					// Éxito: Ocultamos el spinner y arrancamos la aplicación.
+					unblockUI();
+					startFullApp();
+				} else {
+					// Fallo (acceso revocado): Ocultamos el spinner, borramos los datos malos y mostramos el modal.
+					unblockUI();
+					localStorage.removeItem('isKeyValid');
+					
+					const licenseErrorEl = document.getElementById('license-error-message');
+					if(licenseErrorEl) {
+						licenseErrorEl.textContent = 'Tu acceso ha sido revocado. Por favor, introduce credenciales válidas.';
+						licenseErrorEl.style.display = 'block';
+					}
+					
+					appContainer.classList.add('app-locked');
+					licenseModal.style.display = 'flex';
+				}
+			} catch (e) {
+				// Si hay cualquier otro error (ej. JSON mal formado), hacemos lo mismo: revocamos el acceso.
+				unblockUI();
+				localStorage.removeItem('isKeyValid');
+				appContainer.classList.add('app-locked');
+				licenseModal.style.display = 'flex';
+			}
+
+		} else {
+			// --- PRIMERA EJECUCIÓN ---
+			// No hay licencia, mostramos el modal (comportamiento sin cambios).
+			appContainer.classList.add('app-locked');
+			licenseModal.style.display = 'flex';
+		}
+	}
+
+	/**
+	 * Contiene la lógica de arranque original de la aplicación.
+	 * Solo se ejecuta una vez que la licencia ha sido validada.
+	 */
+	function startFullApp() {
 		startLogBuffering();
 		if (localStorage.getItem('logCollapsedState') === 'true') appContainer.classList.add('log-collapsed');
 		loadConfigsIntoSelect();
@@ -3106,7 +3227,6 @@ document.addEventListener('DOMContentLoaded', function () {
 		clearFieldsTable();
 		observer.observe(fieldsTableBody, observerConfig);
 		initializeCollapsibleMenus();
-		setupEventListeners();
 		logMessage("Aplicación lista. Selecciona un cliente o configura uno nuevo.");
 		endLogBuffering();
 	}
