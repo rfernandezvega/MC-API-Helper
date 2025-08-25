@@ -15,6 +15,7 @@
 //    - 4.3. Gestión de Campos
 //    - 4.4. Funcionalidades de Búsqueda
 //    - 4.5. Gestión de Automatismos
+//    - 4.6. Gestión de Journeys
 // 5. FUNCIONES AUXILIARES (HELPERS)
 //    - 5.1. Helpers de API (SOAP, REST)
 //    - 5.2. Parsers (XML, JSON)
@@ -26,6 +27,7 @@
 //    - 6.3. Modal de Importación
 //    - 6.4. Menús Colapsables
 //    - 6.5. Configuración de APIs
+//	  - 6.6. Gestión de Journeys
 // 7. EVENT LISTENERS
 // 8. INICIALIZACIÓN DE LA APLICACIÓN
 // ===================================================================
@@ -35,6 +37,9 @@ document.addEventListener('DOMContentLoaded', function () {
 	// ==========================================================
 	// --- 1. DECLARACIÓN DE ELEMENTOS DEL DOM Y VARIABLES GLOBALES ---
 	// ==========================================================
+	const API_PAGE_SIZE = 500;
+
+	const loaderOverlay = document.getElementById('loader-overlay');
 
 	// --- Variables de Estado Global ---
 	let currentUserInfo = null;      // Almacena la información del usuario logueado.
@@ -51,6 +56,29 @@ document.addEventListener('DOMContentLoaded', function () {
 	let calendarDataForClient = '';  // Cliente para el que se han cargado los datos del calendario.
 	let currentSortColumn = 'name';  // Columna de ordenación por defecto para la tabla de automatismos.
 	let currentSortDirection = 'asc';// Dirección de ordenación por defecto.
+	let fullJourneyList = [];        // Caché de todos los journeys para la vista de gestión.
+ 	let eventDefinitionsMap = {}; // Caché para mapear EventDefinitions por nombre
+    let journeyFolderMap = {};    // Caché para mapear rutas de carpetas de Journeys
+
+	// --- Gestión de Journeys ---
+	const journeysTbody = document.getElementById('journeys-tbody');
+	const journeyNameFilter = document.getElementById('journeyNameFilter');
+	const journeyTypeFilter = document.getElementById('journeyTypeFilter');
+	const refreshJourneysTableBtn = document.getElementById('refreshJourneysTableBtn');
+	const getCommunicationsBtn = document.getElementById('getCommunicationsBtn');
+	const journeyStatusFilter = document.getElementById('journeyStatusFilter');
+    const journeyDEFilter = document.getElementById('journeyDEFilter');
+	const drawJourneyBtn = document.getElementById('drawJourneyBtn'); 
+
+	 // --- Modal de Flujo de Journey ---
+    const journeyFlowModal = document.getElementById('journey-flow-modal');
+    const journeyFlowContent = document.getElementById('journey-flow-content');
+    const closeFlowBtn = document.getElementById('close-flow-btn');
+	const copyFlowBtn = document.getElementById('copyFlowBtn');
+
+	// Variables de ordenación y filtrado para Journeys
+    let currentJourneySortColumn = 'name';
+    let currentJourneySortDirection = 'asc';
 
 	// --- Búferes para el sistema de Logs Acumulativos ---
 	let logBuffer = [];
@@ -230,18 +258,25 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 	
 	/**
-	 * Bloquea la interfaz de usuario para prevenir interacciones durante una operación asíncrona.
+	 * Muestra un overlay de carga para prevenir interacciones durante una operación asíncrona.
+	 * @param {string} [message='Cargando...'] - El mensaje a mostrar bajo el spinner.
 	 */
-	function blockUI() {
+	function blockUI(message = 'Cargando...') {
 		if (document.activeElement) document.activeElement.blur();
-		appContainer.classList.add('is-updating');
+		
+		const loaderText = document.getElementById('loader-text');
+		if (loaderText) {
+			loaderText.textContent = message;
+		}
+		
+		loaderOverlay.style.display = 'flex';
 	}
 
 	/**
-	 * Desbloquea la interfaz de usuario una vez que la operación ha finalizado.
+	 * Oculta el overlay de carga una vez que la operación ha finalizado.
 	 */
 	function unblockUI() {
-		appContainer.classList.remove('is-updating');
+		loaderOverlay.style.display = 'none';
 	}
 	
 	/**
@@ -345,10 +380,20 @@ document.addEventListener('DOMContentLoaded', function () {
 			renderAutomationsTable([]);
 			updateAutomationButtonsState();
 
+			fullJourneyList = [];
+            eventDefinitionsMap = {};
+            journeyFolderMap = {};
+            if (journeyNameFilter) journeyNameFilter.value = '';
+            if (journeyTypeFilter) journeyTypeFilter.value = '';
+            if (journeyStatusFilter) journeyStatusFilter.value = '';
+            if (journeyDEFilter) journeyDEFilter.value = '';
+            if (journeysTbody) journeysTbody.innerHTML = ''; // Limpia la tabla visualmente
+            updateJourneyActionButtonsState();
+
 			currentClientConfig = null; 
 
 			if (clientName) {
-				blockUI();
+				blockUI("Cargando configuración de cliente...");
 				const configToLoad = configs[clientName] || {};
 				currentClientConfig = configToLoad;
 				setClientConfigForm(configToLoad);
@@ -430,7 +475,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para crear una Data Extension utilizando la API SOAP.
 	 */
 	async function macroCreateDE() {
-		blockUI();
+		blockUI("Creando Data Extension...");
 		startLogBuffering();
 		try {
 			logMessage("Iniciando creación de Data Extension...");
@@ -471,7 +516,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para crear o actualizar (upsert) campos en una Data Extension existente.
 	 */
 	async function macroCreateFields() {
-		blockUI();
+		blockUI("Creando campos...");
 		startLogBuffering();
 		try {
 			logMessage(`Iniciando creación/actualización de campos...`);
@@ -496,7 +541,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para recuperar todos los campos de una Data Extension y mostrarlos en la tabla.
 	 */
 	async function macroGetFields() {
-		blockUI();
+		blockUI("Recuperando campos...");
 		startLogBuffering();
 		try {
 			const apiConfig = await getAuthenticatedConfig();
@@ -530,7 +575,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para eliminar un campo específico de una Data Extension.
 	 */
 	async function macroDeleteField() {
-		blockUI();
+		blockUI("Borrando campo...");
 		startLogBuffering();
 		try {
 			const apiConfig = await getAuthenticatedConfig();
@@ -558,7 +603,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para buscar una Data Extension y mostrar su ruta de carpetas completa.
 	 */
 	async function macroSearchDE() {
-		blockUI();
+		blockUI("Buscando Data Extension...");
 		startLogBuffering();
 		deSearchResultsTbody.innerHTML = '<tr><td colspan="2">Buscando...</td></tr>';
 		try {
@@ -610,7 +655,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para validar una dirección de email utilizando la API REST.
 	 */
 	async function macroValidateEmail() {
-		blockUI();
+		blockUI("Validando email...");
 		startLogBuffering();
 		emailValidationResults.textContent = 'Validando...';
 		try {
@@ -639,7 +684,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para encontrar todas las actividades que tienen como destino una Data Extension.
 	 */
 	async function macroFindDataSources() {
-		blockUI();
+		blockUI("Buscando origenes de datos...");
 		startLogBuffering();
 		dataSourcesTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
 		try {
@@ -669,7 +714,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para buscar un cliente (suscriptor) por Subscriber Key o Email.
 	 */
 	async function macroSearchCustomer() {
-		blockUI();
+		blockUI("Buscando cliente...");
 		startLogBuffering(); // <-- Adaptado a la nueva estructura de logs
 		customerSearchTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
 		
@@ -742,7 +787,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	async function macroGetCustomerJourneys() {
 		if (!selectedSubscriberData?.subscriberKey) return;
-		blockUI();
+		blockUI("Buscando Journeys...");
 		startLogBuffering();
 		customerJourneysResultsBlock.classList.remove('hidden');
 		customerJourneysTbody.innerHTML = '<tr><td colspan="6">Buscando membresías de Journey...</td></tr>';
@@ -788,7 +833,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	async function macroGetCustomerSends() {
 		if (!selectedSubscriberData?.subscriberKey) return;
-		blockUI();
+		blockUI("Buscando en Data Extensions...");
 		startLogBuffering();
 		
 		customerSendsResultsBlock.classList.remove('hidden');
@@ -858,7 +903,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para buscar en el texto de todas las Query Activities.
 	 */
 	async function macroSearchQueriesByText() {
-		blockUI();
+		blockUI("Buscando Queries...");
 		startLogBuffering();
 		querySearchResultsTbody.innerHTML = '<tr><td colspan="4">Buscando en todas las queries...</td></tr>';
 		try {
@@ -930,6 +975,8 @@ document.addEventListener('DOMContentLoaded', function () {
 		logMessage(`Calendario actualizado con ${allAutomations.length} automatismos programados.`);
 	}
 
+	// --- 4.6. Gestión de Journeys ---
+
 	/**
 	 * Macro para obtener solo los JOURNEYS PROGRAMADOS y mostrarlos en el calendario.
 	 */
@@ -958,7 +1005,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (selectedAutomations.length === 0) return;
 		if (!confirm(`¿Seguro que quieres '${actionName}' ${selectedAutomations.length} automatismo(s)?`)) return;
 		
-		blockUI();
+		blockUI("Realizando acción "+actionName+"...");
 		startLogBuffering();
 		const successes = [];
 		const failures = [];
@@ -1020,6 +1067,110 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 	}
 
+	/**
+	 * Macro para obtener y procesar las comunicaciones (Emails, SMS, Pushes) de todos los journeys.
+	 * Es una operación pesada y solo se ejecuta si los datos no están ya en caché.
+	 */
+	async function macroGetJourneyCommunications() {
+        const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
+		if (selectedRows.length === 0) {
+			alert("Por favor, selecciona al menos un journey de la lista.");
+			return;
+		}
+
+        const journeysToProcess = Array.from(selectedRows).map(row => {
+            return fullJourneyList.find(j => j.id === row.dataset.journeyId);
+        }).filter(Boolean); // Filtra por si acaso
+
+		blockUI("Recuperando comunicaciones...");
+		startLogBuffering();
+		try {
+			logMessage(`Iniciando obtención de detalles de comunicación para ${journeysToProcess.length} journey(s) seleccionado(s)...`);
+			const apiConfig = await getAuthenticatedConfig();
+			let processedCount = 0;
+
+			for (const journey of journeysToProcess) {
+				// Aunque el botón se deshabilita, una doble comprobación no hace daño
+				if (journey.hasCommunications) {
+					logMessage(`Saltando ${journey.name}, ya tiene los datos.`);
+					processedCount++;
+					continue;
+				}
+				// ... (el resto del bucle for se mantiene exactamente igual) ...
+                try {
+					logMessage(`(${processedCount + 1}/${journeysToProcess.length}) Obteniendo actividades para: ${journey.name}`);
+					const url = `${apiConfig.restUri}interaction/v1/interactions/${journey.id}`;
+					const response = await fetch(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
+					
+					if (!response.ok) {
+						logMessage(` -> Error ${response.status} al obtener detalles para ${journey.name}.`);
+						continue;
+					}
+
+					const journeyDetails = await response.json();
+					const communications = parseJourneyActivities(journeyDetails.activities);
+					
+					journey.emails = communications.emails;
+					journey.sms = communications.sms;
+					journey.pushes = communications.pushes;
+					journey.activities = journeyDetails.activities || [];
+					journey.hasCommunications = true;
+
+				} catch (error) {
+					logMessage(` -> Error de red al procesar ${journey.name}: ${error.message}`);
+				} finally {
+					processedCount++;
+				}
+			}
+
+			logMessage("Proceso de obtención de comunicaciones finalizado.");
+			alert("Comunicaciones actualizadas para los journeys seleccionados.");
+			
+            applyJourneyFiltersAndRender();
+            updateJourneyActionButtonsState(); // Actualizamos el estado de los botones
+
+		} catch (error) {
+			logMessage(`Error fatal durante la obtención de comunicaciones: ${error.message}`);
+			alert(`Error: ${error.message}`);
+		} finally {
+			unblockUI();
+			endLogBuffering();
+		}
+	}
+
+	/**
+	 * Helper para parsear el array de actividades de un journey y extraer los nombres de las comunicaciones.
+	 * @param {Array} activities - El array 'activities' de la respuesta detallada del journey.
+	 * @returns {object} Un objeto con arrays de nombres para emails, sms y pushes.
+	 */
+	function parseJourneyActivities(activities = []) {
+		const communications = {
+			emails: [],
+			sms: [],
+			pushes: []
+		};
+
+		if (!activities || activities.length === 0) {
+			return communications;
+		}
+
+		for (const activity of activities) {
+			switch (activity.type) {
+				case 'EMAILV2':
+					communications.emails.push(activity.name);
+					break;
+				case 'SMS':
+					communications.sms.push(activity.name);
+					break;
+				case 'INAPP': 
+				case 'INBOX':
+				case 'MOBILEPUSH':
+					communications.pushes.push(activity.name);
+					break;
+			}
+		}
+		return communications;
+	}
 
 	// ==========================================================
 	// --- 5. FUNCIONES AUXILIARES (HELPERS) ---
@@ -1599,6 +1750,113 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 	}
 
+	/**
+	 * Rellena los desplegables de filtro para Journeys.
+	 * @param {Array} journeys - La lista completa de Journeys.
+	 */
+	function populateJourneyFilters(journeys) {
+		const currentType = journeyTypeFilter.value;
+		journeyTypeFilter.innerHTML = '<option value="">Todos los tipos</option>';
+		const types = [...new Set(journeys.map(j => j.eventType).filter(Boolean))].sort();
+		types.forEach(type => journeyTypeFilter.appendChild(new Option(type, type)));
+		journeyTypeFilter.value = currentType;	
+
+        const currentStatus = journeyStatusFilter.value;
+        journeyStatusFilter.innerHTML = '<option value="">Todos los estados</option>';
+        const statuses = [...new Set(journeys.map(j => j.status).filter(Boolean))].sort();
+        statuses.forEach(status => journeyStatusFilter.appendChild(new Option(status, status)));
+        journeyStatusFilter.value = currentStatus;
+	}
+
+	/**
+	 * Aplica los filtros de nombre y tipo a la lista de Journeys y redibuja la tabla.
+	 */
+	function applyJourneyFiltersAndRender() {
+		const nameFilter = journeyNameFilter.value.toLowerCase().trim();
+		const typeFilter = journeyTypeFilter.value;
+        // ▼▼▼ AÑADIR ESTAS 2 LÍNEAS ▼▼▼
+		const statusFilter = journeyStatusFilter.value;
+		const deFilter = journeyDEFilter.value.toLowerCase().trim();
+
+		let filteredJourneys = fullJourneyList;
+
+		if (nameFilter) {
+			filteredJourneys = filteredJourneys.filter(j => j.name.toLowerCase().includes(nameFilter));
+		}
+		if (typeFilter) {
+			filteredJourneys = filteredJourneys.filter(j => j.eventType === typeFilter);
+		}
+		if (statusFilter) {
+			filteredJourneys = filteredJourneys.filter(j => j.status === statusFilter);
+		}
+		if (deFilter) {
+			// Nos aseguramos de que la propiedad exista antes de llamar a .toLowerCase()
+			filteredJourneys = filteredJourneys.filter(j => j.dataExtensionName && j.dataExtensionName.toLowerCase().includes(deFilter));
+		}
+
+		renderJourneysTable(filteredJourneys);
+	}
+
+	/**
+	 * Ordena un array de Journeys según la columna y dirección actuales.
+	 * @param {Array} dataToSort - El array de Journeys a ordenar.
+	 * @returns {Array} El array ordenado.
+	 */
+	function sortJourneys(dataToSort) {
+		const sortKey = currentJourneySortColumn;
+		const direction = currentJourneySortDirection === 'asc' ? 1 : -1;
+
+		return [...dataToSort].sort((a, b) => {
+			// Pre-procesamos los valores para las columnas de comunicación
+			const getValue = (obj, key) => {
+				if (['emails', 'sms', 'pushes'].includes(key)) {
+					return obj[key] ? obj[key].join(', ') : '';
+				}
+				return obj[key];
+			}
+
+			let valA = getValue(a, sortKey);
+			let valB = getValue(b, sortKey);
+
+			if (valA == null) return 1;
+			if (valB == null) return -1;
+
+			let compareResult = 0;
+			
+			if (sortKey.includes('Date')) {
+				compareResult = new Date(valA) - new Date(valB);
+			} 
+			else if (sortKey === 'version') {
+				compareResult = (parseInt(valA) || 0) - (parseInt(valB) || 0);
+			}
+			else if (sortKey === 'hasCommunications') {
+                compareResult = (valA === valB) ? 0 : valA ? -1 : 1; // Pone 'Sí' (true) primero
+            }
+			else {
+				compareResult = String(valA).localeCompare(String(valB), undefined, { sensitivity: 'base' });
+			}
+			
+			const finalResult = compareResult * direction;
+			
+			if (finalResult === 0 && sortKey !== 'name') {
+				return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+			}
+			return finalResult;
+		});
+	}
+
+	/**
+	 * Actualiza los indicadores visuales de ordenación (flechas) en las cabeceras de la tabla de Journeys.
+	 */
+	function updateJourneySortIndicators() {
+		document.querySelectorAll('#journeys-table .sortable-header').forEach(header => {
+			header.classList.remove('sort-asc', 'sort-desc');
+			if (header.dataset.sortBy === currentJourneySortColumn) {
+				header.classList.add(currentJourneySortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+			}
+		});
+	}
+
 
 	// ==========================================================
 	// --- 6. MANIPULACIÓN DEL DOM Y COMPONENTES ---
@@ -1751,7 +2009,6 @@ document.addEventListener('DOMContentLoaded', function () {
 		calendarDataForClient = '';
 		if (automationList) automationList.innerHTML = '<p>Selecciona un día para ver los detalles.</p>';
 		if (calendarGrid) generateCalendar();
-		logMessage('Datos del calendario limpiados.');
 	}
 	
 	/**
@@ -1899,14 +2156,31 @@ document.addEventListener('DOMContentLoaded', function () {
 	async function viewAutomations(automationsToShow = null) {
         showSection('gestion-automatismos-section');
         document.querySelectorAll('#automations-table tbody tr.selected').forEach(row => row.classList.remove('selected'));
-		let dataToRender;
+        
         if (automationsToShow) {
-            dataToRender = automationsToShow;
+            renderAutomationsTable(automationsToShow);
         } else {
-            if (fullAutomationList.length === 0) await macroGetAllAutomationDetails();
-            dataToRender = fullAutomationList;
+            // Si la lista no está en caché, la cargamos
+            if (fullAutomationList.length === 0) {
+                blockUI("Recuperando automatismos..."); 
+                startLogBuffering();
+                try {
+                    logMessage("Cargando lista de Automatismos por primera vez...");
+                    await macroGetAllAutomationDetails();
+                } catch (error) {
+                    const errorMessage = error.message || "Error desconocido al cargar Automatismos.";
+                    logMessage(`Error: ${errorMessage}`);
+                    alert(`Error al cargar Automatismos: ${errorMessage}`);
+                    automationsTbody.innerHTML = `<tr><td colspan="4" style="color:red;">Error al cargar: ${errorMessage}</td></tr>`;
+                } finally {
+                    unblockUI(); 
+                    endLogBuffering();
+                }
+            } else {
+                // Si ya está en caché, simplemente la mostramos
+                applyFiltersAndRender();
+            }
         }
-        renderAutomationsTable(dataToRender);
     }
 
 	// --- 6.5. Configuración de APIs ---
@@ -1955,6 +2229,453 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 	}
 
+	// --- 6.6. Gestión de Journeys --- 
+
+	/**
+	 * Muestra la vista de "Gestión de Journeys" y la puebla con datos si es necesario.
+	 */
+	async function viewJourneys() {
+		showSection('gestion-journeys-section');
+
+        // Limpiar y resetear el estado de la tabla de Journeys
+        document.querySelectorAll('#journeys-table thead th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+        document.querySelector(`#journeys-table thead th[data-sort-by="${currentJourneySortColumn}"]`).classList.add(currentJourneySortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+
+		if (fullJourneyList.length === 0) {
+			blockUI("Recuperando Journeys...");
+			startLogBuffering();
+			try {
+				logMessage("Cargando lista de Journeys y dependencias por primera vez...");
+				
+                const apiConfig = await getAuthenticatedConfig();
+                
+                // 1. Obtener Event Definitions y mapearlas
+                eventDefinitionsMap = await macroFetchEventDefinitions(apiConfig);
+                
+                // 2. Obtener todos los Journeys
+				const journeys = await macroFetchAllJourneys(apiConfig);
+
+                // 3. Obtener rutas de carpetas
+                journeyFolderMap = await buildJourneyFolderMap(journeys, apiConfig);
+
+                // 4. Enriquecer y guardar lista completa
+                fullJourneyList = enrichJourneys(journeys);
+
+                populateJourneyFilters(fullJourneyList);
+				applyJourneyFiltersAndRender();
+                
+			} catch (error) {
+				const errorMessage = error.message || "Error desconocido al cargar Journeys.";
+				logMessage(`Error al obtener journeys: ${errorMessage}`);
+				alert(`Error al cargar Journeys: ${errorMessage}`);
+				journeysTbody.innerHTML = `<tr><td colspan="9" style="color:red;">Error al cargar journeys: ${errorMessage}</td></tr>`;
+			} finally {
+				unblockUI();
+				endLogBuffering();
+			}
+		} else {
+            // Si ya está en caché, simplemente aplicamos filtros y renderizamos
+			applyJourneyFiltersAndRender();
+		}
+	}
+
+	/**
+	 * Macro para obtener la lista COMPLETA de todos los journeys desde la API REST, manejando paginación.
+	 * @param {object} apiConfig - La configuración de la API autenticada.
+	 * @returns {Promise<Array>} Una promesa que resuelve a la lista completa de journeys.
+	 */
+	async function macroFetchAllJourneys(apiConfig) {
+		let allItems = [];
+		let page = 1;
+		let totalPages = 1; // Inicialmente asumimos una página
+
+		logMessage("Recuperando todas las definiciones de Journeys (paginación habilitada)...");
+		
+		do {
+			const url = `${apiConfig.restUri}interaction/v1/interactions?$page=${page}&$pageSize=${API_PAGE_SIZE}`;
+			logApiCall({ endpoint: url, method: 'GET', page: page });
+			
+			const response = await fetch(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
+			
+			if (!response.ok) {
+				const errorText = await response.text();
+				logApiResponse({ status: response.status, body: errorText });
+				throw new Error(`Error ${response.status}: ${errorText}`);
+			}
+			
+			const data = await response.json();
+			
+			const pageItems = data.items || [];
+			allItems = allItems.concat(pageItems);
+			
+			totalPages = data.count ? Math.ceil(data.count / API_PAGE_SIZE) : 1;
+			page++;
+
+			logMessage(`Página ${page - 1} de ${totalPages} recuperada. Items totales: ${allItems.length}`);
+
+		} while (page <= totalPages);
+		
+		logMessage(`Recuperación completa. Se encontraron ${allItems.length} journeys.`);
+		return allItems;
+	}
+
+	/**
+	 * Macro para obtener las definiciones de eventos, manejando paginación.
+	 * @param {object} apiConfig - La configuración de la API autenticada.
+	 * @returns {Promise<object>} Un mapa que relaciona el nombre del EventDefinition con sus datos (para el cruce).
+	 */
+	async function macroFetchEventDefinitions(apiConfig) {
+		let eventDefinitions = {};
+		let page = 1;
+		let totalPages = 1; 
+
+		logMessage("Recuperando todas las Event Definitions (para origen de datos)...");
+		
+		do {
+			const url = `${apiConfig.restUri}interaction/v1/eventDefinitions?$page=${page}&$pageSize=${API_PAGE_SIZE}`;
+			const response = await fetch(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
+			
+			if (!response.ok) {
+				logApiResponse({ step: 'Event Definition Error', status: response.status, body: await response.text() });
+				throw new Error(`Error al recuperar Event Definitions: ${response.status}`);
+			}
+			
+			const data = await response.json();
+			const items = data.items || [];
+			
+			items.forEach(item => {
+				// Solo nos interesa la definición activa que está publicada en una interacción.
+				if (item.publishedInteractionCount === 1) {
+					// Usamos el 'name' para cruzarlo con el Journey
+					eventDefinitions[item.name] = { 
+						type: item.type, 
+						dataExtensionName: item.dataExtensionName 
+					};
+				}
+			});
+
+			totalPages = data.count ? Math.ceil(data.count / API_PAGE_SIZE) : 1;
+
+			page++;
+		} while (page <= totalPages);
+		
+		logMessage(`Recuperación de Event Definitions completa. Mapeados ${Object.keys(eventDefinitions).length} items activos.`);
+		return eventDefinitions;
+	}
+
+	/**
+	 * Recorre recursivamente los IDs de carpeta de los Journeys para construir un mapa de rutas.
+	 * @param {Array} journeys - Lista de objetos Journey.
+	 * @param {object} apiConfig - Configuración de la API.
+	 * @returns {Promise<object>} Mapa de rutas de carpetas { categoryId: 'Ruta > Completa' }
+	 */
+	async function buildJourneyFolderMap(journeys, apiConfig) {
+		const allCategoryIds = [...new Set(journeys.map(j => j.categoryId).filter(Boolean))];
+		const folderDetailsMap = {}; // Almacenará { id: { name, parentId } }
+		let requiredIds = new Set(allCategoryIds);
+		let fetchedIds = new Set();
+
+		logMessage(`Construyendo mapa de rutas para ${allCategoryIds.length} carpetas iniciales...`);
+		const folderUrlBase = `${apiConfig.restUri}email/v1/categories/`;
+
+		// 1. Bucle para obtener todos los ancestros de las carpetas
+		while (requiredIds.size > 0) {
+			const idsToFetch = [...requiredIds].filter(id => !fetchedIds.has(id));
+			if (idsToFetch.length === 0) break;
+
+			logMessage(`Recuperando detalles de ${idsToFetch.length} carpetas...`);
+
+			await Promise.all(idsToFetch.map(async (id) => {
+				fetchedIds.add(id); // Marcar como intentado para no repetir
+				try {
+					const url = `${folderUrlBase}${id}`;
+					const response = await fetch(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
+					if (response.ok) {
+						const cat = await response.json();
+						folderDetailsMap[cat.categoryId] = { name: cat.name, parentId: cat.parentCatId };
+						// Si este padre no ha sido visto antes, lo añadimos a la cola para la siguiente iteración
+						if (cat.parentCatId && !fetchedIds.has(cat.parentCatId)) {
+							requiredIds.add(cat.parentCatId);
+						}
+					}
+				} catch (e) {
+					logMessage(`Error de red obteniendo carpeta ${id}: ${e.message}`);
+				}
+			}));
+            // Actualizar la lista de IDs requeridos para la siguiente vuelta
+            requiredIds = new Set([...requiredIds].filter(id => !fetchedIds.has(id)));
+		}
+		
+		logMessage(`Detalles de ${Object.keys(folderDetailsMap).length} carpetas en total recuperados. Construyendo rutas...`);
+		
+		const pathCache = {}; // Caché para evitar recalcular rutas
+
+		// 2. Función interna para construir la ruta de una carpeta
+		function getFullPath(categoryId) {
+			if (pathCache[categoryId]) return pathCache[categoryId];
+			if (!folderDetailsMap[categoryId]) return 'Carpeta raíz / No encontrado';
+
+			let pathParts = [];
+			let currentId = categoryId;
+			let safetyBreak = 0; // Previene bucles infinitos
+
+			while (currentId && folderDetailsMap[currentId] && safetyBreak < 20) {
+				pathParts.unshift(folderDetailsMap[currentId].name);
+				currentId = folderDetailsMap[currentId].parentId;
+				safetyBreak++;
+			}
+			
+			const fullPath = pathParts.join(" > ");
+			pathCache[categoryId] = fullPath;
+			return fullPath;
+		}
+
+		// 3. Crear el mapa final de rutas completas para las carpetas originales
+		const finalPathMap = {};
+		allCategoryIds.forEach(id => {
+			finalPathMap[id] = getFullPath(id);
+		});
+		
+		logMessage(`Mapa de rutas de carpetas construido.`);
+		return finalPathMap;
+	}
+
+	/**
+	 * Enriquece la lista de Journeys con datos de EventDefinitions y rutas de carpeta.
+	 * @param {Array} journeys - La lista base de Journeys.
+	 * @returns {Array} La lista enriquecida.
+	 */
+	function enrichJourneys(journeys) {
+		return journeys.map(journey => {
+			const eventDef = eventDefinitionsMap[journey.name];
+			const folderPath = journeyFolderMap[journey.categoryId] || 'Carpeta raíz / No especificado';
+			
+			return {
+				...journey,
+				// Datos existentes
+				type: journey.type || 'N/A',
+				version: journey.version,
+				createdDate: journey.createdDate,
+				modifiedDate: journey.modifiedDate,
+				entryMode: journey.entryMode || 'N/A',
+				status: journey.status || 'N/A',
+
+				// Datos enriquecidos
+				eventType: eventDef?.type || 'No asociado',
+				dataExtensionName: eventDef?.dataExtensionName || 'No asociado',
+				location: folderPath,
+
+                // Propiedades para las comunicaciones, inicializadas
+                emails: [],
+                sms: [],
+                pushes: [],
+				activities: null,
+                hasCommunications: false // Flag para saber si ya hemos pedido los detalles
+			};
+		});
+	}
+
+	/**
+     * Dibuja la tabla de la vista "Gestión de Journeys" con los datos proporcionados.
+     * @param {Array} journeys - El array de journeys a mostrar.
+     */
+	function renderJourneysTable(journeys) {
+		journeysTbody.innerHTML = '';
+        updateJourneySortIndicators(); 
+
+        const sortedData = sortJourneys(journeys);
+
+		if (!sortedData || sortedData.length === 0) {
+			journeysTbody.innerHTML = '<tr><td colspan="12">No se encontraron journeys con los filtros aplicados.</td></tr>'; // Colspan ahora es 12
+			return;
+		}
+
+		sortedData.forEach(journey => {
+			const row = document.createElement('tr');
+            row.dataset.journeyId = journey.id;
+			
+            // Restaurar el estado visual de selección si la fila estaba seleccionada
+            if (document.querySelector(`#journeys-table tbody tr.selected[data-journey-id="${journey.id}"]`)) {
+                row.classList.add('selected');
+            }
+
+			row.innerHTML = `
+				<td>${journey.name || '---'}</td>
+				<td>${journey.version || '---'}</td>
+				<td>${formatDateToSpanishTime(journey.createdDate)}</td>
+				<td>${formatDateToSpanishTime(journey.modifiedDate)}</td>
+				<td>${journey.eventType || '---'}</td> 
+				<td>${journey.status || '---'}</td>
+				<td>${journey.location || '---'}</td>
+				<td>${journey.dataExtensionName || '---'}</td>
+                <td>${journey.hasCommunications ? 'Sí' : 'No'}</td>
+                <td>${journey.emails && journey.emails.length > 0 ? journey.emails.join(', ') : '---'}</td>
+                <td>${journey.sms && journey.sms.length > 0 ? journey.sms.join(', ') : '---'}</td>
+                <td>${journey.pushes && journey.pushes.length > 0 ? journey.pushes.join(', ') : '---'}</td>
+			`;
+			journeysTbody.appendChild(row);
+		});
+	}
+
+	/**
+	 * Muestra el modal con el flujo del journey en formato de texto.
+	 * @param {string} flowText - El texto preformateado del flujo del journey.
+	 */
+	function showJourneyFlowModal(flowText) {
+		journeyFlowContent.textContent = flowText;
+		journeyFlowModal.style.display = 'flex';
+	}
+
+	/**
+	 * Cierra el modal de visualización del flujo.
+	 */
+	function closeJourneyFlowModal() {
+		journeyFlowModal.style.display = 'none';
+		journeyFlowContent.textContent = 'Cargando flujo...'; // Resetear contenido
+	}
+
+	/**
+	 * Parsea la estructura de un journey y la convierte en una representación textual con indentación.
+	 * @param {object} journey - El objeto de journey completo con su array de 'activities'.
+	 * @returns {string} El flujo del journey formateado como texto.
+	 */
+	function generateJourneyFlowText(journey) {
+		if (!journey || !journey.activities || journey.activities.length === 0) {
+			return "No se han cargado los detalles de las actividades para este journey.";
+		}
+
+		// (El mapa de actividades se mantiene igual)
+		const ACTIVITY_TYPE_MAP = {
+			'EMAILV2': '[EMAIL]', 'SMS': '[SMS]', 'MOBILEPUSH': '[PUSH]', 'PUSHNOTIFICATIONACTIVITY': '[PUSH]',
+			'WHATSAPPACTIVITY': '[WHATSAPP]', 'INBOX': '[INBOX MSG]', 'INAPP': '[IN-APP MSG]', 'WAIT': '[ESPERA]',
+			'WAITBYDURATION': '[ESPERA]', 'WAITBYATTRIBUTE': '[ESPERA POR ATRIBUTO]', 'WAITBYEVENT': '[ESPERA HASTA EVENTO]',
+			'WAITUNTILDATE': '[ESPERA HASTA FECHA]', 'STOWAIT': '[ESPERA EINSTEIN STO]', 'MULTICRITERIARDECISION': '[DIVISIÓN]',
+			'MULTICRITERIADECISIONV2': '[DIVISIÓN]', 'RANDOMSPLIT': '[DIVISIÓN A/B]', 'RANDOMSPLITV2': '[DIVISIÓN A/B]',
+			'ENGAGEMENTDECISION': '[DIVISIÓN POR ENGAGEMENT]', 'ENGAGEMENTSPLITV2': '[DIVISIÓN POR ENGAGEMENT]',
+			'PATHOPTIMIZER': '[OPTIMIZADOR DE RUTA]', 'UPDATECONTACTDATA': '[ACTUALIZAR CONTACTO]',
+			'UPDATECONTACTDATAV2': '[ACTUALIZAR CONTACTO]', 'ADDAUDIENCE': '[AÑADIR A AUDIENCIA]',
+			'CONTACTUPDATE': '[ACTUALIZAR CONTACTO]', 'EINSTEINSPLIT': '[DIVISIÓN EINSTEIN SCORE]',
+			'EINSTEINMESSAGINGSPLIT': '[DIVISIÓN EINSTEIN INSIGHTS]', 'EINSTEIN_EMAIL_OPEN': '[DIVISIÓN EINSTEIN OPEN]',
+			'EINSTEIN_MC_EMAIL_CLICK': '[DIVISIÓN EINSTEIN CLICK]', 'SALESFORCESALESCLOUDACTIVITY': '[ACCIÓN SALESFORCE]',
+			'OBJECTACTIVITY': '[ACCIÓN OBJETO SALESFORCE]', 'LEAD': '[ACCIÓN LEAD SALESFORCE]',
+			'CAMPAIGNMEMBER': '[ACCIÓN MIEMBRO DE CAMPAÑA]', 'REST': '[API REST (CUSTOM)]', 'SETCONTACTKEY': '[ESTABLECER CONTACT KEY]',
+			'EVENT': '[EVENTO]', 'SMSSYNC': '[SMS]' // Tratamos SMSSYNC como un envío de SMS
+		};
+
+		const activitiesMap = new Map(journey.activities.map(act => [act.key, act]));
+		const activityKeyToLineNum = new Map();
+		const output = [];
+		let lineCounter = 1;
+
+		function processActivity(activityKey, prefix) {
+			if (!activityKey || activityKeyToLineNum.has(activityKey)) return;
+
+			const activity = activitiesMap.get(activityKey);
+			if (!activity) {
+				output.push(`${prefix}Error: Actividad con key '${activityKey}' no encontrada.`);
+				return;
+			}
+
+			const lineNum = lineCounter++;
+			activityKeyToLineNum.set(activityKey, lineNum);
+
+			const type = ACTIVITY_TYPE_MAP[activity.type] || `[${activity.type}]`;
+			const name = activity.name || '*Actividad sin nombre*';
+			let details = '';
+
+			// Detalles mejorados para actividades comunes
+			if (activity.type.startsWith('WAIT')) {
+				const config = activity.configurationArguments;
+				if (config.waitDuration) details = ` (${config.waitDuration} ${config.waitUnit || ''})`;
+				else if (config.waitEndDateAttributeExpression) details = ` (hasta ${config.waitEndDateAttributeExpression.replace(/{{|}}/g, '')})`;
+			} else if (activity.type.includes('ENGAGEMENT')) {
+				const config = activity.configurationArguments;
+				const activityName = config.refActivityName || '';
+				if (config.statsTypeId === 2) details = ` (Open: ${activityName})`;
+				else if (config.statsTypeId === 3) details = ` (Click: ${activityName})`;
+			}
+
+			output.push(`${prefix}${lineNum}. ${type} ${name}${details}`);
+
+			const outcomes = activity.outcomes || [];
+			
+			// LÓGICA MEJORADA: Distinguir entre flujo lineal y ramas
+			if (outcomes.length === 1) {
+				// Flujo lineal (sin ramas), no se muestra "RAMA 1"
+				const nextKey = outcomes[0].next;
+				if (nextKey) {
+					if (activityKeyToLineNum.has(nextKey)) {
+						output.push(`${prefix}   └─> [UNIÓN] ➡️ ${activityKeyToLineNum.get(nextKey)}`);
+					} else {
+						processActivity(nextKey, `${prefix}   `);
+					}
+				} else {
+					output.push(`${prefix}   └─> 🔴`);
+				}
+			} else if (outcomes.length > 1) {
+				// Múltiples ramas, se dibuja el árbol
+				outcomes.forEach((outcome, index) => {
+					const isLastBranch = index === outcomes.length - 1;
+					const branchPrefix = isLastBranch ? '└─' : '├─';
+					const nextPrefix = isLastBranch ? '   ' : '│  ';
+					
+					let branchLabel = `[RAMA ${index + 1}]`;
+					if (outcome.metaData && outcome.metaData.label) {
+						branchLabel = `[RAMA: ${outcome.metaData.label}]`;
+					} else if (activity.type.includes('RANDOMSPLIT') && outcome.arguments.percentage) {
+						branchLabel = `[RAMA: ${outcome.arguments.percentage}%]`;
+					}
+
+					output.push(`${prefix}${branchPrefix} ${branchLabel}`);
+					
+					const nextKey = outcome.next;
+					if (nextKey) {
+						if (activityKeyToLineNum.has(nextKey)) {
+							output.push(`${prefix}${nextPrefix}  └─> [UNIÓN] ➡️ ${activityKeyToLineNum.get(nextKey)}`);
+						} else {
+							processActivity(nextKey, `${prefix}${nextPrefix}`);
+						}
+					} else {
+						output.push(`${prefix}${nextPrefix}  └─> 🔴`);
+					}
+				});
+			}
+		}
+
+		// Lógica de inicio
+		const trigger = journey.triggers ? journey.triggers[0] : null;
+		if (trigger && trigger.outcomes && trigger.outcomes.length > 0 && trigger.outcomes[0].next) {
+			output.push(`[INICIO] Fuente: ${trigger.type || 'Desconocida'}`);
+			processActivity(trigger.outcomes[0].next, '');
+		} else if (journey.activities.length > 0) {
+			output.push(`[INICIO] Fuente: No definida en Trigger (usando primera actividad)`);
+			processActivity(journey.activities[0].key, '');
+		}
+		
+		return output.join('\n');
+	}
+
+	/**
+	 * Actualiza el estado de los botones de acción ("Comunicaciones" y "Dibujar")
+	 * basándose en la selección actual de filas en la tabla de journeys.
+	 */
+	function updateJourneyActionButtonsState() {
+		const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
+		const selectionCount = selectedRows.length;
+
+		// Lógica para el botón "Comunicaciones"
+		getCommunicationsBtn.disabled = selectionCount === 0;
+
+		// Lógica para el botón "Dibujar"
+		if (selectionCount === 1) {
+			const journeyId = selectedRows[0].dataset.journeyId;
+			const journey = fullJourneyList.find(j => j.id === journeyId);
+			drawJourneyBtn.disabled = !(journey && journey.hasCommunications);
+		} else {
+			drawJourneyBtn.disabled = true;
+		}
+	}
+
 	// ==========================================================
 	// --- 7. EVENT LISTENERS ---
 	// ==========================================================
@@ -1993,7 +2714,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
 				loadConfigsIntoSelect();
 				logMessage("Configuración guardada. Iniciando login...");
-				blockUI();
+				blockUI("Iniciando login...");
 				window.electronAPI.startLogin(config);
 			} finally {
 				endLogBuffering();
@@ -2062,6 +2783,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				if (sectionMap[macro]) showSection(sectionMap[macro]);
 				else if (macro === 'calendario') viewCalendar();
 				else if (macro === 'gestionAutomatismos') viewAutomations();
+				else if (macro === 'gestionJourneys') viewJourneys();
 			});
 		});
 
@@ -2186,7 +2908,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			automationList.innerHTML = '<p>Selecciona un día para ver los detalles.</p>';
 			document.querySelectorAll('.calendar-month td.selected').forEach(c => c.classList.remove('selected'));
 
-			blockUI();
+			blockUI("Refrescando automatismos...");
 			startLogBuffering();
 			try {
 				await macroGetAutomations();
@@ -2202,7 +2924,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			automationList.innerHTML = '<p>Selecciona un día para ver los detalles.</p>';
 			document.querySelectorAll('.calendar-month td.selected').forEach(c => c.classList.remove('selected'));
 
-			blockUI();
+			blockUI("Refrescando Journeys...");
 			startLogBuffering();
 			try {
 				await macroGetJourneyAutomations();
@@ -2254,7 +2976,7 @@ document.addEventListener('DOMContentLoaded', function () {
         runAutomationBtn.addEventListener('click', () => macroPerformAutomationAction('run'));
         stopAutomationBtn.addEventListener('click', () => macroPerformAutomationAction('pause'));
 		refreshAutomationsTableBtn.addEventListener('click', async () => {
-			blockUI();
+			blockUI("Refrescando automatismos...");
 			startLogBuffering();
 			try {
 				logMessage("Refrescando lista de automatismos...");
@@ -2281,6 +3003,90 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 		automationNameFilter.addEventListener('input', applyFiltersAndRender);
         automationStatusFilter.addEventListener('change', applyFiltersAndRender);
+
+				// --- Listeners de Gestión de Journeys ---
+		journeyNameFilter.addEventListener('input', applyJourneyFiltersAndRender);
+		journeyTypeFilter.addEventListener('change', applyJourneyFiltersAndRender);
+        journeyStatusFilter.addEventListener('change', applyJourneyFiltersAndRender);
+        journeyDEFilter.addEventListener('input', applyJourneyFiltersAndRender);
+
+        getCommunicationsBtn.addEventListener('click', macroGetJourneyCommunications);
+
+		 refreshJourneysTableBtn.addEventListener('click', () => {
+			fullJourneyList = [];
+			eventDefinitionsMap = {};
+			journeyFolderMap = {};
+			journeyNameFilter.value = '';
+			journeyTypeFilter.value = '';
+            journeyStatusFilter.value = '';
+            journeyDEFilter.value = '';
+			updateJourneyActionButtonsState(); // Llama a la nueva función que deshabilita ambos botones
+			viewJourneys(); 
+		});
+
+        drawJourneyBtn.addEventListener('click', () => {
+            const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
+            if (selectedRows.length !== 1) return; // Solo funciona si hay exactamente una fila seleccionada
+            
+            const journeyId = selectedRows[0].dataset.journeyId;
+			const journey = fullJourneyList.find(j => j.id === journeyId);
+            
+            if (journey && journey.hasCommunications) {
+				const flowText = generateJourneyFlowText(journey);
+				showJourneyFlowModal(flowText);
+			}
+        });
+
+		document.querySelector('#journeys-table thead').addEventListener('click', (e) => {
+            const header = e.target.closest('.sortable-header');
+            if (!header) return;
+            const newSortColumn = header.dataset.sortBy;
+            
+            if (currentJourneySortColumn === newSortColumn) {
+                currentJourneySortDirection = currentJourneySortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentJourneySortColumn = newSortColumn;
+                currentJourneySortDirection = 'asc';
+            }
+            applyJourneyFiltersAndRender();
+        });
+
+        // Listener para multiselección de filas
+		journeysTbody.addEventListener('click', (e) => {
+			const clickedRow = e.target.closest('tr');
+			if (!clickedRow || !clickedRow.dataset.journeyId) return;
+
+            // Simplemente alterna la clase 'selected' en la fila clicada
+			clickedRow.classList.toggle('selected');
+			
+            // Actualiza el estado de los botones después de cualquier cambio en la selección
+			updateJourneyActionButtonsState();
+		});
+
+		// Listeners para cerrar el modal de flujo
+		closeFlowBtn.addEventListener('click', closeJourneyFlowModal);
+		journeyFlowModal.addEventListener('click', (e) => {
+			if (e.target === journeyFlowModal) {
+				closeJourneyFlowModal();
+			}
+		});
+
+        // Listener para el botón "Copiar"
+        copyFlowBtn.addEventListener('click', () => {
+            const textToCopy = journeyFlowContent.textContent;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const originalText = copyFlowBtn.textContent;
+                copyFlowBtn.textContent = '¡Copiado!';
+                copyFlowBtn.classList.add('copied');
+                setTimeout(() => {
+                    copyFlowBtn.textContent = originalText;
+                    copyFlowBtn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Error al intentar copiar al portapapeles:', err);
+                alert('No se pudo copiar el texto. Revisa la consola para más detalles.');
+            });
+        });
 	}
 
 

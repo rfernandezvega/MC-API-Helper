@@ -85,6 +85,43 @@ body {
     overflow: hidden;
 }
 
+/* --- Overlay de Carga Global --- */
+.loader-overlay {
+  position: fixed; /* Se posiciona sobre toda la ventana */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.75); /* Fondo blanco semitransparente */
+  display: flex; /* Usamos flexbox para centrar el contenido */
+  justify-content: center;
+  align-items: center;
+  flex-direction: column; /* Apila el spinner sobre el texto */
+  z-index: 9999; /* Asegura que esté por encima de todo */
+  cursor: wait; /* Muestra el cursor de espera */
+  -webkit-app-region: no-drag; /* Importante para Electron, evita que se pueda arrastrar la ventana desde el overlay */
+}
+
+.loader-spinner {
+  border: 8px solid #f3f3f3; /* Gris claro */
+  border-top: 8px solid #69a3db; /* Azul de tu tema */
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loader-text {
+  margin-top: 20px;
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #558ac7;
+}
 
 /* ==========================================================
    2. BARRA LATERAL IZQUIERDA (NAVEGACIÓN)
@@ -412,6 +449,14 @@ body {
     background-color: #e67e22;
 }
 
+/* Botón de "Dibujar" (naranja) */
+#drawJourneyBtn:not([disabled]) {
+    background-color: #f39c12;
+}
+#drawJourneyBtn:hover:not([disabled]) {
+    background-color: #e67e22;
+}
+
 /* Estilo general para CUALQUIER botón deshabilitado */
 .action-button[disabled] {
   background-color: #cccccc !important;
@@ -426,6 +471,7 @@ body {
     gap: 10px;
     align-items: center;
     margin-bottom: 20px;
+    flex-wrap: wrap;
 }
 .filter-input {
     padding: 8px;
@@ -726,6 +772,27 @@ td a:hover {
   border-radius: 4px;
   font-family: monospace;
 }
+.docu-container .tab-content {
+  padding: 10px 5px; /* Ajusta el padding para un mejor espaciado */
+}
+
+.docu-container h3 {
+  border-bottom: 2px solid #e0e7ef;
+  padding-bottom: 10px;
+  margin-bottom: 25px;
+  color: #558ac7;
+}
+
+/* Estilo de "tarjeta" para cada item principal de la lista */
+.docu-list > li {
+  list-style-type: none; /* Quitamos los puntos de la lista principal */
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
 
 /* --- 5.2. Modal de Importación --- */
 .modal-overlay {
@@ -886,6 +953,44 @@ td a:hover {
     table-layout: auto; /* Permite que las columnas se ajusten al contenido */
     width: auto;      /* Evita que la tabla intente ocupar más del 100% del contenedor */
     min-width: 100%;  /* Asegura que la tabla ocupe al menos todo el ancho disponible */
+}
+/* --- 5.5. Modal de Flujo de Journey --- */
+.modal-content.modal-lg {
+  max-width: 800px; /* Hacemos el modal más ancho */
+  width: 90%;
+}
+
+.journey-flow-container {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 5px;
+  padding: 15px;
+  max-height: 60vh; /* Altura máxima para que no ocupe toda la pantalla */
+  overflow-y: auto; /* Scroll si el contenido es muy largo */
+  margin-bottom: 15px;
+}
+
+#journey-flow-content {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.85em;
+  white-space: pre; /* Mantiene los espacios y saltos de línea, pero no ajusta línea */
+  margin: 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end; /* Mantiene el comportamiento por defecto a la derecha */
+  gap: 10px;
+}
+
+#copyFlowBtn {
+  margin-right: auto; 
+}
+
+/* Estilo para el feedback visual al copiar */
+#copyFlowBtn.copied {
+    background-color: #28a745; /* Verde de éxito */
+    cursor: default;
 }
 
 /* ==========================================================

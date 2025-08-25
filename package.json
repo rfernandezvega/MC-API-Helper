@@ -1,12 +1,11 @@
 {
-  "name": "MC-API-Helper",
-  "version": "1.4.0",
+  "name": "mc-api-helper",
+  "version": "1.6.3",
   "description": "Herramienta para interactuar con la API de Marketing Cloud",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-packager . MC-API-Helper --platform=win32 --arch=x64 --icon=icon.ico --out=dist --overwrite",
-    "dist": "electron-builder"
+    "dist": "electron-builder --publish always"
   },
   "keywords": [],
   "author": "",
@@ -19,13 +18,13 @@
   },
   "devDependencies": {
     "electron": "^37.2.6",
-    "electron-builder": "^26.0.12",
-    "electron-packager": "^17.1.2"
+    "electron-builder": "^26.0.12"
   },
   "build": {
-    "appId": "com.seidor.mc-api-desktop",
+    "appId": "com.seidor.mc-api-helper",
     "productName": "MC API Helper",
     "artifactName": "MC-API-Helper-Setup-${version}.${ext}",
+    "icon": "icon.ico",
     "forceCodeSigning": false,
     "win": {
       "target": [
@@ -35,12 +34,16 @@
             "x64"
           ]
         }
-      ],
-      "icon": "icon.ico",
+      ],      
       "signAndEditExecutable": false
     },
     "nsis": {
       "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "createStartMenuShortcut": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "MC API Helper",
       "allowToChangeInstallationDirectory": true,
       "installerIcon": "icon.ico",
       "uninstallerIcon": "icon.ico",
@@ -50,8 +53,7 @@
       "provider": "github",
       "owner": "rfernandezvega",
       "repo": "MC-API-Helper",
-      "private": true,
-      "token": ""
+      "private": true
     }
   }
 }
