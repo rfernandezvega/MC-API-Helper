@@ -519,7 +519,6 @@ body {
 .pagination-controls .page-input {
     width: 60px;
     text-align: center;
-    -moz-appearance: textfield; /* Oculta las flechas por defecto en Firefox */
 }
 /* Oculta las flechas por defecto en Chrome, Safari, etc. */
 .pagination-controls .page-input::-webkit-outer-spin-button,
