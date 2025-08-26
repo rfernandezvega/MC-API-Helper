@@ -79,6 +79,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	const journeyStatusFilter = document.getElementById('journeyStatusFilter');
     const journeyDEFilter = document.getElementById('journeyDEFilter');
 	const drawJourneyBtn = document.getElementById('drawJourneyBtn'); 
+	const stopJourneyBtn = document.getElementById('stopJourneyBtn');
 
 	 // --- Modal de Flujo de Journey ---
     const journeyFlowModal = document.getElementById('journey-flow-modal');
@@ -304,6 +305,10 @@ document.addEventListener('DOMContentLoaded', function () {
 		appContainer.style.display = 'none';
 		void appContainer.offsetHeight; // Esta línea fuerza al navegador a aplicar el cambio de estilo.
 		appContainer.style.display = ''; // Al quitar el estilo en línea, vuelve al 'grid' definido en el CSS.
+
+		setTimeout(() => {
+			document.body.focus();
+		}, 0);
 	}
 	
 	/**
@@ -1162,6 +1167,69 @@ document.addEventListener('DOMContentLoaded', function () {
 		} finally {
 			unblockUI();
 			endLogBuffering();
+		}
+	}
+
+	/**
+	 * Macro para parar los Journeys seleccionados.
+	 */
+	async function macroStopJourneys() {
+		const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
+		if (selectedRows.length === 0) return;
+
+		const journeysToStop = Array.from(selectedRows).map(row => {
+			return fullJourneyList.find(j => j.id === row.dataset.journeyId);
+		}).filter(Boolean);
+
+		if (journeysToStop.length === 0) return;
+
+		if (!confirm(`¿Seguro que quieres parar ${journeysToStop.length} journey(s)? Esta acción intentará detener la versión activa.`)) return;
+
+		blockUI(`Parando ${journeysToStop.length} journey(s)...`);
+		startLogBuffering();
+		const successes = [];
+		const failures = [];
+
+		try {
+			const apiConfig = await getAuthenticatedConfig();
+			const headers = { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" };
+
+			for (const journey of journeysToStop) {
+				logMessage(`Procesando parada para: "${journey.name}" (Versión ${journey.version})`);
+				const url = `${apiConfig.restUri}interaction/v1/interactions/stop/${journey.id}?versionNumber=${journey.version}`;
+				logApiCall({ action: 'stop', endpoint: url });
+
+				try {
+					const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify({}) });
+					const responseData = await response.json();
+					logApiResponse({ for: journey.name, status: response.status, response: responseData });
+
+					if (response.ok) {
+						successes.push({ name: journey.name });
+					} else {
+						failures.push({ name: journey.name, reason: responseData.message || `Error ${response.status}` });
+					}
+				} catch (error) {
+					failures.push({ name: journey.name, reason: error.message });
+					logApiResponse({ for: journey.name, status: 'Failure', response: error.message });
+				}
+			}
+		} catch (error) {
+			logMessage(`Error fatal durante la acción de parar journeys: ${error.message}`);
+			alert(`Error fatal: ${error.message}`);
+		} finally {
+			const alertSummary = `Acción 'Parar' completada. Éxitos: ${successes.length}, Fallos: ${failures.length}.`;
+			let logSummary = alertSummary;
+			if (failures.length > 0) {
+				const failureDetails = failures.map(f => `  - ${f.name}: ${f.reason}`).join('\n');
+				logSummary += `\n\n--- Detalles de Fallos ---\n${failureDetails}`;
+			}
+			logMessage(logSummary);
+			alert(alertSummary);
+			unblockUI();
+			endLogBuffering();
+			// Refrescamos la tabla para ver los cambios de estado
+			refreshJourneysTableBtn.click();
 		}
 	}
 
@@ -2760,6 +2828,19 @@ document.addEventListener('DOMContentLoaded', function () {
 		} else {
 			drawJourneyBtn.disabled = true;
 		}
+
+		// Lógica para el botón "Parar"
+		if (selectionCount > 0) {
+			const selectedJourneys = Array.from(selectedRows).map(row => {
+				return fullJourneyList.find(j => j.id === row.dataset.journeyId);
+			}).filter(Boolean);
+			
+			// Habilitar solo si TODOS los seleccionados tienen estado "Published"
+			const allArePublished = selectedJourneys.every(j => j.status === 'Published');
+			stopJourneyBtn.disabled = !allArePublished;
+		} else {
+			stopJourneyBtn.disabled = true;
+		}
 	}
 
 	/**
@@ -3260,8 +3341,9 @@ document.addEventListener('DOMContentLoaded', function () {
         journeyDEFilter.addEventListener('input', applyJourneyFiltersAndRender);
 
         getCommunicationsBtn.addEventListener('click', macroGetJourneyCommunications);
+		stopJourneyBtn.addEventListener('click', macroStopJourneys);
 
-		 refreshJourneysTableBtn.addEventListener('click', () => {
+		refreshJourneysTableBtn.addEventListener('click', () => {
 			fullJourneyList = [];
 			eventDefinitionsMap = {};
 			journeyFolderMap = {};
