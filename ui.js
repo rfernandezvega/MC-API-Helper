@@ -3315,6 +3315,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Listener para el botón "Copiar"
         copyFlowBtn.addEventListener('click', () => {
+			// Forzar el foco sobre el botón antes de intentar escribir en el portapapeles.
+			// Esto asegura al navegador que la acción es iniciada por el usuario en un elemento activo.
+			copyFlowBtn.focus(); 
             const textToCopy = journeyFlowContent.textContent;
             navigator.clipboard.writeText(textToCopy).then(() => {
                 const originalText = copyFlowBtn.textContent;
