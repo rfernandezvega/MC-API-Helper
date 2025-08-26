@@ -3315,23 +3315,41 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Listener para el botón "Copiar"
         copyFlowBtn.addEventListener('click', () => {
-			// Forzar el foco sobre el botón antes de intentar escribir en el portapapeles.
-			// Esto asegura al navegador que la acción es iniciada por el usuario en un elemento activo.
-			copyFlowBtn.focus(); 
-            const textToCopy = journeyFlowContent.textContent;
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                const originalText = copyFlowBtn.textContent;
-                copyFlowBtn.textContent = '¡Copiado!';
-                copyFlowBtn.classList.add('copied');
-                setTimeout(() => {
-                    copyFlowBtn.textContent = originalText;
-                    copyFlowBtn.classList.remove('copied');
-                }, 2000);
-            }).catch(err => {
-                console.error('Error al intentar copiar al portapapeles:', err);
-                alert('No se pudo copiar el texto. Revisa la consola para más detalles.');
-            });
-        });
+			const textToCopy = journeyFlowContent.textContent;
+
+			// Usamos el método clásico y más robusto para copiar, que evita problemas de foco y CSP.
+			const textArea = document.createElement('textarea');
+			textArea.value = textToCopy;
+
+			// Hacemos el textarea invisible y lo añadimos al DOM
+			textArea.style.position = 'absolute';
+			textArea.style.left = '-9999px';
+			document.body.appendChild(textArea);
+
+			// Seleccionamos el contenido y ejecutamos el comando de copia
+			textArea.select();
+			
+			try {
+				const successful = document.execCommand('copy');
+				if (successful) {
+					const originalText = copyFlowBtn.textContent;
+					copyFlowBtn.textContent = '¡Copiado!';
+					copyFlowBtn.classList.add('copied');
+					setTimeout(() => {
+						copyFlowBtn.textContent = originalText;
+						copyFlowBtn.classList.remove('copied');
+					}, 2000);
+				} else {
+					throw new Error('Fallback copy command failed.');
+				}
+			} catch (err) {
+				console.error('Error al intentar copiar al portapapeles con el método clásico:', err);
+				alert('No se pudo copiar el texto. Inténtalo manualmente (Ctrl+C).');
+			} finally {
+				// Siempre eliminamos el textarea del DOM
+				document.body.removeChild(textArea);
+			}
+		});
 	}
 
 
