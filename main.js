@@ -50,6 +50,25 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.js')
         }
     });
+
+    // Si la aplicación está empaquetada (producción), elimina el menú y bloquea las DevTools.
+    if (app.isPackaged) {
+        // 1. Elimina la barra de menú por completo.
+        mainWindow.setMenu(null);
+
+        // 2. Bloquea las combinaciones de teclas para abrir las Herramientas de Desarrollador.
+        mainWindow.webContents.on('before-input-event', (event, input) => {
+            // Bloquear Ctrl+Shift+I
+            if (input.control && input.shift && input.key.toLowerCase() === 'i') {
+                event.preventDefault();
+            }
+            // Bloquear F12
+            if (input.key === 'F12') {
+                event.preventDefault();
+            }
+        });
+    }
+
     mainWindow.loadFile('index.html');
 }
 

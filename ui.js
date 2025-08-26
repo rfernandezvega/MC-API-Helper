@@ -297,6 +297,13 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	function unblockUI() {
 		loaderOverlay.style.display = 'none';
+		 // Esto soluciona un bug de renderizado de Chromium/Electron donde los inputs
+		// dejan de responder después de ocultar un overlay. Al cambiar brevemente
+		// el display del contenedor principal, forzamos al motor a recalcular
+		// el layout y los eventos, "despertando" los inputs.
+		appContainer.style.display = 'none';
+		void appContainer.offsetHeight; // Esta línea fuerza al navegador a aplicar el cambio de estilo.
+		appContainer.style.display = ''; // Al quitar el estilo en línea, vuelve al 'grid' definido en el CSS.
 	}
 	
 	/**
