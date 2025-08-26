@@ -39,6 +39,8 @@ document.addEventListener('DOMContentLoaded', function () {
 	// ==========================================================
 	const API_PAGE_SIZE = 500;
 
+	const ITEMS_PER_PAGE = 15;
+
 	const loaderOverlay = document.getElementById('loader-overlay');
 
 	const licenseModal = document.getElementById('license-modal-overlay');
@@ -65,6 +67,8 @@ document.addEventListener('DOMContentLoaded', function () {
 	let fullJourneyList = [];        // Caché de todos los journeys para la vista de gestión.
  	let eventDefinitionsMap = {}; // Caché para mapear EventDefinitions por nombre
     let journeyFolderMap = {};    // Caché para mapear rutas de carpetas de Journeys
+	let currentPageAutomations = 1; 
+    let currentPageJourneys = 1;    
 
 	// --- Gestión de Journeys ---
 	const journeysTbody = document.getElementById('journeys-tbody');
@@ -196,6 +200,16 @@ document.addEventListener('DOMContentLoaded', function () {
     const stopAutomationBtn = document.getElementById('stopAutomationBtn');
 	const automationNameFilter = document.getElementById('automationNameFilter');
     const automationStatusFilter = document.getElementById('automationStatusFilter');
+
+	// --- Paginación de vistas de gestión ---	
+	const prevPageBtnAutomations = document.getElementById('prevPageBtnAutomations');
+    const nextPageBtnAutomations = document.getElementById('nextPageBtnAutomations');
+    const pageInputAutomations = document.getElementById('pageInputAutomations');
+    const totalPagesAutomations = document.getElementById('totalPagesAutomations');
+	const prevPageBtnJourneys = document.getElementById('prevPageBtnJourneys');
+    const nextPageBtnJourneys = document.getElementById('nextPageBtnJourneys');
+    const pageInputJourneys = document.getElementById('pageInputJourneys');
+    const totalPagesJourneys = document.getElementById('totalPagesJourneys');
 
 	// --- Componentes Generales ---
 	const tabButtons = document.querySelectorAll('.tab-button');
@@ -1615,15 +1629,16 @@ document.addEventListener('DOMContentLoaded', function () {
      * Dibuja la tabla de la vista "Gestión de Automatismos" con los datos proporcionados.
      * @param {Array} automations - El array de automatismos a mostrar.
      */
-	function renderAutomationsTable(automations) {
+	function renderAutomationsTable(automationsToRender) {
 		automationsTbody.innerHTML = '';
-		updateSortIndicators();
-		if (!automations || automations.length === 0) {
+		updateSortIndicators(); // Esto se mantiene
+
+		if (!automationsToRender || automationsToRender.length === 0) {
 			automationsTbody.innerHTML = '<tr><td colspan="4">No hay automatismos para mostrar.</td></tr>';
 			return;
 		}
-		const sortedData = sortAutomations(automations);
-		sortedData.forEach(auto => {
+		
+		automationsToRender.forEach(auto => {
 			const row = document.createElement('tr');
 			row.dataset.automationId = auto.id;
 			row.innerHTML = `<td>${auto.name || 'Sin Nombre'}</td><td>${formatDateToSpanishTime(auto.lastRunTime)}</td><td>${formatDateToSpanishTime(auto.scheduledTime)}</td><td>${auto.status || '---'}</td>`;
@@ -1673,11 +1688,15 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 
 	/**
-     * Aplica los filtros de nombre y estado a la lista de automatismos y redibuja la tabla.
-     */
+	 * Aplica los filtros actuales a la lista completa de automatismos y luego la renderiza.
+	 * ESTA FUNCIÓN DEBE LLAMARSE CUANDO SE CAMBIA UN FILTRO (nombre o estado).
+	 */
 	function applyFiltersAndRender() {
+		currentPageAutomations = 1; // Resetea a la página 1 cada vez que se filtra
+		
 		const nameFilter = automationNameFilter.value.toLowerCase().trim();
 		const statusFilter = automationStatusFilter.value;
+		
 		let filteredAutomations = fullAutomationList;
 		if (nameFilter) {
 			filteredAutomations = filteredAutomations.filter(auto => auto.name.toLowerCase().includes(nameFilter));
@@ -1685,7 +1704,28 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (statusFilter) {
 			filteredAutomations = filteredAutomations.filter(auto => auto.status === statusFilter);
 		}
-		renderAutomationsTable(filteredAutomations);
+		
+		// Ahora llamamos a la función de renderizado con la lista ya filtrada
+		renderPaginatedAutomations(filteredAutomations);
+	}
+
+	/**
+	 * Toma una lista de automatismos, la pagina y la muestra en la tabla.
+	 * ESTA FUNCIÓN DEBE LLAMARSE CUANDO SE CAMBIA DE PÁGINA.
+	 */
+	function renderPaginatedAutomations(automations) {
+		// La lógica de paginación se mueve de renderAutomationsTable aquí
+		const startIndex = (currentPageAutomations - 1) * ITEMS_PER_PAGE;
+		const endIndex = startIndex + ITEMS_PER_PAGE;
+		
+		// Ordenamos la lista ANTES de paginarla
+		const sortedAndPaginatedItems = sortAutomations(automations).slice(startIndex, endIndex);
+		
+		// Actualizamos la UI de paginación con el total de items FILTRADOS
+		updateAutomationPaginationUI(automations.length);
+		
+		// Finalmente, llamamos a la función que dibuja la tabla
+		renderAutomationsTable(sortedAndPaginatedItems);
 	}
 
 	/**
@@ -1778,9 +1818,10 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Aplica los filtros de nombre y tipo a la lista de Journeys y redibuja la tabla.
 	 */
 	function applyJourneyFiltersAndRender() {
+		currentPageJourneys = 1; // Resetea a la página 1 cada vez que se filtra
+
 		const nameFilter = journeyNameFilter.value.toLowerCase().trim();
 		const typeFilter = journeyTypeFilter.value;
-        // ▼▼▼ AÑADIR ESTAS 2 LÍNEAS ▼▼▼
 		const statusFilter = journeyStatusFilter.value;
 		const deFilter = journeyDEFilter.value.toLowerCase().trim();
 
@@ -1796,11 +1837,19 @@ document.addEventListener('DOMContentLoaded', function () {
 			filteredJourneys = filteredJourneys.filter(j => j.status === statusFilter);
 		}
 		if (deFilter) {
-			// Nos aseguramos de que la propiedad exista antes de llamar a .toLowerCase()
 			filteredJourneys = filteredJourneys.filter(j => j.dataExtensionName && j.dataExtensionName.toLowerCase().includes(deFilter));
 		}
+		
+		// Ahora llamamos a la función de renderizado con la lista ya filtrada
+		renderPaginatedJourneys(filteredJourneys);
+	}
 
-		renderJourneysTable(filteredJourneys);
+	function renderPaginatedJourneys(journeys) {
+		const startIndex = (currentPageJourneys - 1) * ITEMS_PER_PAGE;
+		const endIndex = startIndex + ITEMS_PER_PAGE;
+		const sortedAndPaginatedItems = sortJourneys(journeys).slice(startIndex, endIndex);
+		updateJourneyPaginationUI(journeys.length);
+		renderJourneysTable(sortedAndPaginatedItems);
 	}
 
 	/**
@@ -1863,6 +1912,33 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 	}
 
+	/**
+     * Actualiza la UI de los controles de paginación para la tabla de Automatismos.
+     * @param {number} totalItems - El número total de items en la lista filtrada.
+     */
+    function updateAutomationPaginationUI(totalItems) {
+        const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
+        totalPagesAutomations.textContent = `/ ${totalPages}`;
+        pageInputAutomations.value = currentPageAutomations;
+        pageInputAutomations.max = totalPages;
+
+        prevPageBtnAutomations.disabled = currentPageAutomations === 1;
+        nextPageBtnAutomations.disabled = currentPageAutomations >= totalPages;
+    }
+
+    /**
+     * Actualiza la UI de los controles de paginación para la tabla de Journeys.
+     * @param {number} totalItems - El número total de items en la lista filtrada.
+     */
+    function updateJourneyPaginationUI(totalItems) {
+        const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
+        totalPagesJourneys.textContent = `/ ${totalPages}`;
+        pageInputJourneys.value = currentPageJourneys;
+        pageInputJourneys.max = totalPages;
+
+        prevPageBtnJourneys.disabled = currentPageJourneys === 1;
+        nextPageBtnJourneys.disabled = currentPageJourneys >= totalPages;
+    }
 
 	// ==========================================================
 	// --- 6. MANIPULACIÓN DEL DOM Y COMPONENTES ---
@@ -2485,25 +2561,22 @@ document.addEventListener('DOMContentLoaded', function () {
      * Dibuja la tabla de la vista "Gestión de Journeys" con los datos proporcionados.
      * @param {Array} journeys - El array de journeys a mostrar.
      */
-	function renderJourneysTable(journeys) {
+	function renderJourneysTable(journeysToRender) {
 		journeysTbody.innerHTML = '';
-        updateJourneySortIndicators(); 
+		updateJourneySortIndicators(); 
 
-        const sortedData = sortJourneys(journeys);
-
-		if (!sortedData || sortedData.length === 0) {
-			journeysTbody.innerHTML = '<tr><td colspan="12">No se encontraron journeys con los filtros aplicados.</td></tr>'; // Colspan ahora es 12
+		if (!journeysToRender || journeysToRender.length === 0) {
+			journeysTbody.innerHTML = '<tr><td colspan="12">No se encontraron journeys con los filtros aplicados.</td></tr>';
 			return;
 		}
 
-		sortedData.forEach(journey => {
+		journeysToRender.forEach(journey => {
 			const row = document.createElement('tr');
-            row.dataset.journeyId = journey.id;
+			row.dataset.journeyId = journey.id;
 			
-            // Restaurar el estado visual de selección si la fila estaba seleccionada
-            if (document.querySelector(`#journeys-table tbody tr.selected[data-journey-id="${journey.id}"]`)) {
-                row.classList.add('selected');
-            }
+			if (document.querySelector(`#journeys-table tbody tr.selected[data-journey-id="${journey.id}"]`)) {
+				row.classList.add('selected');
+			}
 
 			row.innerHTML = `
 				<td>${journey.name || '---'}</td>
@@ -2514,10 +2587,10 @@ document.addEventListener('DOMContentLoaded', function () {
 				<td>${journey.status || '---'}</td>
 				<td>${journey.location || '---'}</td>
 				<td>${journey.dataExtensionName || '---'}</td>
-                <td>${journey.hasCommunications ? 'Sí' : 'No'}</td>
-                <td>${journey.emails && journey.emails.length > 0 ? journey.emails.join(', ') : '---'}</td>
-                <td>${journey.sms && journey.sms.length > 0 ? journey.sms.join(', ') : '---'}</td>
-                <td>${journey.pushes && journey.pushes.length > 0 ? journey.pushes.join(', ') : '---'}</td>
+				<td>${journey.hasCommunications ? 'Sí' : 'No'}</td>
+				<td>${journey.emails && journey.emails.length > 0 ? journey.emails.join(', ') : '---'}</td>
+				<td>${journey.sms && journey.sms.length > 0 ? journey.sms.join(', ') : '---'}</td>
+				<td>${journey.pushes && journey.pushes.length > 0 ? journey.pushes.join(', ') : '---'}</td>
 			`;
 			journeysTbody.appendChild(row);
 		});
@@ -3023,6 +3096,115 @@ document.addEventListener('DOMContentLoaded', function () {
 			getDEsBtn.disabled = !selectedSubscriberData.isSubscriber;
 			customerJourneysResultsBlock.classList.add('hidden');
 			customerSendsResultsBlock.classList.add('hidden');
+		});
+
+		function reRenderAutomations() {
+			// Esta función auxiliar obtiene la lista filtrada actual y la re-renderiza
+			const nameFilter = automationNameFilter.value.toLowerCase().trim();
+			const statusFilter = automationStatusFilter.value;
+			let filteredAutomations = fullAutomationList;
+			if (nameFilter) {
+				filteredAutomations = filteredAutomations.filter(auto => auto.name.toLowerCase().includes(nameFilter));
+			}
+			if (statusFilter) {
+				filteredAutomations = filteredAutomations.filter(auto => auto.status === statusFilter);
+			}
+			renderPaginatedAutomations(filteredAutomations);
+		}
+
+		prevPageBtnAutomations.addEventListener('click', () => {
+			if (currentPageAutomations > 1) {
+				currentPageAutomations--;
+				reRenderAutomations();
+			}
+		});
+
+		nextPageBtnAutomations.addEventListener('click', () => {
+			const maxPage = parseInt(pageInputAutomations.max, 10);
+			if (currentPageAutomations < maxPage) {
+				currentPageAutomations++;
+				reRenderAutomations();
+			}
+		});
+
+		pageInputAutomations.addEventListener('input', () => {
+			let newPage = parseInt(pageInputAutomations.value, 10);
+			// No hacemos nada si el campo está vacío, para que el usuario pueda borrar y escribir
+			if (isNaN(newPage)) {
+				return; 
+			}
+			const maxPage = parseInt(pageInputAutomations.max, 10);
+			if (newPage < 1) newPage = 1;
+			if (newPage > maxPage) newPage = maxPage;
+			
+			currentPageAutomations = newPage;
+			reRenderAutomations();
+		});
+
+		// Corrección para cuando el usuario hace clic fuera (blur)
+		pageInputAutomations.addEventListener('change', () => {
+			if (pageInputAutomations.value === '') {
+				currentPageAutomations = 1;
+				reRenderAutomations();
+			}
+		});
+
+        // --- Listeners de Paginación de Journeys ---
+        function reRenderJourneys() {
+			// Función auxiliar que obtiene la lista filtrada actual y la re-renderiza
+			const nameFilter = journeyNameFilter.value.toLowerCase().trim();
+			const typeFilter = journeyTypeFilter.value;
+			const statusFilter = journeyStatusFilter.value;
+			const deFilter = journeyDEFilter.value.toLowerCase().trim();
+			let filteredJourneys = fullJourneyList;
+			if (nameFilter) {
+				filteredJourneys = filteredJourneys.filter(j => j.name.toLowerCase().includes(nameFilter));
+			}
+			if (typeFilter) {
+				filteredJourneys = filteredJourneys.filter(j => j.eventType === typeFilter);
+			}
+			if (statusFilter) {
+				filteredJourneys = filteredJourneys.filter(j => j.status === statusFilter);
+			}
+			if (deFilter) {
+				filteredJourneys = filteredJourneys.filter(j => j.dataExtensionName && j.dataExtensionName.toLowerCase().includes(deFilter));
+			}
+			renderPaginatedJourneys(filteredJourneys);
+		}
+
+		prevPageBtnJourneys.addEventListener('click', () => {
+			if (currentPageJourneys > 1) {
+				currentPageJourneys--;
+				reRenderJourneys();
+			}
+		});
+
+		nextPageBtnJourneys.addEventListener('click', () => {
+			const maxPage = parseInt(pageInputJourneys.max, 10);
+			if (currentPageJourneys < maxPage) {
+				currentPageJourneys++;
+				reRenderJourneys();
+			}
+		});
+
+		pageInputJourneys.addEventListener('input', () => {
+			let newPage = parseInt(pageInputJourneys.value, 10);
+			if (isNaN(newPage)) {
+				return; 
+			}
+			const maxPage = parseInt(pageInputJourneys.max, 10);
+			if (newPage < 1) newPage = 1;
+			if (newPage > maxPage) newPage = maxPage;
+			
+			currentPageJourneys = newPage;
+			reRenderJourneys();
+		});
+
+		pageInputJourneys.addEventListener('change', () => {
+			if (pageInputJourneys.value === '') {
+				currentPageJourneys = 1;
+				reRenderJourneys();
+			}
 		});
 
 		// --- Listeners de Gestión de Automatismos ---

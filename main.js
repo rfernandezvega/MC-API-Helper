@@ -98,7 +98,7 @@ function initializeGoogleClient() {
             console.log("Inicializando cliente de Google Sheets en segundo plano...");
             const auth = new google.auth.GoogleAuth({
                 keyFile: GOOGLE_CREDENTIALS_PATH,
-                scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+                scopes: ['https://www.googleapis.com/auth/spreadsheets'],
             });
             const sheets = google.sheets({ version: 'v4', auth });
             console.log("Cliente de Google Sheets listo.");
@@ -118,10 +118,10 @@ async function validateUserInSheet(email, accessKey) {
             throw new Error("El cliente de Google Sheets no está disponible.");
         }
 
-        // 2. Leer los datos de la hoja (el resto de la función es igual)
+        // 2. Leer los datos de la hoja
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${SHEET_NAME}!A:D`,
+            range: `${SHEET_NAME}!A:F`, // Leemos hasta la columna F para obtener el contador
         });
 
         const rows = response.data.values;
@@ -130,31 +130,58 @@ async function validateUserInSheet(email, accessKey) {
             return false;
         }
 
-        // 3. Buscar al usuario por email (columna B, índice 1)
-        // Asumimos que la primera fila es la cabecera, por eso usamos slice(1)
-        const userRow = rows.slice(1).find(row => row[1] && row[1].toLowerCase() === email.toLowerCase());
+        const dataRows = rows.slice(1);
 
-        if (!userRow) {
+        // 3. Buscar el índice de la fila del usuario
+        const userRowIndex = dataRows.findIndex(row => row[1] && row[1].toLowerCase() === email.toLowerCase());
+
+        if (userRowIndex === -1) {
             console.log(`Usuario no encontrado: ${email}`);
             return false; // Usuario no existe
         }
+        
+        const userRow = dataRows[userRowIndex];
 
         // 4. Validar la clave (columna C, índice 2) y el estado (columna D, índice 3)
         const storedKey = userRow[2];
         const isActive = userRow[3];
+        const isValid = storedKey === accessKey && (isActive.toLowerCase() === 'true' || isActive.toLowerCase() === 'sí');
 
-        // Comparamos la clave y verificamos que el estado sea 'TRUE' o 'Sí' (insensible a mayúsculas)
-        if (storedKey === accessKey && (isActive.toLowerCase() === 'true' || isActive.toLowerCase() === 'sí')) {
-            console.log(`Usuario validado con éxito: ${email}`);
-            return true; // Clave correcta y usuario activo
-        } else {
+        if (!isValid) {
             console.log(`Validación fallida para ${email}. Clave correcta: ${storedKey === accessKey}, Activo: ${isActive}`);
             return false; // Clave incorrecta o usuario inactivo
         }
 
+        // 5. SI LA VALIDACIÓN ES EXITOSA, ACTUALIZAMOS EL REGISTRO
+        console.log(`Usuario validado con éxito: ${email}. Actualizando registro de acceso...`);
+
+        // Obtenemos el número de fila real en la hoja (índice + 2 porque quitamos la cabecera y las filas son 1-based)
+        const sheetRowNumber = userRowIndex + 2;
+
+        // Calculamos los nuevos valores
+        const currentCount = parseInt(userRow[4], 10) || 0; // Columna E (índice 4). Si está vacía o no es un número, es 0.
+        const newCount = currentCount + 1;
+        const lastAccessTimestamp = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' }); // Columna F
+
+        // Preparamos la llamada de actualización
+        await sheets.spreadsheets.values.update({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${SHEET_NAME}!E${sheetRowNumber}:F${sheetRowNumber}`, // Rango a actualizar, ej: Accesos!E5:F5
+            valueInputOption: 'USER_ENTERED',
+            resource: {
+                values: [
+                    [newCount, lastAccessTimestamp] // Los valores para las columnas E y F
+                ],
+            },
+        });
+        
+        console.log(`Registro para ${email} actualizado. Accesos: ${newCount}`);
+
+        // 6. Devolvemos true para que la app continúe
+        return true;
+
     } catch (error) {
-        console.error('Error al validar con Google Sheets:', error.message);
-        // Si el error es por fichero no encontrado, damos un mensaje más claro.
+        console.error('Error al validar o actualizar con Google Sheets:', error.message);
         if (error.code === 'ENOENT') {
             throw new Error('No se encontró el fichero de credenciales de Google (google-credentials.json).');
         }

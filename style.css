@@ -427,7 +427,13 @@ body {
 .back-button:hover { 
     background-color: #5a6268; 
 }
-
+/* Botones de flecha para paginación (gris) */
+.pagination-arrow {
+    background-color: #6c757d;
+}
+.pagination-arrow:hover:not([disabled]) {
+    background-color: #5a6268;
+}
 /* Botones de acción positiva/guardado (verde) */
 .action-button.activate-btn,
 #saveConfigBtn { 
@@ -498,6 +504,34 @@ body {
     text-align: center;
     font-size: 0.9em;
     font-weight: bold;
+}
+/* Contenedor para los controles de paginación */
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+    padding: 10px;
+    user-select: none; /* Evita que el texto se seleccione */
+}
+
+.pagination-controls .page-input {
+    width: 60px;
+    text-align: center;
+    -moz-appearance: textfield; /* Oculta las flechas por defecto en Firefox */
+}
+/* Oculta las flechas por defecto en Chrome, Safari, etc. */
+.pagination-controls .page-input::-webkit-outer-spin-button,
+.pagination-controls .page-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.pagination-controls button {
+    padding: 5px 10px; /* Hacemos los botones de flecha un poco más pequeños */
+    font-size: 1.2em;
+    line-height: 1.2;
 }
 /* --- 3.4. Tablas de Datos --- */
 
