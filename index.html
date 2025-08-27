@@ -69,7 +69,7 @@
         <ul class="collapsible-content">
           <li><a class="macro-item" data-macro="configuracionDE">Configuración de Data Extension</a></li>
           <li><a class="macro-item" data-macro="campos">Campos</a></li>
-          <li><a class="macro-item" data-macro="gestionCampos">Gestión de Campos</a></li>
+          <li><a class="macro-item" data-macro="gestionCampos">Recuperación y Borrado de Campos</a></li>
         </ul>
     </div>
 
@@ -131,13 +131,13 @@
               </div>
               <ul>
                 <li>Ve a <b>Setup → Apps → Installed Packages</b>.</li>
-                <li>Crea un nuevo paquete de tipo <b>Server-to-Server</b> o <b>Web App</b>.</li>
+                <li>Crea un nuevo paquete de tipo <b>Web App</b>.</li>
                 <li>Si es <b>Web App</b>, el Callback URI debe ser <code>https://127.0.0.1:8443/callback</code>.</li>
                 <li>En el componente de API, asigna estos permisos:
                   <ul class="docu-permissions">
                     <li><b>Email:</b> Read, Write</li>
                     <li><b>Automations:</b> Read, Write, Execute</li>
-                    <li><b>Journeys:</b> Read, Activate/Stop/Pause/Resume/Send/Schedule</li>
+                    <li><b>Journeys:</b> Read, Write, Activate/Stop/Pause/Resume/Send/Schedule, Delete</li>
                     <li><b>Audiences:</b> Read, Write</li>
                     <li><b>List and Subscribers:</b> Read, Write</li>
                     <li><b>Data Extensions:</b> Read, Write</li>
@@ -374,6 +374,9 @@
             <h3>Parámetros</h3>
             <p class="info-text" style="text-align: left; margin: 0 0 15px;">
                 Introduce la External Key de la DE sobre la que quieres operar.
+            </p>
+             <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+                Los campos recuperados se rellenarán en la picklist y en la sección <em>Campos</em>.
             </p>
             <div class="form-group">
                 <label for="recExternalKey">External Key de la DE</label>
@@ -648,6 +651,7 @@
                 <button id="refreshJourneysTableBtn" class="action-button">Refrescar</button>
                 <button id="getCommunicationsBtn" class="action-button activate-btn" disabled>Comunicaciones</button>
                 <button id="drawJourneyBtn" class="action-button" disabled>Dibujar</button>
+                <button id="copyJourneyBtn" class="action-button" disabled>Copiar</button>
                 <button id="stopJourneyBtn" class="action-button delete-btn" disabled>Parar</button>
             </div>          
         </div>
@@ -767,6 +771,36 @@
     </div>
 </div>
 <!-- END: MODAL DE FLUJO -->
+
+<!-- ========================================================== -->
+<!-- START: MODAL DE ALERTA PERSONALIZADO -->
+<!-- ========================================================== -->
+<div id="custom-alert-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Aviso</h3>
+        <p id="custom-alert-message" style="line-height: 1.6;"></p>
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button id="custom-alert-close-btn" class="action-button">Aceptar</button>
+        </div>
+    </div>
+</div>
+<!-- END: MODAL DE ALERTA -->
+
+
+<!-- ========================================================== -->
+<!-- START: MODAL DE CONFIRMACIÓN PERSONALIZADO -->
+<!-- ========================================================== -->
+<div id="custom-confirm-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Confirmación Requerida</h3>
+        <p id="custom-confirm-message" style="line-height: 1.6;"></p>
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button id="custom-confirm-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="custom-confirm-ok-btn" class="action-button activate-btn">Confirmar</button>
+        </div>
+    </div>
+</div>
+<!-- END: MODAL DE CONFIRMACIÓN -->
  
 <!-- Enlaza el fichero JavaScript al final del body para un rendimiento óptimo -->
 <script src="ui.js"></script>
