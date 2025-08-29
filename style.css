@@ -562,7 +562,8 @@ th {
 
 /* Filas interactivas (seleccionables con el ratón) */
 #customer-search-table tbody tr,
-#automations-table tbody tr {
+#automations-table tbody tr,
+#journeys-table tbody tr {
     cursor: pointer;
 }
 tr.selected { 
@@ -620,8 +621,18 @@ tr.selected {
     padding: 8px;
     cursor: pointer;
 }
-.control-buttons button:hover {
-    background-color: #5a6268;
+
+.control-buttons .action-button{
+    width: 100px;
+     background-color: #69a3db; 
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 8px;
+    cursor: pointer;
+}
+.control-buttons .action-button:hover {
+     background-color: #558ac7;
 }
 
 /* Botón de borrado que aparece al lado de una fila de campo seleccionada */

@@ -158,8 +158,10 @@ document.addEventListener('DOMContentLoaded', function () {
 	const moveUpBtn = document.getElementById('moveUp');
 	const moveDownBtn = document.getElementById('moveDown');
 	const recExternalKeyInput = document.getElementById('recExternalKey');
+	const recCategoryIdInput = document.getElementById('recCategoryId'); 
 	const targetFieldSelect = document.getElementById('targetFieldSelect');
 	const getFieldsBtn = document.getElementById('getFields');
+	const documentDEsBtn = document.getElementById('documentDEsBtn');
 	const deleteFieldBtn = document.getElementById('deleteField');
 	const importFieldsBtn = document.getElementById('importFieldsBtn');
 
@@ -630,20 +632,19 @@ document.addEventListener('DOMContentLoaded', function () {
 			const apiConfig = await getAuthenticatedConfig();
 			const externalKey = recExternalKeyInput.value.trim();
 			if (!externalKey) throw new Error('Introduzca la "External Key de la DE".');
+			
 			logMessage(`Recuperando campos para la DE: ${externalKey}`);
-			const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtensionField</ObjectType><Properties>Name</Properties><Properties>ObjectID</Properties><Properties>CustomerKey</Properties><Properties>FieldType</Properties><Properties>IsPrimaryKey</Properties><Properties>IsRequired</Properties><Properties>MaxLength</Properties><Properties>Ordinal</Properties><Properties>Scale</Properties><Properties>DefaultValue</Properties><Filter xsi:type="SimpleFilterPart"><Property>DataExtension.CustomerKey</Property><SimpleOperator>equals</SimpleOperator><Value>${externalKey}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-			logApiCall({ payload: soapPayload });
-			const responseText = await (await fetch(apiConfig.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload })).text();
-			logApiResponse({ body: responseText });
-			const fields = await parseFullSoapFieldsAsync(responseText);
+			
+			const fields = await fetchFieldsForDE(externalKey, apiConfig);
+
 			if (fields.length > 0) {
 				populateFieldsTable(fields);
 				populateDeletionPicklist(fields);
-				logMessage(`${fields.length} campos recuperados.`);
+				logMessage(`${fields.length} campos recuperados y cargados en la tabla.`);
 			} else {
 				clearFieldsTable();
 				populateDeletionPicklist([]);
-				logMessage('Llamada exitosa pero no se encontraron campos.');
+				logMessage('Llamada exitosa pero no se encontraron campos para esta DE.');
 			}
 		} catch (error) {
 			logMessage(`Error al recuperar campos: ${error.message}`);
@@ -677,6 +678,149 @@ document.addEventListener('DOMContentLoaded', function () {
 		} finally {
 			unblockUI();
 			endLogBuffering();
+		}
+	}
+
+	/**
+	 * Macro para documentar todas las Data Extensions de una carpeta en un CSV.
+	 */
+	async function macroDocumentDataExtensions() {
+		blockUI("Documentando Data Extensions...");
+		startLogBuffering();
+		try {
+			const apiConfig = await getAuthenticatedConfig();
+			const categoryId = recCategoryIdInput.value.trim();
+			if (!categoryId) throw new Error('Introduzca el "Identificador de carpeta".');
+
+			logMessage(`Paso 1: Recuperando Data Extensions de la carpeta ID: ${categoryId}`);
+			const deList = await getDEsFromFolder(categoryId, apiConfig);
+
+			if (deList.length === 0) {
+				showCustomAlert(`No se encontraron Data Extensions en la carpeta con ID ${categoryId}.`);
+				return;
+			}
+			logMessage(`Se encontraron ${deList.length} Data Extensions. Recuperando campos para cada una...`);
+			
+			const allFieldsData = [];
+			let deCounter = 0;
+
+			for (const de of deList) {
+				deCounter++;
+				blockUI(`Procesando ${deCounter}/${deList.length}: ${de.name}`);
+				logMessage(` - Procesando: ${de.name} (Key: ${de.customerKey})`);
+
+				try {
+					const fields = await fetchFieldsForDE(de.customerKey, apiConfig);
+					fields.forEach(field => {
+						allFieldsData.push({
+							'Name': de.name,
+							'ExternalKey': de.customerKey,
+							'Field': field.mc,
+							'FieldType': field.type,
+							'Length': field.len || '',
+							'Default': field.defaultValue || '',
+							'PK': field.pk ? 'Yes' : 'No',
+							'Required': field.req ? 'Yes' : 'No'
+						});
+					});
+				} catch (fieldError) {
+					logMessage(`   -> Error al recuperar campos para ${de.name}: ${fieldError.message}`);
+					// Continuar con la siguiente DE aunque una falle
+				}
+			}
+
+			if (allFieldsData.length === 0) {
+				showCustomAlert('No se pudieron recuperar campos para ninguna de las Data Extensions encontradas.');
+				return;
+			}
+			
+			logMessage(`Paso 3: Generando CSV con ${allFieldsData.length} filas.`);
+			generateAndDownloadCsv(allFieldsData, `DEs_Carpeta_${categoryId}.csv`);
+			showCustomAlert('Documentación generada con éxito. Revisa tus descargas.');
+
+		} catch (error) {
+			logMessage(`Error al documentar las Data Extensions: ${error.message}`);
+			showCustomAlert(`Error: ${error.message}`);
+		} finally {
+			unblockUI();
+			endLogBuffering();
+		}
+	}
+
+	/**
+	 * Lógica reutilizable para obtener los campos de una DE.
+	 * @param {string} customerKey - La External Key de la DE.
+	 * @param {object} apiConfig - La configuración de la API.
+	 * @returns {Promise<Array>} Un array de objetos de campo.
+	 */
+	async function fetchFieldsForDE(customerKey, apiConfig) {
+		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtensionField</ObjectType><Properties>Name</Properties><Properties>ObjectID</Properties><Properties>CustomerKey</Properties><Properties>FieldType</Properties><Properties>IsPrimaryKey</Properties><Properties>IsRequired</Properties><Properties>MaxLength</Properties><Properties>Ordinal</Properties><Properties>Scale</Properties><Properties>DefaultValue</Properties><Filter xsi:type="SimpleFilterPart"><Property>DataExtension.CustomerKey</Property><SimpleOperator>equals</SimpleOperator><Value>${customerKey}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+		
+		logApiCall({ payload: soapPayload });
+		const response = await fetch(apiConfig.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload });
+		const responseText = await response.text();
+		logApiResponse({ body: responseText });
+		if (!responseText.includes('<OverallStatus>OK</OverallStatus>')) {
+			const errorMatch = responseText.match(/<StatusMessage>(.*?)<\/StatusMessage>/);
+			throw new Error(errorMatch ? errorMatch[1] : 'Error desconocido al recuperar campos.');
+		}
+		
+		const fields = await parseFullSoapFieldsAsync(responseText);
+		return fields;
+	}
+
+	/**
+	 * Recupera la lista de Data Extensions de una carpeta específica.
+	 * @param {string} categoryId - El ID de la carpeta.
+	 * @param {object} apiConfig - La configuración de la API.
+	 * @returns {Promise<Array>} Una lista de objetos DE { name, customerKey }.
+	 */
+	async function getDEsFromFolder(categoryId, apiConfig) {
+		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>CustomerKey</Properties><Properties>Name</Properties><Filter xsi:type="SimpleFilterPart"><Property>CategoryID</Property><SimpleOperator>equals</SimpleOperator><Value>${categoryId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+
+		const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload, null);
+		const parser = new DOMParser();
+		const xmlDoc = parser.parseFromString(responseText, "application/xml");
+
+		const deList = Array.from(xmlDoc.querySelectorAll("Results")).map(node => ({
+			name: node.querySelector("Name")?.textContent,
+			customerKey: node.querySelector("CustomerKey")?.textContent
+		}));
+
+		return deList;
+	}
+
+	/**
+	 * Genera un archivo CSV a partir de un array de objetos y lo descarga.
+	 * @param {Array<object>} data - El array de datos.
+	 * @param {string} filename - El nombre del archivo a descargar.
+	 */
+	function generateAndDownloadCsv(data, filename) {
+		if (!data || data.length === 0) return;
+
+		const headers = Object.keys(data[0]);
+		const csvRows = [headers.join(',')]; // Fila de cabecera
+
+		for (const row of data) {
+			const values = headers.map(header => {
+				const escaped = ('' + row[header]).replace(/"/g, '""'); // Escapa comillas dobles
+				return `"${escaped}"`; // Envuelve cada valor en comillas
+			});
+			csvRows.push(values.join(','));
+		}
+
+		const csvString = csvRows.join('\n');
+		const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+		
+		const link = document.createElement("a");
+		if (link.download !== undefined) {
+			const url = URL.createObjectURL(blob);
+			link.setAttribute("href", url);
+			link.setAttribute("download", filename);
+			link.style.visibility = 'hidden';
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
 		}
 	}
 
@@ -1331,8 +1475,9 @@ document.addEventListener('DOMContentLoaded', function () {
 		// 7. Limpiamos los triggers y nos aseguramos de que tienen los nuevos IDs y Key correctos.
 		finalPayload.triggers = finalPayload.triggers.map(trigger => {
 			const { id, ...rest } = trigger;
+			rest.type = 'EmailAudience'; 
 			if (rest.metaData) {
-				rest.metaData.eventDefinitionKey = newEventDef.key; // 'key' en la respuesta es la eventDefinitionKey
+				rest.metaData.eventDefinitionKey = newEventDef.eventDefinitionKey; 
 				rest.metaData.eventDefinitionId = newEventDef.id;
 			}
 			return rest;
@@ -1541,7 +1686,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		// Construimos el payload basándonos estrictamente en la documentación para la creación.
 		const payload = {
-			type: originalEventDef.type,
+			type: 'EmailAudience'/*originalEventDef.type*/,
 			name: `${originalEventDef.name}_Copia`,
 			description: originalEventDef.description || "",
 			mode: originalEventDef.mode || "Production",
@@ -3193,10 +3338,10 @@ document.addEventListener('DOMContentLoaded', function () {
 			const journey = fullJourneyList.find(j => j.id === journeyId);
 			drawJourneyBtn.disabled = !(journey && journey.hasCommunications);
 			// Habilitar "Copiar" solo si hay journey y el tipo es EmailAudience
-			copyJourneyBtn.disabled = !(journey && journey.eventType === 'EmailAudience');
+			copyJourneyBtn.disabled = !(journey && (journey.eventType === 'EmailAudience' || journey.eventType === 'AutomationAudience'));
 			// Aplicar estilo naranja si está habilitado
 			if (!copyJourneyBtn.disabled) {
-				copyJourneyBtn.style.backgroundColor = '#f39c12';
+				copyJourneyBtn.style.backgroundColor = '#7700ffff';
 			} else {
 				copyJourneyBtn.style.backgroundColor = '';
 			}
@@ -3425,6 +3570,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 
 		// --- Listeners de Botones de Macros ---
+		documentDEsBtn.addEventListener('click', macroDocumentDataExtensions);
 		createDEBtn.addEventListener('click', macroCreateDE);
 		createFieldsBtn.addEventListener('click', macroCreateFields);
 		getFieldsBtn.addEventListener('click', macroGetFields);

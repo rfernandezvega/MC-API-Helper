@@ -1,6 +1,6 @@
 {
   "name": "mc-api-helper",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "Herramienta para interactuar con la API de Marketing Cloud",
   "main": "main.js",
   "scripts": {

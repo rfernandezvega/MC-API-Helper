@@ -337,9 +337,8 @@
         <div class="section-header">
             <button class="back-button">← Atrás</button>
             <div class="header-actions">
-                <button id="importFieldsBtn" class="action-button">Importar...</button>
-                <button id="addFieldBtn" class="action-button">Añadir Fila</button>
-                <button id="createFieldsBtn" class="action-button">Crear/Actualizar Campos</button>
+                <button id="importFieldsBtn" class="action-button">Importar</button>                
+                <button id="createFieldsBtn" class="action-button activate-btn">Crear/Actualizar Campos</button>
                 <button id="createDummyFieldsBtn" class="action-button">Campos de Ejemplo</button>                
                 <button id="clearFieldsBtn" class="action-button delete-btn">Limpiar Tabla</button>
             </div>
@@ -354,6 +353,7 @@
           </table>
           <!-- Botones para mover filas seleccionadas -->
           <div class="control-buttons">
+            <button id="addFieldBtn" class="action-button">Añadir Fila</button>
             <button id="moveUp" title="Mover fila seleccionada hacia arriba">▲</button>
             <button id="moveDown" title="Mover fila seleccionada hacia abajo">▼</button>
           </div>
@@ -366,17 +366,15 @@
             <button class="back-button">← Atrás</button>
             <div class="header-actions">
                 <button id="getFields" class="action-button">Recuperar Campos</button>
+                <button id="documentDEsBtn" class="action-button">Documentar Data Extensions</button>
                 <button id="deleteField" class="action-button delete-btn">Borrar Campo</button>
             </div>
         </div>
         <h2>Gestión de Campos de Data Extension</h2>
         <div class="config-block">
-            <h3>Parámetros</h3>
+            <h3>Parámetros para recuperación de 1 DE, Actualización de tabla de campos y Borrado</h3>
             <p class="info-text" style="text-align: left; margin: 0 0 15px;">
-                Introduce la External Key de la DE sobre la que quieres operar.
-            </p>
-             <p class="info-text" style="text-align: left; margin: 0 0 15px;">
-                Los campos recuperados se rellenarán en la picklist y en la sección <em>Campos</em>.
+                Introduce la External Key de la DE sobre la que quieres operar y pulsa en <em>Recuperar Campos</em>.  Estos se rellenarán en la picklist y en la sección <em>Campos</em>.
             </p>
             <div class="form-group">
                 <label for="recExternalKey">External Key de la DE</label>
@@ -385,6 +383,16 @@
             <div class="form-group">
                 <label for="targetFieldSelect">Campo a eliminar</label>
                 <select id="targetFieldSelect" disabled><option value="">-- Pulsa "Recuperar Campos" --</option></select>
+            </div>
+        </div>
+        <div class="config-block">
+            <h3>Parámetros para generación de CSV con las DEs y sus campos </h3>
+            <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+                Introduce un identificador de carpeta y pulsa en <em>Documentar Data Extensions</em>
+            </p>
+            <div class="form-group">
+                <label for="recCategoryId">Identificador de carpeta</label>
+                <input type="text" id="recCategoryId">
             </div>
         </div>
     </div>
