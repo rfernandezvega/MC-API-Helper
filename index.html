@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Marketing Cloud API Helper</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.marketingcloudapis.com https://*.exacttarget.com https://www.googleapis.com">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://*.marketingcloudapis.com https://*.exacttarget.com https://www.googleapis.com">
   <!-- Enlaza la hoja de estilos principal -->
   <link rel="stylesheet" href="style.css">
 </head>
@@ -67,8 +67,8 @@
     <div class="collapsible-group">
         <h3 class="collapsible-header">Data Extensions</h3>
         <ul class="collapsible-content">
-          <li><a class="macro-item" data-macro="configuracionDE">Configuración de Data Extension</a></li>
-          <li><a class="macro-item" data-macro="campos">Campos</a></li>
+          <li><a class="macro-item" data-macro="configuracionDE">Creación de Data Extension</a></li>
+          <li><a class="macro-item" data-macro="campos">Configuración de Campos</a></li>
           <li><a class="macro-item" data-macro="gestionCampos">Recuperación y Borrado de Campos</a></li>
         </ul>
     </div>
@@ -96,12 +96,11 @@
       <div class="menu-group">
         <h3>Panel Principal</h3>
         <div class="menu-buttons-container">
-         <p class="info-text">
-            Bienvenido a Marketing Cloud API Helper.
-         </p>
+         <img src="welcome2.gif" alt="Animación de bienvenida" class="welcome-gif">
          <p class="info-text">
             Para empezar, configura un cliente en "Configuración de APIs". Al pulsar en login (o seleccionándolo si ya estaba guardado) se iniciará el proceso de autenticación.
          </p>
+         
         </div>
       </div>
     </div>

@@ -278,6 +278,13 @@ body {
     border-bottom: 2px solid #e0e7ef;
     padding-bottom: 10px;
 }
+.welcome-gif {
+  display: block; /* Necesario para que el margen automático funcione */
+  margin: 0 auto 20px auto; /* Centra horizontalmente y añade espacio debajo */
+  max-width: 100%; /* Asegura que no se desborde en pantallas pequeñas */
+  width: 350px; /* Ancho fijo, ajústalo a tu gusto */
+  border-radius: 8px; /* Opcional: añade bordes redondeados */
+}
 .menu-buttons-container {
     display: flex;
     flex-direction: column;
