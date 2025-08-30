@@ -384,6 +384,35 @@ body {
     margin-top: 20px; 
 }
 
+/* --- Estilos para el Clonador de Queries --- */
+.cloner-step-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.folder-results-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* Crea 3 columnas de igual tamaño */
+    gap: 20px; /* Espacio entre las columnas */
+    width: 100%;
+}
+
+.folder-column h4 {
+    text-align: center;
+    color: #558ac7;
+    margin-top: 0;
+}
+
+.folder-results-table tbody tr {
+    cursor: pointer;
+}
+
+#query-selection-table th:first-child,
+#query-selection-table td:first-child {
+    width: 50px; /* Ancho fijo para la columna de checkboxes */
+    text-align: center;
+}
+
 /* --- 3.3. Botones (de acción, atrás, deshabilitados) --- */
 
 /* Contenedor para el botón "Atrás" y los botones de acción en la cabecera de una sección */
@@ -428,10 +457,12 @@ body {
 }
 
 /* Botón de "Atrás" (gris) */
-.back-button { 
+.back-button,
+#queryClonerBackBtn { 
     background-color: #6c757d; 
 }
-.back-button:hover { 
+.back-button:hover,
+#queryClonerBackBtn:hover { 
     background-color: #5a6268; 
 }
 /* Botones de flecha para paginación (gris) */
