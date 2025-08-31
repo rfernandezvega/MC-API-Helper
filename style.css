@@ -891,6 +891,61 @@ td a:hover {
   margin-bottom: 20px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.04);
 }
+/* Hace que las pestañas de la documentación sean fijas al hacer scroll */
+.docu-container .tab-buttons {
+  position: -webkit-sticky; /* Para compatibilidad con Safari */
+  position: sticky;
+  top: 0;
+  background-color: #fff; /* Esencial para que el texto no se vea a través */
+  z-index: 10; /* Asegura que las pestañas se mantengan por encima del contenido */
+}
+/* --- 5.1.1. Acordeón de Documentación --- */
+.docu-accordion {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.docu-accordion-item {
+  border-bottom: 1px solid #e9ecef;
+}
+.docu-accordion-item:last-child {
+  border-bottom: none;
+}
+
+.docu-accordion-header {
+  padding: 18px 10px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  font-size: 1.1em;
+  color: #005A9C;
+  transition: background-color 0.2s;
+  user-select: none;
+}
+.docu-accordion-header:hover {
+  background-color: #f8f9fa;
+}
+
+.docu-accordion-header::after {
+  content: '▶';
+  font-size: 0.6em;
+  color: #558ac7;
+  transition: transform 0.3s ease;
+}
+
+.docu-accordion-header.active::after {
+  transform: rotate(90deg);
+}
+
+.docu-accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease-in-out;
+  /* El contenido interno ya está definido en la clase .docu-list */
+}
 
 /* --- 5.2. Modal de Importación --- */
 .modal-overlay {

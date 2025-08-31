@@ -592,7 +592,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
 			const deName = deNameInput.value.trim();
 			const deExternalKey = deExternalKeyInput.value.trim();
-			if (!deName || !deExternalKey) throw new Error('El Nombre y la External Key son obligatorios.');
+			const description = deDescriptionInput.value.trim();
+			if (!deName || !description) throw new Error('El Nombre y la Descripción son obligatorios.');
 
 			const isSendable = isSendableCheckbox.checked;
 			const subscriberKey = subscriberKeyFieldSelect.value;
@@ -4341,6 +4342,33 @@ document.addEventListener('DOMContentLoaded', function () {
 			querySelectionTbody.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = isChecked);
 
 			queryClonerCloneBtn.disabled = !isChecked && clonerState.queriesInSourceFolder.length > 0;
+		});
+
+		// --- Listener para el Acordeón de la Documentación ---
+		const allAccordionHeaders = document.querySelectorAll('.docu-accordion-header');
+		
+		allAccordionHeaders.forEach(header => {
+			header.addEventListener('click', () => {
+				// Encuentra el contenedor del acordeón al que pertenece este header
+				const parentAccordion = header.closest('.docu-accordion');
+				// Busca el header que ya está activo DENTRO de ese mismo acordeón
+				const activeHeader = parentAccordion.querySelector('.docu-accordion-header.active');
+				
+				// Si hacemos clic en un header que ya está abierto (y no es el que pulsamos), lo cerramos.
+				if (activeHeader && activeHeader !== header) {
+					activeHeader.classList.remove('active');
+					activeHeader.nextElementSibling.style.maxHeight = null;
+				}
+
+				// Abrimos o cerramos el header clicado.
+				header.classList.toggle('active');
+				const content = header.nextElementSibling;
+				if (content.style.maxHeight) {
+					content.style.maxHeight = null; // Colapsar
+				} else {
+					content.style.maxHeight = content.scrollHeight + "px"; // Expandir
+				}
+			});
 		});
 	}
 
