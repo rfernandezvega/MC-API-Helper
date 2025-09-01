@@ -248,7 +248,7 @@ body {
 
 /* Permite el scroll vertical si el contenido es más alto que la ventana */
 #main-content {
-    height: 100vh;
+    height: calc(100vh - 40px);
     padding: 20px;
     border-radius: 10px;
     background-color: #fff;

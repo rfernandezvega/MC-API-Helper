@@ -76,12 +76,12 @@
     <div class="collapsible-group">
         <h3 class="collapsible-header">Funcionalidades</h3>
         <ul class="collapsible-content">
-          <li><a class="macro-item" data-macro="calendario">Calendario</a></li>
-          <li><a class="macro-item" data-macro="validadorEmail">Validador de Email</a></li>
           <li><a class="macro-item" data-macro="buscadores">Buscadores</a></li>
+          <li><a class="macro-item" data-macro="calendario">Calendario</a></li>         
           <li><a class="macro-item" data-macro="gestionAutomatismos">Gestión de automatismos</a></li> 
           <li><a class="macro-item" data-macro="gestionJourneys">Gestión de Journeys</a></li>
           <li><a class="macro-item" data-macro="clonadorQueries">Clonador de Queries</a></li> 
+          <li><a class="macro-item" data-macro="validadorEmail">Validador de Email</a></li>
         </ul>
     </div>
   </aside>
@@ -216,11 +216,29 @@
                 <ul>
                 <li>Ve a <b>Data Extensions → Creación de Data Extension</b> para definir el Nombre, la Descripción y si es "Sendable".</li>
                 <li>Puedes incluir el identificador de una carpeta para que se cree donde quieras. Si no se indica, se crea en la carpeta <b>Data Extensions</b>.</li>
-                <li>Ve a <b>Data Extensions → Configuración de Campos</b> para añadir los campos. Puedes hacerlo manualmente (<b>"Añadir Fila"</b>), con ejemplos (<b>"Campos de Ejemplo"</b>) o importando desde el portapapeles (<b>"Importar"</b>).</li>
+                <li>Ve a <b>Data Extensions → Configuración de Campos</b> para añadir los campos.</li> 
+                <li>Puedes hacerlo con:
+                  <ul style="margin-top: 10px;">	
+                      <li><b>Añadir Fila:</b> Añade filas para configurar campos manualmente. Puedes elminar la fila seleccionandola y pulsando en el botón que aparece a la derecha.</li>	
+                      <li><b>Campos de Ejemplo:</b> Mete un campo de cada tipo</li>							
+                      <li><b>Importar:</b> Permite pegar desde el portapapeles, indicando que separador utilizar.</li>							
+                    </ul>                
+                </li>
                 <li>Finalmente, pulsa <b>"Crear Data Extension"</b> en la primera pantalla.</li>
                 </ul>
               </li>
-              <li><b>Modificar o Añadir Campos a una DE Existente:</b>
+            </div>
+            </div>
+          </li>
+          <li class="docu-accordion-item">
+            <div class="docu-accordion-header">
+            <span>Modificar o Añadir Campos a una DE Existente</span>
+            </div>
+            <div class="docu-accordion-content">
+            <div class="docu-list"> <!-- Envolvemos en .docu-list para mantener estilos -->
+              <p>Este flujo te permite crear o actualizar campos en una Data Extension.</p>
+              <ol>            
+              <li><b>Configuración:</b>
                 <ul>
                 <li>Ve a <b>Data Extensions → Recuperación y Borrado de Campos</b>.</li>
                 <li>Introduce la <b>External Key</b> de la DE y pulsa <b>"Recuperar Campos"</b>.</li>
@@ -228,7 +246,40 @@
                 <li>Pulsa <b>"Crear/Actualizar Campos"</b> para aplicar los cambios (esta acción no borra campos).</li>
                 </ul>
               </li>
-              <li><b>Documentar DEs de una Carpeta (Exportar a CSV):</b>
+              </ol>
+            </div>
+            </div>
+          </li>
+
+          <li class="docu-accordion-item">
+            <div class="docu-accordion-header">
+            <span>Borrar campos a una DE Existente</span>
+            </div>
+            <div class="docu-accordion-content">
+            <div class="docu-list"> <!-- Envolvemos en .docu-list para mantener estilos -->
+              <p>Este flujo te permite borrar un campo en una Data Extension. Esto no se puede hacer por pantalla si está en un grupo de atributos, pero sí por API</p>
+              <ol>    
+              <li><b>Configuración:</b>
+                <ul>
+                  <li>En la misma vista de <b>Recuperación y Borrado de Campos</b>, introduce la <b>External Key</b> de la DE y pulsa <b>"Recuperar Campos"</b></li>
+                  <li>La estructura se cargará en la vista de <b>Configuración de Campos</b> y en la <b>picklist</b>.</li>
+                  <li>Selecciona un campo en la picklist y pulsa <b>"Borrar Campo"</b> para eliminarlo.</li>
+                </ul>
+              </li>
+              </ol>
+            </div>
+            </div>
+          </li>
+
+          <li class="docu-accordion-item">
+            <div class="docu-accordion-header">
+            <span>Documentar Data Extensions</span>
+            </div>
+            <div class="docu-accordion-content">
+            <div class="docu-list"> <!-- Envolvemos en .docu-list para mantener estilos -->
+              <p>Este flujo te permite generar un csv con las Data Extensions de una carpeta. Util cuando hay que reivsar una nueva instancia</p>
+              <ol>    
+              <li><b>Configuración:</b>
                 <ul>
                   <li>En la misma vista de <b>Recuperación y Borrado de Campos</b>, introduce el <b>ID numérico</b> de una carpeta.</li>
                   <li>Pulsa <b>"Documentar Data Extensions"</b>. La aplicación generará y descargará un fichero CSV con todas las DEs de esa carpeta y la estructura completa de sus campos.</li>

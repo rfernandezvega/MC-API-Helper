@@ -130,4 +130,4 @@ Para compilar la aplicación y crear un instalador para Windows, ejecuta el sigu
 ```bash
 npm run dist
 
-Será necesario haber generado la variable de entorno previamente con la clave necesaria de Github para las actualizaciones automáticas
+> **Nota:** Será necesario haber generado la variable de entorno previamente con la clave necesaria de Github para las actualizaciones automáticas
