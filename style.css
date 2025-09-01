@@ -429,6 +429,17 @@ body {
   outline: 2px solid #69a3db; /* Resaltado azul al editar */
   box-shadow: 0 0 5px rgba(105, 163, 219, 0.5);
 }
+/* Le decimos a la tabla que su ancho debe ser fijo y no basarse en el contenido.
+   Esto fuerza a las columnas a repartirse el espacio disponible del contenedor. */
+#query-selection-table {
+    table-layout: fixed;
+}
+
+/* Una vez que las columnas son más estrechas, le decimos al texto largo
+   que puede romperse en cualquier punto para evitar que se desborde. */
+#query-selection-table td {
+    word-break: break-all;
+}
 
 /* --- 3.3. Botones (de acción, atrás, deshabilitados) --- */
 
