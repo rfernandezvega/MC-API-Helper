@@ -2505,7 +2505,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			row.innerHTML = `
 				<td><input type="checkbox"></td>
 				<td>${query.name}</td>
-				<td>${query.targetDE.name} (Key: ${query.targetDE.customerKey})</td>
+				<td>${query.targetDE.name}</td>
 				<td contenteditable="true" data-type="query-name">${query.newQueryName}</td>
 				<td contenteditable="true" data-type="de-name">${query.newDeName}</td>
 			`;
