@@ -1615,11 +1615,12 @@ document.addEventListener('DOMContentLoaded', function () {
 	/**
 	 * Clona una Data Extension, incluyendo su estructura y campos.
 	 * @param {string} originalDeCustomerKey - La CustomerKey de la DE a clonar.
+	 * @param {object} newDeName - El nombre de la nueva DE.
 	 * @param {object} apiConfig - El objeto de configuración de la API.
 	 * @param {string} targetCategoryId - El ID de la carpeta donde se guardará la nueva DE.
 	 * @returns {Promise<{objectID: string, customerKey: string, name: string}>} - Promesa con IDs y nombre de la nueva DE.
 	 */
-	async function cloneDataExtension(originalDeCustomerKey, apiConfig, targetCategoryId) {
+	async function cloneDataExtension(originalDeCustomerKey, newDeName, apiConfig, targetCategoryId) {
 		const businessUnitId = businessUnitInput.value.trim();
 
 		// 1. Recuperar detalles de la DE original usando su CustomerKey
@@ -1651,8 +1652,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		const sendableFieldType = fields.find(f => f.mc === originalDeDetails.sendableField)?.type;
 
 		// 3. Crear la nueva DE con una CustomerKey VACÍA
-		logMessage(`  - Subpaso 3: Creando la nueva DE clonada en la carpeta ID ${targetCategoryId}...`);
-		const newDeName = `${originalDeDetails.name}_Copy`;
+		logMessage(`  - Subpaso 3: Creando la nueva DE clonada con nombre "${newDeName}" en la carpeta ID ${targetCategoryId}...`);
 		const descriptionXml = originalDeDetails.description ? `<Description>${originalDeDetails.description}</Description>` : '';
 		const clientXml = businessUnitId ? `<Client><ClientID>${businessUnitId}</ClientID></Client>` : '';
 
@@ -1825,9 +1825,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
 			logMessage(`Recuperando queries de la carpeta ID: ${clonerState.sourceQueryFolder.id}`);
 			const queries = await getQueriesFromFolder(clonerState.sourceQueryFolder.id, apiConfig);
-			clonerState.queriesInSourceFolder = queries;
+			clonerState.queriesInSourceFolder = queries.map(q => ({
+				...q,
+				newQueryName: `${q.name}_Copy`,
+				newDeName: `${q.targetDE.name}_Copy`
+			}));
 			
-			renderQuerySelectionTable(queries);
+			// Pasamos el nuevo estado enriquecido a la función de renderizado
+			renderQuerySelectionTable(clonerState.queriesInSourceFolder);
 
 			queriesClonerStep1.style.display = 'none';
 			queriesClonerStep2.style.display = 'flex';
@@ -1861,23 +1866,25 @@ document.addEventListener('DOMContentLoaded', function () {
 			logMessage(`Iniciando clonación masiva de ${selectedQueries.length} queries...`);
 
 			for (let i = 0; i < selectedQueries.length; i++) {
-				const query = selectedQueries[i];
+				const query = selectedQueries[i]; 
 				const progress = `(${i + 1}/${selectedQueries.length})`;
 
 				try {
 					logMessage(`\n--- ${progress} Procesando Query: ${query.name} ---`);
 					
-					// 1. Clonar la Data Extension
-					blockUI(`${progress} Clonando DE: ${query.targetDE.name}...`);
+					// 1. Clonar la Data Extension 
+					blockUI(`${progress} Clonando DE como "${query.newDeName}"...`);
 					logMessage(`  - Paso 1: Clonando DE de destino (Key: ${query.targetDE.customerKey})`);
-					const clonedDE = await cloneDataExtension(query.targetDE.customerKey, apiConfig, clonerState.targetDEFolder.id);
+					// Pasamos el nuevo nombre de la DE como argumento
+					const clonedDE = await cloneDataExtension(query.targetDE.customerKey, query.newDeName, apiConfig, clonerState.targetDEFolder.id);
 					logMessage(`  - Éxito: Nueva DE "${clonedDE.name}" creada con Key: ${clonedDE.customerKey}`);
 
-					// 2. Crear la nueva Query
-					blockUI(`${progress} Creando Query: ${query.name}_Copy...`);
+					// 2. Crear la nueva Query 
+					blockUI(`${progress} Creando Query como "${query.newQueryName}"...`);
 					logMessage(`  - Paso 2: Creando la nueva Query Activity apuntando a la DE clonada.`);
-					await createClonedQuery(query, clonedDE, clonerState.targetQueryFolder.id, apiConfig);
-					logMessage(`  - Éxito: Query "${query.name}_Copy" creada.`);
+					// Pasamos el nuevo nombre de la Query y el objeto de la DE clonada
+					await createClonedQuery(query, clonedDE, query.newQueryName, clonerState.targetQueryFolder.id, apiConfig);
+					logMessage(`  - Éxito: Query "${query.newQueryName}" creada.`);
 
 					successCount++;
 
@@ -1961,14 +1968,14 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Crea una nueva Query Activity clonada.
 	 * @param {object} originalQuery - El objeto de la query original.
 	 * @param {object} clonedDE - El objeto de la DE clonada (con nueva key y nombre).
+	 * @param {object} newQueryName - El nombre de la Query.
 	 * @param {string} targetCategoryId - El ID de la carpeta donde se guardará la query.
 	 * @param {object} apiConfig - La configuración de la API.
 	 */
-	async function createClonedQuery(originalQuery, clonedDE, targetCategoryId, apiConfig) {
-		const newName = `${originalQuery.name}_Copy`;
+	async function createClonedQuery(originalQuery, clonedDE, newQueryName, targetCategoryId, apiConfig) {
 		const newCustomerKey = '';
 
-		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Create</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><CreateRequest xmlns="http://exacttarget.com/wsdl/partnerAPI"><Objects xsi:type="QueryDefinition"><CategoryID>${targetCategoryId}</CategoryID><CustomerKey>${newCustomerKey}</CustomerKey><Name>${newName}</Name><QueryText>${originalQuery.queryText}</QueryText><TargetType>DE</TargetType><DataExtensionTarget><CustomerKey>${clonedDE.customerKey}</CustomerKey><Name>${clonedDE.name}</Name></DataExtensionTarget><TargetUpdateType>${originalQuery.updateType}</TargetUpdateType></Objects></CreateRequest></s:Body></s:Envelope>`;
+		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Create</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><CreateRequest xmlns="http://exacttarget.com/wsdl/partnerAPI"><Objects xsi:type="QueryDefinition"><CategoryID>${targetCategoryId}</CategoryID><CustomerKey>${newCustomerKey}</CustomerKey><Name>${newQueryName}</Name><QueryText>${originalQuery.queryText}</QueryText><TargetType>DE</TargetType><DataExtensionTarget><CustomerKey>${clonedDE.customerKey}</CustomerKey><Name>${clonedDE.name}</Name></DataExtensionTarget><TargetUpdateType>${originalQuery.updateType}</TargetUpdateType></Objects></CreateRequest></s:Body></s:Envelope>`;
 
 		await executeSoapRequest(apiConfig.soapUri, soapPayload, null);
 	}
@@ -2486,17 +2493,21 @@ document.addEventListener('DOMContentLoaded', function () {
 		querySelectionTbody.innerHTML = '';
 		selectAllQueriesCheckbox.checked = false;
 		if (!queries || queries.length === 0) {
-			querySelectionTbody.innerHTML = '<tr><td colspan="3">No se encontraron Queries en esta carpeta.</td></tr>';
+			// Actualizamos el colspan a 5
+			querySelectionTbody.innerHTML = '<tr><td colspan="5">No se encontraron Queries en esta carpeta.</td></tr>';
 			return;
 		}
 
 		queries.forEach((query, index) => {
 			const row = querySelectionTbody.insertRow();
 			row.dataset.queryIndex = index;
+			// Nueva estructura de la fila con celdas editables
 			row.innerHTML = `
 				<td><input type="checkbox"></td>
 				<td>${query.name}</td>
 				<td>${query.targetDE.name} (Key: ${query.targetDE.customerKey})</td>
+				<td contenteditable="true" data-type="query-name">${query.newQueryName}</td>
+				<td contenteditable="true" data-type="de-name">${query.newDeName}</td>
 			`;
 		});
 	}
@@ -4267,7 +4278,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			}
 		});
 
-				// --- Listeners del Clonador de Queries ---
+		// --- Listeners del Clonador de Queries ---
 		const queryClonerInputs = [querySourceFolderNameInput, queryTargetFolderNameInput, deTargetFolderNameInput];
 		
 		queryClonerInputs.forEach(input => {
@@ -4342,6 +4353,23 @@ document.addEventListener('DOMContentLoaded', function () {
 			querySelectionTbody.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = isChecked);
 
 			queryClonerCloneBtn.disabled = !isChecked && clonerState.queriesInSourceFolder.length > 0;
+		});
+
+		// --- Listener para edición en la tabla de selección de queries ---
+		querySelectionTbody.addEventListener('input', (e) => {
+			const cell = e.target.closest('td[contenteditable="true"]');
+			if (!cell) return;
+
+			const row = cell.closest('tr');
+			const index = parseInt(row.dataset.queryIndex, 10);
+			const dataType = cell.dataset.type;
+			const newValue = cell.textContent.trim();
+
+			if (dataType === 'query-name') {
+				clonerState.queriesInSourceFolder[index].newQueryName = newValue;
+			} else if (dataType === 'de-name') {
+				clonerState.queriesInSourceFolder[index].newDeName = newValue;
+			}
 		});
 
 		// --- Listener para el Acordeón de la Documentación ---

@@ -413,6 +413,23 @@ body {
     text-align: center;
 }
 
+/* --- Estilos para Tablas Editables (Clonador de Queries) --- */
+#query-selection-table td[contenteditable="true"] {
+  cursor: text;
+  background-color: #f8f9fa; /* Un fondo muy ligero para indicar que es editable */
+  transition: background-color 0.2s;
+}
+
+#query-selection-table td[contenteditable="true"]:hover {
+  background-color: #e9ecef;
+}
+
+#query-selection-table td[contenteditable="true"]:focus {
+  background-color: #fff;
+  outline: 2px solid #69a3db; /* Resaltado azul al editar */
+  box-shadow: 0 0 5px rgba(105, 163, 219, 0.5);
+}
+
 /* --- 3.3. Botones (de acción, atrás, deshabilitados) --- */
 
 /* Contenedor para el botón "Atrás" y los botones de acción en la cabecera de una sección */
