@@ -82,6 +82,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	const drawJourneyBtn = document.getElementById('drawJourneyBtn'); 
 	const stopJourneyBtn = document.getElementById('stopJourneyBtn');
 	const copyJourneyBtn = document.getElementById('copyJourneyBtn'); 
+	const deleteJourneyBtn = document.getElementById('deleteJourneyBtn');
 
 	 // --- Modal de Flujo de Journey ---
     const journeyFlowModal = document.getElementById('journey-flow-modal');
@@ -1456,14 +1457,6 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 
 	/**
-	 * Prepara el payload para crear una copia de un Journey.
-	 * @param {object} originalJourney - El objeto de Journey completo.
-	 * @param {object} originalEventDef - El objeto de Event Definition original para obtener la clave antigua.
-	 * @param {string} newEventDefKey - La nueva eventDefinitionKey.
-	 * @param {string} newEventDefId - El nuevo eventDefinitionId.
-	 * @returns {object} Un objeto JSON listo para ser enviado en la petición de creación.
-	 */
-	/**
 	 * Prepara el payload para crear una copia de un Journey, actualizando todas las referencias.
 	 * @param {object} originalJourney - El objeto de Journey completo.
 	 * @param {object} originalEventDef - El objeto de Event Definition original para obtener la clave antigua.
@@ -1772,6 +1765,74 @@ document.addEventListener('DOMContentLoaded', function () {
 			}
 		}
 		return communications;
+	}
+
+	/**
+	 * Macro para borrar los Journeys seleccionados.
+	 */
+	async function macroDeleteJourneys() {
+		const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
+		if (selectedRows.length === 0) return;
+
+		const journeysToDelete = Array.from(selectedRows).map(row => {
+			return fullJourneyList.find(j => j.id === row.dataset.journeyId);
+		}).filter(Boolean);
+
+		if (journeysToDelete.length === 0) return;
+
+		if (!await showCustomConfirm(`¿Seguro que quieres borrar permanentemente ${journeysToDelete.length} journey(s)? Esta acción no se puede deshacer.`)) {
+			return;
+		}
+
+		blockUI(`Borrando ${journeysToDelete.length} journey(s)...`);
+		startLogBuffering();
+		const successes = [];
+		const failures = [];
+
+		try {
+			const apiConfig = await getAuthenticatedConfig();
+			const headers = { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" };
+
+			for (const journey of journeysToDelete) {
+				logMessage(`Procesando borrado para: "${journey.name}" (ID: ${journey.id})`);
+				const deleteUrl = `${apiConfig.restUri}interaction/v1/interactions/${journey.id}`;
+				logApiCall({ action: 'DELETE', endpoint: deleteUrl });
+
+				try {
+					const response = await fetch(deleteUrl, { method: 'DELETE', headers });
+					
+					// La API de borrado responde con 200 OK y un cuerpo vacío en caso de éxito
+					if (response.ok) {
+						successes.push({ name: journey.name });
+						logApiResponse({ for: journey.name, status: 'Success', response: 'Borrado con éxito.' });
+					} else {
+						const responseData = await response.json(); // Intentamos leer el error
+						failures.push({ name: journey.name, reason: responseData.message || `Error ${response.status}` });
+						logApiResponse({ for: journey.name, status: 'Failure', response: responseData });
+					}
+				} catch (error) {
+					failures.push({ name: journey.name, reason: error.message });
+					logApiResponse({ for: journey.name, status: 'Failure', response: error.message });
+				}
+			}
+		} catch (error) {
+			logMessage(`Error fatal durante la acción de borrado: ${error.message}`);
+			showCustomAlert(`Error fatal: ${error.message}`);
+		} finally {
+			const alertSummary = `Proceso de borrado finalizado. Éxitos: ${successes.length}, Fallos: ${failures.length}.`;
+			let logSummary = alertSummary;
+			if (failures.length > 0) {
+				const failureDetails = failures.map(f => `  - ${f.name}: ${f.reason}`).join('\n');
+				logSummary += `\n\n--- Detalles de Fallos ---\n${failureDetails}`;
+			}
+			logMessage(logSummary);
+			showCustomAlert(alertSummary);
+			unblockUI();
+			endLogBuffering();
+			
+			// Refrescamos la tabla para que desaparezcan los journeys borrados
+			refreshJourneysTableBtn.click();
+		}
 	}
 
 	// --- 4.7. Clonador Masivo de Queries ---
@@ -3633,43 +3694,48 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * basándose en la selección actual de filas en la tabla de journeys.
 	 */
 	function updateJourneyActionButtonsState() {
-		const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
-		const selectionCount = selectedRows.length;
+    const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
+    const selectionCount = selectedRows.length;
 
-		// Botón "Comunicaciones" (habilitado si hay 1 o más seleccionados)
-		getCommunicationsBtn.disabled = selectionCount === 0;
+    // Lógica para los botones existentes (Comunicaciones, Dibujar, Copiar)
+    getCommunicationsBtn.disabled = selectionCount === 0;
 
-		// Botón "Dibujar" y "Copiar" (habilitados solo si hay 1 seleccionado)
-		if (selectionCount === 1) {
-			const journeyId = selectedRows[0].dataset.journeyId;
-			const journey = fullJourneyList.find(j => j.id === journeyId);
-			drawJourneyBtn.disabled = !(journey && journey.hasCommunications);
-			// Habilitar "Copiar" solo si hay journey y el tipo es EmailAudience
-			copyJourneyBtn.disabled = !(journey && (journey.eventType === 'EmailAudience' || journey.eventType === 'AutomationAudience'));
-			// Aplicar estilo naranja si está habilitado
-			if (!copyJourneyBtn.disabled) {
-				copyJourneyBtn.style.backgroundColor = '#7700ffff';
-			} else {
-				copyJourneyBtn.style.backgroundColor = '';
-			}
-		} else {
-			drawJourneyBtn.disabled = true;
-			copyJourneyBtn.disabled = true;
-			copyJourneyBtn.style.backgroundColor = '';
-		}
+    if (selectionCount === 1) {
+        const journeyId = selectedRows[0].dataset.journeyId;
+        const journey = fullJourneyList.find(j => j.id === journeyId);
+        drawJourneyBtn.disabled = !(journey && journey.hasCommunications);
+        copyJourneyBtn.disabled = !(journey && (journey.eventType === 'EmailAudience' || journey.eventType === 'AutomationAudience'));
+        if (!copyJourneyBtn.disabled) {
+            copyJourneyBtn.style.backgroundColor = '#7700ffff';
+        } else {
+            copyJourneyBtn.style.backgroundColor = '';
+        }
+    } else {
+        drawJourneyBtn.disabled = true;
+        copyJourneyBtn.disabled = true;
+        copyJourneyBtn.style.backgroundColor = '';
+    }
 
-		// Botón "Parar" (habilitado si hay 1 o más Y todos son 'Published')
-		if (selectionCount > 0) {
-			const selectedJourneys = Array.from(selectedRows).map(row => {
-				return fullJourneyList.find(j => j.id === row.dataset.journeyId);
-			}).filter(Boolean);
-			
-			const allArePublished = selectedJourneys.every(j => j.status === 'Published');
-			stopJourneyBtn.disabled = !allArePublished;
-		} else {
-			stopJourneyBtn.disabled = true;
-		}
-	}
+    // Lógica para los botones de acción masiva (Parar, Borrar)
+    if (selectionCount > 0) {
+        const selectedJourneys = Array.from(selectedRows).map(row => {
+            return fullJourneyList.find(j => j.id === row.dataset.journeyId);
+        }).filter(Boolean);
+
+        // Lógica para el botón "Parar"
+        const allArePublished = selectedJourneys.every(j => j.status === 'Published');
+        stopJourneyBtn.disabled = !allArePublished;
+
+        // Se habilita solo si hay seleccionados Y TODOS son de subtipo 'Quicksend'
+        const allAreQuicksend = selectedJourneys.every(j => j.definitionType === 'Quicksend');
+        deleteJourneyBtn.disabled = !allAreQuicksend;
+
+    } else {
+        // Si no hay nada seleccionado, todos los botones de acción se deshabilitan
+        stopJourneyBtn.disabled = true;
+        deleteJourneyBtn.disabled = true;
+    }
+}
 
 	/**
 	 * Gestiona el envío del formulario de licencia.
@@ -4182,6 +4248,7 @@ document.addEventListener('DOMContentLoaded', function () {
         getCommunicationsBtn.addEventListener('click', macroGetJourneyCommunications);
 		copyJourneyBtn.addEventListener('click', macroCopyJourney);
 		stopJourneyBtn.addEventListener('click', macroStopJourneys);
+		deleteJourneyBtn.addEventListener('click', macroDeleteJourneys);
 
 		refreshJourneysTableBtn.addEventListener('click', async () => {
 			// Añadimos el patrón de bloqueo/desbloqueo seguro

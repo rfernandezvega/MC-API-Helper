@@ -518,6 +518,14 @@ body {
     background-color: #c82333; 
 }
 
+/* Botones de acción destructiva MÁS FUERTE (rojo oscuro) */
+.action-button.delete-btn-darker { 
+    background-color: #b02a37; /* Un rojo más oscuro que el de "Parar" */
+}
+.action-button.delete-btn-darker:hover { 
+    background-color: #8b212b; /* Aún más oscuro al pasar el ratón */
+}
+
 /* Botón de "Ejecutar" (naranja) */
 #runAutomationBtn:not([disabled]) {
     background-color: #f39c12;
