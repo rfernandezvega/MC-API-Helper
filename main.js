@@ -10,6 +10,9 @@ const path = require('path');
 const axios = require('axios');
 const keytar = require('keytar'); // Librería para el llavero seguro
 
+const appVersion = require('./package.json').version;
+
+
 // --- Configuración Inicial ---
 // Asigna un App User Model ID explícito. Esto arregla el nombre en las notificaciones de Windows.
 app.setAppUserModelId("com.seidor.mc-api-helper");
@@ -129,7 +132,7 @@ function initializeGoogleClient() {
     });
 }
 // --- FUNCIÓN DE VALIDACIÓN DE LICENCIA ---
-async function validateUserInSheet(email, accessKey) {
+async function validateUserInSheet(email, accessKey, version) {
     try {
         // 1. Esperamos a que la promesa de inicialización se complete
         const sheets = await sheetsClientPromise;
@@ -140,7 +143,7 @@ async function validateUserInSheet(email, accessKey) {
         // 2. Leer los datos de la hoja
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${SHEET_NAME}!A:F`, // Leemos hasta la columna F para obtener el contador
+            range: `${SHEET_NAME}!A:G`, // Leemos hasta la columna F para obtener el contador
         });
 
         const rows = response.data.values;
@@ -185,11 +188,11 @@ async function validateUserInSheet(email, accessKey) {
         // Preparamos la llamada de actualización
         await sheets.spreadsheets.values.update({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${SHEET_NAME}!E${sheetRowNumber}:F${sheetRowNumber}`, // Rango a actualizar, ej: Accesos!E5:F5
+            range: `${SHEET_NAME}!E${sheetRowNumber}:G${sheetRowNumber}`, // Rango a actualizar, ej: Accesos!E5:F5
             valueInputOption: 'USER_ENTERED',
             resource: {
                 values: [
-                    [newCount, lastAccessTimestamp] // Los valores para las columnas E y F
+                    [newCount, lastAccessTimestamp, version]
                 ],
             },
         });
@@ -212,7 +215,7 @@ async function validateUserInSheet(email, accessKey) {
 
 ipcMain.handle('validate-license', async (event, { email, key }) => {
     try {
-        return await validateUserInSheet(email, key);
+        return await validateUserInSheet(email, key, appVersion);
     } catch (error) {
         // Si hay un error, lo pasamos a la UI para que lo muestre
         return { error: error.message };
