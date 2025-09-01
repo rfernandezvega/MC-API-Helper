@@ -74,6 +74,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	const journeysTbody = document.getElementById('journeys-tbody');
 	const journeyNameFilter = document.getElementById('journeyNameFilter');
 	const journeyTypeFilter = document.getElementById('journeyTypeFilter');
+	const journeySubtypeFilter = document.getElementById('journeySubtypeFilter');
 	const refreshJourneysTableBtn = document.getElementById('refreshJourneysTableBtn');
 	const getCommunicationsBtn = document.getElementById('getCommunicationsBtn');
 	const journeyStatusFilter = document.getElementById('journeyStatusFilter');
@@ -494,6 +495,7 @@ document.addEventListener('DOMContentLoaded', function () {
             journeyFolderMap = {};
             if (journeyNameFilter) journeyNameFilter.value = '';
             if (journeyTypeFilter) journeyTypeFilter.value = '';
+			if (journeySubtypeFilter) journeySubtypeFilter.value = '';
             if (journeyStatusFilter) journeyStatusFilter.value = '';
             if (journeyDEFilter) journeyDEFilter.value = '';
             if (journeysTbody) journeysTbody.innerHTML = ''; // Limpia la tabla visualmente
@@ -2686,6 +2688,12 @@ document.addEventListener('DOMContentLoaded', function () {
 		types.forEach(type => journeyTypeFilter.appendChild(new Option(type, type)));
 		journeyTypeFilter.value = currentType;	
 
+		const currentSubtype = journeySubtypeFilter.value;
+		journeySubtypeFilter.innerHTML = '<option value="">Todos los subtipos</option>';
+		const subtypes = [...new Set(journeys.map(j => j.definitionType).filter(Boolean))].sort();
+		subtypes.forEach(subtype => journeySubtypeFilter.appendChild(new Option(subtype, subtype)));
+		journeySubtypeFilter.value = currentSubtype;
+
         const currentStatus = journeyStatusFilter.value;
         journeyStatusFilter.innerHTML = '<option value="">Todos los estados</option>';
         const statuses = [...new Set(journeys.map(j => j.status).filter(Boolean))].sort();
@@ -2701,6 +2709,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		const nameFilter = journeyNameFilter.value.toLowerCase().trim();
 		const typeFilter = journeyTypeFilter.value;
+		const subtypeFilter = journeySubtypeFilter.value;
 		const statusFilter = journeyStatusFilter.value;
 		const deFilter = journeyDEFilter.value.toLowerCase().trim();
 
@@ -2711,6 +2720,9 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 		if (typeFilter) {
 			filteredJourneys = filteredJourneys.filter(j => j.eventType === typeFilter);
+		}
+		if (subtypeFilter) {
+			filteredJourneys = filteredJourneys.filter(j => j.definitionType === subtypeFilter);
 		}
 		if (statusFilter) {
 			filteredJourneys = filteredJourneys.filter(j => j.status === statusFilter);
@@ -3424,6 +3436,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 				// Datos enriquecidos
 				eventType: eventDef?.type || 'No asociado',
+				definitionType: journey.definitionType || 'N/A',
 				dataExtensionName: eventDef?.dataExtensionName || 'No asociado',
 				location: folderPath,
 
@@ -3446,7 +3459,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		updateJourneySortIndicators(); 
 
 		if (!journeysToRender || journeysToRender.length === 0) {
-			journeysTbody.innerHTML = '<tr><td colspan="12">No se encontraron journeys con los filtros aplicados.</td></tr>';
+			journeysTbody.innerHTML = '<tr><td colspan="13">No se encontraron journeys con los filtros aplicados.</td></tr>';
 			return;
 		}
 
@@ -3464,6 +3477,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				<td>${formatDateToSpanishTime(journey.createdDate)}</td>
 				<td>${formatDateToSpanishTime(journey.modifiedDate)}</td>
 				<td>${journey.eventType || '---'}</td> 
+				<td>${journey.definitionType || '---'}</td>
 				<td>${journey.status || '---'}</td>
 				<td>${journey.location || '---'}</td>
 				<td>${journey.dataExtensionName || '---'}</td>
@@ -4161,6 +4175,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		// --- Listeners de Gestión de Journeys ---
 		journeyNameFilter.addEventListener('input', applyJourneyFiltersAndRender);
 		journeyTypeFilter.addEventListener('change', applyJourneyFiltersAndRender);
+		journeySubtypeFilter.addEventListener('change', applyJourneyFiltersAndRender);
         journeyStatusFilter.addEventListener('change', applyJourneyFiltersAndRender);
         journeyDEFilter.addEventListener('input', applyJourneyFiltersAndRender);
 
@@ -4179,6 +4194,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				journeyFolderMap = {};
 				journeyNameFilter.value = '';
 				journeyTypeFilter.value = '';
+				journeySubtypeFilter.value = ''; 
 				journeyStatusFilter.value = '';
 				journeyDEFilter.value = '';
 				updateJourneyActionButtonsState();
