@@ -3,11 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <title>Marketing Cloud API Helper</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://*.marketingcloudapis.com https://*.exacttarget.com https://www.googleapis.com">
   <!-- Enlaza la hoja de estilos principal -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
+<div id="license-modal-overlay" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <h3>Acceso a la Aplicación</h3>
+        <p>Por favor, introduce tu email y la clave de acceso para activar la herramienta.</p>
+        <p id="license-error-message" class="error-text" style="display: none;"></p>
+        <form id="license-form" class="config-section-container" style="padding: 0;">
+            <div class="form-group">
+                <label for="license-email">Email de registro</label>
+                <input type="email" id="license-email" required>
+            </div>
+            <div class="form-group">
+                <label for="license-key">Clave de Acceso</label>
+                <input type="password" id="license-key" required>
+            </div>
+            <div class="modal-actions" style="margin-top: 10px;">
+                <button type="submit" id="license-submit-btn" class="action-button">Validar y Acceder</button>
+            </div>
+        </form>
+    </div>
+</div>
   <div id="loader-overlay" class="loader-overlay" style="display: none;">
     <div class="loader-spinner"></div>
     <p id="loader-text" class="loader-text">Cargando...</p>
@@ -47,20 +67,21 @@
     <div class="collapsible-group">
         <h3 class="collapsible-header">Data Extensions</h3>
         <ul class="collapsible-content">
-          <li><a class="macro-item" data-macro="configuracionDE">Configuración de Data Extension</a></li>
-          <li><a class="macro-item" data-macro="campos">Campos</a></li>
-          <li><a class="macro-item" data-macro="gestionCampos">Gestión de Campos</a></li>
+          <li><a class="macro-item" data-macro="configuracionDE">Creación de Data Extension</a></li>
+          <li><a class="macro-item" data-macro="campos">Configuración de Campos</a></li>
+          <li><a class="macro-item" data-macro="gestionCampos">Recuperación y Borrado de Campos</a></li>
         </ul>
     </div>
 
     <div class="collapsible-group">
         <h3 class="collapsible-header">Funcionalidades</h3>
         <ul class="collapsible-content">
-          <li><a class="macro-item" data-macro="calendario">Calendario</a></li>
-          <li><a class="macro-item" data-macro="validadorEmail">Validador de Email</a></li>
           <li><a class="macro-item" data-macro="buscadores">Buscadores</a></li>
+          <li><a class="macro-item" data-macro="calendario">Calendario</a></li>         
           <li><a class="macro-item" data-macro="gestionAutomatismos">Gestión de automatismos</a></li> 
-          <li><a class="macro-item" data-macro="gestionJourneys">Gestión de Journeys</a></li> 
+          <li><a class="macro-item" data-macro="gestionJourneys">Gestión de Journeys</a></li>
+          <li><a class="macro-item" data-macro="clonadorQueries">Clonador de Queries</a></li> 
+          <li><a class="macro-item" data-macro="validadorEmail">Validador de Email</a></li>
         </ul>
     </div>
   </aside>
@@ -76,12 +97,11 @@
       <div class="menu-group">
         <h3>Panel Principal</h3>
         <div class="menu-buttons-container">
-         <p class="info-text">
-            Bienvenido a Marketing Cloud API Helper.
-         </p>
+         <img src="welcome2.gif" alt="Animación de bienvenida" class="welcome-gif">
          <p class="info-text">
             Para empezar, configura un cliente en "Configuración de APIs". Al pulsar en login (o seleccionándolo si ya estaba guardado) se iniciará el proceso de autenticación.
          </p>
+         
         </div>
       </div>
     </div>
@@ -94,68 +114,364 @@
       <div class="tabs-container docu-container">
         <div class="tab-buttons">
           <button class="tab-button active" data-tab="configuracion-principal">Primeros Pasos</button>
-          <button class="tab-button" data-tab="guia-rapida">Guía Rápida</button>
+          <button class="tab-button" data-tab="guia-rapida">Guía de funcionalidades</button>
           <button class="tab-button" data-tab="errores-comunes">Errores Comunes</button>
           <button class="tab-button" data-tab="comentarios-adicionales">Comentarios</button>
         </div>
         
         <!-- Pestaña: Primeros Pasos -->
         <div id="configuracion-principal" class="tab-content active">
-          <ul class="docu-list">
-            <li>
-              <div class="docu-item-header">
-                <span class="docu-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z" /><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /></svg>
+          <ol class="docu-accordion">
+
+            <!-- Paso 1 -->
+            <li class="docu-accordion-item">
+              <div class="docu-accordion-header">
+                <span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z" /><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /></svg>
+                  <strong>Paso 1: Configurar la Aplicación en Marketing Cloud</strong>
                 </span>
-                <strong>Paso 1: Configurar la Aplicación en Marketing Cloud</strong>
               </div>
-              <ul>
-                <li>Ve a <b>Setup → Apps → Installed Packages</b>.</li>
-                <li>Crea un nuevo paquete de tipo <b>Server-to-Server</b> o <b>Web App</b>.</li>
-                <li>Si es <b>Web App</b>, el Callback URI debe ser <code>https://127.0.0.1:8443/callback</code>.</li>
-                <li>En el componente de API, asigna estos permisos:
-                  <ul class="docu-permissions">
-                    <li><b>Email:</b> Read, Write</li>
-                    <li><b>Automations:</b> Read, Write, Execute</li>
-                    <li><b>Journeys:</b> Read</li>
-                    <li><b>Audiences:</b> Read, Write</li>
-                    <li><b>List and Subscribers:</b> Read, Write</li>
-                    <li><b>Data Extensions:</b> Read, Write</li>
+              <div class="docu-accordion-content">
+                <div class="docu-list">
+                  <ul>
+                    <li>Ve a <b>Setup → Apps → Installed Packages</b>.</li>
+                    <li>Crea un nuevo paquete de tipo <b>Web App</b>.</li>
+                    <li>El **Redirect URI** debe ser exactamente: <code>https://127.0.0.1:8443/callback</code>.</li>
+                    <li>En el componente de API, asigna estos permisos:
+                      <ul class="docu-permissions">
+                        <li><b>Email:</b> Read, Write</li>
+                        <li><b>Automations:</b> Read, Write, Execute</li>
+                        <li><b>Journeys:</b> Read, Write, Activate/Stop/Pause/Resume/Send/Schedule, Delete</li>
+                        <li><b>Audiences:</b> Read, Write</li>
+                        <li><b>List and Subscribers:</b> Read, Write</li>
+                        <li><b>Data Extensions:</b> Read, Write</li>
+                      </ul>
+                    </li>
+                    <div class="docu-callout info">
+                      <b>IMPORTANTE:</b> La aplicación en Marketing Cloud puede tardar hasta 10 minutos en estar completamente operativa después de guardarla.
+                    </div>
                   </ul>
-                </li>
-                <div class="docu-callout info">
-                  <b>IMPORTANTE:</b> La aplicación en Marketing Cloud puede tardar hasta 10 minutos en estar completamente operativa después de guardarla.
                 </div>
-              </ul>
-            </li>
-            <li>
-              <div class="docu-item-header">
-                <span class="docu-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 7h1" /><path d="M9 13h6" /><path d="M9 17h6" /></svg>
-                </span>
-                <strong>Paso 2: Configurar un Cliente en esta App</strong>
               </div>
-              <ul>
-                <li>Ve a la vista de <b>Configuración de APIs</b>.</li>
-                <li>Introduce un nombre para el cliente (ej: "Cliente X - Producción").</li>
-                <li>Rellena los datos (MID, Auth URI, Client ID, etc.) obtenidos del paso anterior.</li>
-                <li>Pulsa <b>"Guardar"</b>. La configuración quedará almacenada en tu equipo.</li>
-                <li>Pulsa <b>"Login"</b> para iniciar la sesión. Se abrirá una ventana de Salesforce para que te autentiques.</li>
-              </ul>
             </li>
-          </ul>
+
+            <!-- Paso 2 -->
+            <li class="docu-accordion-item">
+              <div class="docu-accordion-header">
+                <span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;"><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 7h1" /><path d="M9 13h6" /><path d="M9 17h6" /></svg>
+                  <strong>Paso 2: Configurar un Cliente en esta App</strong>
+                </span>
+              </div>
+              <div class="docu-accordion-content">
+                <div class="docu-list">
+                  <ul>
+                    <li>Ve a la vista de <b>Configuración de APIs</b>.</li>
+                    <li>Introduce un nombre para el cliente (ej: "Cliente X - Producción").</li>
+                    <li>Rellena los datos (MID, Auth URI, Client ID, etc.) obtenidos del paso anterior.</li>
+                    <li>Pulsa <b>"Login"</b> para guardar e iniciar la sesión. Se abrirá una ventana de Salesforce para que te autentiques.</li>
+                    <li>En la parte inferior se pueden configurar las tablas sobre las que lanzar la búsqueda de clientes. Se debe indicar el nombre de la tabla, su External Key y el nombre del campo por el que buscar al cliente</li>
+                    <li>Pulsa <b>"Guardar"</b>. La configuración quedará almacenada en tu equipo. Esto principalmente es para la parte de las tablas.</li>
+                  </ul>
+                </div>
+              </div>
+            </li>
+
+             <!-- Paso 3 -->
+            <li class="docu-accordion-item">
+              <div class="docu-accordion-header">
+                <span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;"><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 7h1" /><path d="M9 13h6" /><path d="M9 17h6" /></svg>
+                  <strong>Log de Eventos</strong>
+                </span>
+              </div>
+              <div class="docu-accordion-content">
+                <div class="docu-list">
+                  <ul>
+                    <li>El panel lateral derecho se puede colapsar.</li>
+                    <li>El bloque <b>Mensajes</b> muestra los procesos ejecutados y los posibles errores que se hayan podido dar al realizar una acción.</li>
+                    <li>El bloque <b>Llamada API</b>, muestra todas las llamadas que se han hecho al realizar una acción con el endpoint y el payload.</li>
+                    <li>El bloque <b>Respuesta API</b>Respuesta API, muestra todas las respuestas que se han recibido al realizar una acción.</li>
+                  </ul>
+                </div>
+              </div>
+            </li>
+
+          </ol>
         </div>
 
-        <!-- Pestaña: Guía Rápida -->
+        <!-- Pestaña: Guía Rápida (Versión Acordeón) -->
         <div id="guia-rapida" class="tab-content">
-          <ol class="docu-list ordered">
-            <li><b>Configuración de DE:</b> Define el nombre, carpeta y si será "Sendable".</li>
-            <li><b>Campos:</b> Añade campos manualmente, con el botón de ejemplos o importando desde Excel/Sheets.</li>
-            <li><b>Crear DE / Campos:</b> Usa "Crear Data Extension" para DEs nuevas o "Crear/Actualizar Campos" para modificar una existente.</li>
-            <li><b>Gestión de Campos:</b> Herramienta para recuperar o eliminar campos de una DE. Muy útil para campos en Attribute Groups que no se pueden borrar desde la interfaz de MC.</li>
-            <li><b>Calendario:</b> Visualiza los automatismos programados. Un botón muestra todos, y el otro filtra solo los que contienen un Journey.</li>
-            <li><b>Buscadores:</b> Un potente conjunto de herramientas para encontrar DEs por su nombre (incluso parcial), el origen de sus datos, buscar texto dentro de todas las Queries, y localizar clientes.</li>
-            <li><b>Gestión de automatismos:</b> Permite buscar, filtrar y realizar acciones masivas (Activar, Ejecutar, Parar) sobre los automatismos.</li>
+          <ol class="docu-accordion">
+
+          <li class="docu-accordion-item">
+            <div class="docu-accordion-header">
+            <span>Creación de Data Extensions</span>
+            </div>
+            <div class="docu-accordion-content">
+            <div class="docu-list"> <!-- Envolvemos en .docu-list para mantener estilos -->
+              <p>Este flujo te permite crear una Data Extensions.</p>
+              <ol>
+              <li><b>Configuración:</b>
+                <ul>
+                <li>Ve a <b>Data Extensions → Creación de Data Extension</b> para definir el Nombre, la Descripción y si es "Sendable".</li>
+                <li>Puedes incluir el identificador de una carpeta para que se cree donde quieras. Si no se indica, se crea en la carpeta <b>Data Extensions</b>.</li>
+                <li>Ve a <b>Data Extensions → Configuración de Campos</b> para añadir los campos.</li> 
+                <li>Puedes hacerlo con:
+                  <ul style="margin-top: 10px;">	
+                      <li><b>Añadir Fila:</b> Añade filas para configurar campos manualmente. Puedes elminar la fila seleccionandola y pulsando en el botón que aparece a la derecha.</li>	
+                      <li><b>Campos de Ejemplo:</b> Mete un campo de cada tipo</li>							
+                      <li><b>Importar:</b> Permite pegar desde el portapapeles, indicando que separador utilizar.</li>							
+                    </ul>                
+                </li>
+                <li>Finalmente, pulsa <b>"Crear Data Extension"</b> en la primera pantalla.</li>
+                </ul>
+              </li>
+            </div>
+            </div>
+          </li>
+          <li class="docu-accordion-item">
+            <div class="docu-accordion-header">
+            <span>Modificar o Añadir Campos a una DE Existente</span>
+            </div>
+            <div class="docu-accordion-content">
+            <div class="docu-list"> <!-- Envolvemos en .docu-list para mantener estilos -->
+              <p>Este flujo te permite crear o actualizar campos en una Data Extension.</p>
+              <ol>            
+              <li><b>Configuración:</b>
+                <ul>
+                <li>Ve a <b>Data Extensions → Recuperación y Borrado de Campos</b>.</li>
+                <li>Introduce la <b>External Key</b> de la DE y pulsa <b>"Recuperar Campos"</b>.</li>
+                <li>La estructura se cargará en la vista de <b>Configuración de Campos</b>. Añade las filas nuevas que necesites.</li>
+                <li>Pulsa <b>"Crear/Actualizar Campos"</b> para aplicar los cambios (esta acción no borra campos).</li>
+                </ul>
+              </li>
+              </ol>
+            </div>
+            </div>
+          </li>
+
+          <li class="docu-accordion-item">
+            <div class="docu-accordion-header">
+            <span>Borrar campos a una DE Existente</span>
+            </div>
+            <div class="docu-accordion-content">
+            <div class="docu-list"> <!-- Envolvemos en .docu-list para mantener estilos -->
+              <p>Este flujo te permite borrar un campo en una Data Extension. Esto no se puede hacer por pantalla si está en un grupo de atributos, pero sí por API</p>
+              <ol>    
+              <li><b>Configuración:</b>
+                <ul>
+                  <li>En la misma vista de <b>Recuperación y Borrado de Campos</b>, introduce la <b>External Key</b> de la DE y pulsa <b>"Recuperar Campos"</b></li>
+                  <li>La estructura se cargará en la vista de <b>Configuración de Campos</b> y en la <b>picklist</b>.</li>
+                  <li>Selecciona un campo en la picklist y pulsa <b>"Borrar Campo"</b> para eliminarlo.</li>
+                </ul>
+              </li>
+              </ol>
+            </div>
+            </div>
+          </li>
+
+          <li class="docu-accordion-item">
+            <div class="docu-accordion-header">
+            <span>Documentar Data Extensions</span>
+            </div>
+            <div class="docu-accordion-content">
+            <div class="docu-list"> <!-- Envolvemos en .docu-list para mantener estilos -->
+              <p>Este flujo te permite generar un csv con las Data Extensions de una carpeta. Util cuando hay que reivsar una nueva instancia</p>
+              <ol>    
+              <li><b>Configuración:</b>
+                <ul>
+                  <li>En la misma vista de <b>Recuperación y Borrado de Campos</b>, introduce el <b>ID numérico</b> de una carpeta.</li>
+                  <li>Pulsa <b>"Documentar Data Extensions"</b>. La aplicación generará y descargará un fichero CSV con todas las DEs de esa carpeta y la estructura completa de sus campos.</li>
+                </ul>
+              </li>
+              </ol>
+            </div>
+            </div>
+          </li>
+
+          <li class="docu-accordion-item">
+            <div class="docu-accordion-header">
+            <span>Calendario de Automatizaciones</span>
+            </div>
+            <div class="docu-accordion-content">
+            <div class="docu-list">
+              <p>Una vista para visualizar los automatismos programados o los automatismos programados que lanzan journeys.</p>
+              <ul>
+                <li><b>Refrescar Automatismos:</b> Pulsa este botón para cargar <b>todas</b> las automatizaciones programadas en el calendario.</li>
+                <li><b>Refrescar Automatismos de Journeys:</b> Pulsa este botón para cargar únicamente las automatizaciones que contienen una actividad de Journey.</li>
+                <li><b>Navegación:</b> Haz clic en un día del calendario que esté resaltado. La lista de la derecha se actualizará con las ejecuciones de ese día. Si haces clic en el título de esa lista <b>"Automatizaciones del Día"</b>, serás redirigido a la vista de  <b>"Gestión de Automatismos"</b>, pre-filtrada para mostrar solo las de ese día.</li>
+              </ul>
+            </div>
+            </div>
+          </li>
+          
+          <li class="docu-accordion-item">
+            <div class="docu-accordion-header">
+              <span>Gestión de Automatismos</span>
+            </div>
+            <div class="docu-accordion-content">
+              <div class="docu-list">
+                <p>Panel de control para visualizar, filtrar y ejecutar acciones sobre múltiples automatismos a la vez.</p>
+                <ul>
+                  <li>Al entrar por primera vez, se recuperarán y cargarán todos los automatismos de la instancia</li>
+                  <li>Es posible filtrar por <b>Nombre</b> y <b>Estado</b> de los automatismos</li>
+                  <li>La tabla permite seleccionar más de un automatismo. Volviendo a clicar, se deselecciona.</li>
+                  <li><b>Lanzar acciones.</b> Si se selecciona más de un automatismo, solo se pueden lanzar acciones si todos los automatismos seleccionados tienen el <b>mismo estado</b>.						
+                    <ul style="margin-top: 10px;">	
+                      <li><b>Refrescar:</b> Refresca el listado completo de automatismos. Esto se hace automáticamente al realizar cualquier acción.</li>	
+                      <li><b>Activar:</b> Pone en marcha la programación de los automatismos seleccionados. Solo se habilita para automatismos en estado <i>"PausedSchedule"</i> o <i>"Stopped"</i>.</li>							
+                      <li><b>Ejecutar:</b> Lanza una ejecución única e inmediata de los automatismos seleccionados. Solo se habilita para automatismos en estado <i>"PausedSchedule"</i> o <i>"Stopped"</i>.</li>							
+                      <li><b>Parar:</b> Detiene la programación de los automatismos seleccionados. Solo se habilita para automatismos en estado <i>"Scheduled"</i> o <i>"Ready"</i>.</li>							
+                    </ul>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </li>
+          
+          <li class="docu-accordion-item">
+            <div class="docu-accordion-header">
+              <span>Gestión de Journeys</span>
+            </div>
+            <div class="docu-accordion-content">
+              <div class="docu-list">
+                <p>Panel de control para visualizar, filtrar y ejecutar acciones sobre múltiples journeys a la vez.</p>
+                <ul>
+                  <li>Al entrar por primera vez, se recuperarán y cargarán todos los journeys de la instancia</li>
+                  <li>Es posible filtrar por <b>Nombre</b>, <b>Tipo</b>, <b>Estado</b> y <b>Data Extension</b> de los automatismos</li>
+                  <li>La tabla muestra la información principal del Journey, donde se encuentra y que Data Extension se encuentra en su entrada.</li>
+                  <li><b>Lanzar acciones.</b> En funcion de la acción que se quiera realizar, se podrá seleccionar uno o varios journeys</b>.						
+                    <ul style="margin-top: 10px;">							
+                      <li><b>Refrescar:</b> Refresca el listado completo de automatismos. Esto se hace automáticamente al realizar cualquier acción.</li>
+                      <li><b>Comunicaciones:</b> Recupera todas las comunicaciones de los Journeys seleccionados. Lo que se muestra es el nombre de la actividad en el Journey por lo que si se ha cambiado, no coincidirá con el contenido.</li>							
+                      <li><b>Dibujar:</b> Permite crear una versión de texto del Journey de cara a la documentación. Es necesario haber recuperado las comunicaciones previamente, lo cual marca el Journey como Descargado</li>		
+                      <li><b>Copiar:</b> Permite clonar un Journey, con toda su estructura y clona la Data Extension de entrada en la misma carpeta donde se encontrará la anterior. Por ahora solo para los de tipo <b>"EmailAudience"</b>.</li>			
+                      <li><b>Parar:</b> Permite parar varios Journeys a la vez</li>		
+                      <li><b>Parar:</b> Permite borrar varios Journeys a la vez, si son de Subtipo Quicksend</li>							
+                    </ul>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </li>
+          
+          <li class="docu-accordion-item">
+            <div class="docu-accordion-header">
+              <span>Buscador de Data Extensions</span>
+            </div>
+            <div class="docu-accordion-content">
+              <div class="docu-list">
+                <p>Panel de control buscar rutas de Data Extensions.</p>
+                <ul>
+                  <li>Selecciona por qué quieres buscar: Nombre o External Key</li>
+                  <li>No es necesario indicar el nombre completo, se mostrarán las rutas de todas las Data Extension que contengan el texto indicado</li>
+                  <li>Al pulsar en <b>Buscar</b>, se mostrarán las rutas en la tabla inferior</li>					
+                </ul>
+              </div>
+            </div>
+          </li>
+
+          <li class="docu-accordion-item">
+            <div class="docu-accordion-header">
+              <span>Buscador de Origen de Datos</span>
+            </div>
+            <div class="docu-accordion-content">
+              <div class="docu-list">
+                <p>Panel de control para buscar qué actividades rellenan los datos de una Data Extension (Queries e Imports).</p>
+                <ul>
+                  <li>Indica el nombre exacto de la Data Extension y pulsa en <b>Buscar Orígenes</b>.</li>
+                  <li>Se mostrarán las actividades, el tipo y, si se encuentran dentro de una automatismo, en qué paso.</li>				
+                </ul>
+              </div>
+            </div>
+          </li>
+          
+          <li class="docu-accordion-item">
+            <div class="docu-accordion-header">
+              <span>Buscador de Clientes</span>
+            </div>
+            <div class="docu-accordion-content">
+              <div class="docu-list">
+                <p>Panel de control para buscar clientes y su información relacionada.</p>
+                <ul>
+                  <li>Pon el valor por el que quieres buscar. Puede ser un identificador o el mail.</li>
+                  <li>Pulsa en <b>Buscar Cliente</b> para empezar la búsqueda.</li>
+                  <li>Se realizará una búsqueda por Subscriber y si no se encuentra se buscara por Contacto.</li>
+                  <li>Si se ha encontrado un suscriptor, los botones <b>DEs</b> y <b>Journeys</b> estarán activos</b>.
+                  <li>Si se ha encontrado un contacto, el botón <b>Journeys</b> estará activo</b>.					
+                    <ul style="margin-top: 10px;">							
+                      <li><b>DEs:</b> Buscará lo que se haya indicado en el formulario en todas las DEs configuradas a nivel de Configuración de APIs del cliente al que se ha conectado. Se muestran todos los campos de la tabla</li>
+                      <li><b>Journeys:</b> Buscará lo que se haya indicado en el formulario en todos los Journeys. Si se encuentra en ese momento en alguno, lo mostrará en un tabla</li>
+                    </ul>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </li>
+          
+          <li class="docu-accordion-item">
+            <div class="docu-accordion-header">
+              <span>Buscador de Texto en Queries</span>
+            </div>
+            <div class="docu-accordion-content">
+              <div class="docu-list">
+                <p>Panel de control para buscar Queries que contengan el texto indicado en el buscado.</p>
+                <ul>
+                  <li>Pon el valor por el que quieres buscar. Puede ser un identificador o el mail.</li>
+                  <li>Pulsa en <b>Buscar en Queries</b> para empezar la búsqueda.</li>
+                  <li>La tabla muestra el nombre de las queries encontradas y en qué automatismo y paso se encuentran, si es que está en alguno.</li>
+                  <li>La columna de Query Text se puede ocultar/mostrar con la casilla del formulario.</li>					
+                </ul>
+              </div>
+            </div>
+          </li>
+
+          <li class="docu-accordion-item">
+            <div class="docu-accordion-header">
+            <span>Clonador Masivo de Queries</span>
+            </div>
+            <div class="docu-accordion-content">
+            <div class="docu-list">
+              <p>Esta herramienta te permite clonar múltiples Query Activities y sus Data Extensions de destino entre carpetas.</p>
+              <ol>
+              <li><b>Paso 1: Configuración de Carpetas</b>
+                <ul>
+                  <li>Ve a <b>Funcionalidades → Clonador de Queries</b>.</li>
+                  <li>Introduce el nombre (o parte del nombre) de tres carpetas: la de origen de las Queries, la de destino de las Queries clonadas y la de destino de las DEs clonadas.</li>
+                  <li>Pulsa <b>"Buscar Carpetas"</b>. Se mostrarán tablas con las posibles rutas encontradas.</li>
+                  <li>Selecciona <b>una ruta de cada una de las tres tablas</b>. El botón <b>"Continuar"</b> se habilitará.</li>
+                </ul>
+              </li>
+              <li><b>Paso 2: Selección y Clonación</b>
+                <ul>
+                  <li>Verás una lista de todas las Queries de la carpeta de origen.</li>
+                  <li>Usa las casillas de verificación para seleccionar las que quieres clonar.</li>
+                  <li>Puedes modificar el nombre de las DEs y Queries que se van a crear. Si no, se crearán añadiendo el sufijo `_Copy.</li>
+                  <li>Pulsa <b>"Clonar Seleccionadas"</b>. La aplicación clonará cada query y su DE de destino a las carpetas que elegiste.</li>
+                </ul>
+              </li>
+              </ol>
+            </div>
+            </div>
+          </li>
+          
+          <li class="docu-accordion-item">
+            <div class="docu-accordion-header">
+              <span>Validador de Email</span>
+            </div>
+            <div class="docu-accordion-content">
+              <div class="docu-list">
+                <p>Una herramienta sencilla para verificar la validez de una dirección de correo con los validadores que utiliza Marketing Cloud.</p>
+                <ul>
+                  <li>Ve a <b>Funcionalidades → Validador de Email</b>.</li>
+                  <li>Introduce la dirección de correo y pulsa <b>"Validar Email"</b>.</li>
+                  <li>El resultado te indicará si el email es válido según las validaciones de sintaxis, registros MX y List Detective de Marketing Cloud.</li>
+                </ul>
+              </div>
+            </div>
+          </li>
+
           </ol>
         </div>
 
@@ -165,45 +481,27 @@
             <li>
               <div class="docu-item-header">
                 <span class="docu-icon warning">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4" /><path d="M10.36 15.64a2 2 0 1 1 3.28 0" /><path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9 -9 9s-9 -1.8 -9 -9s1.8 -9 9 -9z" /></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4" /><path d="M10.36 15.64a2 2 0 1 1 3.28 0" /><path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9 -9 9s-9 -1.8 -9 -9s1.8 -9 9 -9z" /></svg>
                 </span>
                 <strong>Error de autenticación</strong>
               </div>
-              <p>Revisa que el MID, Client ID y Client Secret sean correctos. La URI de autenticación debe terminar en <code>/v2/token</code>.</p>
+              <p>Si se ha creado la aplicación en MC, se ha configurado el usuario en Marketing Cloud API Helper y luego se cambian los permisos en la aplicación de MC, lo mejor es deslogearse y volverse a logear para que recupere el token con los permisos correctos.</p>
             </li>
             <li>
               <div class="docu-item-header">
                 <span class="docu-icon warning">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4" /><path d="M10.36 15.64a2 2 0 1 1 3.28 0" /><path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9 -9 9s-9 -1.8 -9 -9s1.8 -9 9 -9z" /></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4" /><path d="M10.36 15.64a2 2 0 1 1 3.28 0" /><path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9 -9 9s-9 -1.8 -9 -9s1.8 -9 9 -9z" /></svg>
                 </span>
                 <strong>La DE se crea en la carpeta raíz</strong>
               </div>
-              <p>Para crear una DE en una carpeta específica, debes usar su <b>ID numérico</b>, no su nombre.</p>
-            </li>
-            <li>
-              <div class="docu-item-header">
-                <span class="docu-icon warning">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4" /><path d="M10.36 15.64a2 2 0 1 1 3.28 0" /><path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9 -9 9s-9 -1.8 -9 -9s1.8 -9 9 -9z" /></svg>
-                </span>
-                <strong>DE Sendable sin Subscriber Key</strong>
-              </div>
-              <p>Es <b>obligatorio</b> seleccionar un campo como "Campo SubscriberKey" si marcas la casilla "Es Sendable".</p>
+              <p>Para crear una DE en una carpeta específica, debes usar su <b>ID numérico</b>, no su nombre. Lo mismo ocurre para documentar las Data Extensions de una carpeta</p>
             </li>
           </ul>
         </div>
         
         <!-- Pestaña: Comentarios Adicionales -->
         <div id="comentarios-adicionales" class="tab-content">
-          <ul class="docu-list">
-            <li>
-              <div class="docu-item-header">
-                <span class="docu-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 11h-2a2 2 0 1 0 0 4h2v-4z" /><path d="M18 11h-2a2 2 0 1 0 0 4h2v-4z" /><path d="M3 11v4" /><path d="M21 11v4" /><path d="M13 11v4" /><path d="M5 15v-2a3 3 0 0 1 3 -3h8a3 3 0 0 1 3 3v2" /><path d="M12 5m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /></svg>
-                </span>
-                <strong>Permisos de API</strong>
-              </div>
-              <p>Asegúrate de que la aplicación API en Marketing Cloud tenga permisos de <b>Lectura y Escritura</b> para los objetos que quieres gestionar.</p>
-            </li>
+          <ul class="docu-list">            
             <li>
               <div class="docu-item-header">
                 <span class="docu-icon">
@@ -317,9 +615,8 @@
         <div class="section-header">
             <button class="back-button">← Atrás</button>
             <div class="header-actions">
-                <button id="importFieldsBtn" class="action-button">Importar...</button>
-                <button id="addFieldBtn" class="action-button">Añadir Fila</button>
-                <button id="createFieldsBtn" class="action-button">Crear/Actualizar Campos</button>
+                <button id="importFieldsBtn" class="action-button">Importar</button>                
+                <button id="createFieldsBtn" class="action-button activate-btn">Crear/Actualizar Campos</button>
                 <button id="createDummyFieldsBtn" class="action-button">Campos de Ejemplo</button>                
                 <button id="clearFieldsBtn" class="action-button delete-btn">Limpiar Tabla</button>
             </div>
@@ -334,8 +631,9 @@
           </table>
           <!-- Botones para mover filas seleccionadas -->
           <div class="control-buttons">
-            <button id="moveUp" title="Mover fila seleccionada hacia arriba">Subir</button>
-            <button id="moveDown" title="Mover fila seleccionada hacia abajo">Bajar</button>
+            <button id="addFieldBtn" class="action-button">Añadir Fila</button>
+            <button id="moveUp" title="Mover fila seleccionada hacia arriba">▲</button>
+            <button id="moveDown" title="Mover fila seleccionada hacia abajo">▼</button>
           </div>
         </div>
     </div>
@@ -346,14 +644,15 @@
             <button class="back-button">← Atrás</button>
             <div class="header-actions">
                 <button id="getFields" class="action-button">Recuperar Campos</button>
+                <button id="documentDEsBtn" class="action-button">Documentar Data Extensions</button>
                 <button id="deleteField" class="action-button delete-btn">Borrar Campo</button>
             </div>
         </div>
         <h2>Gestión de Campos de Data Extension</h2>
         <div class="config-block">
-            <h3>Parámetros</h3>
+            <h3>Parámetros para recuperación de 1 DE, Actualización de tabla de campos y Borrado</h3>
             <p class="info-text" style="text-align: left; margin: 0 0 15px;">
-                Introduce la External Key de la DE sobre la que quieres operar.
+                Introduce la External Key de la DE sobre la que quieres operar y pulsa en <em>Recuperar Campos</em>.  Estos se rellenarán en la picklist y en la sección <em>Campos</em>.
             </p>
             <div class="form-group">
                 <label for="recExternalKey">External Key de la DE</label>
@@ -362,6 +661,16 @@
             <div class="form-group">
                 <label for="targetFieldSelect">Campo a eliminar</label>
                 <select id="targetFieldSelect" disabled><option value="">-- Pulsa "Recuperar Campos" --</option></select>
+            </div>
+        </div>
+        <div class="config-block">
+            <h3>Parámetros para generación de CSV con las DEs y sus campos </h3>
+            <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+                Introduce un identificador de carpeta y pulsa en <em>Documentar Data Extensions</em>
+            </p>
+            <div class="form-group">
+                <label for="recCategoryId">Identificador de carpeta</label>
+                <input type="text" id="recCategoryId">
             </div>
         </div>
     </div>
@@ -612,6 +921,12 @@
             <tbody id="automations-tbody"></tbody>
           </table>
         </div>
+          <div id="pagination-automations" class="pagination-controls">
+            <button id="prevPageBtnAutomations" class="action-button pagination-arrow">&laquo;</button>
+            <input type="number" id="pageInputAutomations" class="filter-input page-input" min="1">
+            <span id="totalPagesAutomations">/ 1</span>
+            <button id="nextPageBtnAutomations" class="action-button pagination-arrow">&raquo;</button>
+          </div>
     </div>
     
     <!-- 11. SECCIÓN: GESTIÓN DE JOURNEYS -->
@@ -622,6 +937,9 @@
                 <button id="refreshJourneysTableBtn" class="action-button">Refrescar</button>
                 <button id="getCommunicationsBtn" class="action-button activate-btn" disabled>Comunicaciones</button>
                 <button id="drawJourneyBtn" class="action-button" disabled>Dibujar</button>
+                <button id="copyJourneyBtn" class="action-button" disabled>Copiar</button>
+                <button id="stopJourneyBtn" class="action-button delete-btn" disabled>Parar</button>
+                <button id="deleteJourneyBtn" class="action-button delete-btn-darker" disabled>Borrar</button>
             </div>          
         </div>
         <h2>Gestión de Journeys</h2>
@@ -630,6 +948,10 @@
             <input type="text" id="journeyNameFilter" class="filter-input" placeholder="Buscar por nombre...">
             <select id="journeyTypeFilter" class="filter-input">
                 <option value="">Todos los tipos</option>
+                <!-- Opciones se cargarán dinámicamente -->
+            </select>
+            <select id="journeySubtypeFilter" class="filter-input">
+                <option value="">Todos los subtipos</option>
                 <!-- Opciones se cargarán dinámicamente -->
             </select>
             <select id="journeyStatusFilter" class="filter-input">
@@ -647,6 +969,7 @@
                 <th class="sortable-header" data-sort-by="createdDate">Fecha creación</th>
                 <th class="sortable-header" data-sort-by="modifiedDate">Fecha modificación</th>
                 <th class="sortable-header" data-sort-by="eventType">Tipo</th>
+                <th class="sortable-header" data-sort-by="definitionType">Subtipo</th>
                 <th class="sortable-header" data-sort-by="status">Estado</th>
                 <th class="sortable-header" data-sort-by="location">Ubicación</th>
                 <th class="sortable-header" data-sort-by="dataExtensionName">Data Extension</th>
@@ -659,8 +982,123 @@
             <tbody id="journeys-tbody"></tbody>
           </table>
         </div>
+         <div id="pagination-journeys" class="pagination-controls">
+          <button id="prevPageBtnJourneys" class="action-button pagination-arrow">&laquo;</button>
+          <input type="number" id="pageInputJourneys" class="filter-input page-input" min="1">
+          <span id="totalPagesJourneys">/ 1</span>
+          <button id="nextPageBtnJourneys" class="action-button pagination-arrow">&raquo;</button>
+        </div>
     </div>
+
+        <!-- 12. SECCIÓN: CLONADOR DE QUERIES (CORREGIDO) -->
+    <div id="clonador-queries-section" class="section config-section-container">
+        <!-- ========================================================== -->
+        <!-- PASO 1: CONFIGURACIÓN DE CARPETAS                        -->
+        <!-- ========================================================== -->
+        <div id="queries-cloner-step1" class="cloner-step-container">
+            <div class="section-header">
+                <!-- CORRECCIÓN: Añadida la clase "action-button" -->
+                <button class="action-button back-button">← Atrás</button>
+            </div>
+            <h2>Clonador de Queries - Paso 1: Configuración</h2>
+            
+            <!-- Bloque del Formulario -->
+            <div class="config-block">
+                <h3>Carpetas de Origen y Destino</h3>
+                <div class="form-group">
+                    <label for="querySourceFolderName">Nombre de carpeta con Queries a clonar</label>
+                    <input type="text" id="querySourceFolderName" placeholder="Introduce un nombre o parte de él">
+                </div>
+                <div class="form-group">
+                    <label for="queryTargetFolderName">Nombre de carpeta donde guardar Queries clonadas</label>
+                    <input type="text" id="queryTargetFolderName" placeholder="Introduce un nombre o parte de él">
+                </div>
+                <div class="form-group">
+                    <label for="deTargetFolderName">Nombre de carpeta donde guardar DEs clonadas</label>
+                    <input type="text" id="deTargetFolderName" placeholder="Introduce un nombre o parte de él">
+                </div>
+                <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                    <button id="queryClonerSearchFoldersBtn" class="action-button" disabled>Buscar Carpetas</button>
+                </div>
+            </div>
+
+            <!-- Bloque de Resultados de Búsqueda -->
+            <div id="query-cloner-folder-results" class="config-block hidden">
+                <div class="config-block-header">
+                    <h3>Resultados de Búsqueda</h3>
+                    <div class="header-actions">
+                        <button id="queryClonerContinueBtn" class="action-button" disabled>Continuar →</button>
+                    </div>
+                </div>
+                <div class="folder-results-grid">
+                    <div class="folder-column">
+                        <h4>Posibles carpetas de Queries a clonar</h4>
+                        <div class="table-container">
+                            <table id="query-source-folders-table" class="folder-results-table">
+                                <thead><tr><th>Ruta de Carpeta</th></tr></thead>
+                                <tbody id="query-source-folders-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="folder-column">
+                        <h4>Posibles carpetas para Queries clonadas</h4>
+                        <div class="table-container">
+                            <table id="query-target-folders-table" class="folder-results-table">
+                                <thead><tr><th>Ruta de Carpeta</th></tr></thead>
+                                <tbody id="query-target-folders-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="folder-column">
+                        <h4>Posibles carpetas para DEs clonadas</h4>
+                        <div class="table-container">
+                            <table id="de-target-folders-table" class="folder-results-table">
+                                <thead><tr><th>Ruta de Carpeta</th></tr></thead>
+                                <tbody id="de-target-folders-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================== -->
+        <!-- PASO 2: SELECCIÓN DE QUERIES (Oculto por defecto)        -->
+        <!-- ========================================================== -->
+        <div id="queries-cloner-step2" class="cloner-step-container" style="display: none;">
+             <div class="section-header">
+                <!-- CORRECCIÓN: Añadida la clase "action-button" -->
+                <button id="queryClonerBackBtn" class="action-button">← Atrás</button>
+            </div>
+            <h2>Clonador de Queries - Paso 2: Selección</h2>
+            
+            <div class="config-block" style="flex-grow: 1; display: flex; flex-direction: column;">
+                <div class="config-block-header">
+                    <h3>Selecciona las Queries a clonar</h3>
+                    <div class="header-actions">
+                        <button id="queryClonerCloneBtn" class="action-button activate-btn" disabled>Clonar Seleccionadas</button>
+                    </div>
+                </div>
+                <div class="table-container" style="flex-grow: 1;">
+                    <table id="query-selection-table">
+                      <thead>
+                          <tr>
+                              <th><input type="checkbox" id="selectAllQueriesCheckbox" title="Seleccionar Todas"></th>
+                              <th>Query Origen</th>
+                              <th>DE Origen</th>
+                              <th>Query Destino</th>
+                              <th>DE Destino</th>
+                          </tr>
+                      </thead>
+                      <tbody id="query-selection-tbody"></tbody>
+                  </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
   </main> 
+
   <!-- END: CONTENIDO PRINCIPAL -->
 
   <!-- ========================================================== -->
@@ -734,6 +1172,36 @@
     </div>
 </div>
 <!-- END: MODAL DE FLUJO -->
+
+<!-- ========================================================== -->
+<!-- START: MODAL DE ALERTA PERSONALIZADO -->
+<!-- ========================================================== -->
+<div id="custom-alert-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Aviso</h3>
+        <p id="custom-alert-message" style="line-height: 1.6;"></p>
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button id="custom-alert-close-btn" class="action-button">Aceptar</button>
+        </div>
+    </div>
+</div>
+<!-- END: MODAL DE ALERTA -->
+
+
+<!-- ========================================================== -->
+<!-- START: MODAL DE CONFIRMACIÓN PERSONALIZADO -->
+<!-- ========================================================== -->
+<div id="custom-confirm-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Confirmación Requerida</h3>
+        <p id="custom-confirm-message" style="line-height: 1.6;"></p>
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button id="custom-confirm-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="custom-confirm-ok-btn" class="action-button activate-btn">Confirmar</button>
+        </div>
+    </div>
+</div>
+<!-- END: MODAL DE CONFIRMACIÓN -->
  
 <!-- Enlaza el fichero JavaScript al final del body para un rendimiento óptimo -->
 <script src="ui.js"></script>

@@ -39,7 +39,15 @@ document.addEventListener('DOMContentLoaded', function () {
 	// ==========================================================
 	const API_PAGE_SIZE = 500;
 
+	const ITEMS_PER_PAGE = 15;
+
 	const loaderOverlay = document.getElementById('loader-overlay');
+
+	const licenseModal = document.getElementById('license-modal-overlay');
+	const licenseForm = document.getElementById('license-form');
+	const licenseEmailInput = document.getElementById('license-email');
+	const licenseKeyInput = document.getElementById('license-key');
+	const licenseErrorEl = document.getElementById('license-error-message'); 
 
 	// --- Variables de Estado Global ---
 	let currentUserInfo = null;      // Almacena la información del usuario logueado.
@@ -59,22 +67,39 @@ document.addEventListener('DOMContentLoaded', function () {
 	let fullJourneyList = [];        // Caché de todos los journeys para la vista de gestión.
  	let eventDefinitionsMap = {}; // Caché para mapear EventDefinitions por nombre
     let journeyFolderMap = {};    // Caché para mapear rutas de carpetas de Journeys
+	let currentPageAutomations = 1; 
+    let currentPageJourneys = 1;    
 
 	// --- Gestión de Journeys ---
 	const journeysTbody = document.getElementById('journeys-tbody');
 	const journeyNameFilter = document.getElementById('journeyNameFilter');
 	const journeyTypeFilter = document.getElementById('journeyTypeFilter');
+	const journeySubtypeFilter = document.getElementById('journeySubtypeFilter');
 	const refreshJourneysTableBtn = document.getElementById('refreshJourneysTableBtn');
 	const getCommunicationsBtn = document.getElementById('getCommunicationsBtn');
 	const journeyStatusFilter = document.getElementById('journeyStatusFilter');
     const journeyDEFilter = document.getElementById('journeyDEFilter');
 	const drawJourneyBtn = document.getElementById('drawJourneyBtn'); 
+	const stopJourneyBtn = document.getElementById('stopJourneyBtn');
+	const copyJourneyBtn = document.getElementById('copyJourneyBtn'); 
+	const deleteJourneyBtn = document.getElementById('deleteJourneyBtn');
 
 	 // --- Modal de Flujo de Journey ---
     const journeyFlowModal = document.getElementById('journey-flow-modal');
     const journeyFlowContent = document.getElementById('journey-flow-content');
     const closeFlowBtn = document.getElementById('close-flow-btn');
 	const copyFlowBtn = document.getElementById('copyFlowBtn');
+
+	// --- Modal de Alerta Personalizado ---
+	const customAlertModal = document.getElementById('custom-alert-modal');
+	const customAlertMessage = document.getElementById('custom-alert-message');
+	const customAlertCloseBtn = document.getElementById('custom-alert-close-btn');
+
+	// --- Modal de Confirmación Personalizado ---
+	const customConfirmModal = document.getElementById('custom-confirm-modal');
+	const customConfirmMessage = document.getElementById('custom-confirm-message');
+	const customConfirmOkBtn = document.getElementById('custom-confirm-ok-btn');
+	const customConfirmCancelBtn = document.getElementById('custom-confirm-cancel-btn');
 
 	// Variables de ordenación y filtrado para Journeys
     let currentJourneySortColumn = 'name';
@@ -135,8 +160,10 @@ document.addEventListener('DOMContentLoaded', function () {
 	const moveUpBtn = document.getElementById('moveUp');
 	const moveDownBtn = document.getElementById('moveDown');
 	const recExternalKeyInput = document.getElementById('recExternalKey');
+	const recCategoryIdInput = document.getElementById('recCategoryId'); 
 	const targetFieldSelect = document.getElementById('targetFieldSelect');
 	const getFieldsBtn = document.getElementById('getFields');
+	const documentDEsBtn = document.getElementById('documentDEsBtn');
 	const deleteFieldBtn = document.getElementById('deleteField');
 	const importFieldsBtn = document.getElementById('importFieldsBtn');
 
@@ -191,6 +218,16 @@ document.addEventListener('DOMContentLoaded', function () {
 	const automationNameFilter = document.getElementById('automationNameFilter');
     const automationStatusFilter = document.getElementById('automationStatusFilter');
 
+	// --- Paginación de vistas de gestión ---	
+	const prevPageBtnAutomations = document.getElementById('prevPageBtnAutomations');
+    const nextPageBtnAutomations = document.getElementById('nextPageBtnAutomations');
+    const pageInputAutomations = document.getElementById('pageInputAutomations');
+    const totalPagesAutomations = document.getElementById('totalPagesAutomations');
+	const prevPageBtnJourneys = document.getElementById('prevPageBtnJourneys');
+    const nextPageBtnJourneys = document.getElementById('nextPageBtnJourneys');
+    const pageInputJourneys = document.getElementById('pageInputJourneys');
+    const totalPagesJourneys = document.getElementById('totalPagesJourneys');
+
 	// --- Componentes Generales ---
 	const tabButtons = document.querySelectorAll('.tab-button');
 	const tabContents = document.querySelectorAll('.tab-content');
@@ -201,10 +238,73 @@ document.addEventListener('DOMContentLoaded', function () {
 	const observer = new MutationObserver(updateSubscriberKeyFieldOptions);
 	const observerConfig = { childList: true, subtree: true, characterData: true };
 
+	// --- Clonador de Queries ---
+	const querySourceFolderNameInput = document.getElementById('querySourceFolderName');
+	const queryTargetFolderNameInput = document.getElementById('queryTargetFolderName');
+	const deTargetFolderNameInput = document.getElementById('deTargetFolderName');
+	const queryClonerSearchFoldersBtn = document.getElementById('queryClonerSearchFoldersBtn');
+	const queryClonerContinueBtn = document.getElementById('queryClonerContinueBtn');
+	const queryClonerBackBtn = document.getElementById('queryClonerBackBtn');
+	const queryClonerCloneBtn = document.getElementById('queryClonerCloneBtn');
+	const queryClonerFolderResultsBlock = document.getElementById('query-cloner-folder-results');
+	const querySourceFoldersTbody = document.getElementById('query-source-folders-tbody');
+	const queryTargetFoldersTbody = document.getElementById('query-target-folders-tbody');
+	const deTargetFoldersTbody = document.getElementById('de-target-folders-tbody');
+	const queriesClonerStep1 = document.getElementById('queries-cloner-step1');
+	const queriesClonerStep2 = document.getElementById('queries-cloner-step2');
+	const querySelectionTbody = document.getElementById('query-selection-tbody');
+	const selectAllQueriesCheckbox = document.getElementById('selectAllQueriesCheckbox');
+
+	// --- Variables de estado para el clonador ---
+	let clonerState = {
+		sourceQueryFolder: null,
+		targetQueryFolder: null,
+		targetDEFolder: null,
+		queriesInSourceFolder: []
+	};
 
 	// ==========================================================
 	// --- 2. GESTIÓN DE LA UI (LOGS, ESTADO DE CARGA, NAVEGACIÓN) ---
 	// ==========================================================
+	/**
+	 * Muestra un modal de alerta no bloqueante. Reemplaza a la función alert() nativa.
+	 * @param {string} message - El mensaje a mostrar en la alerta.
+	 */
+	function showCustomAlert(message) {
+		customAlertMessage.textContent = message;
+		customAlertModal.style.display = 'flex';
+	}
+
+	/** Cierra el modal de alerta personalizado. */
+	function closeCustomAlert() {
+		customAlertModal.style.display = 'none';
+	}
+
+	/**
+	 * Muestra un modal de confirmación no bloqueante. Reemplaza a confirm() nativo.
+	 * @param {string} message - El mensaje de confirmación a mostrar.
+	 * @returns {Promise<boolean>} - Una promesa que resuelve a `true` si se confirma, o `false` si se cancela.
+	 */
+	function showCustomConfirm(message) {
+		return new Promise(resolve => {
+			customConfirmMessage.textContent = message;
+			customConfirmModal.style.display = 'flex';
+
+			const closeAndResolve = (value) => {
+				customConfirmModal.style.display = 'none';
+				resolve(value);
+			};
+
+			// Usamos { once: true } para que los listeners se eliminen solos después de un clic
+			customConfirmOkBtn.addEventListener('click', () => closeAndResolve(true), { once: true });
+			customConfirmCancelBtn.addEventListener('click', () => closeAndResolve(false), { once: true });
+			customConfirmModal.addEventListener('click', (e) => {
+				if (e.target === customConfirmModal) {
+					closeAndResolve(false);
+				}
+			}, { once: true });
+		});
+	}
 
 	// --- Sistema de Logs Acumulativos ---
 	// En lugar de escribir directamente en el DOM, estas funciones acumulan los logs
@@ -277,6 +377,17 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	function unblockUI() {
 		loaderOverlay.style.display = 'none';
+		 // Esto soluciona un bug de renderizado de Chromium/Electron donde los inputs
+		// dejan de responder después de ocultar un overlay. Al cambiar brevemente
+		// el display del contenedor principal, forzamos al motor a recalcular
+		// el layout y los eventos, "despertando" los inputs.
+		appContainer.style.display = 'none';
+		void appContainer.offsetHeight; // Esta línea fuerza al navegador a aplicar el cambio de estilo.
+		appContainer.style.display = ''; // Al quitar el estilo en línea, vuelve al 'grid' definido en el CSS.
+
+		setTimeout(() => {
+			document.body.focus();
+		}, 0);
 	}
 	
 	/**
@@ -385,6 +496,7 @@ document.addEventListener('DOMContentLoaded', function () {
             journeyFolderMap = {};
             if (journeyNameFilter) journeyNameFilter.value = '';
             if (journeyTypeFilter) journeyTypeFilter.value = '';
+			if (journeySubtypeFilter) journeySubtypeFilter.value = '';
             if (journeyStatusFilter) journeyStatusFilter.value = '';
             if (journeyDEFilter) journeyDEFilter.value = '';
             if (journeysTbody) journeysTbody.innerHTML = ''; // Limpia la tabla visualmente
@@ -483,7 +595,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
 			const deName = deNameInput.value.trim();
 			const deExternalKey = deExternalKeyInput.value.trim();
-			if (!deName || !deExternalKey) throw new Error('El Nombre y la External Key son obligatorios.');
+			const description = deDescriptionInput.value.trim();
+			if (!deName || !description) throw new Error('El Nombre y la Descripción son obligatorios.');
 
 			const isSendable = isSendableCheckbox.checked;
 			const subscriberKey = subscriberKeyFieldSelect.value;
@@ -503,7 +616,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			await executeSoapRequest(apiConfig.soapUri, soapPayload.trim(), `¡Data Extension "${deName}" creada con éxito!`);
 		} catch (error) {
 			logMessage(`Error al crear la Data Extension: ${error.message}`);
-			alert(`Error: ${error.message}`);
+			showCustomAlert(`Error: ${error.message}`);
 		} finally {
 			unblockUI();
 			endLogBuffering();
@@ -530,7 +643,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			await executeSoapRequest(apiConfig.soapUri, soapPayload.trim(), `¡Éxito! ${validFieldsData.length} campos creados/actualizados.`);
 		} catch (error) {
 			logMessage(`Error al crear los campos: ${error.message}`);
-			alert(`Error: ${error.message}`);
+			showCustomAlert(`Error: ${error.message}`);
 		} finally {
 			unblockUI();
 			endLogBuffering();
@@ -547,24 +660,23 @@ document.addEventListener('DOMContentLoaded', function () {
 			const apiConfig = await getAuthenticatedConfig();
 			const externalKey = recExternalKeyInput.value.trim();
 			if (!externalKey) throw new Error('Introduzca la "External Key de la DE".');
+			
 			logMessage(`Recuperando campos para la DE: ${externalKey}`);
-			const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtensionField</ObjectType><Properties>Name</Properties><Properties>ObjectID</Properties><Properties>CustomerKey</Properties><Properties>FieldType</Properties><Properties>IsPrimaryKey</Properties><Properties>IsRequired</Properties><Properties>MaxLength</Properties><Properties>Ordinal</Properties><Properties>Scale</Properties><Properties>DefaultValue</Properties><Filter xsi:type="SimpleFilterPart"><Property>DataExtension.CustomerKey</Property><SimpleOperator>equals</SimpleOperator><Value>${externalKey}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-			logApiCall({ payload: soapPayload });
-			const responseText = await (await fetch(apiConfig.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload })).text();
-			logApiResponse({ body: responseText });
-			const fields = await parseFullSoapFieldsAsync(responseText);
+			
+			const fields = await fetchFieldsForDE(externalKey, apiConfig);
+
 			if (fields.length > 0) {
 				populateFieldsTable(fields);
 				populateDeletionPicklist(fields);
-				logMessage(`${fields.length} campos recuperados.`);
+				logMessage(`${fields.length} campos recuperados y cargados en la tabla.`);
 			} else {
 				clearFieldsTable();
 				populateDeletionPicklist([]);
-				logMessage('Llamada exitosa pero no se encontraron campos.');
+				logMessage('Llamada exitosa pero no se encontraron campos para esta DE.');
 			}
 		} catch (error) {
 			logMessage(`Error al recuperar campos: ${error.message}`);
-			alert(`Error: ${error.message}`);
+			showCustomAlert(`Error: ${error.message}`);
 		} finally {
 			unblockUI();
 			endLogBuffering();
@@ -583,17 +695,160 @@ document.addEventListener('DOMContentLoaded', function () {
 			const fieldObjectId = targetFieldSelect.value;
 			const selectedFieldName = targetFieldSelect.selectedOptions[0]?.text;
 			if (!externalKey || !fieldObjectId) throw new Error('Introduzca la External Key y seleccione un campo a eliminar.');
-			if (!confirm(`¿Seguro que quieres eliminar el campo "${selectedFieldName}"? Esta acción no se puede deshacer.`)) return;
+			if (!await showCustomConfirm(`¿Seguro que quieres eliminar el campo "${selectedFieldName}"? Esta acción no se puede deshacer.`)) return;
 			logMessage(`Iniciando borrado del campo "${selectedFieldName}"...`);
 			const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth><a:Action s:mustUnderstand="1">Delete</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To></s:Header><s:Body xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><DeleteRequest xmlns="http://exacttarget.com/wsdl/partnerAPI"><Objects xsi:type="DataExtension"><CustomerKey>${externalKey}</CustomerKey><Fields><Field><ObjectID>${fieldObjectId}</ObjectID></Field></Fields></Objects></DeleteRequest></s:Body></s:Envelope>`;
 			await executeSoapRequest(apiConfig.soapUri, soapPayload.trim(), `Campo "${selectedFieldName}" eliminado.`);
 			await macroGetFields();
 		} catch (error) {
 			logMessage(`Error al eliminar el campo: ${error.message}`);
-			alert(`Error: ${error.message}`);
+			showCustomAlert(`Error: ${error.message}`);
 		} finally {
 			unblockUI();
 			endLogBuffering();
+		}
+	}
+
+	/**
+	 * Macro para documentar todas las Data Extensions de una carpeta en un CSV.
+	 */
+	async function macroDocumentDataExtensions() {
+		blockUI("Documentando Data Extensions...");
+		startLogBuffering();
+		try {
+			const apiConfig = await getAuthenticatedConfig();
+			const categoryId = recCategoryIdInput.value.trim();
+			if (!categoryId) throw new Error('Introduzca el "Identificador de carpeta".');
+
+			logMessage(`Paso 1: Recuperando Data Extensions de la carpeta ID: ${categoryId}`);
+			const deList = await getDEsFromFolder(categoryId, apiConfig);
+
+			if (deList.length === 0) {
+				showCustomAlert(`No se encontraron Data Extensions en la carpeta con ID ${categoryId}.`);
+				return;
+			}
+			logMessage(`Se encontraron ${deList.length} Data Extensions. Recuperando campos para cada una...`);
+			
+			const allFieldsData = [];
+			let deCounter = 0;
+
+			for (const de of deList) {
+				deCounter++;
+				blockUI(`Procesando ${deCounter}/${deList.length}: ${de.name}`);
+				logMessage(` - Procesando: ${de.name} (Key: ${de.customerKey})`);
+
+				try {
+					const fields = await fetchFieldsForDE(de.customerKey, apiConfig);
+					fields.forEach(field => {
+						allFieldsData.push({
+							'Name': de.name,
+							'ExternalKey': de.customerKey,
+							'Field': field.mc,
+							'FieldType': field.type,
+							'Length': field.len || '',
+							'Default': field.defaultValue || '',
+							'PK': field.pk ? 'Yes' : 'No',
+							'Required': field.req ? 'Yes' : 'No'
+						});
+					});
+				} catch (fieldError) {
+					logMessage(`   -> Error al recuperar campos para ${de.name}: ${fieldError.message}`);
+					// Continuar con la siguiente DE aunque una falle
+				}
+			}
+
+			if (allFieldsData.length === 0) {
+				showCustomAlert('No se pudieron recuperar campos para ninguna de las Data Extensions encontradas.');
+				return;
+			}
+			
+			logMessage(`Paso 3: Generando CSV con ${allFieldsData.length} filas.`);
+			generateAndDownloadCsv(allFieldsData, `DEs_Carpeta_${categoryId}.csv`);
+			showCustomAlert('Documentación generada con éxito. Revisa tus descargas.');
+
+		} catch (error) {
+			logMessage(`Error al documentar las Data Extensions: ${error.message}`);
+			showCustomAlert(`Error: ${error.message}`);
+		} finally {
+			unblockUI();
+			endLogBuffering();
+		}
+	}
+
+	/**
+	 * Lógica reutilizable para obtener los campos de una DE.
+	 * @param {string} customerKey - La External Key de la DE.
+	 * @param {object} apiConfig - La configuración de la API.
+	 * @returns {Promise<Array>} Un array de objetos de campo.
+	 */
+	async function fetchFieldsForDE(customerKey, apiConfig) {
+		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtensionField</ObjectType><Properties>Name</Properties><Properties>ObjectID</Properties><Properties>CustomerKey</Properties><Properties>FieldType</Properties><Properties>IsPrimaryKey</Properties><Properties>IsRequired</Properties><Properties>MaxLength</Properties><Properties>Ordinal</Properties><Properties>Scale</Properties><Properties>DefaultValue</Properties><Filter xsi:type="SimpleFilterPart"><Property>DataExtension.CustomerKey</Property><SimpleOperator>equals</SimpleOperator><Value>${customerKey}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+		
+		logApiCall({ payload: soapPayload });
+		const response = await fetch(apiConfig.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload });
+		const responseText = await response.text();
+		logApiResponse({ body: responseText });
+		if (!responseText.includes('<OverallStatus>OK</OverallStatus>')) {
+			const errorMatch = responseText.match(/<StatusMessage>(.*?)<\/StatusMessage>/);
+			throw new Error(errorMatch ? errorMatch[1] : 'Error desconocido al recuperar campos.');
+		}
+		
+		const fields = await parseFullSoapFieldsAsync(responseText);
+		return fields;
+	}
+
+	/**
+	 * Recupera la lista de Data Extensions de una carpeta específica.
+	 * @param {string} categoryId - El ID de la carpeta.
+	 * @param {object} apiConfig - La configuración de la API.
+	 * @returns {Promise<Array>} Una lista de objetos DE { name, customerKey }.
+	 */
+	async function getDEsFromFolder(categoryId, apiConfig) {
+		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>CustomerKey</Properties><Properties>Name</Properties><Filter xsi:type="SimpleFilterPart"><Property>CategoryID</Property><SimpleOperator>equals</SimpleOperator><Value>${categoryId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+
+		const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload, null);
+		const parser = new DOMParser();
+		const xmlDoc = parser.parseFromString(responseText, "application/xml");
+
+		const deList = Array.from(xmlDoc.querySelectorAll("Results")).map(node => ({
+			name: node.querySelector("Name")?.textContent,
+			customerKey: node.querySelector("CustomerKey")?.textContent
+		}));
+
+		return deList;
+	}
+
+	/**
+	 * Genera un archivo CSV a partir de un array de objetos y lo descarga.
+	 * @param {Array<object>} data - El array de datos.
+	 * @param {string} filename - El nombre del archivo a descargar.
+	 */
+	function generateAndDownloadCsv(data, filename) {
+		if (!data || data.length === 0) return;
+
+		const headers = Object.keys(data[0]);
+		const csvRows = [headers.join(',')]; // Fila de cabecera
+
+		for (const row of data) {
+			const values = headers.map(header => {
+				const escaped = ('' + row[header]).replace(/"/g, '""'); // Escapa comillas dobles
+				return `"${escaped}"`; // Envuelve cada valor en comillas
+			});
+			csvRows.push(values.join(','));
+		}
+
+		const csvString = csvRows.join('\n');
+		const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+		
+		const link = document.createElement("a");
+		if (link.download !== undefined) {
+			const url = URL.createObjectURL(blob);
+			link.setAttribute("href", url);
+			link.setAttribute("download", filename);
+			link.style.visibility = 'hidden';
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
 		}
 	}
 
@@ -946,7 +1201,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			return allItems;
 		} catch (error) {
 			logMessage(`Error al recuperar automatismos: ${error.message}`);
-			alert(`Error: ${error.message}`);
+			showCustomAlert(`Error: ${error.message}`);
 			return []; // Devuelve un array vacío en caso de error para no romper el flujo.
 		}
 	}
@@ -1003,7 +1258,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (selectedRows.length === 0) return;
 		const selectedAutomations = Array.from(selectedRows).map(row => fullAutomationList.find(auto => auto.id === row.dataset.automationId)).filter(Boolean);
 		if (selectedAutomations.length === 0) return;
-		if (!confirm(`¿Seguro que quieres '${actionName}' ${selectedAutomations.length} automatismo(s)?`)) return;
+		if (!await showCustomConfirm(`¿Seguro que quieres '${actionName}' ${selectedAutomations.length} automatismo(s)?`)) return;
 		
 		blockUI("Realizando acción "+actionName+"...");
 		startLogBuffering();
@@ -1051,7 +1306,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			}
 		} catch (error) {
 			logMessage(`Error fatal durante la acción '${actionName}': ${error.message}`);
-			alert(`Error fatal: ${error.message}`);
+			showCustomAlert(`Error fatal: ${error.message}`);
 		} finally {
 			const alertSummary = `Acción '${actionName}' completada. Éxitos: ${successes.length}, Fallos: ${failures.length}.`;
 			let logSummary = alertSummary;
@@ -1060,7 +1315,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				logSummary += `\n\n--- Detalles de Fallos ---\n${failureDetails}`;
 			}
 			logMessage(logSummary);
-			alert(alertSummary);
+			showCustomAlert(alertSummary);
 			unblockUI();
 			endLogBuffering();
 			refreshAutomationsTableBtn.click();
@@ -1074,7 +1329,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	async function macroGetJourneyCommunications() {
         const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
 		if (selectedRows.length === 0) {
-			alert("Por favor, selecciona al menos un journey de la lista.");
+			showCustomAlert("Por favor, selecciona al menos un journey de la lista.");
 			return;
 		}
 
@@ -1096,7 +1351,7 @@ document.addEventListener('DOMContentLoaded', function () {
 					processedCount++;
 					continue;
 				}
-				// ... (el resto del bucle for se mantiene exactamente igual) ...
+				
                 try {
 					logMessage(`(${processedCount + 1}/${journeysToProcess.length}) Obteniendo actividades para: ${journey.name}`);
 					const url = `${apiConfig.restUri}interaction/v1/interactions/${journey.id}`;
@@ -1124,18 +1379,358 @@ document.addEventListener('DOMContentLoaded', function () {
 			}
 
 			logMessage("Proceso de obtención de comunicaciones finalizado.");
-			alert("Comunicaciones actualizadas para los journeys seleccionados.");
+			showCustomAlert("Comunicaciones actualizadas para los journeys seleccionados.");
 			
             applyJourneyFiltersAndRender();
             updateJourneyActionButtonsState(); // Actualizamos el estado de los botones
 
 		} catch (error) {
 			logMessage(`Error fatal durante la obtención de comunicaciones: ${error.message}`);
-			alert(`Error: ${error.message}`);
+			showCustomAlert(`Error: ${error.message}`);
 		} finally {
 			unblockUI();
 			endLogBuffering();
 		}
+	}
+
+	/**
+	 * Macro para parar los Journeys seleccionados.
+	 */
+	async function macroStopJourneys() {
+		const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
+		if (selectedRows.length === 0) return;
+
+		const journeysToStop = Array.from(selectedRows).map(row => {
+			return fullJourneyList.find(j => j.id === row.dataset.journeyId);
+		}).filter(Boolean);
+
+		if (journeysToStop.length === 0) return;
+
+		if (!await showCustomConfirm(`¿Seguro que quieres parar ${journeysToStop.length} journey(s)? Esta acción intentará detener la versión activa.`)) return;
+
+		blockUI(`Parando ${journeysToStop.length} journey(s)...`);
+		startLogBuffering();
+		const successes = [];
+		const failures = [];
+
+		try {
+			const apiConfig = await getAuthenticatedConfig();
+			const headers = { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" };
+
+			for (const journey of journeysToStop) {
+				logMessage(`Procesando parada para: "${journey.name}" (Versión ${journey.version})`);
+				const url = `${apiConfig.restUri}interaction/v1/interactions/stop/${journey.id}?versionNumber=${journey.version}`;
+				logApiCall({ action: 'stop', endpoint: url });
+
+				try {
+					const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify({}) });
+					const responseData = await response.json();
+					logApiResponse({ for: journey.name, status: response.status, response: responseData });
+
+					if (response.ok) {
+						successes.push({ name: journey.name });
+					} else {
+						failures.push({ name: journey.name, reason: responseData.message || `Error ${response.status}` });
+					}
+				} catch (error) {
+					failures.push({ name: journey.name, reason: error.message });
+					logApiResponse({ for: journey.name, status: 'Failure', response: error.message });
+				}
+			}
+		} catch (error) {
+			logMessage(`Error fatal durante la acción de parar journeys: ${error.message}`);
+			showCustomAlert(`Error fatal: ${error.message}`);
+		} finally {
+			const alertSummary = `Acción 'Parar' completada. Éxitos: ${successes.length}, Fallos: ${failures.length}.`;
+			let logSummary = alertSummary;
+			if (failures.length > 0) {
+				const failureDetails = failures.map(f => `  - ${f.name}: ${f.reason}`).join('\n');
+				logSummary += `\n\n--- Detalles de Fallos ---\n${failureDetails}`;
+			}
+			logMessage(logSummary);
+			showCustomAlert(alertSummary);
+			unblockUI();
+			endLogBuffering();
+			// Refrescamos la tabla para ver los cambios de estado
+			refreshJourneysTableBtn.click();
+		}
+	}
+
+	/**
+	 * Prepara el payload para crear una copia de un Journey, actualizando todas las referencias.
+	 * @param {object} originalJourney - El objeto de Journey completo.
+	 * @param {object} originalEventDef - El objeto de Event Definition original para obtener la clave antigua.
+	 * @param {object} newEventDef - El objeto del nuevo Event Definition para obtener los nuevos IDs y Key.
+	 * @returns {object} Un objeto JSON listo para ser enviado en la petición de creación.
+	 */
+	function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
+		// 1. Obtenemos las claves antigua y nueva para el reemplazo.
+		const oldEventDefKey = originalEventDef.eventDefinitionKey;
+		const newEventDefKey = newEventDef.eventDefinitionKey;
+		
+		if (!oldEventDefKey || !newEventDefKey) {
+			throw new Error("No se pudieron obtener las claves de Event Definition para el reemplazo.");
+		}
+
+		// 2. Creamos una copia profunda del objeto original para no modificarlo.
+		let journeyCopy = JSON.parse(JSON.stringify(originalJourney));
+		
+		// 3. Convertimos la copia a una cadena de texto para hacer un reemplazo global y seguro.
+		let journeyString = JSON.stringify(journeyCopy);
+
+		// 4. Reemplazamos TODAS las ocurrencias de la antigua eventDefinitionKey por la nueva.
+		// Esto soluciona el problema de las referencias en 'activities' y 'defaults'.
+		const regex = new RegExp(oldEventDefKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+		journeyString = journeyString.replace(regex, newEventDefKey);
+		
+		// 5. Volvemos a convertir la cadena a un objeto JSON.
+		let finalPayload = JSON.parse(journeyString);
+
+		// 6. Limpiamos las actividades: quitamos 'id' y 'schema' de cada una.
+		finalPayload.activities = finalPayload.activities.map(activity => {
+			const { id, schema, ...rest } = activity;
+			return rest;
+		});
+
+		// 7. Limpiamos los triggers y nos aseguramos de que tienen los nuevos IDs y Key correctos.
+		finalPayload.triggers = finalPayload.triggers.map(trigger => {
+			const { id, ...rest } = trigger;
+			rest.type = 'EmailAudience'; 
+			if (rest.metaData) {
+				rest.metaData.eventDefinitionKey = newEventDef.eventDefinitionKey; 
+				rest.metaData.eventDefinitionId = newEventDef.id;
+			}
+			return rest;
+		});
+		
+		// 8. Eliminamos las propiedades del nivel superior que no deben ir en una creación.
+		delete finalPayload.id;
+		delete finalPayload.version;
+		delete finalPayload.createdDate;
+		delete finalPayload.modifiedDate;
+		delete finalPayload.lastPublishedDate;
+		delete finalPayload.definitionId;
+		delete finalPayload.status;
+		delete finalPayload.stats;
+		
+		// 9. Asignamos un nuevo nombre y una nueva 'key' para el Journey clonado.
+		finalPayload.name = `${originalJourney.name}_Copy`;
+		finalPayload.key = crypto.randomUUID();
+
+		return finalPayload;
+	}
+
+	/**
+	 * Macro principal para orquestar la copia de un Journey.
+	 */
+	async function macroCopyJourney() {
+		const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
+		if (selectedRows.length !== 1) return;
+
+		const journeyId = selectedRows[0].dataset.journeyId;
+		const journey = fullJourneyList.find(j => j.id === journeyId);
+		if (!journey) return;
+
+		if (!await showCustomConfirm(`Se va a crear una copia completa del journey "${journey.name}", incluyendo su Data Extension de entrada. ¿Continuar?`)) return;
+
+		blockUI("Iniciando copia de Journey...");
+		startLogBuffering();
+
+		try {
+			const apiConfig = await getAuthenticatedConfig();
+			
+			// --- PASO 1: Obtener la definición completa del Journey original ---
+			logMessage(`PASO 1/6: Obteniendo definición completa de "${journey.name}"...`);
+			blockUI(`Paso 1/6: Obteniendo Journey original...`);
+			const getJourneyUrl = `${apiConfig.restUri}interaction/v1/interactions/${journeyId}`;
+			const responseGetJourney = await fetch(getJourneyUrl, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
+			if (!responseGetJourney.ok) throw new Error(`Error obteniendo Journey. Status: ${responseGetJourney.status}`);
+			const originalJourney = await responseGetJourney.json();
+			const originalEventDefId = originalJourney.triggers?.[0]?.metaData?.eventDefinitionId;
+			if (!originalEventDefId) throw new Error("No se pudo encontrar el Event Definition ID en el trigger del Journey.");
+			logApiResponse({ step: 1, response: "Definición de Journey obtenida." });
+
+			// --- PASO 2: Obtener la definición del Event Definition original ---
+			logMessage(`PASO 2/6: Obteniendo Event Definition original (ID: ${originalEventDefId})...`);
+			blockUI(`Paso 2/6: Obteniendo Event Definition...`);
+			const getEventDefUrl = `${apiConfig.restUri}interaction/v1/eventDefinitions/${originalEventDefId}`;
+			const responseGetEventDef = await fetch(getEventDefUrl, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
+			if (!responseGetEventDef.ok) throw new Error(`Error obteniendo Event Definition. Status: ${responseGetEventDef.status}`);
+			const originalEventDef = await responseGetEventDef.json();
+			const originalDeName = originalEventDef.dataExtensionName;
+			if (!originalDeName) throw new Error("No se pudo encontrar el nombre (dataExtensionName) de la DE en el Event Definition.");
+			logApiResponse({ step: 2, response: `Event Definition obtenido. Nombre de la DE de origen: ${originalDeName}` });
+
+			// --- PASO 3: Encontrar la CustomerKey de la DE original usando su Nombre ---
+			logMessage(`PASO 3/6: Buscando CustomerKey para la DE con nombre "${originalDeName}"...`);
+			blockUI(`Paso 3/6: Buscando DE de origen...`);
+			const findKeyPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>CustomerKey</Properties><Filter xsi:type="SimpleFilterPart"><Property>Name</Property><SimpleOperator>equals</SimpleOperator><Value>${originalDeName}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+			const findKeyResponseText = await executeSoapRequest(apiConfig.soapUri, findKeyPayload, null); // Pasamos null para suprimir la alerta de éxito
+			const keyParser = new DOMParser();
+			const keyDoc = keyParser.parseFromString(findKeyResponseText, "application/xml");
+			const originalDeCustomerKey = keyDoc.querySelector("CustomerKey")?.textContent;
+			if (!originalDeCustomerKey) throw new Error(`No se pudo encontrar una Data Extension con el nombre exacto "${originalDeName}".`);
+			logApiResponse({ step: 3, response: `CustomerKey encontrada: ${originalDeCustomerKey}` });
+			
+			// --- PASO 4: Clonar la Data Extension ---
+			logMessage(`PASO 4/6: Clonando la Data Extension "${originalDeCustomerKey}"...`);
+			blockUI(`Paso 4/6: Clonando Data Extension...`);
+			const clonedDeInfo = await cloneDataExtension(originalDeCustomerKey, apiConfig);
+			logApiResponse({ step: 4, response: `DE clonada con éxito. Nueva Key: ${clonedDeInfo.customerKey}, Nuevo ObjectID: ${clonedDeInfo.objectID}` });
+
+			// --- PASO 5: Crear el nuevo Event Definition ---
+			logMessage(`PASO 5/6: Creando nuevo Event Definition para la DE clonada...`);
+			blockUI(`Paso 5/6: Creando nuevo Event Definition...`);
+			const newEventDef = await createClonedEventDefinition(originalEventDef, clonedDeInfo, apiConfig);
+			logApiResponse({ step: 5, response: `Nuevo Event Definition creado. Nuevo ID: ${newEventDef.eventDefinitionId}. Nueva Key: ${newEventDef.eventDefinitionKey}` });
+
+			// --- PASO 6: Crear el nuevo Journey ---
+			logMessage(`PASO 6/6: Creando la copia final del Journey...`);
+			blockUI(`Paso 6/6: Creando copia del Journey...`);
+			const copyPayload = prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef);
+			const postJourneyUrl = `${apiConfig.restUri}interaction/v1/interactions/`;
+			logApiCall({ action: 'create_copy', endpoint: postJourneyUrl, payload: copyPayload });
+			const responsePostJourney = await fetch(postJourneyUrl, { method: 'POST', headers: { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(copyPayload) });
+			const newJourneyData = await responsePostJourney.json();
+			logApiResponse({ step: 6, status: responsePostJourney.status, response: newJourneyData });
+			if (!responsePostJourney.ok) throw new Error(newJourneyData.message || `Error al crear la copia. Status: ${responsePostJourney.status}`);
+
+			showCustomAlert(`¡Éxito! Se ha creado la copia "${newJourneyData.name}". Refrescando la lista...`);
+			refreshJourneysTableBtn.click();
+
+		} catch (error) {
+			logMessage(`ERROR en la copia del journey: ${error.message}`);
+			showCustomAlert(`Se produjo un error durante la copia: ${error.message}`);
+		} finally {
+			unblockUI();
+			endLogBuffering();
+		}
+	}
+
+	/**
+	 * Clona una Data Extension, incluyendo su estructura y campos.
+	 * @param {string} originalDeCustomerKey - La CustomerKey de la DE a clonar.
+	 * @param {object} newDeName - El nombre de la nueva DE.
+	 * @param {object} apiConfig - El objeto de configuración de la API.
+	 * @param {string} targetCategoryId - El ID de la carpeta donde se guardará la nueva DE.
+	 * @returns {Promise<{objectID: string, customerKey: string, name: string}>} - Promesa con IDs y nombre de la nueva DE.
+	 */
+	async function cloneDataExtension(originalDeCustomerKey, newDeName, apiConfig, targetCategoryId) {
+		const businessUnitId = businessUnitInput.value.trim();
+
+		// 1. Recuperar detalles de la DE original usando su CustomerKey
+		logMessage(`  - Subpaso 1: Recuperando detalles de la DE (${originalDeCustomerKey})...`);
+		const retrieveDeDetailsPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>Name</Properties><Properties>Description</Properties><Properties>IsSendable</Properties><Properties>SendableDataExtensionField.Name</Properties><Properties>SendableSubscriberField.Name</Properties><Filter xsi:type="SimpleFilterPart"><Property>CustomerKey</Property><SimpleOperator>equals</SimpleOperator><Value>${originalDeCustomerKey}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+		const deDetailsText = await executeSoapRequest(apiConfig.soapUri, retrieveDeDetailsPayload, null);
+		const deParser = new DOMParser();
+		const deDoc = deParser.parseFromString(deDetailsText, "application/xml");
+		const deResultNode = deDoc.querySelector("Results");
+
+		if (!deResultNode) {
+			throw new Error(`No se encontraron detalles para la Data Extension con CustomerKey: ${originalDeCustomerKey}`);
+		}
+
+		const originalDeDetails = {
+			name: deResultNode.querySelector("Name")?.textContent,
+			description: deResultNode.querySelector("Description")?.textContent || "",
+			isSendable: deResultNode.querySelector("IsSendable")?.textContent === 'true',
+			sendableField: deResultNode.querySelector("SendableDataExtensionField > Name")?.textContent
+		};
+		logMessage(`  - Detalles recuperados: Nombre='${originalDeDetails.name}', Sendable=${originalDeDetails.isSendable}`);
+
+		// 2. Recuperar todos los campos de la DE original
+		logMessage("  - Subpaso 2: Recuperando campos de la DE original...");
+		const fields = await fetchFieldsForDE(originalDeCustomerKey, apiConfig);
+		if (fields.length === 0) throw new Error("No se pudieron recuperar los campos de la DE original.");
+
+		const fieldsXmlString = fields.map(buildFieldXml).join('');
+		const sendableFieldType = fields.find(f => f.mc === originalDeDetails.sendableField)?.type;
+
+		// 3. Crear la nueva DE con una CustomerKey VACÍA
+		logMessage(`  - Subpaso 3: Creando la nueva DE clonada con nombre "${newDeName}" en la carpeta ID ${targetCategoryId}...`);
+		const descriptionXml = originalDeDetails.description ? `<Description>${originalDeDetails.description}</Description>` : '';
+		const clientXml = businessUnitId ? `<Client><ClientID>${businessUnitId}</ClientID></Client>` : '';
+
+		let sendableXml = '';
+		if (originalDeDetails.isSendable && originalDeDetails.sendableField && sendableFieldType) {
+			sendableXml = `<SendableDataExtensionField><CustomerKey>${originalDeDetails.sendableField}</CustomerKey><Name>${originalDeDetails.sendableField}</Name><FieldType>${sendableFieldType}</FieldType></SendableDataExtensionField><SendableSubscriberField><Name>Subscriber Key</Name><Value/></SendableSubscriberField>`;
+		}
+
+		const createDePayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Create</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><CreateRequest xmlns="http://exacttarget.com/wsdl/partnerAPI"><Objects xsi:type="DataExtension">${clientXml}<CustomerKey></CustomerKey>${descriptionXml}<Name>${newDeName}</Name><CategoryID>${targetCategoryId}</CategoryID><IsSendable>${originalDeDetails.isSendable}</IsSendable>${sendableXml}<Fields>${fieldsXmlString}</Fields></Objects></CreateRequest></s:Body></s:Envelope>`;
+		const createResponseText = await executeSoapRequest(apiConfig.soapUri, createDePayload, null);
+
+		const createParser = new DOMParser();
+		const createDoc = createParser.parseFromString(createResponseText, "application/xml");
+		if (createDoc.querySelector("OverallStatus")?.textContent !== 'OK') {
+			const errorMessage = createDoc.querySelector("StatusMessage")?.textContent || "Error desconocido al crear la DE clonada.";
+			throw new Error(errorMessage);
+		}
+		logMessage(`  - Subpaso 4: DE "${newDeName}" creada. Recuperando su nueva CustomerKey...`);
+
+		// 4. Recuperar la DE recién creada por su nombre para obtener la CustomerKey generada
+		const retrieveNewDePayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>CustomerKey</Properties><Properties>ObjectID</Properties><Filter xsi:type="SimpleFilterPart"><Property>Name</Property><SimpleOperator>equals</SimpleOperator><Value>${newDeName}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+		const newDeText = await executeSoapRequest(apiConfig.soapUri, retrieveNewDePayload, null);
+		const newDeDoc = new DOMParser().parseFromString(newDeText, "application/xml");
+		const newDeNode = newDeDoc.querySelector("Results");
+
+		if (!newDeNode) {
+			throw new Error(`No se pudo recuperar la DE recién creada con el nombre "${newDeName}".`);
+		}
+		
+		const newObjectID = newDeNode.querySelector("ObjectID")?.textContent;
+		const createdCustomerKey = newDeNode.querySelector("CustomerKey")?.textContent;
+		if (!newObjectID || !createdCustomerKey) {
+			throw new Error("No se pudo obtener el ID/Key de la nueva DE creada tras la recuperación.");
+		}
+
+		return { objectID: newObjectID, customerKey: createdCustomerKey, name: newDeName };
+	}
+
+
+	/**
+	 * Crea un nuevo Event Definition apuntando a una DE clonada.
+	 * @param {object} originalEventDef - El objeto del Event Definition original.
+	 * @param {{objectID: string, customerKey: string}} clonedDeInfo - IDs de la nueva DE.
+	 * @param {object} apiConfig - El objeto de configuración de la API.
+	 * @returns {Promise<object>} - Una promesa que resuelve con el nuevo Event Definition creado.
+	 */
+	async function createClonedEventDefinition(originalEventDef, clonedDeInfo, apiConfig) {
+		// CORRECCIÓN FINAL: Generamos un UUID estándar. Es único y tiene exactamente 36 caracteres.
+		const newEventDefKey = crypto.randomUUID();
+
+		// Construimos el payload basándonos estrictamente en la documentación para la creación.
+		const payload = {
+			type: 'EmailAudience'/*originalEventDef.type*/,
+			name: `${originalEventDef.name}_Copy`,
+			description: originalEventDef.description || "",
+			mode: originalEventDef.mode || "Production",
+			eventDefinitionKey: newEventDefKey,
+			dataExtensionId: clonedDeInfo.objectID,
+			iconUrl: originalEventDef.iconUrl,
+			isVisibleInPicker: originalEventDef.isVisibleInPicker,
+			category: originalEventDef.category,
+			// Incluimos el schema, que es necesario para que el evento sepa qué esperar de la DE
+			schema: originalEventDef.schema 
+		};
+
+		const url = `${apiConfig.restUri}interaction/v1/eventDefinitions/`;
+		logApiCall({ step: "createClonedEventDefinition", payload: payload });
+		
+		const response = await fetch(url, {
+			method: 'POST',
+			headers: { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		
+		const responseData = await response.json();
+		logApiResponse({ step: "createClonedEventDefinition", response: responseData });
+		
+		if (!response.ok) {
+			const errorMessage = responseData.message || "Error desconocido al crear el Event Definition clonado.";
+			throw new Error(`Error en Event Definition: ${errorMessage}`);
+		}
+		
+		return responseData;
 	}
 
 	/**
@@ -1172,6 +1767,281 @@ document.addEventListener('DOMContentLoaded', function () {
 		return communications;
 	}
 
+	/**
+	 * Macro para borrar los Journeys seleccionados.
+	 */
+	async function macroDeleteJourneys() {
+		const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
+		if (selectedRows.length === 0) return;
+
+		const journeysToDelete = Array.from(selectedRows).map(row => {
+			return fullJourneyList.find(j => j.id === row.dataset.journeyId);
+		}).filter(Boolean);
+
+		if (journeysToDelete.length === 0) return;
+
+		if (!await showCustomConfirm(`¿Seguro que quieres borrar permanentemente ${journeysToDelete.length} journey(s)? Esta acción no se puede deshacer.`)) {
+			return;
+		}
+
+		blockUI(`Borrando ${journeysToDelete.length} journey(s)...`);
+		startLogBuffering();
+		const successes = [];
+		const failures = [];
+
+		try {
+			const apiConfig = await getAuthenticatedConfig();
+			const headers = { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" };
+
+			for (const journey of journeysToDelete) {
+				logMessage(`Procesando borrado para: "${journey.name}" (ID: ${journey.id})`);
+				const deleteUrl = `${apiConfig.restUri}interaction/v1/interactions/${journey.id}`;
+				logApiCall({ action: 'DELETE', endpoint: deleteUrl });
+
+				try {
+					const response = await fetch(deleteUrl, { method: 'DELETE', headers });
+					
+					// La API de borrado responde con 200 OK y un cuerpo vacío en caso de éxito
+					if (response.ok) {
+						successes.push({ name: journey.name });
+						logApiResponse({ for: journey.name, status: 'Success', response: 'Borrado con éxito.' });
+					} else {
+						const responseData = await response.json(); // Intentamos leer el error
+						failures.push({ name: journey.name, reason: responseData.message || `Error ${response.status}` });
+						logApiResponse({ for: journey.name, status: 'Failure', response: responseData });
+					}
+				} catch (error) {
+					failures.push({ name: journey.name, reason: error.message });
+					logApiResponse({ for: journey.name, status: 'Failure', response: error.message });
+				}
+			}
+		} catch (error) {
+			logMessage(`Error fatal durante la acción de borrado: ${error.message}`);
+			showCustomAlert(`Error fatal: ${error.message}`);
+		} finally {
+			const alertSummary = `Proceso de borrado finalizado. Éxitos: ${successes.length}, Fallos: ${failures.length}.`;
+			let logSummary = alertSummary;
+			if (failures.length > 0) {
+				const failureDetails = failures.map(f => `  - ${f.name}: ${f.reason}`).join('\n');
+				logSummary += `\n\n--- Detalles de Fallos ---\n${failureDetails}`;
+			}
+			logMessage(logSummary);
+			showCustomAlert(alertSummary);
+			unblockUI();
+			endLogBuffering();
+			
+			// Refrescamos la tabla para que desaparezcan los journeys borrados
+			refreshJourneysTableBtn.click();
+		}
+	}
+
+	// --- 4.7. Clonador Masivo de Queries ---
+
+	/**
+	 * Macro principal que busca las carpetas especificadas por el usuario.
+	 */
+	async function macroSearchCloneFolders() {
+		blockUI("Buscando carpetas...");
+		startLogBuffering();
+		try {
+			const apiConfig = await getAuthenticatedConfig();
+			const sourceQueryName = querySourceFolderNameInput.value.trim();
+			const targetQueryName = queryTargetFolderNameInput.value.trim();
+			const targetDEName = deTargetFolderNameInput.value.trim();
+
+			// Limpiar resultados anteriores
+			resetFolderSelection();
+
+			logMessage("Iniciando búsqueda de carpetas...");
+			const [sourceQueryFolders, targetQueryFolders, targetDEFolders] = await Promise.all([
+				findDataFolders(sourceQueryName, 'queryactivity', apiConfig),
+				findDataFolders(targetQueryName, 'queryactivity', apiConfig),
+				findDataFolders(targetDEName, 'dataextension', apiConfig)
+			]);
+			
+			logMessage(`Resultados: ${sourceQueryFolders.length} (Query Origen), ${targetQueryFolders.length} (Query Destino), ${targetDEFolders.length} (DE Destino)`);
+			
+			renderFolderResultsTable(querySourceFoldersTbody, sourceQueryFolders);
+			renderFolderResultsTable(queryTargetFoldersTbody, targetQueryFolders);
+			renderFolderResultsTable(deTargetFoldersTbody, targetDEFolders);
+
+			queryClonerFolderResultsBlock.classList.remove('hidden');
+
+		} catch (error) {
+			logMessage(`Error al buscar carpetas: ${error.message}`);
+			showCustomAlert(`Error: ${error.message}`);
+		} finally {
+			unblockUI();
+			endLogBuffering();
+		}
+	}
+
+	/**
+	 * Macro que avanza al paso 2, recuperando las queries de la carpeta de origen.
+	 */
+	async function macroDisplayQuerySelection() {
+		blockUI("Cargando Queries...");
+		startLogBuffering();
+		try {
+			const apiConfig = await getAuthenticatedConfig();
+			if (!clonerState.sourceQueryFolder) throw new Error("No se ha seleccionado una carpeta de origen.");
+
+			logMessage(`Recuperando queries de la carpeta ID: ${clonerState.sourceQueryFolder.id}`);
+			const queries = await getQueriesFromFolder(clonerState.sourceQueryFolder.id, apiConfig);
+			clonerState.queriesInSourceFolder = queries.map(q => ({
+				...q,
+				newQueryName: `${q.name}_Copy`,
+				newDeName: `${q.targetDE.name}_Copy`
+			}));
+			
+			// Pasamos el nuevo estado enriquecido a la función de renderizado
+			renderQuerySelectionTable(clonerState.queriesInSourceFolder);
+
+			queriesClonerStep1.style.display = 'none';
+			queriesClonerStep2.style.display = 'flex';
+			queriesClonerStep2.style.flexDirection = 'column';
+			queriesClonerStep2.style.height = '100%';
+			
+		} catch (error) {
+			logMessage(`Error al obtener las queries: ${error.message}`);
+			showCustomAlert(`Error: ${error.message}`);
+		} finally {
+			unblockUI();
+			endLogBuffering();
+		}
+	}
+	
+	/**
+	 * Macro final que ejecuta el proceso de clonación para las queries seleccionadas.
+	 */
+	async function macroCloneSelectedQueries() {
+		const selectedQueries = clonerState.queriesInSourceFolder.filter(q => q.selected);
+		if (selectedQueries.length === 0) return showCustomAlert("No has seleccionado ninguna query para clonar.");
+
+		if (!await showCustomConfirm(`Se clonarán ${selectedQueries.length} Query Activities y sus Data Extensions de destino. ¿Continuar?`)) return;
+
+		startLogBuffering();
+		let successCount = 0;
+		let failCount = 0;
+
+		try {
+			const apiConfig = await getAuthenticatedConfig();
+			logMessage(`Iniciando clonación masiva de ${selectedQueries.length} queries...`);
+
+			for (let i = 0; i < selectedQueries.length; i++) {
+				const query = selectedQueries[i]; 
+				const progress = `(${i + 1}/${selectedQueries.length})`;
+
+				try {
+					logMessage(`\n--- ${progress} Procesando Query: ${query.name} ---`);
+					
+					// 1. Clonar la Data Extension 
+					blockUI(`${progress} Clonando DE como "${query.newDeName}"...`);
+					logMessage(`  - Paso 1: Clonando DE de destino (Key: ${query.targetDE.customerKey})`);
+					// Pasamos el nuevo nombre de la DE como argumento
+					const clonedDE = await cloneDataExtension(query.targetDE.customerKey, query.newDeName, apiConfig, clonerState.targetDEFolder.id);
+					logMessage(`  - Éxito: Nueva DE "${clonedDE.name}" creada con Key: ${clonedDE.customerKey}`);
+
+					// 2. Crear la nueva Query 
+					blockUI(`${progress} Creando Query como "${query.newQueryName}"...`);
+					logMessage(`  - Paso 2: Creando la nueva Query Activity apuntando a la DE clonada.`);
+					// Pasamos el nuevo nombre de la Query y el objeto de la DE clonada
+					await createClonedQuery(query, clonedDE, query.newQueryName, clonerState.targetQueryFolder.id, apiConfig);
+					logMessage(`  - Éxito: Query "${query.newQueryName}" creada.`);
+
+					successCount++;
+
+				} catch (cloneError) {
+					logMessage(`  - ERROR al procesar "${query.name}": ${cloneError.message}`);
+					failCount++;
+				}
+			}
+
+			showCustomAlert(`Proceso de clonación finalizado.\nÉxitos: ${successCount}\nFallos: ${failCount}\n\nRevisa el log para más detalles.`);
+			
+			// Resetear la vista
+			queriesClonerStep2.style.display = 'none';
+			queriesClonerStep1.style.display = 'flex';
+			resetFolderSelection();
+			queryClonerFolderResultsBlock.classList.add('hidden');
+
+		} catch (error) {
+			logMessage(`Error fatal durante el proceso de clonación: ${error.message}`);
+			showCustomAlert(`Error fatal: ${error.message}`);
+		} finally {
+			unblockUI();
+			endLogBuffering();
+		}
+	}
+
+	// --- Helpers para el Clonador de Queries ---
+
+	/**
+	 * Busca carpetas por nombre y tipo de contenido.
+	 * @param {string} folderName - El nombre (o parte del nombre) a buscar.
+	 * @param {string} contentType - 'queryactivity' o 'dataextension'.
+	 * @param {object} apiConfig - La configuración de la API.
+	 * @returns {Promise<Array>} Lista de objetos de carpeta con { id, name, fullPath }.
+	 */
+	async function findDataFolders(folderName, contentType, apiConfig) {
+		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataFolder</ObjectType><Properties>Name</Properties><Properties>ID</Properties><Properties>ParentFolder.ID</Properties><Properties>ContentType</Properties><Filter xsi:type="ComplexFilterPart"><LeftOperand xsi:type="SimpleFilterPart"><Property>Name</Property><SimpleOperator>like</SimpleOperator><Value>%${folderName}%</Value></LeftOperand><LogicalOperator>AND</LogicalOperator><RightOperand xsi:type="SimpleFilterPart"><Property>ContentType</Property><SimpleOperator>equals</SimpleOperator><Value>${contentType}</Value></RightOperand></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+		const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload, null);
+		const parser = new DOMParser();
+		const xmlDoc = parser.parseFromString(responseText, "application/xml");
+		
+		const folderNodes = Array.from(xmlDoc.querySelectorAll("Results"));
+		const pathPromises = folderNodes.map(async (node) => {
+			const id = node.querySelector("ID")?.textContent;
+			const name = node.querySelector("Name")?.textContent;
+			if (!id || !name) return null;
+			const fullPath = await getFolderPath(id, apiConfig);
+			return { id, name, fullPath };
+		});
+		
+		return (await Promise.all(pathPromises)).filter(Boolean);
+	}
+
+	/**
+	 * Recupera las queries de una carpeta específica.
+	 * @param {string} folderId - El ID de la carpeta de queries.
+	 * @param {object} apiConfig - La configuración de la API.
+	 * @returns {Promise<Array>} Lista de objetos de query.
+	 */
+	async function getQueriesFromFolder(folderId, apiConfig) {
+		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>QueryDefinition</ObjectType><Properties>Name</Properties><Properties>CustomerKey</Properties><Properties>QueryText</Properties><Properties>TargetUpdateType</Properties><Properties>DataExtensionTarget.Name</Properties><Properties>DataExtensionTarget.CustomerKey</Properties><Filter xsi:type="SimpleFilterPart"><Property>CategoryID</Property><SimpleOperator>equals</SimpleOperator><Value>${folderId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+		
+		const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload, null);
+		const parser = new DOMParser();
+		const xmlDoc = parser.parseFromString(responseText, "application/xml");
+
+		return Array.from(xmlDoc.querySelectorAll("Results")).map(node => ({
+			name: node.querySelector("Name")?.textContent,
+			customerKey: node.querySelector("CustomerKey")?.textContent,
+			queryText: node.querySelector("QueryText")?.textContent,
+			updateType: node.querySelector("TargetUpdateType")?.textContent,
+			targetDE: {
+				name: node.querySelector("DataExtensionTarget > Name")?.textContent,
+				customerKey: node.querySelector("DataExtensionTarget > CustomerKey")?.textContent
+			},
+			selected: false // Propiedad para el estado de selección
+		}));
+	}
+
+	/**
+	 * Crea una nueva Query Activity clonada.
+	 * @param {object} originalQuery - El objeto de la query original.
+	 * @param {object} clonedDE - El objeto de la DE clonada (con nueva key y nombre).
+	 * @param {object} newQueryName - El nombre de la Query.
+	 * @param {string} targetCategoryId - El ID de la carpeta donde se guardará la query.
+	 * @param {object} apiConfig - La configuración de la API.
+	 */
+	async function createClonedQuery(originalQuery, clonedDE, newQueryName, targetCategoryId, apiConfig) {
+		const newCustomerKey = '';
+
+		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Create</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><CreateRequest xmlns="http://exacttarget.com/wsdl/partnerAPI"><Objects xsi:type="QueryDefinition"><CategoryID>${targetCategoryId}</CategoryID><CustomerKey>${newCustomerKey}</CustomerKey><Name>${newQueryName}</Name><QueryText>${originalQuery.queryText}</QueryText><TargetType>DE</TargetType><DataExtensionTarget><CustomerKey>${clonedDE.customerKey}</CustomerKey><Name>${clonedDE.name}</Name></DataExtensionTarget><TargetUpdateType>${originalQuery.updateType}</TargetUpdateType></Objects></CreateRequest></s:Body></s:Envelope>`;
+
+		await executeSoapRequest(apiConfig.soapUri, soapPayload, null);
+	}
 	// ==========================================================
 	// --- 5. FUNCIONES AUXILIARES (HELPERS) ---
 	// ==========================================================
@@ -1191,8 +2061,13 @@ document.addEventListener('DOMContentLoaded', function () {
 		const responseText = await response.text();
 		logApiResponse({ status: response.status, body: responseText });
 		if (responseText.includes('<OverallStatus>OK</OverallStatus>')) {
-			logMessage(successMessage);
-			if (!successMessage.includes("Búsqueda")) alert(successMessage);
+			if (successMessage) {
+				logMessage(successMessage);
+				// Y solo mostrar la alerta si el mensaje existe Y no es una búsqueda.
+				if (!successMessage.includes("Búsqueda")) {
+					showCustomAlert(successMessage);
+				}
+			}
 			return responseText;
 		} else {
 			const errorMatch = responseText.match(/<StatusMessage>(.*?)<\/StatusMessage>/);
@@ -1201,12 +2076,32 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 
 	/**
+	 * Recupera los detalles de una Data Extension.
+	 * @param {string} property - La propiedad por la que filtrar ('Name', 'CustomerKey', 'ObjectID').
+	 * @param {string} value - El valor de la propiedad a buscar.
+	 * @param {Array<string>} propertiesToRetrieve - Un array con los nombres de las propiedades a recuperar.
+	 * @param {object} apiConfig - El objeto de configuración de la API.
+	 * @returns {Promise<Element|null>} - El nodo XML <Results> de la DE encontrada, o null.
+	 */
+	async function getDEDetails(property, value, propertiesToRetrieve, apiConfig) {
+		const propertiesXml = propertiesToRetrieve.map(p => `<Properties>${p}</Properties>`).join('');
+		const payload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType>${propertiesXml}<Filter xsi:type="SimpleFilterPart"><Property>${property}</Property><SimpleOperator>equals</SimpleOperator><Value>${value}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+		
+		const responseText = await executeSoapRequest(apiConfig.soapUri, payload, null);
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(responseText, "application/xml");
+		
+		return doc.querySelector("Results");
+	}
+
+
+	/**
 	 * Construye el fragmento XML para un único campo de Data Extension.
 	 * @param {object} fieldData - Objeto con los datos del campo (name, type, length, etc.).
 	 * @returns {string} La cadena XML para el campo.
 	 */
 	function buildFieldXml(fieldData) {
-		const { name, type, length, defaultValue, isPrimaryKey, isRequired } = fieldData;
+		const { mc: name, type, len: length, defaultValue, pk: isPrimaryKey, req: isRequired } = fieldData;
 		let fieldXml = '';
 		const commonNodes = `<CustomerKey>${name}</CustomerKey><Name>${name}</Name><IsRequired>${isRequired}</IsRequired><IsPrimaryKey>${isPrimaryKey}</IsPrimaryKey>`;
 		const defaultValueNode = defaultValue ? `<DefaultValue>${defaultValue}</DefaultValue>` : '';
@@ -1609,20 +2504,88 @@ document.addEventListener('DOMContentLoaded', function () {
      * Dibuja la tabla de la vista "Gestión de Automatismos" con los datos proporcionados.
      * @param {Array} automations - El array de automatismos a mostrar.
      */
-	function renderAutomationsTable(automations) {
+	function renderAutomationsTable(automationsToRender) {
 		automationsTbody.innerHTML = '';
-		updateSortIndicators();
-		if (!automations || automations.length === 0) {
+		updateSortIndicators(); // Esto se mantiene
+
+		if (!automationsToRender || automationsToRender.length === 0) {
 			automationsTbody.innerHTML = '<tr><td colspan="4">No hay automatismos para mostrar.</td></tr>';
 			return;
 		}
-		const sortedData = sortAutomations(automations);
-		sortedData.forEach(auto => {
+		
+		automationsToRender.forEach(auto => {
 			const row = document.createElement('tr');
 			row.dataset.automationId = auto.id;
 			row.innerHTML = `<td>${auto.name || 'Sin Nombre'}</td><td>${formatDateToSpanishTime(auto.lastRunTime)}</td><td>${formatDateToSpanishTime(auto.scheduledTime)}</td><td>${auto.status || '---'}</td>`;
 			automationsTbody.appendChild(row);
 		});
+	}
+
+	/**
+	 * Pinta una tabla de resultados de búsqueda de carpetas.
+	 * @param {HTMLElement} tbody - El elemento tbody de la tabla a rellenar.
+	 * @param {Array} folders - La lista de carpetas con { id, name, fullPath }.
+	 */
+	function renderFolderResultsTable(tbody, folders) {
+		tbody.innerHTML = '';
+		if (!folders || folders.length === 0) {
+			tbody.innerHTML = '<tr><td>No se encontraron carpetas.</td></tr>';
+			return;
+		}
+		folders.forEach(folder => {
+			const row = tbody.insertRow();
+			row.dataset.folderId = folder.id;
+			row.dataset.folderName = folder.name;
+			row.innerHTML = `<td>${folder.fullPath}</td>`;
+		});
+
+		// Si solo hay un resultado, seleccionarlo automáticamente
+		if (folders.length === 1) {
+			const singleRow = tbody.querySelector('tr');
+			singleRow.classList.add('selected');
+			// Disparamos un evento de clic para que la lógica de selección se ejecute
+			singleRow.click();
+		}
+	}
+
+	/**
+	 * Pinta la tabla de selección de queries en el paso 2.
+	 * @param {Array} queries - La lista de queries a mostrar.
+	 */
+	function renderQuerySelectionTable(queries) {
+		querySelectionTbody.innerHTML = '';
+		selectAllQueriesCheckbox.checked = false;
+		if (!queries || queries.length === 0) {
+			// Actualizamos el colspan a 5
+			querySelectionTbody.innerHTML = '<tr><td colspan="5">No se encontraron Queries en esta carpeta.</td></tr>';
+			return;
+		}
+
+		queries.forEach((query, index) => {
+			const row = querySelectionTbody.insertRow();
+			row.dataset.queryIndex = index;
+			// Nueva estructura de la fila con celdas editables
+			row.innerHTML = `
+				<td><input type="checkbox"></td>
+				<td>${query.name}</td>
+				<td>${query.targetDE.name}</td>
+				<td contenteditable="true" data-type="query-name">${query.newQueryName}</td>
+				<td contenteditable="true" data-type="de-name">${query.newDeName}</td>
+			`;
+		});
+	}
+
+	/** Resetea el estado y la UI del clonador de queries. */
+	function resetFolderSelection() {
+		clonerState.sourceQueryFolder = null;
+		clonerState.targetQueryFolder = null;
+		clonerState.targetDEFolder = null;
+		
+		[querySourceFoldersTbody, queryTargetFoldersTbody, deTargetFoldersTbody].forEach(tbody => {
+			tbody.innerHTML = '';
+		});
+		
+		queryClonerContinueBtn.disabled = true;
 	}
 
 	// --- 5.4. Otros Helpers ---
@@ -1667,11 +2630,15 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 
 	/**
-     * Aplica los filtros de nombre y estado a la lista de automatismos y redibuja la tabla.
-     */
+	 * Aplica los filtros actuales a la lista completa de automatismos y luego la renderiza.
+	 * ESTA FUNCIÓN DEBE LLAMARSE CUANDO SE CAMBIA UN FILTRO (nombre o estado).
+	 */
 	function applyFiltersAndRender() {
+		currentPageAutomations = 1; // Resetea a la página 1 cada vez que se filtra
+		
 		const nameFilter = automationNameFilter.value.toLowerCase().trim();
 		const statusFilter = automationStatusFilter.value;
+		
 		let filteredAutomations = fullAutomationList;
 		if (nameFilter) {
 			filteredAutomations = filteredAutomations.filter(auto => auto.name.toLowerCase().includes(nameFilter));
@@ -1679,7 +2646,28 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (statusFilter) {
 			filteredAutomations = filteredAutomations.filter(auto => auto.status === statusFilter);
 		}
-		renderAutomationsTable(filteredAutomations);
+		
+		// Ahora llamamos a la función de renderizado con la lista ya filtrada
+		renderPaginatedAutomations(filteredAutomations);
+	}
+
+	/**
+	 * Toma una lista de automatismos, la pagina y la muestra en la tabla.
+	 * ESTA FUNCIÓN DEBE LLAMARSE CUANDO SE CAMBIA DE PÁGINA.
+	 */
+	function renderPaginatedAutomations(automations) {
+		// La lógica de paginación se mueve de renderAutomationsTable aquí
+		const startIndex = (currentPageAutomations - 1) * ITEMS_PER_PAGE;
+		const endIndex = startIndex + ITEMS_PER_PAGE;
+		
+		// Ordenamos la lista ANTES de paginarla
+		const sortedAndPaginatedItems = sortAutomations(automations).slice(startIndex, endIndex);
+		
+		// Actualizamos la UI de paginación con el total de items FILTRADOS
+		updateAutomationPaginationUI(automations.length);
+		
+		// Finalmente, llamamos a la función que dibuja la tabla
+		renderAutomationsTable(sortedAndPaginatedItems);
 	}
 
 	/**
@@ -1761,6 +2749,12 @@ document.addEventListener('DOMContentLoaded', function () {
 		types.forEach(type => journeyTypeFilter.appendChild(new Option(type, type)));
 		journeyTypeFilter.value = currentType;	
 
+		const currentSubtype = journeySubtypeFilter.value;
+		journeySubtypeFilter.innerHTML = '<option value="">Todos los subtipos</option>';
+		const subtypes = [...new Set(journeys.map(j => j.definitionType).filter(Boolean))].sort();
+		subtypes.forEach(subtype => journeySubtypeFilter.appendChild(new Option(subtype, subtype)));
+		journeySubtypeFilter.value = currentSubtype;
+
         const currentStatus = journeyStatusFilter.value;
         journeyStatusFilter.innerHTML = '<option value="">Todos los estados</option>';
         const statuses = [...new Set(journeys.map(j => j.status).filter(Boolean))].sort();
@@ -1772,9 +2766,11 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Aplica los filtros de nombre y tipo a la lista de Journeys y redibuja la tabla.
 	 */
 	function applyJourneyFiltersAndRender() {
+		currentPageJourneys = 1; // Resetea a la página 1 cada vez que se filtra
+
 		const nameFilter = journeyNameFilter.value.toLowerCase().trim();
 		const typeFilter = journeyTypeFilter.value;
-        // ▼▼▼ AÑADIR ESTAS 2 LÍNEAS ▼▼▼
+		const subtypeFilter = journeySubtypeFilter.value;
 		const statusFilter = journeyStatusFilter.value;
 		const deFilter = journeyDEFilter.value.toLowerCase().trim();
 
@@ -1786,15 +2782,26 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (typeFilter) {
 			filteredJourneys = filteredJourneys.filter(j => j.eventType === typeFilter);
 		}
+		if (subtypeFilter) {
+			filteredJourneys = filteredJourneys.filter(j => j.definitionType === subtypeFilter);
+		}
 		if (statusFilter) {
 			filteredJourneys = filteredJourneys.filter(j => j.status === statusFilter);
 		}
 		if (deFilter) {
-			// Nos aseguramos de que la propiedad exista antes de llamar a .toLowerCase()
 			filteredJourneys = filteredJourneys.filter(j => j.dataExtensionName && j.dataExtensionName.toLowerCase().includes(deFilter));
 		}
+		
+		// Ahora llamamos a la función de renderizado con la lista ya filtrada
+		renderPaginatedJourneys(filteredJourneys);
+	}
 
-		renderJourneysTable(filteredJourneys);
+	function renderPaginatedJourneys(journeys) {
+		const startIndex = (currentPageJourneys - 1) * ITEMS_PER_PAGE;
+		const endIndex = startIndex + ITEMS_PER_PAGE;
+		const sortedAndPaginatedItems = sortJourneys(journeys).slice(startIndex, endIndex);
+		updateJourneyPaginationUI(journeys.length);
+		renderJourneysTable(sortedAndPaginatedItems);
 	}
 
 	/**
@@ -1857,6 +2864,33 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 	}
 
+	/**
+     * Actualiza la UI de los controles de paginación para la tabla de Automatismos.
+     * @param {number} totalItems - El número total de items en la lista filtrada.
+     */
+    function updateAutomationPaginationUI(totalItems) {
+        const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
+        totalPagesAutomations.textContent = `/ ${totalPages}`;
+        pageInputAutomations.value = currentPageAutomations;
+        pageInputAutomations.max = totalPages;
+
+        prevPageBtnAutomations.disabled = currentPageAutomations === 1;
+        nextPageBtnAutomations.disabled = currentPageAutomations >= totalPages;
+    }
+
+    /**
+     * Actualiza la UI de los controles de paginación para la tabla de Journeys.
+     * @param {number} totalItems - El número total de items en la lista filtrada.
+     */
+    function updateJourneyPaginationUI(totalItems) {
+        const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
+        totalPagesJourneys.textContent = `/ ${totalPages}`;
+        pageInputJourneys.value = currentPageJourneys;
+        pageInputJourneys.max = totalPages;
+
+        prevPageBtnJourneys.disabled = currentPageJourneys === 1;
+        nextPageBtnJourneys.disabled = currentPageJourneys >= totalPages;
+    }
 
 	// ==========================================================
 	// --- 6. MANIPULACIÓN DEL DOM Y COMPONENTES ---
@@ -2116,7 +3150,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			else if (selectedDelimiter === 'comma') delimiter = ',';
 			else if (selectedDelimiter === 'semicolon') delimiter = ';';
 			else delimiter = '\t';
-			if (!delimiter) return alert('Por favor, introduce un separador.');
+			if (!delimiter) return showCustomAlert('Por favor, introduce un separador.');
 			const newFields = text.split('\n').map(line => {
 				if (!line.trim()) return null;
 				const [name, type, length] = line.split(delimiter).map(c => c.trim());
@@ -2170,7 +3204,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 } catch (error) {
                     const errorMessage = error.message || "Error desconocido al cargar Automatismos.";
                     logMessage(`Error: ${errorMessage}`);
-                    alert(`Error al cargar Automatismos: ${errorMessage}`);
+                    showCustomAlert(`Error al cargar Automatismos: ${errorMessage}`);
                     automationsTbody.innerHTML = `<tr><td colspan="4" style="color:red;">Error al cargar: ${errorMessage}</td></tr>`;
                 } finally {
                     unblockUI(); 
@@ -2267,7 +3301,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			} catch (error) {
 				const errorMessage = error.message || "Error desconocido al cargar Journeys.";
 				logMessage(`Error al obtener journeys: ${errorMessage}`);
-				alert(`Error al cargar Journeys: ${errorMessage}`);
+				showCustomAlert(`Error al cargar Journeys: ${errorMessage}`);
 				journeysTbody.innerHTML = `<tr><td colspan="9" style="color:red;">Error al cargar journeys: ${errorMessage}</td></tr>`;
 			} finally {
 				unblockUI();
@@ -2344,8 +3378,9 @@ document.addEventListener('DOMContentLoaded', function () {
 			const items = data.items || [];
 			
 			items.forEach(item => {
-				// Solo nos interesa la definición activa que está publicada en una interacción.
-				if (item.publishedInteractionCount === 1) {
+				// Solo nos interesa la definición activa que está publicada en una interacción. (item.publishedInteractionCount === 1)
+				// El problema de esto es que si está el journey en draft, no aparece, por lo que buscamos que tenga DE.
+				if (item.dataExtensionId && item.dataExtensionName)  {
 					// Usamos el 'name' para cruzarlo con el Journey
 					eventDefinitions[item.name] = { 
 						type: item.type, 
@@ -2462,6 +3497,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 				// Datos enriquecidos
 				eventType: eventDef?.type || 'No asociado',
+				definitionType: journey.definitionType || 'N/A',
 				dataExtensionName: eventDef?.dataExtensionName || 'No asociado',
 				location: folderPath,
 
@@ -2479,25 +3515,22 @@ document.addEventListener('DOMContentLoaded', function () {
      * Dibuja la tabla de la vista "Gestión de Journeys" con los datos proporcionados.
      * @param {Array} journeys - El array de journeys a mostrar.
      */
-	function renderJourneysTable(journeys) {
+	function renderJourneysTable(journeysToRender) {
 		journeysTbody.innerHTML = '';
-        updateJourneySortIndicators(); 
+		updateJourneySortIndicators(); 
 
-        const sortedData = sortJourneys(journeys);
-
-		if (!sortedData || sortedData.length === 0) {
-			journeysTbody.innerHTML = '<tr><td colspan="12">No se encontraron journeys con los filtros aplicados.</td></tr>'; // Colspan ahora es 12
+		if (!journeysToRender || journeysToRender.length === 0) {
+			journeysTbody.innerHTML = '<tr><td colspan="13">No se encontraron journeys con los filtros aplicados.</td></tr>';
 			return;
 		}
 
-		sortedData.forEach(journey => {
+		journeysToRender.forEach(journey => {
 			const row = document.createElement('tr');
-            row.dataset.journeyId = journey.id;
+			row.dataset.journeyId = journey.id;
 			
-            // Restaurar el estado visual de selección si la fila estaba seleccionada
-            if (document.querySelector(`#journeys-table tbody tr.selected[data-journey-id="${journey.id}"]`)) {
-                row.classList.add('selected');
-            }
+			if (document.querySelector(`#journeys-table tbody tr.selected[data-journey-id="${journey.id}"]`)) {
+				row.classList.add('selected');
+			}
 
 			row.innerHTML = `
 				<td>${journey.name || '---'}</td>
@@ -2505,13 +3538,14 @@ document.addEventListener('DOMContentLoaded', function () {
 				<td>${formatDateToSpanishTime(journey.createdDate)}</td>
 				<td>${formatDateToSpanishTime(journey.modifiedDate)}</td>
 				<td>${journey.eventType || '---'}</td> 
+				<td>${journey.definitionType || '---'}</td>
 				<td>${journey.status || '---'}</td>
 				<td>${journey.location || '---'}</td>
 				<td>${journey.dataExtensionName || '---'}</td>
-                <td>${journey.hasCommunications ? 'Sí' : 'No'}</td>
-                <td>${journey.emails && journey.emails.length > 0 ? journey.emails.join(', ') : '---'}</td>
-                <td>${journey.sms && journey.sms.length > 0 ? journey.sms.join(', ') : '---'}</td>
-                <td>${journey.pushes && journey.pushes.length > 0 ? journey.pushes.join(', ') : '---'}</td>
+				<td>${journey.hasCommunications ? 'Sí' : 'No'}</td>
+				<td>${journey.emails && journey.emails.length > 0 ? journey.emails.join(', ') : '---'}</td>
+				<td>${journey.sms && journey.sms.length > 0 ? journey.sms.join(', ') : '---'}</td>
+				<td>${journey.pushes && journey.pushes.length > 0 ? journey.pushes.join(', ') : '---'}</td>
 			`;
 			journeysTbody.appendChild(row);
 		});
@@ -2660,19 +3694,99 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * basándose en la selección actual de filas en la tabla de journeys.
 	 */
 	function updateJourneyActionButtonsState() {
-		const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
-		const selectionCount = selectedRows.length;
+    const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
+    const selectionCount = selectedRows.length;
 
-		// Lógica para el botón "Comunicaciones"
-		getCommunicationsBtn.disabled = selectionCount === 0;
+    // Lógica para los botones existentes (Comunicaciones, Dibujar, Copiar)
+    getCommunicationsBtn.disabled = selectionCount === 0;
 
-		// Lógica para el botón "Dibujar"
-		if (selectionCount === 1) {
-			const journeyId = selectedRows[0].dataset.journeyId;
-			const journey = fullJourneyList.find(j => j.id === journeyId);
-			drawJourneyBtn.disabled = !(journey && journey.hasCommunications);
+    if (selectionCount === 1) {
+        const journeyId = selectedRows[0].dataset.journeyId;
+        const journey = fullJourneyList.find(j => j.id === journeyId);
+        drawJourneyBtn.disabled = !(journey && journey.hasCommunications);
+        copyJourneyBtn.disabled = !(journey && (journey.eventType === 'EmailAudience' || journey.eventType === 'AutomationAudience'));
+        if (!copyJourneyBtn.disabled) {
+            copyJourneyBtn.style.backgroundColor = '#7700ffff';
+        } else {
+            copyJourneyBtn.style.backgroundColor = '';
+        }
+    } else {
+        drawJourneyBtn.disabled = true;
+        copyJourneyBtn.disabled = true;
+        copyJourneyBtn.style.backgroundColor = '';
+    }
+
+    // Lógica para los botones de acción masiva (Parar, Borrar)
+    if (selectionCount > 0) {
+        const selectedJourneys = Array.from(selectedRows).map(row => {
+            return fullJourneyList.find(j => j.id === row.dataset.journeyId);
+        }).filter(Boolean);
+
+        // Lógica para el botón "Parar"
+        const allArePublished = selectedJourneys.every(j => j.status === 'Published');
+        stopJourneyBtn.disabled = !allArePublished;
+
+        // Se habilita solo si hay seleccionados Y TODOS son de subtipo 'Quicksend'
+        const allAreQuicksend = selectedJourneys.every(j => j.definitionType === 'Quicksend');
+        deleteJourneyBtn.disabled = !allAreQuicksend;
+
+    } else {
+        // Si no hay nada seleccionado, todos los botones de acción se deshabilitan
+        stopJourneyBtn.disabled = true;
+        deleteJourneyBtn.disabled = true;
+    }
+}
+
+	/**
+	 * Gestiona el envío del formulario de licencia.
+	 * Guarda los datos en localStorage y arranca la aplicación.
+	 * @param {Event} event - El evento de envío del formulario.
+	 */
+	async function handleLicenseSubmit(event) {
+		event.preventDefault(); // Evita que la página se recargue
+		const email = licenseEmailInput.value.trim();
+		const key = licenseKeyInput.value.trim();
+		const submitBtn = document.getElementById('license-submit-btn');
+
+		// Ocultamos cualquier error anterior al iniciar la validación
+    	licenseErrorEl.style.display = 'none';
+
+		if (!email || !key) {
+			showCustomAlert('Por favor, completa ambos campos.');
+			licenseErrorEl.style.display = 'block';
+			return;
+		}
+
+		// Bloqueamos el botón para evitar múltiples envíos
+		submitBtn.disabled = true;
+		submitBtn.textContent = 'Validando...';
+
+		// Llamamos a la función del proceso principal
+		const result = await window.electronAPI.validateLicense({ email, key });
+		
+		// Si el resultado es un objeto, es un error del backend
+		if (result && result.error) {
+			// Mostramos el error de configuración en el modal
+			licenseErrorEl.textContent = `Error de configuración: ${result.error}`;
+			licenseErrorEl.style.display = 'block';
+			submitBtn.disabled = false;
+			submitBtn.textContent = 'Validar y Acceder';
+			return;
+		}
+
+		if (result === true) {
+			// Éxito
+			const licenseData = { email, key };
+			localStorage.setItem('isKeyValid', JSON.stringify(licenseData));
+			appContainer.classList.remove('app-locked');
+			licenseModal.style.display = 'none';
+			startFullApp();
 		} else {
-			drawJourneyBtn.disabled = true;
+			// Error de validación
+			licenseErrorEl.textContent = 'El email o la clave de acceso no son válidos, o el usuario no está activo.';
+			licenseErrorEl.style.display = 'block';
+			submitBtn.disabled = false;
+			submitBtn.textContent = 'Validar y Acceder';
 		}
 	}
 
@@ -2684,19 +3798,28 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Configura todos los event listeners de la aplicación una sola vez.
 	 */
 	function setupEventListeners() {
+		licenseForm.addEventListener('submit', handleLicenseSubmit);
+
+		// Listeners para el nuevo modal de alerta
+		customAlertCloseBtn.addEventListener('click', closeCustomAlert);
+		customAlertModal.addEventListener('click', (e) => {
+			if (e.target === customAlertModal) {
+				closeCustomAlert();
+			}
+		});
 
 		// --- Listeners de Configuración y Sesión ---
 		saveConfigBtn.addEventListener('click', () => {
 			startLogBuffering();
 			try {
 				const clientName = clientNameInput.value.trim();
-				if (!clientName) return alert('Introduzca un nombre para el cliente antes de guardar.');
+				if (!clientName) return showCustomAlert('Introduzca un nombre para el cliente antes de guardar.');
 				let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
 				configs[clientName] = getConfigToSave();
 				localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
 				loadConfigsIntoSelect();
 				logMessage(`Configuración para "${clientName}" guardada localmente.`);
-				alert(`Configuración para "${clientName}" guardada.`);
+				showCustomAlert(`Configuración para "${clientName}" guardada.`);
 			} finally {
 				endLogBuffering();
 			}
@@ -2706,9 +3829,9 @@ document.addEventListener('DOMContentLoaded', function () {
 			startLogBuffering();
 			try {
 				const clientName = clientNameInput.value.trim();
-				if (!clientName) return alert('Introduzca un nombre para el cliente.');
+				if (!clientName) return showCustomAlert('Introduzca un nombre para el cliente.');
 				const config = { clientName, authUri: authUriInput.value.trim(), clientId: clientIdInput.value.trim(), clientSecret: clientSecretInput.value.trim(), businessUnit: businessUnitInput.value.trim() };
-				if (!config.authUri || !config.clientId || !config.clientSecret || !config.businessUnit) return alert('Se necesitan Auth URI, Client ID, Client Secret y MID para el login.');
+				if (!config.authUri || !config.clientId || !config.clientSecret || !config.businessUnit) return showCustomAlert('Se necesitan Auth URI, Client ID, Client Secret y MID para el login.');
 				let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
 				configs[clientName] = getConfigToSave();
 				localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
@@ -2721,12 +3844,12 @@ document.addEventListener('DOMContentLoaded', function () {
 			}
 		});
 
-		logoutBtn.addEventListener('click', () => {
+		logoutBtn.addEventListener('click', async () => {
 			startLogBuffering();
 			try {
 				const clientName = savedConfigsSelect.value;
-				if (!clientName) return alert("Seleccione un cliente para hacer logout.");
-				if (confirm(`Esto borrará la configuración y cerrará la sesión para "${clientName}". ¿Continuar?`)) {
+				if (!clientName) return showCustomAlert("Seleccione un cliente para hacer logout.");
+				if (await showCustomConfirm(`Esto borrará la configuración y cerrará la sesión para "${clientName}". ¿Continuar?`)) {
 					let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
 					delete configs[clientName];
 					localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
@@ -2746,11 +3869,11 @@ document.addEventListener('DOMContentLoaded', function () {
 			startLogBuffering();
 			if (result.success) {
 				logMessage("Login exitoso. Sesión activa.");
-				alert("Login completado con éxito.");
+				showCustomAlert("Login completado con éxito.");
 				loadAndSyncClientConfig(clientNameInput.value);
 			} else {
 				logMessage(`Error durante el login: ${result.error}`);
-				alert(`Hubo un error en el login: ${result.error}`);
+				showCustomAlert(`Hubo un error en el login: ${result.error}`);
 				updateLoginStatus(false);
 			}
 			endLogBuffering();
@@ -2758,7 +3881,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		window.electronAPI.onLogoutSuccess(() => {
 			startLogBuffering();
-			alert(`Sesión cerrada y configuración borrada.`);
+			showCustomAlert(`Sesión cerrada y configuración borrada.`);
 			logMessage("Sesión cerrada y configuración borrada.");
 			loadConfigsIntoSelect();
 			loadAndSyncClientConfig('');
@@ -2767,7 +3890,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		window.electronAPI.onRequireLogin(data => {
 			startLogBuffering();
-			alert(`La sesión ha expirado o no es válida. Por favor, haz login de nuevo.\n\nMotivo: ${data.message}`);
+			showCustomAlert(`La sesión ha expirado o no es válida. Por favor, haz login de nuevo.\n\nMotivo: ${data.message}`);
 			logMessage(`LOGIN REQUERIDO: ${data.message}`);
 			updateLoginStatus(false);
 			endLogBuffering();
@@ -2784,6 +3907,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				else if (macro === 'calendario') viewCalendar();
 				else if (macro === 'gestionAutomatismos') viewAutomations();
 				else if (macro === 'gestionJourneys') viewJourneys();
+				else if (macro === 'clonadorQueries') showSection('clonador-queries-section');
 			});
 		});
 
@@ -2820,6 +3944,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 
 		// --- Listeners de Botones de Macros ---
+		documentDEsBtn.addEventListener('click', macroDocumentDataExtensions);
 		createDEBtn.addEventListener('click', macroCreateDE);
 		createFieldsBtn.addEventListener('click', macroCreateFields);
 		getFieldsBtn.addEventListener('click', macroGetFields);
@@ -2914,7 +4039,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				await macroGetAutomations();
 			} catch (e) {
 				logMessage(`Error al refrescar automatismos del calendario: ${e.message}`);
-				alert(`Error: ${e.message}`);
+				showCustomAlert(`Error: ${e.message}`);
 			} finally {
 				unblockUI();
 				endLogBuffering();
@@ -2930,7 +4055,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				await macroGetJourneyAutomations();
 			} catch (e) {
 				logMessage(`Error al refrescar journeys del calendario: ${e.message}`);
-				alert(`Error: ${e.message}`);
+				showCustomAlert(`Error: ${e.message}`);
 			} finally {
 				unblockUI();
 				endLogBuffering();
@@ -2963,6 +4088,115 @@ document.addEventListener('DOMContentLoaded', function () {
 			getDEsBtn.disabled = !selectedSubscriberData.isSubscriber;
 			customerJourneysResultsBlock.classList.add('hidden');
 			customerSendsResultsBlock.classList.add('hidden');
+		});
+
+		function reRenderAutomations() {
+			// Esta función auxiliar obtiene la lista filtrada actual y la re-renderiza
+			const nameFilter = automationNameFilter.value.toLowerCase().trim();
+			const statusFilter = automationStatusFilter.value;
+			let filteredAutomations = fullAutomationList;
+			if (nameFilter) {
+				filteredAutomations = filteredAutomations.filter(auto => auto.name.toLowerCase().includes(nameFilter));
+			}
+			if (statusFilter) {
+				filteredAutomations = filteredAutomations.filter(auto => auto.status === statusFilter);
+			}
+			renderPaginatedAutomations(filteredAutomations);
+		}
+
+		prevPageBtnAutomations.addEventListener('click', () => {
+			if (currentPageAutomations > 1) {
+				currentPageAutomations--;
+				reRenderAutomations();
+			}
+		});
+
+		nextPageBtnAutomations.addEventListener('click', () => {
+			const maxPage = parseInt(pageInputAutomations.max, 10);
+			if (currentPageAutomations < maxPage) {
+				currentPageAutomations++;
+				reRenderAutomations();
+			}
+		});
+
+		pageInputAutomations.addEventListener('input', () => {
+			let newPage = parseInt(pageInputAutomations.value, 10);
+			// No hacemos nada si el campo está vacío, para que el usuario pueda borrar y escribir
+			if (isNaN(newPage)) {
+				return; 
+			}
+			const maxPage = parseInt(pageInputAutomations.max, 10);
+			if (newPage < 1) newPage = 1;
+			if (newPage > maxPage) newPage = maxPage;
+			
+			currentPageAutomations = newPage;
+			reRenderAutomations();
+		});
+
+		// Corrección para cuando el usuario hace clic fuera (blur)
+		pageInputAutomations.addEventListener('change', () => {
+			if (pageInputAutomations.value === '') {
+				currentPageAutomations = 1;
+				reRenderAutomations();
+			}
+		});
+
+        // --- Listeners de Paginación de Journeys ---
+        function reRenderJourneys() {
+			// Función auxiliar que obtiene la lista filtrada actual y la re-renderiza
+			const nameFilter = journeyNameFilter.value.toLowerCase().trim();
+			const typeFilter = journeyTypeFilter.value;
+			const statusFilter = journeyStatusFilter.value;
+			const deFilter = journeyDEFilter.value.toLowerCase().trim();
+			let filteredJourneys = fullJourneyList;
+			if (nameFilter) {
+				filteredJourneys = filteredJourneys.filter(j => j.name.toLowerCase().includes(nameFilter));
+			}
+			if (typeFilter) {
+				filteredJourneys = filteredJourneys.filter(j => j.eventType === typeFilter);
+			}
+			if (statusFilter) {
+				filteredJourneys = filteredJourneys.filter(j => j.status === statusFilter);
+			}
+			if (deFilter) {
+				filteredJourneys = filteredJourneys.filter(j => j.dataExtensionName && j.dataExtensionName.toLowerCase().includes(deFilter));
+			}
+			renderPaginatedJourneys(filteredJourneys);
+		}
+
+		prevPageBtnJourneys.addEventListener('click', () => {
+			if (currentPageJourneys > 1) {
+				currentPageJourneys--;
+				reRenderJourneys();
+			}
+		});
+
+		nextPageBtnJourneys.addEventListener('click', () => {
+			const maxPage = parseInt(pageInputJourneys.max, 10);
+			if (currentPageJourneys < maxPage) {
+				currentPageJourneys++;
+				reRenderJourneys();
+			}
+		});
+
+		pageInputJourneys.addEventListener('input', () => {
+			let newPage = parseInt(pageInputJourneys.value, 10);
+			if (isNaN(newPage)) {
+				return; 
+			}
+			const maxPage = parseInt(pageInputJourneys.max, 10);
+			if (newPage < 1) newPage = 1;
+			if (newPage > maxPage) newPage = maxPage;
+			
+			currentPageJourneys = newPage;
+			reRenderJourneys();
+		});
+
+		pageInputJourneys.addEventListener('change', () => {
+			if (pageInputJourneys.value === '') {
+				currentPageJourneys = 1;
+				reRenderJourneys();
+			}
 		});
 
 		// --- Listeners de Gestión de Automatismos ---
@@ -3004,24 +4238,42 @@ document.addEventListener('DOMContentLoaded', function () {
 		automationNameFilter.addEventListener('input', applyFiltersAndRender);
         automationStatusFilter.addEventListener('change', applyFiltersAndRender);
 
-				// --- Listeners de Gestión de Journeys ---
+		// --- Listeners de Gestión de Journeys ---
 		journeyNameFilter.addEventListener('input', applyJourneyFiltersAndRender);
 		journeyTypeFilter.addEventListener('change', applyJourneyFiltersAndRender);
+		journeySubtypeFilter.addEventListener('change', applyJourneyFiltersAndRender);
         journeyStatusFilter.addEventListener('change', applyJourneyFiltersAndRender);
         journeyDEFilter.addEventListener('input', applyJourneyFiltersAndRender);
 
         getCommunicationsBtn.addEventListener('click', macroGetJourneyCommunications);
+		copyJourneyBtn.addEventListener('click', macroCopyJourney);
+		stopJourneyBtn.addEventListener('click', macroStopJourneys);
+		deleteJourneyBtn.addEventListener('click', macroDeleteJourneys);
 
-		 refreshJourneysTableBtn.addEventListener('click', () => {
-			fullJourneyList = [];
-			eventDefinitionsMap = {};
-			journeyFolderMap = {};
-			journeyNameFilter.value = '';
-			journeyTypeFilter.value = '';
-            journeyStatusFilter.value = '';
-            journeyDEFilter.value = '';
-			updateJourneyActionButtonsState(); // Llama a la nueva función que deshabilita ambos botones
-			viewJourneys(); 
+		refreshJourneysTableBtn.addEventListener('click', async () => {
+			// Añadimos el patrón de bloqueo/desbloqueo seguro
+			blockUI("Refrescando Journeys...");
+			startLogBuffering();
+			try {
+				// Vaciamos todas las cachés para forzar una recarga completa
+				fullJourneyList = [];
+				eventDefinitionsMap = {};
+				journeyFolderMap = {};
+				journeyNameFilter.value = '';
+				journeyTypeFilter.value = '';
+				journeySubtypeFilter.value = ''; 
+				journeyStatusFilter.value = '';
+				journeyDEFilter.value = '';
+				updateJourneyActionButtonsState();
+				// Llamamos a viewJourneys y esperamos a que termine
+				await viewJourneys();
+			} catch (error) {
+				logMessage(`Error en el proceso de refresco de Journeys: ${error.message}`);
+				showCustomAlert(`Se produjo un error al refrescar: ${error.message}`);
+			} finally {
+				unblockUI();
+				endLogBuffering();
+			}
 		});
 
         drawJourneyBtn.addEventListener('click', () => {
@@ -3073,20 +4325,162 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Listener para el botón "Copiar"
         copyFlowBtn.addEventListener('click', () => {
-            const textToCopy = journeyFlowContent.textContent;
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                const originalText = copyFlowBtn.textContent;
-                copyFlowBtn.textContent = '¡Copiado!';
-                copyFlowBtn.classList.add('copied');
-                setTimeout(() => {
-                    copyFlowBtn.textContent = originalText;
-                    copyFlowBtn.classList.remove('copied');
-                }, 2000);
-            }).catch(err => {
-                console.error('Error al intentar copiar al portapapeles:', err);
-                alert('No se pudo copiar el texto. Revisa la consola para más detalles.');
-            });
-        });
+			const textToCopy = journeyFlowContent.textContent;
+
+			// Usamos el método clásico y más robusto para copiar, que evita problemas de foco y CSP.
+			const textArea = document.createElement('textarea');
+			textArea.value = textToCopy;
+
+			// Hacemos el textarea invisible y lo añadimos al DOM
+			textArea.style.position = 'absolute';
+			textArea.style.left = '-9999px';
+			document.body.appendChild(textArea);
+
+			// Seleccionamos el contenido y ejecutamos el comando de copia
+			textArea.select();
+			
+			try {
+				const successful = document.execCommand('copy');
+				if (successful) {
+					const originalText = copyFlowBtn.textContent;
+					copyFlowBtn.textContent = '¡Copiado!';
+					copyFlowBtn.classList.add('copied');
+					setTimeout(() => {
+						copyFlowBtn.textContent = originalText;
+						copyFlowBtn.classList.remove('copied');
+					}, 2000);
+				} else {
+					throw new Error('Fallback copy command failed.');
+				}
+			} catch (err) {
+				console.error('Error al intentar copiar al portapapeles con el método clásico:', err);
+				showCustomAlert('No se pudo copiar el texto. Inténtalo manualmente (Ctrl+C).');
+			} finally {
+				// Siempre eliminamos el textarea del DOM
+				document.body.removeChild(textArea);
+			}
+		});
+
+		// --- Listeners del Clonador de Queries ---
+		const queryClonerInputs = [querySourceFolderNameInput, queryTargetFolderNameInput, deTargetFolderNameInput];
+		
+		queryClonerInputs.forEach(input => {
+			input.addEventListener('input', () => {
+				const allFilled = queryClonerInputs.every(i => i.value.trim() !== '');
+				queryClonerSearchFoldersBtn.disabled = !allFilled;
+			});
+		});
+
+		queryClonerSearchFoldersBtn.addEventListener('click', macroSearchCloneFolders);
+		queryClonerContinueBtn.addEventListener('click', macroDisplayQuerySelection);
+		queryClonerCloneBtn.addEventListener('click', macroCloneSelectedQueries);
+
+		queryClonerBackBtn.addEventListener('click', () => {
+			queriesClonerStep2.style.display = 'none';
+			queriesClonerStep1.style.display = 'flex';
+			clonerState.queriesInSourceFolder = []; // Limpiar estado
+			querySelectionTbody.innerHTML = ''; // Limpiar tabla
+		});
+
+		// Lógica de selección para las tablas de carpetas
+		function handleFolderTableClick(event, stateKey) {
+			const tbody = event.currentTarget;
+			const clickedRow = event.target.closest('tr');
+			if (!clickedRow || !clickedRow.dataset.folderId) return;
+			
+			// Deseleccionar la fila anterior en la misma tabla
+			const previouslySelected = tbody.querySelector('tr.selected');
+			if (previouslySelected) previouslySelected.classList.remove('selected');
+
+			// Seleccionar la nueva fila y guardar el estado
+			clickedRow.classList.add('selected');
+			clonerState[stateKey] = {
+				id: clickedRow.dataset.folderId,
+				name: clickedRow.dataset.folderName
+			};
+
+			// Comprobar si se puede continuar
+			queryClonerContinueBtn.disabled = !(clonerState.sourceQueryFolder && clonerState.targetQueryFolder && clonerState.targetDEFolder);
+		}
+
+		querySourceFoldersTbody.addEventListener('click', (e) => handleFolderTableClick(e, 'sourceQueryFolder'));
+		queryTargetFoldersTbody.addEventListener('click', (e) => handleFolderTableClick(e, 'targetQueryFolder'));
+		deTargetFoldersTbody.addEventListener('click', (e) => handleFolderTableClick(e, 'targetDEFolder'));
+
+		// Lógica de selección para la tabla de queries
+		querySelectionTbody.addEventListener('click', (e) => {
+			const row = e.target.closest('tr');
+			if (!row) return;
+			
+			const checkbox = row.querySelector('input[type="checkbox"]');
+			const queryIndex = parseInt(row.dataset.queryIndex, 10);
+			
+			// Si el clic no fue en el checkbox, lo marcamos/desmarcamos igualmente
+			if (e.target.type !== 'checkbox') {
+				checkbox.checked = !checkbox.checked;
+			}
+			
+			clonerState.queriesInSourceFolder[queryIndex].selected = checkbox.checked;
+
+			const anySelected = clonerState.queriesInSourceFolder.some(q => q.selected);
+			queryClonerCloneBtn.disabled = !anySelected;
+
+			const allSelected = clonerState.queriesInSourceFolder.every(q => q.selected);
+			selectAllQueriesCheckbox.checked = allSelected;
+		});
+
+		selectAllQueriesCheckbox.addEventListener('change', (e) => {
+			const isChecked = e.target.checked;
+			clonerState.queriesInSourceFolder.forEach(q => q.selected = isChecked);
+			
+			querySelectionTbody.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = isChecked);
+
+			queryClonerCloneBtn.disabled = !isChecked && clonerState.queriesInSourceFolder.length > 0;
+		});
+
+		// --- Listener para edición en la tabla de selección de queries ---
+		querySelectionTbody.addEventListener('input', (e) => {
+			const cell = e.target.closest('td[contenteditable="true"]');
+			if (!cell) return;
+
+			const row = cell.closest('tr');
+			const index = parseInt(row.dataset.queryIndex, 10);
+			const dataType = cell.dataset.type;
+			const newValue = cell.textContent.trim();
+
+			if (dataType === 'query-name') {
+				clonerState.queriesInSourceFolder[index].newQueryName = newValue;
+			} else if (dataType === 'de-name') {
+				clonerState.queriesInSourceFolder[index].newDeName = newValue;
+			}
+		});
+
+		// --- Listener para el Acordeón de la Documentación ---
+		const allAccordionHeaders = document.querySelectorAll('.docu-accordion-header');
+		
+		allAccordionHeaders.forEach(header => {
+			header.addEventListener('click', () => {
+				// Encuentra el contenedor del acordeón al que pertenece este header
+				const parentAccordion = header.closest('.docu-accordion');
+				// Busca el header que ya está activo DENTRO de ese mismo acordeón
+				const activeHeader = parentAccordion.querySelector('.docu-accordion-header.active');
+				
+				// Si hacemos clic en un header que ya está abierto (y no es el que pulsamos), lo cerramos.
+				if (activeHeader && activeHeader !== header) {
+					activeHeader.classList.remove('active');
+					activeHeader.nextElementSibling.style.maxHeight = null;
+				}
+
+				// Abrimos o cerramos el header clicado.
+				header.classList.toggle('active');
+				const content = header.nextElementSibling;
+				if (content.style.maxHeight) {
+					content.style.maxHeight = null; // Colapsar
+				} else {
+					content.style.maxHeight = content.scrollHeight + "px"; // Expandir
+				}
+			});
+		});
 	}
 
 
@@ -3096,9 +4490,70 @@ document.addEventListener('DOMContentLoaded', function () {
 	
 	/**
 	 * Función principal que se ejecuta al cargar la página.
-	 * Inicializa el estado de la aplicación.
+	 * Actúa como un guardián: comprueba si la licencia es válida antes de iniciar la app.
 	 */
-	function initializeApp() {
+	async function initializeApp() {
+		setupEventListeners();
+
+		const licenseInfoRaw = localStorage.getItem('isKeyValid');
+
+		if (licenseInfoRaw) {
+			// --- INICIO CON VALIDACIÓN EXPLÍCITA ---
+
+			// 1. Mostramos el spinner INMEDIATAMENTE. El usuario sabe que algo está pasando.
+			blockUI("Validando licencia...");
+
+			try {
+				const licenseInfo = JSON.parse(licenseInfoRaw);
+				if (!licenseInfo.email || !licenseInfo.key) {
+					// Si los datos están corruptos, lo tratamos como un fallo.
+					throw new Error("Datos de licencia locales corruptos.");
+				}
+
+				// 2. Realizamos la validación. Esta llamada ya no bloquea la ventana,
+				// pero sí esperamos su resultado antes de continuar.
+				const isValid = await window.electronAPI.validateLicense({ email: licenseInfo.email, key: licenseInfo.key });
+				
+				// 3. Actuamos según el resultado.
+				if (isValid === true) {
+					// Éxito: Ocultamos el spinner y arrancamos la aplicación.
+					unblockUI();
+					startFullApp();
+				} else {
+					// Fallo (acceso revocado): Ocultamos el spinner, borramos los datos malos y mostramos el modal.
+					unblockUI();
+					localStorage.removeItem('isKeyValid');
+					
+					const licenseErrorEl = document.getElementById('license-error-message');
+					if(licenseErrorEl) {
+						licenseErrorEl.textContent = 'Tu acceso ha sido revocado. Por favor, introduce credenciales válidas.';
+						licenseErrorEl.style.display = 'block';
+					}
+					
+					appContainer.classList.add('app-locked');
+					licenseModal.style.display = 'flex';
+				}
+			} catch (e) {
+				// Si hay cualquier otro error (ej. JSON mal formado), hacemos lo mismo: revocamos el acceso.
+				unblockUI();
+				localStorage.removeItem('isKeyValid');
+				appContainer.classList.add('app-locked');
+				licenseModal.style.display = 'flex';
+			}
+
+		} else {
+			// --- PRIMERA EJECUCIÓN ---
+			// No hay licencia, mostramos el modal (comportamiento sin cambios).
+			appContainer.classList.add('app-locked');
+			licenseModal.style.display = 'flex';
+		}
+	}
+
+	/**
+	 * Contiene la lógica de arranque original de la aplicación.
+	 * Solo se ejecuta una vez que la licencia ha sido validada.
+	 */
+	function startFullApp() {
 		startLogBuffering();
 		if (localStorage.getItem('logCollapsedState') === 'true') appContainer.classList.add('log-collapsed');
 		loadConfigsIntoSelect();
@@ -3106,7 +4561,6 @@ document.addEventListener('DOMContentLoaded', function () {
 		clearFieldsTable();
 		observer.observe(fieldsTableBody, observerConfig);
 		initializeCollapsibleMenus();
-		setupEventListeners();
 		logMessage("Aplicación lista. Selecciona un cliente o configura uno nuevo.");
 		endLogBuffering();
 	}

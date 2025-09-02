@@ -123,6 +123,11 @@ body {
   color: #558ac7;
 }
 
+.app-container.app-locked {
+    filter: blur(5px); /* Difumina el contenido de la aplicación */
+    pointer-events: none; /* Deshabilita cualquier interacción */
+    user-select: none; /* Evita que se pueda seleccionar texto */
+}
 /* ==========================================================
    2. BARRA LATERAL IZQUIERDA (NAVEGACIÓN)
    ========================================================== */
@@ -243,7 +248,7 @@ body {
 
 /* Permite el scroll vertical si el contenido es más alto que la ventana */
 #main-content {
-    height: 100vh;
+    height: calc(100vh - 40px);
     padding: 20px;
     border-radius: 10px;
     background-color: #fff;
@@ -272,6 +277,13 @@ body {
     text-align: center;
     border-bottom: 2px solid #e0e7ef;
     padding-bottom: 10px;
+}
+.welcome-gif {
+  display: block; /* Necesario para que el margen automático funcione */
+  margin: 0 auto 20px auto; /* Centra horizontalmente y añade espacio debajo */
+  max-width: 100%; /* Asegura que no se desborde en pantallas pequeñas */
+  width: 350px; /* Ancho fijo, ajústalo a tu gusto */
+  border-radius: 8px; /* Opcional: añade bordes redondeados */
 }
 .menu-buttons-container {
     display: flex;
@@ -372,6 +384,63 @@ body {
     margin-top: 20px; 
 }
 
+/* --- Estilos para el Clonador de Queries --- */
+.cloner-step-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.folder-results-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* Crea 3 columnas de igual tamaño */
+    gap: 20px; /* Espacio entre las columnas */
+    width: 100%;
+}
+
+.folder-column h4 {
+    text-align: center;
+    color: #558ac7;
+    margin-top: 0;
+}
+
+.folder-results-table tbody tr {
+    cursor: pointer;
+}
+
+#query-selection-table th:first-child,
+#query-selection-table td:first-child {
+    width: 50px; /* Ancho fijo para la columna de checkboxes */
+    text-align: center;
+}
+
+/* --- Estilos para Tablas Editables (Clonador de Queries) --- */
+#query-selection-table td[contenteditable="true"] {
+  cursor: text;
+  background-color: #f8f9fa; /* Un fondo muy ligero para indicar que es editable */
+  transition: background-color 0.2s;
+}
+
+#query-selection-table td[contenteditable="true"]:hover {
+  background-color: #e9ecef;
+}
+
+#query-selection-table td[contenteditable="true"]:focus {
+  background-color: #fff;
+  outline: 2px solid #69a3db; /* Resaltado azul al editar */
+  box-shadow: 0 0 5px rgba(105, 163, 219, 0.5);
+}
+/* Le decimos a la tabla que su ancho debe ser fijo y no basarse en el contenido.
+   Esto fuerza a las columnas a repartirse el espacio disponible del contenedor. */
+#query-selection-table {
+    table-layout: fixed;
+}
+
+/* Una vez que las columnas son más estrechas, le decimos al texto largo
+   que puede romperse en cualquier punto para evitar que se desborde. */
+#query-selection-table td {
+    word-break: break-all;
+}
+
 /* --- 3.3. Botones (de acción, atrás, deshabilitados) --- */
 
 /* Contenedor para el botón "Atrás" y los botones de acción en la cabecera de una sección */
@@ -416,13 +485,21 @@ body {
 }
 
 /* Botón de "Atrás" (gris) */
-.back-button { 
+.back-button,
+#queryClonerBackBtn { 
     background-color: #6c757d; 
 }
-.back-button:hover { 
+.back-button:hover,
+#queryClonerBackBtn:hover { 
     background-color: #5a6268; 
 }
-
+/* Botones de flecha para paginación (gris) */
+.pagination-arrow {
+    background-color: #6c757d;
+}
+.pagination-arrow:hover:not([disabled]) {
+    background-color: #5a6268;
+}
 /* Botones de acción positiva/guardado (verde) */
 .action-button.activate-btn,
 #saveConfigBtn { 
@@ -439,6 +516,14 @@ body {
 }
 .action-button.delete-btn:hover { 
     background-color: #c82333; 
+}
+
+/* Botones de acción destructiva MÁS FUERTE (rojo oscuro) */
+.action-button.delete-btn-darker { 
+    background-color: #b02a37; /* Un rojo más oscuro que el de "Parar" */
+}
+.action-button.delete-btn-darker:hover { 
+    background-color: #8b212b; /* Aún más oscuro al pasar el ratón */
 }
 
 /* Botón de "Ejecutar" (naranja) */
@@ -482,7 +567,45 @@ body {
 #automationNameFilter {
     min-width: 200px;
 }
+/* Estilo para textos de error, como en el modal de licencia */
+.error-text {
+    color: #c5221f; /* Rojo oscuro */
+    background-color: #fce8e6; /* Rojo claro */
+    border: 1px solid #f6ccc7;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px 0 15px 0; /* Espaciado vertical */
+    text-align: center;
+    font-size: 0.9em;
+    font-weight: bold;
+}
+/* Contenedor para los controles de paginación */
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+    padding: 10px;
+    user-select: none; /* Evita que el texto se seleccione */
+}
 
+.pagination-controls .page-input {
+    width: 60px;
+    text-align: center;
+}
+/* Oculta las flechas por defecto en Chrome, Safari, etc. */
+.pagination-controls .page-input::-webkit-outer-spin-button,
+.pagination-controls .page-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.pagination-controls button {
+    padding: 5px 10px; /* Hacemos los botones de flecha un poco más pequeños */
+    font-size: 1.2em;
+    line-height: 1.2;
+}
 /* --- 3.4. Tablas de Datos --- */
 
 /* Contenedor que permite el scroll horizontal de la tabla */
@@ -513,7 +636,8 @@ th {
 
 /* Filas interactivas (seleccionables con el ratón) */
 #customer-search-table tbody tr,
-#automations-table tbody tr {
+#automations-table tbody tr,
+#journeys-table tbody tr {
     cursor: pointer;
 }
 tr.selected { 
@@ -571,8 +695,18 @@ tr.selected {
     padding: 8px;
     cursor: pointer;
 }
-.control-buttons button:hover {
-    background-color: #5a6268;
+
+.control-buttons .action-button{
+    width: 100px;
+     background-color: #69a3db; 
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 8px;
+    cursor: pointer;
+}
+.control-buttons .action-button:hover {
+     background-color: #558ac7;
 }
 
 /* Botón de borrado que aparece al lado de una fila de campo seleccionada */
@@ -792,6 +926,61 @@ td a:hover {
   padding: 20px;
   margin-bottom: 20px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+/* Hace que las pestañas de la documentación sean fijas al hacer scroll */
+.docu-container .tab-buttons {
+  position: -webkit-sticky; /* Para compatibilidad con Safari */
+  position: sticky;
+  top: 0;
+  background-color: #fff; /* Esencial para que el texto no se vea a través */
+  z-index: 10; /* Asegura que las pestañas se mantengan por encima del contenido */
+}
+/* --- 5.1.1. Acordeón de Documentación --- */
+.docu-accordion {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.docu-accordion-item {
+  border-bottom: 1px solid #e9ecef;
+}
+.docu-accordion-item:last-child {
+  border-bottom: none;
+}
+
+.docu-accordion-header {
+  padding: 18px 10px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  font-size: 1.1em;
+  color: #005A9C;
+  transition: background-color 0.2s;
+  user-select: none;
+}
+.docu-accordion-header:hover {
+  background-color: #f8f9fa;
+}
+
+.docu-accordion-header::after {
+  content: '▶';
+  font-size: 0.6em;
+  color: #558ac7;
+  transition: transform 0.3s ease;
+}
+
+.docu-accordion-header.active::after {
+  transform: rotate(90deg);
+}
+
+.docu-accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease-in-out;
+  /* El contenido interno ya está definido en la clase .docu-list */
 }
 
 /* --- 5.2. Modal de Importación --- */

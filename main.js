@@ -2,11 +2,16 @@
 // Descripción: Gestiona el ciclo de vida de la aplicación, el flujo de autenticación seguro y las llamadas a la API.
 
 // --- 1. MÓDulos REQUERIDOS ---
-const { app, BrowserWindow, ipcMain, shell, Notification } = require('electron'); // <-- Añadido ", Notification"
+const { app, BrowserWindow, ipcMain, shell, Notification } = require('electron'); 
+const { google } = require('googleapis'); 
+const fs = require('fs'); 
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const axios = require('axios');
 const keytar = require('keytar'); // Librería para el llavero seguro
+
+const appVersion = require('./package.json').version;
+
 
 // --- Configuración Inicial ---
 // Asigna un App User Model ID explícito. Esto arregla el nombre en las notificaciones de Windows.
@@ -31,6 +36,11 @@ const KEYTAR_SERVICE_NAME = 'MC-API-Helper';
 const REDIRECT_URI = 'https://127.0.0.1:8443/callback';
 const TOKEN_EXPIRY_BUFFER = 300;
 
+// --- Constantes para Google Sheets ---
+const GOOGLE_CREDENTIALS_PATH = path.join(__dirname, 'google-credentials.json');
+const SPREADSHEET_ID = '17vqeFeKK5Ht-WCYrhNxyRjwWTAUSscNVBCGO5quz7VY';
+const SHEET_NAME = 'Accesos'; // El nombre de la pestaña en tu hoja
+
 // --- 2. FUNCIÓN DE CREACIÓN DE LA VENTANA ---
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -43,11 +53,31 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.js')
         }
     });
+
+    // Si la aplicación está empaquetada (producción), elimina el menú y bloquea las DevTools.
+    if (app.isPackaged) {
+        // 1. Elimina la barra de menú por completo.
+        mainWindow.setMenu(null);
+
+        // 2. Bloquea las combinaciones de teclas para abrir las Herramientas de Desarrollador.
+        mainWindow.webContents.on('before-input-event', (event, input) => {
+            // Bloquear Ctrl+Shift+I
+            if (input.control && input.shift && input.key.toLowerCase() === 'i') {
+                event.preventDefault();
+            }
+            // Bloquear F12
+            if (input.key === 'F12') {
+                event.preventDefault();
+            }
+        });
+    }
+
     mainWindow.loadFile('index.html');
 }
 
 // --- 3. GESTIÓN DEL CICLO DE VIDA Y ACTUALIZACIONES ---
 app.whenReady().then(() => {
+    initializeGoogleClient();
     createWindow();
 
     // --- LÓGICA DE AUTO-ACTUALIZACIÓN PERSONALIZADA ---
@@ -81,8 +111,117 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
+// --- FUNCIÓN DE INICIALIZACIÓN DEL CLIENTE DE GOOGLE ---
+function initializeGoogleClient() {
+    // Esta función crea una promesa que se resolverá con el cliente de Sheets.
+    // La llamamos una sola vez al inicio de la app.
+    sheetsClientPromise = new Promise(async (resolve, reject) => {
+        try {
+            console.log("Inicializando cliente de Google Sheets en segundo plano...");
+            const auth = new google.auth.GoogleAuth({
+                keyFile: GOOGLE_CREDENTIALS_PATH,
+                scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+            });
+            const sheets = google.sheets({ version: 'v4', auth });
+            console.log("Cliente de Google Sheets listo.");
+            resolve(sheets);
+        } catch (error) {
+            console.error("Fallo al inicializar el cliente de Google Sheets:", error);
+            reject(error);
+        }
+    });
+}
+// --- FUNCIÓN DE VALIDACIÓN DE LICENCIA ---
+async function validateUserInSheet(email, accessKey, version) {
+    try {
+        // 1. Esperamos a que la promesa de inicialización se complete
+        const sheets = await sheetsClientPromise;
+        if (!sheets) {
+            throw new Error("El cliente de Google Sheets no está disponible.");
+        }
+
+        // 2. Leer los datos de la hoja
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${SHEET_NAME}!A:G`, // Leemos hasta la columna F para obtener el contador
+        });
+
+        const rows = response.data.values;
+        if (!rows || rows.length === 0) {
+            console.error("La hoja de cálculo está vacía o no se pudo leer.");
+            return false;
+        }
+
+        const dataRows = rows.slice(1);
+
+        // 3. Buscar el índice de la fila del usuario
+        const userRowIndex = dataRows.findIndex(row => row[1] && row[1].toLowerCase() === email.toLowerCase());
+
+        if (userRowIndex === -1) {
+            console.log(`Usuario no encontrado: ${email}`);
+            return false; // Usuario no existe
+        }
+        
+        const userRow = dataRows[userRowIndex];
+
+        // 4. Validar la clave (columna C, índice 2) y el estado (columna D, índice 3)
+        const storedKey = userRow[2];
+        const isActive = userRow[3];
+        const isValid = storedKey === accessKey && (isActive.toLowerCase() === 'true' || isActive.toLowerCase() === 'sí');
+
+        if (!isValid) {
+            console.log(`Validación fallida para ${email}. Clave correcta: ${storedKey === accessKey}, Activo: ${isActive}`);
+            return false; // Clave incorrecta o usuario inactivo
+        }
+
+        // 5. SI LA VALIDACIÓN ES EXITOSA, ACTUALIZAMOS EL REGISTRO
+        console.log(`Usuario validado con éxito: ${email}. Actualizando registro de acceso...`);
+
+        // Obtenemos el número de fila real en la hoja (índice + 2 porque quitamos la cabecera y las filas son 1-based)
+        const sheetRowNumber = userRowIndex + 2;
+
+        // Calculamos los nuevos valores
+        const currentCount = parseInt(userRow[4], 10) || 0; // Columna E (índice 4). Si está vacía o no es un número, es 0.
+        const newCount = currentCount + 1;
+        const lastAccessTimestamp = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' }); // Columna F
+
+        // Preparamos la llamada de actualización
+        await sheets.spreadsheets.values.update({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${SHEET_NAME}!E${sheetRowNumber}:G${sheetRowNumber}`, // Rango a actualizar, ej: Accesos!E5:F5
+            valueInputOption: 'USER_ENTERED',
+            resource: {
+                values: [
+                    [newCount, lastAccessTimestamp, version]
+                ],
+            },
+        });
+        
+        console.log(`Registro para ${email} actualizado. Accesos: ${newCount}`);
+
+        // 6. Devolvemos true para que la app continúe
+        return true;
+
+    } catch (error) {
+        console.error('Error al validar o actualizar con Google Sheets:', error.message);
+        if (error.code === 'ENOENT') {
+            throw new Error('No se encontró el fichero de credenciales de Google (google-credentials.json).');
+        }
+        return false;
+    }
+}
 
 // --- 4. COMUNICACIÓN IPC ---
+
+ipcMain.handle('validate-license', async (event, { email, key }) => {
+    try {
+        return await validateUserInSheet(email, key, appVersion);
+    } catch (error) {
+        // Si hay un error, lo pasamos a la UI para que lo muestre
+        return { error: error.message };
+    }
+});
+
 ipcMain.on('open-external-link', (event, url) => {
     if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
         shell.openExternal(url);
@@ -136,7 +275,7 @@ async function refreshAccessToken(clientName) {
             userInfo: userInfo,
             orgInfo: orgInfo
         };
-
+        let sheetsClientPromise = null;
     } catch (error) {
         console.error("Error crítico al refrescar el token.", error.response ? error.response.data : error.message);
         await keytar.deletePassword(KEYTAR_SERVICE_NAME, `${clientName}-refreshToken`);

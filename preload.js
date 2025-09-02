@@ -77,4 +77,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * con el mensaje de error (ej: { message: 'Fallo al refrescar el token.' }).
    */
   onRequireLogin: (callback) => ipcRenderer.on('require-login', (_event, data) => callback(data)),
+
+   /**
+   * Envía las credenciales al proceso principal para ser validadas contra Google Sheets.
+   * @param {object} credentials - Un objeto con { email, key }.
+   * @returns {Promise<boolean|object>} - Devuelve `true` si es válido, `false` si no, o un objeto de error.
+   */
+  validateLicense: (credentials) => ipcRenderer.invoke('validate-license', credentials),
 });

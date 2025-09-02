@@ -13,3 +13,5 @@ npm-debug.log*
 
 # Pruebas de actualizaciones
 dev-app-update.yml
+
+google-credentials.json
