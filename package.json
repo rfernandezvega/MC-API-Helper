@@ -2,7 +2,7 @@
   "name": "mc-api-helper",
   "version": "1.9.0",
   "description": "Herramienta para interactuar con la API de Marketing Cloud",
-  "main": "main.js",
+  "main": "src/main/main.js",
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder --publish always"
