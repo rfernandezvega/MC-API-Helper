@@ -31,7 +31,9 @@
 // 7. EVENT LISTENERS
 // 8. INICIALIZACIÓN DE LA APLICACIÓN
 // ===================================================================
-import { fetchAllAutomations } from './api/mc-api-service.js';
+import * as mcApiService from './api/mc-api-service.js';
+
+import { buildFieldXml } from './api/mc-api-service.js';
 
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -603,7 +605,8 @@ document.addEventListener('DOMContentLoaded', function () {
 	// --- 4.2. Gestión de Data Extensions ---
 
 	/**
-	 * Macro para crear una Data Extension utilizando la API SOAP.
+	 * Macro para crear una Data Extension.
+	 * Recoge los datos del formulario y llama al servicio de API.
 	 */
 	async function macroCreateDE() {
 		blockUI("Creando Data Extension...");
@@ -612,27 +615,38 @@ document.addEventListener('DOMContentLoaded', function () {
 			logMessage("Iniciando creación de Data Extension...");
 			const apiConfig = await getAuthenticatedConfig();
 
-			const deName = deNameInput.value.trim();
-			const deExternalKey = deExternalKeyInput.value.trim();
-			const description = deDescriptionInput.value.trim();
-			if (!deName || !description) throw new Error('El Nombre y la Descripción son obligatorios.');
+			// 1. Recoger datos del DOM
+			const deData = {
+				name: deNameInput.value.trim(),
+				externalKey: deExternalKeyInput.value.trim(),
+				description: deDescriptionInput.value.trim(),
+				folderId: deFolderInput.value.trim(),
+				isSendable: isSendableCheckbox.checked,
+				subscriberKeyField: subscriberKeyFieldSelect.value,
+				subscriberKeyType: subscriberKeyTypeInput.value.trim(),
+				fields: getFieldsDataFromTable()
+			};
 
-			const isSendable = isSendableCheckbox.checked;
-			const subscriberKey = subscriberKeyFieldSelect.value;
-			if (isSendable && !subscriberKey) throw new Error('Para una DE sendable, es obligatorio seleccionar un Campo SubscriberKey.');
+			// 2. Validar datos (lógica de UI)
+			if (!deData.name || !deData.description) {
+				throw new Error('El Nombre y la Descripción son obligatorios.');
+			}
+			if (deData.isSendable && !deData.subscriberKeyField) {
+				throw new Error('Para una DE sendable, es obligatorio seleccionar un Campo SubscriberKey.');
+			}
+			if (deData.fields.length === 0) {
+				throw new Error('La DE debe tener al menos un campo.');
+			}
 
-			const validFieldsData = getFieldsDataFromTable();
-			if (validFieldsData.length === 0) throw new Error('La DE debe tener al menos un campo.');
+			// 3. Llamar al servicio
+			logApiCall({ service: 'mc-api-service', function: 'createDataExtension', data: deData });
+			await mcApiService.createDataExtension(deData, apiConfig);
+			
+			// 4. Gestionar éxito
+			const successMessage = `¡Data Extension "${deData.name}" creada con éxito!`;
+			logMessage(successMessage);
+			showCustomAlert(successMessage);
 
-			const clientXml = businessUnitInput.value.trim() ? `<Client><ClientID>${businessUnitInput.value.trim()}</ClientID></Client>` : '';
-			const descriptionXml = deDescriptionInput.value.trim() ? `<Description>${deDescriptionInput.value.trim()}</Description>` : '';
-			const folderXml = deFolderInput.value.trim() ? `<CategoryID>${deFolderInput.value.trim()}</CategoryID>` : '';
-			const sendableXml = isSendable ? `<SendableDataExtensionField><CustomerKey>${subscriberKey}</CustomerKey><Name>${subscriberKey}</Name><FieldType>${subscriberKeyTypeInput.value.trim()}</FieldType></SendableDataExtensionField><SendableSubscriberField><Name>Subscriber Key</Name><Value/></SendableSubscriberField>` : '';
-			const fieldsXmlString = validFieldsData.map(buildFieldXml).join('');
-
-			const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Create</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><CreateRequest xmlns="http://exacttarget.com/wsdl/partnerAPI"><Objects xsi:type="DataExtension">${clientXml}<CustomerKey>${deExternalKey}</CustomerKey>${descriptionXml}<Name>${deName}</Name>${folderXml}<IsSendable>${isSendable}</IsSendable>${sendableXml}<Fields>${fieldsXmlString}</Fields></Objects></CreateRequest></s:Body></s:Envelope>`;
-
-			await executeSoapRequest(apiConfig.soapUri, soapPayload.trim(), `¡Data Extension "${deName}" creada con éxito!`);
 		} catch (error) {
 			logMessage(`Error al crear la Data Extension: ${error.message}`);
 			showCustomAlert(`Error: ${error.message}`);
@@ -801,19 +815,15 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * @returns {Promise<Array>} Un array de objetos de campo.
 	 */
 	async function fetchFieldsForDE(customerKey, apiConfig) {
-		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtensionField</ObjectType><Properties>Name</Properties><Properties>ObjectID</Properties><Properties>CustomerKey</Properties><Properties>FieldType</Properties><Properties>IsPrimaryKey</Properties><Properties>IsRequired</Properties><Properties>MaxLength</Properties><Properties>Ordinal</Properties><Properties>Scale</Properties><Properties>DefaultValue</Properties><Filter xsi:type="SimpleFilterPart"><Property>DataExtension.CustomerKey</Property><SimpleOperator>equals</SimpleOperator><Value>${customerKey}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+		// El payload se construye en el servicio, aquí solo registramos la llamada.
+		logApiCall({ service: 'mc-api-service', function: 'fetchFieldsForDE', customerKey });
 		
-		logApiCall({ payload: soapPayload });
-		const response = await fetch(apiConfig.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload });
-		const responseText = await response.text();
-		logApiResponse({ body: responseText });
-		if (!responseText.includes('<OverallStatus>OK</OverallStatus>')) {
-			const errorMatch = responseText.match(/<StatusMessage>(.*?)<\/StatusMessage>/);
-			throw new Error(errorMatch ? errorMatch[1] : 'Error desconocido al recuperar campos.');
-		}
+		const response = await mcApiService.fetchFieldsForDE(customerKey, apiConfig); // <-- Cambio clave
 		
-		const fields = await parseFullSoapFieldsAsync(responseText);
-		return fields;
+		// El parsing también se hace en el servicio, aquí solo registramos la respuesta.
+		logApiResponse({ status: 'Success', fieldsCount: response.length });
+
+		return response;
 	}
 
 	/**
@@ -1213,7 +1223,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 			// ¡Aquí está la magia! Llamamos a nuestra función del servicio.
 			logApiCall({ service: 'mc-api-service', function: 'fetchAllAutomations' });
-			const allItems = await fetchAllAutomations(apiConfig); // <-- Cambio clave
+			const allItems = await  mcApiService.fetchAllAutomations(apiConfig); // <-- Cambio clave
 			
 			logApiResponse({ status: 'Success', count: allItems.length });
 			logMessage(`Recuperación completa. Se encontraron ${allItems.length} definiciones.`);
@@ -2242,32 +2252,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 
 
-	/**
-	 * Construye el fragmento XML para un único campo de Data Extension.
-	 * @param {object} fieldData - Objeto con los datos del campo (name, type, length, etc.).
-	 * @returns {string} La cadena XML para el campo.
-	 */
-	function buildFieldXml(fieldData) {
-		const { mc: name, type, len: length, defaultValue, pk: isPrimaryKey, req: isRequired } = fieldData;
-		let fieldXml = '';
-		const commonNodes = `<CustomerKey>${name}</CustomerKey><Name>${name}</Name><IsRequired>${isRequired}</IsRequired><IsPrimaryKey>${isPrimaryKey}</IsPrimaryKey>`;
-		const defaultValueNode = defaultValue ? `<DefaultValue>${defaultValue}</DefaultValue>` : '';
-		switch (type.toLowerCase()) {
-			case 'text': fieldXml = `<Field>${commonNodes}<FieldType>Text</FieldType>${length ? `<MaxLength>${length}</MaxLength>` : ''}${defaultValueNode}</Field>`; break;
-			case 'number': fieldXml = `<Field>${commonNodes}<FieldType>Number</FieldType>${defaultValueNode}</Field>`; break;
-			case 'date': fieldXml = `<Field>${commonNodes}<FieldType>Date</FieldType>${defaultValueNode}</Field>`; break;
-			case 'boolean': fieldXml = `<Field>${commonNodes}<FieldType>Boolean</FieldType>${defaultValueNode}</Field>`; break;
-			case 'emailaddress': fieldXml = `<Field>${commonNodes}<FieldType>EmailAddress</FieldType></Field>`; break;
-			case 'phone': fieldXml = `<Field>${commonNodes}<FieldType>Phone</FieldType></Field>`; break;
-			case 'locale': fieldXml = `<Field>${commonNodes}<FieldType>Locale</FieldType></Field>`; break;
-			case 'decimal':
-				const [maxLength, scale] = (length || ',').split(',').map(s => s.trim());
-				fieldXml = `<Field>${commonNodes}<FieldType>Decimal</FieldType>${maxLength ? `<MaxLength>${maxLength}</MaxLength>` : ''}${scale ? `<Scale>${scale}</Scale>` : ''}${defaultValueNode}</Field>`;
-				break;
-			default: return '';
-		}
-		return fieldXml.replace(/\s+/g, ' ').trim();
-	}
+	
 
 	/**
 	 * Obtiene la ruta completa de una carpeta de forma recursiva.
@@ -2384,26 +2369,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	// --- 5.2. Parsers (XML, JSON) ---
 	
-	/**
-	 * Parsea una respuesta SOAP de campos de DE y la convierte en un array de objetos.
-	 * @param {string} xmlString - La respuesta XML de la API.
-	 * @returns {Promise<Array>} Un array de objetos, cada uno representando un campo.
-	 */
-	function parseFullSoapFieldsAsync(xmlString) {
-		return new Promise(resolve => {
-			const fields = [];
-			const parser = new DOMParser();
-			const xmlDoc = parser.parseFromString(xmlString, "application/xml");
-			const getText = (node, tagName) => node.querySelector(tagName)?.textContent || '';
-			xmlDoc.querySelectorAll("Results").forEach(node => {
-				const fieldType = getText(node, 'FieldType');
-				let length = getText(node, 'MaxLength');
-				if (fieldType.toLowerCase() === 'decimal' && getText(node, 'Scale') !== '0') length = `${length},${getText(node, 'Scale')}`;
-				fields.push({ mc: getText(node, 'Name'), type: fieldType, len: length, defaultValue: getText(node, 'DefaultValue'), pk: getText(node, 'IsPrimaryKey') === 'true', req: getText(node, 'IsRequired') === 'true', ordinal: parseInt(getText(node, 'Ordinal'), 10) || 0, objectId: getText(node, 'ObjectID') });
-			});
-			resolve(fields.sort((a, b) => a.ordinal - b.ordinal));
-		});
-	}
 
 	/**
 	 * Parsea la respuesta de búsqueda de una DE para extraer su nombre y el ID de su carpeta.
@@ -3115,7 +3080,15 @@ document.addEventListener('DOMContentLoaded', function () {
 			const cells = row.querySelectorAll('td');
 			const name = cells[0].textContent.trim();
 			const type = cells[1].textContent.trim();
-			return (name && type) ? { name, type, length: cells[2].textContent.trim(), defaultValue: cells[3].textContent.trim(), isPrimaryKey: cells[4].querySelector('input').checked, isRequired: cells[5].querySelector('input').checked } : null;
+			return (name && type) ? { 
+				name: name, 
+				type: type, 
+				length: cells[2].textContent.trim(), 
+				defaultValue: cells[3].textContent.trim(), 
+				isPrimaryKey: cells[4].querySelector('input').checked, 
+				isRequired: cells[5].querySelector('input').checked 
+			} : null;
+
 		}).filter(Boolean);
 	}
 	
