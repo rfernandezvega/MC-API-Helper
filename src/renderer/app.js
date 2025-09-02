@@ -31,6 +31,7 @@
 // 7. EVENT LISTENERS
 // 8. INICIALIZACIÓN DE LA APLICACIÓN
 // ===================================================================
+import { fetchAllAutomations } from './api/mc-api-service.js';
 
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -1201,26 +1202,29 @@ document.addEventListener('DOMContentLoaded', function () {
 	
 	/**
 	 * Macro para obtener la lista COMPLETA de todas las automatizaciones.
+	 * Ahora actúa como un controlador que llama al servicio de API.
 	 * @returns {Promise<Array>} Una promesa que resuelve a la lista de automatismos.
 	 */
 	async function macroFetchAllAutomations() {
-		// Esta función ahora solo realiza la lógica de fetching, no gestiona UI ni logs.
+		// La lógica de la UI (logs, alertas) se queda aquí.
 		try {
 			logMessage("Recuperando todas las definiciones de automatismos...");
 			const apiConfig = await getAuthenticatedConfig();
-			const url = `${apiConfig.restUri}/legacy/v1/beta/bulk/automations/automation/definition/`;
-			logApiCall({ endpoint: url, method: 'GET' });
-			const response = await fetch(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
-			if (!response.ok) throw new Error(await response.text());
-			const data = await response.json();
-			const allItems = data.entry || [];
-			logApiResponse({ status: response.status, count: allItems.length });
+
+			// ¡Aquí está la magia! Llamamos a nuestra función del servicio.
+			logApiCall({ service: 'mc-api-service', function: 'fetchAllAutomations' });
+			const allItems = await fetchAllAutomations(apiConfig); // <-- Cambio clave
+			
+			logApiResponse({ status: 'Success', count: allItems.length });
 			logMessage(`Recuperación completa. Se encontraron ${allItems.length} definiciones.`);
+			
 			return allItems;
+
 		} catch (error) {
+			// Si fetchAllAutomations lanza un error, lo capturamos aquí.
 			logMessage(`Error al recuperar automatismos: ${error.message}`);
 			showCustomAlert(`Error: ${error.message}`);
-			return []; // Devuelve un array vacío en caso de error para no romper el flujo.
+			return []; // Devolvemos un array vacío para no romper las funciones que dependen de esto.
 		}
 	}
 
