@@ -69,6 +69,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let journeyFolderMap = {};    // Caché para mapear rutas de carpetas de Journeys
 	let currentPageAutomations = 1; 
     let currentPageJourneys = 1;    
+	let fullCloudPageList = [];     
+	let currentPageCloudPages = 1;    
 
 	// --- Gestión de Journeys ---
 	const journeysTbody = document.getElementById('journeys-tbody');
@@ -83,6 +85,12 @@ document.addEventListener('DOMContentLoaded', function () {
 	const stopJourneyBtn = document.getElementById('stopJourneyBtn');
 	const copyJourneyBtn = document.getElementById('copyJourneyBtn'); 
 	const deleteJourneyBtn = document.getElementById('deleteJourneyBtn');
+
+	// --- Gestión de Cloud Pages ---
+	const cloudPagesTbody = document.getElementById('cloudpages-tbody');
+	const refreshCloudPagesTableBtn = document.getElementById('refreshCloudPagesTableBtn');
+	const cloudPageNameFilter = document.getElementById('cloudPageNameFilter');
+	const cloudPageTypeFilter = document.getElementById('cloudPageTypeFilter');
 
 	 // --- Modal de Flujo de Journey ---
     const journeyFlowModal = document.getElementById('journey-flow-modal');
@@ -254,6 +262,16 @@ document.addEventListener('DOMContentLoaded', function () {
 	const queriesClonerStep2 = document.getElementById('queries-cloner-step2');
 	const querySelectionTbody = document.getElementById('query-selection-tbody');
 	const selectAllQueriesCheckbox = document.getElementById('selectAllQueriesCheckbox');
+
+	// --- Paginación de Cloud Pages ---
+	const prevPageBtnCloudPages = document.getElementById('prevPageBtnCloudPages');
+	const nextPageBtnCloudPages = document.getElementById('nextPageBtnCloudPages');
+	const pageInputCloudPages = document.getElementById('pageInputCloudPages');
+	const totalPagesCloudPages = document.getElementById('totalPagesCloudPages');
+
+	// Variables de ordenación y filtrado para Cloud Pages
+	let currentCloudPageSortColumn = 'name';
+	let currentCloudPageSortDirection = 'asc';
 
 	// --- Variables de estado para el clonador ---
 	let clonerState = {
@@ -2042,6 +2060,131 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		await executeSoapRequest(apiConfig.soapUri, soapPayload, null);
 	}
+
+	// --- 4.8. Gestión de Cloud Pages ---
+
+	/**
+	 * Macro para obtener la lista COMPLETA de todos los assets de tipo Cloud Page.
+	 * @param {object} apiConfig - La configuración de la API autenticada.
+	 * @returns {Promise<Array>} Una promesa que resuelve a la lista de assets.
+	 */
+	async function macroFetchAllCloudPages(apiConfig) {
+		let allItems = [];
+		let page = 1;
+		let totalCount = 0;
+		const pageSize = 500;
+
+		logMessage("Recuperando todos los assets de Cloud Pages...");
+		
+		const queryBody = {
+			"query": {
+				"property": "assetType.id",
+				"simpleOperator": "in",
+				"values": [240, 241, 242, 243, 244, 245, 247, 248, 249]
+			},
+			"sort": [{ "property": "id", "direction": "ASC" }],
+			"fields": ["id", "name", "assetType", "modifiedDate", "category", "content", "meta"]
+		};
+
+		do {
+			const url = `${apiConfig.restUri}asset/v1/content/assets/query`;
+			const body = { ...queryBody, page: { page: page, pageSize: pageSize } };
+
+			logApiCall({ endpoint: url, method: 'POST', page: page, body });
+			
+			const response = await fetch(url, { 
+				method: 'POST',
+				headers: { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" },
+				body: JSON.stringify(body)
+			});
+			
+			if (!response.ok) {
+				const errorText = await response.text();
+				
+				logApiResponse({ status: response.status, body: errorText });
+				throw new Error(`Error ${response.status}: ${errorText}`);
+			}
+			
+			const data = await response.json();
+
+			logApiResponse({ status: response.status, body: data });
+
+			const pageItems = data.items || [];
+			allItems = allItems.concat(pageItems);
+			totalCount = data.count;
+			
+			logMessage(`Página ${page} recuperada. Items totales: ${allItems.length} de ${totalCount}`);
+			page++;
+
+		} while (allItems.length < totalCount);
+		
+		logMessage(`Recuperación completa. Se encontraron ${allItems.length} assets.`);
+		return allItems;
+	}
+
+	/**
+	 * Enriquece la lista de Cloud Pages con la URL y la ruta de la carpeta.
+	 * @param {Array} items - La lista de assets de la API.
+	 * @param {object} apiConfig - La configuración de la API.
+	 * @returns {Promise<Array>} La lista enriquecida.
+	 */
+	async function enrichCloudPages(items, apiConfig) {
+		logMessage(`Enriqueciendo ${items.length} assets con URLs y rutas de carpeta...`);
+
+		// NOTA: Para las carpetas de 'asset', la API de SOAP sigue siendo necesaria
+		// si no se ha implementado la caché de carpetas REST. Usaremos el método existente.
+		const pathPromises = items.map(async (item) => {
+			const location = item.category.id ? await getFolderPath(item.category.id, apiConfig) : 'Carpeta Raíz';
+			return {
+				...item,
+				url: extractCloudPageUrl(item),
+				location: location
+			};
+		});
+
+		return Promise.all(pathPromises);
+	}
+
+	/**
+	 * Helper para extraer la URL de una Cloud Page desde su campo 'content' o 'meta'.
+	 * @param {object} item - El objeto del asset.
+	 * @returns {string} La URL o 'N/A'.
+	 */
+	function extractCloudPageUrl(item) {
+
+		// 1. Intento Principal: Buscar en el campo 'content' a nivel raíz.
+		//    Común en Landing Pages publicadas.
+		try {
+			if (item.content && item.content.trim().startsWith('{')) {
+				const contentJson = JSON.parse(item.content);
+				if (contentJson.url) {
+					return contentJson.url;
+				}
+			}
+		} catch (e) { /* Ignorar error de parseo, continuar al siguiente intento. */ }
+
+		// 2. Segundo Intento: Buscar en la estructura anidada 'data.site.content'.
+		//    Como bien indicaste, es donde aparece para los Code Resources.
+		try {
+			// Comprobamos que cada nivel del objeto existe para evitar errores.
+			if (item.data && item.data.site && item.data.site.content && item.data.site.content.trim().startsWith('{')) {
+				const nestedContentJson = JSON.parse(item.data.site.content);
+				if (nestedContentJson.url) {
+					return nestedContentJson.url;
+				}
+			}
+		} catch (e) { /* Ignorar error de parseo, continuar al siguiente intento. */ }
+
+		// 3. Tercer Intento (Fallback): Buscar en el campo 'meta'.
+		//    A veces la URL se encuentra aquí.
+		if (item.meta && item.meta.cloudPages && item.meta.cloudPages.url) {
+			return item.meta.cloudPages.url;
+		}
+
+		// 4. Si ninguno de los intentos anteriores funcionó, devolvemos un único mensaje de fallo.
+		return 'URL no encontrada';
+	}
+
 	// ==========================================================
 	// --- 5. FUNCIONES AUXILIARES (HELPERS) ---
 	// ==========================================================
@@ -2131,6 +2274,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	async function getFolderPath(folderId, apiConfig) {
 		if (!folderId || isNaN(parseInt(folderId))) return '';
 		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataFolder</ObjectType><Properties>Name</Properties><Properties>ParentFolder.ID</Properties><Filter xsi:type="SimpleFilterPart"><Property>ID</Property><SimpleOperator>equals</SimpleOperator><Value>${folderId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+		
 		const responseText = await (await fetch(apiConfig.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload })).text();
 		const resultNode = new DOMParser().parseFromString(responseText, "application/xml").querySelector("Results");
 		if (!resultNode) return '';
@@ -3694,48 +3838,48 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * basándose en la selección actual de filas en la tabla de journeys.
 	 */
 	function updateJourneyActionButtonsState() {
-    const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
-    const selectionCount = selectedRows.length;
+		const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
+		const selectionCount = selectedRows.length;
 
-    // Lógica para los botones existentes (Comunicaciones, Dibujar, Copiar)
-    getCommunicationsBtn.disabled = selectionCount === 0;
+		// Lógica para los botones existentes (Comunicaciones, Dibujar, Copiar)
+		getCommunicationsBtn.disabled = selectionCount === 0;
 
-    if (selectionCount === 1) {
-        const journeyId = selectedRows[0].dataset.journeyId;
-        const journey = fullJourneyList.find(j => j.id === journeyId);
-        drawJourneyBtn.disabled = !(journey && journey.hasCommunications);
-        copyJourneyBtn.disabled = !(journey && (journey.eventType === 'EmailAudience' || journey.eventType === 'AutomationAudience'));
-        if (!copyJourneyBtn.disabled) {
-            copyJourneyBtn.style.backgroundColor = '#7700ffff';
-        } else {
-            copyJourneyBtn.style.backgroundColor = '';
-        }
-    } else {
-        drawJourneyBtn.disabled = true;
-        copyJourneyBtn.disabled = true;
-        copyJourneyBtn.style.backgroundColor = '';
-    }
+		if (selectionCount === 1) {
+			const journeyId = selectedRows[0].dataset.journeyId;
+			const journey = fullJourneyList.find(j => j.id === journeyId);
+			drawJourneyBtn.disabled = !(journey && journey.hasCommunications);
+			copyJourneyBtn.disabled = !(journey && (journey.eventType === 'EmailAudience' || journey.eventType === 'AutomationAudience'));
+			if (!copyJourneyBtn.disabled) {
+				copyJourneyBtn.style.backgroundColor = '#7700ffff';
+			} else {
+				copyJourneyBtn.style.backgroundColor = '';
+			}
+		} else {
+			drawJourneyBtn.disabled = true;
+			copyJourneyBtn.disabled = true;
+			copyJourneyBtn.style.backgroundColor = '';
+		}
 
-    // Lógica para los botones de acción masiva (Parar, Borrar)
-    if (selectionCount > 0) {
-        const selectedJourneys = Array.from(selectedRows).map(row => {
-            return fullJourneyList.find(j => j.id === row.dataset.journeyId);
-        }).filter(Boolean);
+		// Lógica para los botones de acción masiva (Parar, Borrar)
+		if (selectionCount > 0) {
+			const selectedJourneys = Array.from(selectedRows).map(row => {
+				return fullJourneyList.find(j => j.id === row.dataset.journeyId);
+			}).filter(Boolean);
 
-        // Lógica para el botón "Parar"
-        const allArePublished = selectedJourneys.every(j => j.status === 'Published');
-        stopJourneyBtn.disabled = !allArePublished;
+			// Lógica para el botón "Parar"
+			const allArePublished = selectedJourneys.every(j => j.status === 'Published');
+			stopJourneyBtn.disabled = !allArePublished;
 
-        // Se habilita solo si hay seleccionados Y TODOS son de subtipo 'Quicksend'
-        const allAreQuicksend = selectedJourneys.every(j => j.definitionType === 'Quicksend');
-        deleteJourneyBtn.disabled = !allAreQuicksend;
+			// Se habilita solo si hay seleccionados Y TODOS son de subtipo 'Quicksend'
+			const allAreQuicksend = selectedJourneys.every(j => j.definitionType === 'Quicksend');
+			deleteJourneyBtn.disabled = !allAreQuicksend;
 
-    } else {
-        // Si no hay nada seleccionado, todos los botones de acción se deshabilitan
-        stopJourneyBtn.disabled = true;
-        deleteJourneyBtn.disabled = true;
-    }
-}
+		} else {
+			// Si no hay nada seleccionado, todos los botones de acción se deshabilitan
+			stopJourneyBtn.disabled = true;
+			deleteJourneyBtn.disabled = true;
+		}
+	}
 
 	/**
 	 * Gestiona el envío del formulario de licencia.
@@ -3788,6 +3932,165 @@ document.addEventListener('DOMContentLoaded', function () {
 			submitBtn.disabled = false;
 			submitBtn.textContent = 'Validar y Acceder';
 		}
+	}
+
+	// --- 6.7. Gestión de Cloud Pages ---
+
+	/**
+	 * Muestra la vista de "Gestión de Cloud Pages" y la puebla con datos si es necesario.
+	 */
+	async function viewCloudPages() {
+		showSection('gestion-cloudpages-section');
+
+		if (fullCloudPageList.length === 0) {
+			blockUI("Recuperando Cloud Pages...");
+			startLogBuffering();
+			try {
+				logMessage("Cargando lista de Cloud Pages por primera vez...");
+				const apiConfig = await getAuthenticatedConfig();
+				const rawAssets = await macroFetchAllCloudPages(apiConfig);
+				fullCloudPageList = await enrichCloudPages(rawAssets, apiConfig);
+
+				populateCloudPageFilters(fullCloudPageList);
+				applyCloudPageFiltersAndRender();
+				
+			} catch (error) {
+				const errorMessage = error.message || "Error desconocido al cargar Cloud Pages.";
+				logMessage(`Error al obtener assets: ${errorMessage}`);
+				showCustomAlert(`Error al cargar Cloud Pages: ${errorMessage}`);
+				cloudPagesTbody.innerHTML = `<tr><td colspan="6" style="color:red;">Error al cargar: ${errorMessage}</td></tr>`;
+			} finally {
+				unblockUI();
+				endLogBuffering();
+			}
+		} else {
+			applyCloudPageFiltersAndRender();
+		}
+	}
+
+	/**
+	 * Rellena el desplegable de filtro de tipo de asset.
+	 * @param {Array} cloudPages - La lista completa de Cloud Pages.
+	 */
+	function populateCloudPageFilters(cloudPages) {
+		const currentType = cloudPageTypeFilter.value;
+		cloudPageTypeFilter.innerHTML = '<option value="">Todos los tipos</option>';
+		const types = [...new Set(cloudPages.map(p => p.assetType.displayName).filter(Boolean))].sort();
+		types.forEach(type => cloudPageTypeFilter.appendChild(new Option(type, type)));
+		cloudPageTypeFilter.value = currentType;
+	}
+
+	/**
+	 * Aplica los filtros a la lista de Cloud Pages y redibuja la tabla.
+	 */
+	function applyCloudPageFiltersAndRender() {
+		currentPageCloudPages = 1;
+		const nameFilter = cloudPageNameFilter.value.toLowerCase().trim();
+		const typeFilter = cloudPageTypeFilter.value;
+		
+		let filteredList = fullCloudPageList;
+		if (nameFilter) {
+			filteredList = filteredList.filter(p => p.name.toLowerCase().includes(nameFilter));
+		}
+		if (typeFilter) {
+			filteredList = filteredList.filter(p => p.assetType.displayName === typeFilter);
+		}
+		
+		renderPaginatedCloudPages(filteredList);
+	}
+
+	/**
+	 * Toma una lista de Cloud Pages, la pagina y la muestra en la tabla.
+	 */
+	function renderPaginatedCloudPages(pages) {
+		const startIndex = (currentPageCloudPages - 1) * ITEMS_PER_PAGE;
+		const endIndex = startIndex + ITEMS_PER_PAGE;
+		const sortedAndPaginatedItems = sortCloudPages(pages).slice(startIndex, endIndex);
+		updateCloudPagePaginationUI(pages.length);
+		renderCloudPagesTable(sortedAndPaginatedItems);
+	}
+
+	/**
+	 * Dibuja la tabla de Cloud Pages con los datos proporcionados.
+	 * @param {Array} pagesToRender - El array de assets a mostrar.
+	 */
+	function renderCloudPagesTable(pagesToRender) {
+		cloudPagesTbody.innerHTML = '';
+		updateCloudPageSortIndicators();
+
+		if (!pagesToRender || pagesToRender.length === 0) {
+       		cloudPagesTbody.innerHTML = '<tr><td colspan="5">No se encontraron Cloud Pages con los filtros aplicados.</td></tr>';
+			return;
+		}
+
+		pagesToRender.forEach(page => {
+			const row = document.createElement('tr');
+			row.dataset.assetId = page.id;
+			
+			const urlCell = page.url.startsWith('http') 
+				? `<td><a href="${page.url}" class="external-link" title="Abrir URL en el navegador">${page.url}</a></td>` 
+				: `<td>${page.url}</td>`;
+
+			row.innerHTML = `
+				<td>${page.name || '---'}</td>
+				<td>${page.assetType.displayName || '---'}</td>
+				<td>${formatDateToSpanishTime(page.modifiedDate)}</td>
+				<td>${page.location || '---'}</td>
+				${urlCell}
+			`;
+			cloudPagesTbody.appendChild(row);
+		});
+	}
+
+	/**
+	 * Ordena un array de Cloud Pages según la columna y dirección actuales.
+	 */
+	function sortCloudPages(dataToSort) {
+		const sortKey = currentCloudPageSortColumn;
+		const direction = currentCloudPageSortDirection === 'asc' ? 1 : -1;
+
+		const getValue = (obj, key) => {
+			if (key === 'assetType.displayName') return obj.assetType?.displayName;
+			return obj[key];
+		};
+
+		return [...dataToSort].sort((a, b) => {
+			let valA = getValue(a, sortKey);
+			let valB = getValue(b, sortKey);
+
+			if (valA == null) return 1;
+			if (valB == null) return -1;
+
+			if (sortKey.includes('Date')) {
+				return (new Date(valA) - new Date(valB)) * direction;
+			} else {
+				return String(valA).localeCompare(String(valB), undefined, { sensitivity: 'base' }) * direction;
+			}
+		});
+	}
+
+	/**
+	 * Actualiza los indicadores visuales de ordenación en las cabeceras de la tabla.
+	 */
+	function updateCloudPageSortIndicators() {
+		document.querySelectorAll('#cloudpages-table .sortable-header').forEach(header => {
+			header.classList.remove('sort-asc', 'sort-desc');
+			if (header.dataset.sortBy === currentCloudPageSortColumn) {
+				header.classList.add(currentCloudPageSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+			}
+		});
+	}
+
+	/**
+	 * Actualiza la UI de los controles de paginación para la tabla de Cloud Pages.
+	 */
+	function updateCloudPagePaginationUI(totalItems) {
+		const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
+		totalPagesCloudPages.textContent = `/ ${totalPages}`;
+		pageInputCloudPages.value = currentPageCloudPages;
+		pageInputCloudPages.max = totalPages;
+		prevPageBtnCloudPages.disabled = currentPageCloudPages === 1;
+		nextPageBtnCloudPages.disabled = currentPageCloudPages >= totalPages;
 	}
 
 	// ==========================================================
@@ -3907,6 +4210,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				else if (macro === 'calendario') viewCalendar();
 				else if (macro === 'gestionAutomatismos') viewAutomations();
 				else if (macro === 'gestionJourneys') viewJourneys();
+				else if (macro === 'gestionCloudPages') viewCloudPages();
 				else if (macro === 'clonadorQueries') showSection('clonador-queries-section');
 			});
 		});
@@ -4481,6 +4785,79 @@ document.addEventListener('DOMContentLoaded', function () {
 				}
 			});
 		});
+
+		// --- Listeners de Gestión de Cloud Pages ---
+		refreshCloudPagesTableBtn.addEventListener('click', async () => {
+			blockUI("Refrescando Cloud Pages...");
+			startLogBuffering();
+			try {
+				fullCloudPageList = [];
+				cloudPageNameFilter.value = '';
+				cloudPageTypeFilter.value = '';
+				await viewCloudPages();
+			} finally {
+				unblockUI();
+				endLogBuffering();
+			}
+		});
+
+		cloudPageNameFilter.addEventListener('input', applyCloudPageFiltersAndRender);
+		cloudPageTypeFilter.addEventListener('change', applyCloudPageFiltersAndRender);
+
+		document.querySelector('#cloudpages-table thead').addEventListener('click', (e) => {
+			const header = e.target.closest('.sortable-header');
+			if (!header) return;
+			const newSortColumn = header.dataset.sortBy;
+			
+			if (currentCloudPageSortColumn === newSortColumn) {
+				currentCloudPageSortDirection = currentCloudPageSortDirection === 'asc' ? 'desc' : 'asc';
+			} else {
+				currentCloudPageSortColumn = newSortColumn;
+				currentCloudPageSortDirection = 'asc';
+			}
+			applyCloudPageFiltersAndRender();
+		});
+
+		function reRenderCloudPages() {
+			const nameFilter = cloudPageNameFilter.value.toLowerCase().trim();
+			const typeFilter = cloudPageTypeFilter.value;
+			let filteredList = fullCloudPageList;
+			if (nameFilter) filteredList = filteredList.filter(p => p.name.toLowerCase().includes(nameFilter));
+			if (typeFilter) filteredList = filteredList.filter(p => p.assetType.displayName === typeFilter);
+			renderPaginatedCloudPages(filteredList);
+		}
+
+		prevPageBtnCloudPages.addEventListener('click', () => {
+			if (currentPageCloudPages > 1) {
+				currentPageCloudPages--;
+				reRenderCloudPages();
+			}
+		});
+
+		nextPageBtnCloudPages.addEventListener('click', () => {
+			const maxPage = parseInt(pageInputCloudPages.max, 10);
+			if (currentPageCloudPages < maxPage) {
+				currentPageCloudPages++;
+				reRenderCloudPages();
+			}
+		});
+
+		pageInputCloudPages.addEventListener('change', () => {
+			let newPage = parseInt(pageInputCloudPages.value, 10) || 1;
+			const maxPage = parseInt(pageInputCloudPages.max, 10);
+			if (newPage < 1) newPage = 1;
+			if (newPage > maxPage) newPage = maxPage;
+			currentPageCloudPages = newPage;
+			reRenderCloudPages();
+		});
+
+		cloudPagesTbody.addEventListener('click', (e) => {
+			const link = e.target.closest('a.external-link');
+			if (link) { 
+				e.preventDefault(); 
+				window.electronAPI.openExternalLink(link.href); 
+			}
+		});	
 	}
 
 

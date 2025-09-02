@@ -79,8 +79,9 @@
           <li><a class="macro-item" data-macro="buscadores">Buscadores</a></li>
           <li><a class="macro-item" data-macro="calendario">Calendario</a></li>         
           <li><a class="macro-item" data-macro="gestionAutomatismos">Gestión de automatismos</a></li> 
-          <li><a class="macro-item" data-macro="gestionJourneys">Gestión de Journeys</a></li>
-          <li><a class="macro-item" data-macro="clonadorQueries">Clonador de Queries</a></li> 
+          <li><a class="macro-item" data-macro="clonadorQueries">Clonador de Queries</a></li>
+          <li><a class="macro-item" data-macro="gestionJourneys">Gestión de Journeys</a></li>          
+          <li><a class="macro-item" data-macro="gestionCloudPages">Gestión de Cloud Pages</a></li>  
           <li><a class="macro-item" data-macro="validadorEmail">Validador de Email</a></li>
         </ul>
     </div>
@@ -135,7 +136,7 @@
                 <div class="docu-list">
                   <ul>
                     <li>Ve a <b>Setup → Apps → Installed Packages</b>.</li>
-                    <li>Crea un nuevo paquete de tipo <b>Web App</b>.</li>
+                    <li>Crea un nuevo paquete de tipo <b>Web App</b> llamado <b>MC API Helper</b>.</li>
                     <li>El **Redirect URI** debe ser exactamente: <code>https://127.0.0.1:8443/callback</code>.</li>
                     <li>En el componente de API, asigna estos permisos:
                       <ul class="docu-permissions">
@@ -145,6 +146,8 @@
                         <li><b>Audiences:</b> Read, Write</li>
                         <li><b>List and Subscribers:</b> Read, Write</li>
                         <li><b>Data Extensions:</b> Read, Write</li>
+                        <li><b>Documents and Images:</b> Read</li>
+                        <li><b>Saved Content:</b> Read</li>
                       </ul>
                     </li>
                     <div class="docu-callout info">
@@ -467,6 +470,22 @@
                   <li>Ve a <b>Funcionalidades → Validador de Email</b>.</li>
                   <li>Introduce la dirección de correo y pulsa <b>"Validar Email"</b>.</li>
                   <li>El resultado te indicará si el email es válido según las validaciones de sintaxis, registros MX y List Detective de Marketing Cloud.</li>
+                </ul>
+              </div>
+            </div>
+          </li>
+
+          <li class="docu-accordion-item">
+            <div class="docu-accordion-header">
+              <span>Gestión de Cloud Pages</span>
+            </div>
+            <div class="docu-accordion-content">
+              <div class="docu-list">
+                <p>Panel de control para visualizar y filtrar Cloud Pages.</p>
+                <ul>
+                  <li>Ve a <b>Funcionalidades → Gestión de Cloud Pages</b>.</li>
+                  <li>Se cargará la tabla con todas las Cloud Pages de la instancia.</li>
+                  <li><b>Importante:</b> no es posible recuperar el identificador real (el que se utiliza en CloudPageURL()) porque ninguna API lo devuelve. 🤷🏻</li>
                 </ul>
               </div>
             </div>
@@ -1096,7 +1115,44 @@
             </div>
         </div>
     </div>
-    
+    <!-- 13. SECCIÓN: GESTIÓN DE CLOUD PAGES -->
+<div id="gestion-cloudpages-section" class="section">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>  
+        <div class="header-actions">
+            <button id="refreshCloudPagesTableBtn" class="action-button">Refrescar</button>
+        </div>          
+    </div>
+    <h2>Gestión de Cloud Pages</h2>
+    <!-- Filtros para la tabla -->
+    <div class="header-filters">
+        <input type="text" id="cloudPageNameFilter" class="filter-input" placeholder="Buscar por nombre...">
+        <select id="cloudPageTypeFilter" class="filter-input">
+            <option value="">Todos los tipos</option>
+            <!-- Opciones se cargarán dinámicamente -->
+        </select>
+    </div>
+    <div class="table-container">
+      <table id="cloudpages-table">
+        <thead>
+          <tr>
+            <th class="sortable-header" data-sort-by="name">Nombre</th>
+            <th class="sortable-header" data-sort-by="assetType.displayName">Tipo</th>
+            <th class="sortable-header" data-sort-by="modifiedDate">Fecha Modificación</th>
+            <th class="sortable-header" data-sort-by="location">Ubicación</th>
+            <th class="sortable-header" data-sort-by="url">URL</th>
+          </tr>
+        </thead>
+        <tbody id="cloudpages-tbody"></tbody>
+      </table>
+    </div>
+     <div id="pagination-cloudpages" class="pagination-controls">
+      <button id="prevPageBtnCloudPages" class="action-button pagination-arrow">&laquo;</button>
+      <input type="number" id="pageInputCloudPages" class="filter-input page-input" min="1">
+      <span id="totalPagesCloudPages">/ 1</span>
+      <button id="nextPageBtnCloudPages" class="action-button pagination-arrow">&raquo;</button>
+    </div>
+</div>
   </main> 
 
   <!-- END: CONTENIDO PRINCIPAL -->
