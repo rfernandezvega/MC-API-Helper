@@ -80,7 +80,8 @@ export function showSection(sectionId, navigationHistory, addToHistory = true) {
         sectionId = 'main-menu';
     }
 
-    if (addToHistory && navigationHistory[navigationHistory.length - 1] !== sectionId) {
+    // Nos aseguramos de que navigationHistory sea un array antes de usarlo.
+    if (addToHistory && Array.isArray(navigationHistory) && navigationHistory[navigationHistory.length - 1] !== sectionId) {
         navigationHistory.push(sectionId);
     }
 }

@@ -190,6 +190,46 @@ export async function deleteDataExtensionField(deExternalKey, fieldObjectId, api
 }
 
 /**
+ * Recupera la lista de Data Extensions de una carpeta específica.
+ * @param {string} categoryId - El ID de la carpeta.
+ * @param {object} apiConfig - La configuración de la API.
+ * @returns {Promise<Array>} Una lista de objetos DE { name, customerKey }.
+ */
+export async function getDEsFromFolder(categoryId, apiConfig) {
+    const soapPayload = `
+    <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+        <s:Header>
+            <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+            <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+            <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+        </s:Header>
+        <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+            <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+                <RetrieveRequest>
+                    <ObjectType>DataExtension</ObjectType>
+                    <Properties>CustomerKey</Properties>
+                    <Properties>Name</Properties>
+                    <Filter xsi:type="SimpleFilterPart">
+                        <Property>CategoryID</Property>
+                        <SimpleOperator>equals</SimpleOperator>
+                        <Value>${categoryId}</Value>
+                    </Filter>
+                </RetrieveRequest>
+            </RetrieveRequestMsg>
+        </s:Body>
+    </s:Envelope>`;
+
+    const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(responseText, "application/xml");
+
+    return Array.from(xmlDoc.querySelectorAll("Results")).map(node => ({
+        name: node.querySelector("Name")?.textContent,
+        customerKey: node.querySelector("CustomerKey")?.textContent
+    }));
+}
+
+/**
  * Busca filas en una Data Extension que coincidan con un filtro simple.
  * @param {string} deKey - La External Key de la Data Extension a consultar.
  * @param {string} fieldName - El nombre de la columna por la que filtrar.

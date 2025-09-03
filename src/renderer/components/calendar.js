@@ -49,7 +49,6 @@ export function init(dependencies) {
  * Prepara y muestra la vista del calendario.
  */
 export function view() {
-    ui.showSection('calendario-section', null, true); // No gestiona el historial global
     populateCalendarYearSelect();
 
     const savedDataRaw = localStorage.getItem('calendarAutomations');
