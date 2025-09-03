@@ -7,6 +7,8 @@ MC API Helper es una aplicación de escritorio construida con **Electron**, dise
 ## ➤ Arquitectura y Estructura de Ficheros
 
 La aplicación sigue una arquitectura modular que separa claramente las responsabilidades entre el proceso principal (backend) y el proceso de renderizado (frontend).
+
+```
 .
 ├── dist/                     # Carpeta de salida para el instalador (generada por `npm run dist`)
 ├── node_modules/             # Dependencias del proyecto
@@ -51,7 +53,7 @@ La aplicación sigue una arquitectura modular que separa claramente las responsa
 ├── build-html.js             # Script para ensamblar el index.html a partir de las vistas.
 ├── dev-app-update.yml
 ├── google-credentials.json   # Claves de la cuenta
-
+```
 
 ### Descripción Detallada
 
