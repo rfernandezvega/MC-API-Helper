@@ -1,133 +1,170 @@
 # MC API Helper
 
-MC API Helper es una aplicación de escritorio construida con Electron, diseñada para interactuar de manera eficiente y segura con la API de Salesforce Marketing Cloud. La herramienta proporciona una interfaz de usuario para simplificar tareas comunes que a menudo requieren múltiples pasos o llamadas directas a la API, agilizando el trabajo de desarrolladores y administradores de Marketing Cloud.
+MC API Helper es una aplicación de escritorio construida con **Electron**, diseñada para simplificar y automatizar tareas complejas en **Salesforce Marketing Cloud**. La herramienta proporciona una interfaz de usuario intuitiva para agilizar el trabajo diario de desarrolladores y administradores de la plataforma.
 
-<!-- AÑADE AQUÍ UNA CAPTURA O GIF DE LA APLICACIÓN -->
-<!-- ![Captura de MC API Helper](ruta/a/tu/imagen.png) -->
-
----
-
-## ➤ Tecnologías Principales
-
-Esta aplicación está construida sobre la plataforma **Electron**, lo que le permite funcionar como una aplicación de escritorio nativa en Windows utilizando tecnologías web modernas.
-
--   **Electron:** Framework principal para crear la aplicación de escritorio.
--   **Node.js:** Entorno de ejecución para la lógica de backend (proceso principal).
--   **HTML5, CSS3, JavaScript (ES6+):** Pila estándar para la construcción de la interfaz de usuario (proceso de renderizado).
--   **Seguridad:**
-    -   **Context Isolation & Preload Scripts:** Para una comunicación segura entre el frontend y el backend, evitando la exposición de APIs de Node.js al renderizador.
-    -   **Keytar:** Almacenamiento de credenciales sensibles (refresh tokens, client secrets) de forma segura en el llavero del sistema operativo (ej. Administrador de Credenciales de Windows).
+![Captura de MC API Helper](src/renderer/assets/screenshot.png)
 
 ---
 
-## ➤ Librerías Clave
+## ➤ Arquitectura y Estructura de Ficheros
 
--   **`axios`:** Cliente HTTP para realizar llamadas a la API REST de Marketing Cloud de forma sencilla.
--   **`googleapis`:** Librería oficial de Google para interactuar con la API de Google Sheets, utilizada para el sistema de validación de licencias.
--   **`electron-updater`:** Gestiona las actualizaciones automáticas de la aplicación, notificando al usuario cuando hay una nueva versión disponible.
--   **`electron-builder`:** Herramienta utilizada para empaquetar y construir la aplicación en un instalador ejecutable (`.exe`).
--   **`electron-log`:** Para una gestión de logs más robusta en el entorno de producción.
+La aplicación sigue una arquitectura modular que separa claramente las responsabilidades entre el proceso principal (backend) y el proceso de renderizado (frontend).
+.
+├── dist/ # Carpeta de salida para el instalador (generada por npm run dist)
+├── node_modules/ # Dependencias del proyecto
+├── src/
+│ ├── main/ # Lógica del Proceso Principal (Backend de Electron)
+│ │ ├── main.js # Punto de entrada principal, gestiona la ventana, autenticación y seguridad.
+│ │ └── preload.js # Script de puente seguro entre el backend (main) y el frontend (renderer).
+│ │
+│ └── renderer/ # Lógica del Proceso de Renderizado (Frontend)
+│ ├── api/
+│ │ └── mc-api-service.js # Módulo que centraliza todas las llamadas a la API de SFMC.
+│ ├── assets/ # Recursos estáticos como imágenes y GIFs.
+│ ├── components/ # Módulos de JavaScript para cada funcionalidad específica.
+│ │ ├── automations-manager.js
+│ │ ├── calendar.js
+│ │ ├── cloud-pages-manager.js
+│ │ ├── customer-finder.js
+│ │ ├── data-source-finder.js
+│ │ ├── de-creator.js
+│ │ ├── de-finder.js
+│ │ ├── documentation-manager.js
+│ │ ├── email-validator.js
+│ │ ├── field-manager.js
+│ │ ├── fields-table.js
+│ │ ├── journeys-manager.js
+│ │ ├── org-manager.js
+│ │ ├── query-cloner.js
+│ │ └── query-text-finder.js
+│ ├── styles/ # Ficheros de estilo CSS.
+│ │ ├── components/ # CSS específico para cada componente.
+│ │ └── common.css # Estilos globales y reutilizables.
+│ │ └── style.css # Fichero principal que importa todos los demás CSS.
+│ ├── ui/ # Módulos de ayuda para la interfaz de usuario.
+│ │ ├── dom-elements.js # Centraliza todas las referencias a los elementos del DOM.
+│ │ ├── logger.js # Gestiona el panel de logs.
+│ │ └── ui-helpers.js # Funciones para modales, loaders, etc.
+│ ├── views/ # Fragmentos de HTML para cada vista de la aplicación.
+│ ├── app.js # Orquestador principal del frontend.
+│ └── index.html # Fichero HTML final (generado automáticamente).
+│
+├── .gitignore
+├── build-html.js # Script para ensamblar el index.html a partir de las vistas.
+├── dev-app-update.yml
+├── google-credentials.json # Claves de la cuenta de servicio de Google (requerido).
+├── icon.ico
+├── package.json
+└── package-lock.json
+
+
+### Descripción Detallada
+
+#### Proceso Principal (`src/main`)
+-   **`main.js`**: Es el corazón de la aplicación. Se encarga de:
+    -   Crear y gestionar la ventana principal de Electron.
+    -   Implementar el flujo de autenticación **OAuth 2.0**, abriendo la ventana de login de Salesforce.
+    -   Almacenar y refrescar tokens de forma segura utilizando **`keytar`** (llavero del sistema operativo).
+    -   Gestionar las **actualizaciones automáticas** con `electron-updater`.
+    -   Validar licencias de usuario contra la API de **Google Sheets**.
+-   **`preload.js`**: Actúa como un puente seguro entre el backend y el frontend. Expone selectivamente funciones del `main.js` al `window` del renderizador (`window.electronAPI`) usando `contextBridge`, lo que es crucial para la seguridad de la aplicación.
+
+#### Proceso de Renderizado (`src/renderer`)
+-   **`app.js` (Orquestador)**: Es el punto de entrada del frontend. No contiene lógica de funcionalidades, sino que:
+    -   Inicializa todos los módulos de componentes.
+    -   Gestiona la navegación entre vistas (`showSection`, `goBack`).
+    -   Maneja el estado global de la sesión y actualiza la UI en consecuencia.
+    -   Configura los event listeners globales.
+-   **`api/mc-api-service.js`**: Módulo que abstrae toda la comunicación con la API de Marketing Cloud. Todas las llamadas SOAP y REST se definen aquí, haciendo que los componentes sean más limpios y reutilizables.
+-   **`components/`**: La lógica de negocio de cada funcionalidad reside aquí. Cada fichero es un módulo independiente que controla una sección de la aplicación (ej. `automations-manager.js` controla la tabla y acciones de los automatismos).
+-   **`ui/`**: Pequeños módulos dedicados a tareas específicas de la interfaz:
+    -   `dom-elements.js`: Evita el uso de `document.getElementById` por todo el código, centralizando las referencias en un solo lugar.
+    -   `logger.js`: Gestiona la escritura de mensajes en el panel de logs.
+    -   `ui-helpers.js`: Proporciona funciones reutilizables como mostrar modales de alerta/confirmación o bloquear/desbloquear la pantalla.
+-   **`views/` y `build-html.js`**: Para mantener el código fuente organizado, el HTML de cada vista se encuentra en su propio fichero dentro de `/views`. El script `build-html.js` lee todos estos fragmentos y los inyecta en una plantilla (`index.html.template`) para generar el `index.html` final que la aplicación carga.
 
 ---
 
-## ➤ Funcionalidades
-
-La aplicación se organiza en varias vistas para cubrir diferentes áreas de trabajo en Marketing Cloud.
+## ➤ Funcionalidades Principales
 
 ### 🏛️ General
--   **Configuración de APIs:** Permite guardar y gestionar múltiples configuraciones de clientes (diferentes BUs, entornos de Sandobx/Producción). La autenticación se realiza mediante un flujo OAuth 2.0 seguro.
--   **Documentación:** Una guía integrada para entender el funcionamiento de cada módulo.
+-   **Gestión de Organizaciones:** Guarda y gestiona múltiples configuraciones de API para diferentes BUs o entornos (Sandbox/Producción).
+-   **Documentación Integrada:** Una guía de uso completa accesible desde la propia aplicación.
 
-### 🗂️ Gestión de Data Extensions
--   **Creación de Data Extensions:** Asistente completo para crear una nueva DE, incluyendo nombre, carpeta, descripción y configuración "Sendable" con su respectivo campo de Subscriber Key.
--   **Gestión de Campos (Creación/Actualización):**
-    -   Añade, edita y reordena campos en una tabla visual antes de enviarlos a la API.
-    -   Permite la creación masiva de campos o la actualización ("upsert") de campos en una DE existente.
-    -   Incluye un importador desde el portapapeles (compatible con Excel/Sheets) para añadir campos rápidamente.
--   **Gestión de Campos (Recuperación y Borrado):**
-    -   Recupera todos los campos de una DE existente y los carga en la tabla de edición.
-    -   Permite eliminar campos específicos, una función útil para campos que no se pueden borrar desde la UI de Marketing Cloud (ej. campos en Attribute Groups).
+### 🗂️ Data Extensions
+-   **Asistente de Creación:** Crea Data Extensions, define sus campos, carpeta y propiedades "Sendable" de forma visual.
+-   **Gestión de Campos:** Recupera, añade, actualiza ("upsert") y elimina campos de DEs existentes. Incluye un importador desde portapapeles.
+-   **Documentador de Carpetas:** Genera un CSV con la estructura completa de todas las Data Extensions de una carpeta específica.
 
-### ⚙️ Funcionalidades y Herramientas
--   **Calendario de Automatizaciones:**
-    -   Visualiza un calendario anual con los días en que hay automatizaciones programadas.
-    -   Permite filtrar para ver todos los automatismos o solo aquellos que contienen un Journey.
-    -   Muestra el detalle de las ejecuciones programadas para un día concreto.
--   **Validador de Email:** Utiliza la API de Marketing Cloud para verificar la validez de una dirección de correo electrónico (sintaxis, MX records, List Detective).
--   **Buscadores Avanzados:**
-    -   **Buscador de DEs:** Encuentra la ruta de carpeta completa de una Data Extension buscando por su nombre o External Key.
-    -   **Buscador de Origen de Datos:** Dado el nombre de una DE, encuentra todas las actividades (Queries e Imports) que la tienen como destino.
-    -   **Buscador de Clientes:** Busca un suscriptor por su Subscriber Key o Email y muestra sus datos, los Journeys en los que se encuentra y los datos de las DEs de envíos configuradas.
-    -   **Buscador de Texto en Queries:** Realiza una búsqueda de texto libre dentro del código de todas las Query Activities de la cuenta.
--   **Gestión de Automatismos:**
-    -   Muestra una tabla paginada y filtrable de todos los automatismos de la cuenta.
-    -   Permite realizar acciones masivas (Activar, Ejecutar, Parar) sobre una selección de automatismos.
+### ⚙️ Herramientas Avanzadas
+-   **Gestión de Automatismos:** Visualiza, filtra y ejecuta acciones masivas (Activar, Ejecutar, Parar) sobre múltiples automatismos.
 -   **Gestión de Journeys:**
-    -   Muestra una tabla paginada y filtrable de todos los Journeys.
-    -   Permite obtener y visualizar las comunicaciones (Emails, SMS, Pushes) de los Journeys seleccionados.
-    -   **Clonado de Journeys:** Clona un Journey de tipo `EmailAudience` con un solo clic. El proceso clona automáticamente la DE de entrada, crea un nuevo Event Definition y recrea el Journey apuntando a los nuevos recursos.
-    -   **Dibujar Flujo:** Genera una representación textual del flujo de un Journey para facilitar su análisis y documentación.
+    -   Panel de control completo para visualizar, filtrar y analizar todos los Journeys.
+    -   **Clonado Inteligente:** Clona un Journey con un solo clic, recreando automáticamente su DE de entrada y su Event Definition.
+    -   **Visualizador de Flujo:** Genera una representación textual del flujo de un Journey para facilitar su documentación y análisis.
+-   **Gestión de Cloud Pages:** Lista y filtra todas las Cloud Pages, mostrando su ubicación y URL.
+-   **Calendario de Automatismos:** Visualiza en un calendario anual las ejecuciones programadas.
+-   **Buscadores Avanzados:**
+    -   **DE Finder:** Encuentra la ruta de carpeta de cualquier Data Extension.
+    -   **Data Source Finder:** Descubre qué Queries o Imports están poblando una Data Extension.
+    -   **Customer Finder:** Busca un suscriptor por Key o Email y rastrea su presencia en Journeys y DEs.
+    -   **Query Text Finder:** Busca texto libre dentro del código de todas las Query Activities.
+-   **Clonador de Queries:** Herramienta para clonar masivamente Query Activities y sus DEs de destino entre carpetas.
+-   **Validador de Email:** Verifica la validez de un email usando la API de Marketing Cloud.
 
 ---
 
-## ➤ Requisitos para Funcionar
+## ➤ Configuración y Requisitos
 
-Para que la aplicación funcione correctamente, se necesita configurar dos elementos externos: el paquete de API en Marketing Cloud y la hoja de Google Sheets para la validación de licencias.
-
-### 1. Configuración en Marketing Cloud
-
-1.  Ve a **Setup > Apps > Installed Packages**.
-2.  Crea un nuevo paquete (`New`).
-3.  Dale un nombre y una descripción.
-4.  En la sección **Components**, haz clic en **Add Component**.
-5.  Selecciona el tipo **API Integration** y escoge **Web App**.
-6.  En el campo **Redirect URI**, debes introducir exactamente: `https://127.0.0.1:8443/callback`
-7.  Asigna los siguientes permisos de API (Scope):
-    -   **Email:** `Read`, `Write`
+### 1. Paquete de API en Marketing Cloud
+Es necesario crear un paquete de tipo **Web App** con los siguientes permisos y configuración:
+-   **Redirect URI:** `https://127.0.0.1:8443/callback`
+-   **Permisos (Scope):**
+    -   **Data:** `Data Extensions (Read, Write)`, `List and Subscribers (Read, Write)`
+    -   **Journeys:** `Read`, `Write`, `Execute`
     -   **Automations:** `Read`, `Write`, `Execute`
-    -   **Journeys:** `Read`, `Write`, `Activate/Stop/Pause/Resume/Send/Schedule`, `Delete`
-    -   **Audiences:** `Read`, `Write`
-    -   **List and Subscribers:** `Read`, `Write`
-    -   **Data Extensions:** `Read`, `Write`
-8.  Guarda el componente y el paquete. Copia el **Client ID**, **Client Secret** y la **Authentication Base URI** para usarlos en la aplicación.
+    -   **Assets:** `Saved Content (Read)`, `Documents and Images (Read)`
+    -   **Marketing Cloud Services:** `Email (Read, Write)`
 
-> **Nota:** Después de crear o modificar un paquete de API, Marketing Cloud puede tardar hasta 10 minutos en aprovisionar los cambios completamente.
+> **Nota:** Tras crear o modificar el paquete, espera hasta 10 minutos para que los cambios se propaguen en la plataforma.
 
-### 2. Configuración para Validación de Licencia (Google Sheets)
-
-La aplicación utiliza una hoja de Google Sheets para validar el acceso de los usuarios.
-
+### 2. Validación de Licencia (Google Sheets)
+La aplicación utiliza una hoja de Google Sheets para validar el acceso.
 1.  **Crea un Proyecto en Google Cloud Platform** y activa la **API de Google Sheets**.
-2.  **Crea una Cuenta de Servicio** (`Service Account`) para este proyecto.
-3.  Genera una clave **JSON** para esta cuenta de servicio y descarga el fichero.
-4.  Renombra el fichero a `google-credentials.json` y colócalo en la raíz del proyecto.
-5.  **Crea una nueva Hoja de Cálculo** en Google Sheets y compártela con el email de la cuenta de servicio que creaste (lo encontrarás dentro del JSON), dándole permisos de **Editor**.
-6.  La hoja de cálculo debe tener una pestaña llamada exactamente **`Accesos`**.
-7.  El ID de esta hoja de cálculo debe ser configurado en la constante `SPREADSHEET_ID` dentro del fichero `main.js`.
-8.  La pestaña `Accesos` debe tener las siguientes columnas en este orden:
-    -   **Columna A:** Nombre
-    -   **Columna B:** Email (este es el email que el usuario introduce)
-    -   **Columna C:** Clave de Acceso (esta es la clave que el usuario introduce)
-    -   **Columna D:** Activo (debe contener `TRUE` o `SÍ` para que el acceso sea válido)
-    -   **Columna E:** Contador de Accesos (se actualiza automáticamente)
-    -   **Columna F:** Último Acceso (se actualiza automáticamente)
+2.  **Crea una Cuenta de Servicio** y genera una clave **JSON**. Renómbrala a `google-credentials.json` y colócala en la raíz del proyecto.
+3.  **Crea una Hoja de Cálculo** y compártela (con permisos de **Editor**) con el email de la cuenta de servicio.
+4.  Configura el ID de la hoja en la constante `SPREADSHEET_ID` dentro de `src/main/main.js`.
+5.  La hoja debe tener una pestaña llamada `Accesos` con las siguientes columnas: `Nombre`, `Email`, `Clave de Acceso`, `Activo` (`TRUE`/`SÍ`), `Contador de Accesos`, `Último Acceso`, `Versión App`.
 
 ---
 
-## ➤ Instalación y Desarrollo
+## ➤ Desarrollo y Compilación
 
-Si quieres ejecutar el proyecto en modo de desarrollo:
+### Flujo de Desarrollo
+La aplicación utiliza un script de construcción para ensamblar el HTML a partir de componentes modulares.
 
-1.  Clona el repositorio: `git clone <URL_DEL_REPO>`
-2.  Navega a la carpeta del proyecto: `cd MC-API-Helper`
-3.  Instala las dependencias: `npm install`
-4.  Ejecuta la aplicación: `npm start`
+1.  **Instalar dependencias:**
+    ```bash
+    npm install
+    ```
+2.  **Iniciar el entorno de desarrollo:**
+    ```bash
+    npm run dev
+    ```
+    Este comando utiliza `nodemon` para vigilar los cambios en los ficheros HTML (`/views` y `index.html.template`) y reconstruye automáticamente el `index.html` final. Simplemente recarga la aplicación (Ctrl+R) para ver los cambios.
 
-## ➤ Compilación
+3.  **Iniciar la aplicación (sin vigilar cambios):**
+    ```bash
+    npm start
+    ```
+    Este comando primero reconstruye el HTML y luego lanza la aplicación.
 
-Para compilar la aplicación y crear un instalador para Windows, ejecuta el siguiente comando. El instalador se generará en la carpeta `dist`.
+### Compilación para Producción
+Para crear el instalador para Windows (`.exe`), el script también se encarga de construir primero el HTML final.
 
-```bash
-npm run dist
-
-> **Nota:** Será necesario haber generado la variable de entorno previamente con la clave necesaria de Github para las actualizaciones automáticas
+1.  **Configurar la variable de entorno `GH_TOKEN`** para que `electron-builder` pueda acceder al repositorio de GitHub para las actualizaciones.
+2.  Ejecutar el comando:
+    ```bash
+    npm run dist
+    ```
+    El instalador se generará en la carpeta `/dist`.
