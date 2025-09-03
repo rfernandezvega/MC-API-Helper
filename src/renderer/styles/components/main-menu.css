@@ -1,0 +1,46 @@
+/* ===================================================================
+   styles/components/main-menu.css
+   Estilos específicos para la pantalla de bienvenida.
+   =================================================================== */
+
+.main-menu-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centra el panel horizontalmente */
+    width: 100%;
+    height: 100%;
+    padding-top: 40px; /* Añade un espacio en la parte superior */
+}
+
+.menu-group {
+    width: 90%;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+.menu-group h3 {
+    color: #558ac7;
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-align: center;
+    border-bottom: 2px solid #e0e7ef;
+    padding-bottom: 10px;
+}
+
+.welcome-gif {
+  display: block;
+  margin: 0 auto 20px auto; /* Centra la imagen dentro del panel */
+  max-width: 100%;
+  width: 350px;
+  border-radius: 8px;
+}
+
+.menu-buttons-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 15px;
+}

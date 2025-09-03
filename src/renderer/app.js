@@ -53,12 +53,54 @@ document.addEventListener('DOMContentLoaded', function () {
 	// ==========================================================
 	
 	/**
+	 * Actualiza el enlace activo en la barra lateral izquierda.
+	 * @param {string} activeSectionId - El ID de la sección que está visible.
+	 */
+	function updateActiveSidebarLink(activeSectionId) {
+		// Primero, elimina la clase 'active' de todos los enlaces del menú.
+		document.querySelectorAll('.macro-item').forEach(link => link.classList.remove('active'));
+
+		// Si volvemos al menú principal, no hay nada que resaltar, así que terminamos.
+		if (activeSectionId === 'main-menu') {
+			return;
+		}
+
+		// Mapeo inverso para encontrar el 'data-macro' que corresponde a la sección activa.
+		const sectionToMacroMap = {
+			'documentacion-section': 'docu',
+			'configuracion-apis-section': 'configuracionAPIs',
+			'configuracion-de-section': 'configuracionDE',
+			'campos-section': 'campos',
+			'configuracion-campos-section': 'gestionCampos',
+			'validadorEmail-section': 'validadorEmail',
+			'buscadores-section': 'buscadores',
+			'clonadorQueries-section': 'clonadorQueries',
+			'calendario-section': 'calendario',
+			'gestion-automatismos-section': 'gestionAutomatismos',
+			'gestion-journeys-section': 'gestionJourneys',
+			'gestion-cloudpages-section': 'gestionCloudPages'
+		};
+
+		const activeMacro = sectionToMacroMap[activeSectionId];
+
+		if (activeMacro) {
+			// Selecciona el enlace que tiene el 'data-macro' correspondiente y le añade la clase 'active'.
+			const activeLink = document.querySelector(`.macro-item[data-macro="${activeMacro}"]`);
+			if (activeLink) {
+				activeLink.classList.add('active');
+			}
+		}
+	}
+
+	/**
 	 * Muestra una sección de la UI y la añade al historial de navegación.
 	 * @param {string} sectionId - El ID de la sección a mostrar.
 	 */
 	function showSection(sectionId) {
 		// Delega en el ui-helper, pasándole el historial para que lo pueda modificar.
 		ui.showSection(sectionId, navigationHistory, true);
+		// Se asegura de que el menú lateral se actualice cada vez que se muestra una sección.
+		updateActiveSidebarLink(sectionId);
 	}
 
 	/**
@@ -73,6 +115,8 @@ document.addEventListener('DOMContentLoaded', function () {
 		const previousSectionId = navigationHistory[navigationHistory.length - 1];
 		// Muestra la sección anterior sin volver a añadirla al historial.
 		ui.showSection(previousSectionId, navigationHistory, false);
+		// También actualiza el menú al usar el botón "Atrás".
+		updateActiveSidebarLink(previousSectionId);
 	}
 
 	// ==========================================================
@@ -229,15 +273,19 @@ document.addEventListener('DOMContentLoaded', function () {
 				// Mapeo de vistas simples que solo necesitan mostrarse.
 				const sectionMap = { 
                     'docu': 'documentacion-section', 'configuracionAPIs': 'configuracion-apis-section', 
-                    'configuracionDE': 'configuracion-de-section', 'campos': 'campos-section', 
-                    'gestionCampos': 'configuracion-campos-section', 'validadorEmail': 'email-validator-section', 
-                    'buscadores': 'buscadores-section', 'clonadorQueries': 'clonador-queries-section'
+                    'configuracionDE': 'configuracion-de-section', 'gestionCampos': 'configuracion-campos-section', 
+					'validadorEmail': 'email-validator-section', 'buscadores': 'buscadores-section', 
+					'clonadorQueries': 'clonador-queries-section'
                 };
 				
 				if (sectionMap[macro]) {
 					showSection(sectionMap[macro]);
 				} 
 				// Vistas complejas que necesitan cargar datos antes de mostrarse.
+				else if (macro === 'campos') {
+                    showSection('campos-section');
+                    fieldsTable.prepareView();
+                }
 				else if (macro === 'calendario'){
                     showSection('calendario-section');
                     calendar.view();

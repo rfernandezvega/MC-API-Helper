@@ -1,0 +1,362 @@
+/* ===================================================================
+   common.css
+   Estilos globales y componentes reutilizables de la aplicación.
+   
+   ÍNDICE:
+   1. ESTILOS GLOBALES Y LAYOUT PRINCIPAL
+   2. BARRAS LATERALES (IZQUIERDA Y DERECHA)
+   3. COMPONENTES COMUNES (Secciones, Botones, Formularios, etc.)
+   4. UTILIDADES GENERALES
+   =================================================================== */
+
+
+/* ==========================================================
+   1. ESTILOS GLOBALES Y LAYOUT PRINCIPAL
+   ========================================================== */
+
+/* Estilos base para toda la aplicación */
+body {
+  margin: 0;
+  background-color: #f0f6fc;
+  font-family: Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after { 
+  box-sizing: inherit; 
+}
+
+/* Layout principal de 3 columnas con CSS Grid */
+.app-container {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) 360px;
+  gap: 20px;
+  padding: 20px;
+  min-height: 100vh;
+  transition: grid-template-columns 0.35s ease-in-out;
+  align-items: start;
+}
+
+/* Estilo base para los 3 paneles principales (barras laterales y contenido) */
+#macros-sidebar, #main-content, #log-sidebar {
+  background-color: #fff;
+  border-radius: 10px;
+  padding: 20px;
+}
+
+/* Evita que el contenido de las barras laterales se desborde visualmente */
+#macros-sidebar, #log-sidebar { 
+  overflow: hidden; 
+}
+
+/* Contenedor principal del contenido central con scroll interno */
+#main-content {
+    height: calc(100vh - 40px);
+    display: flex; /* Permite que el contenido hijo crezca para ocupar el espacio */
+    flex-direction: column;
+}
+
+/* Permite que los contenedores de vistas (tablas, formularios) crezcan y tengan su propio scroll */
+.table-container,
+.config-section-container,
+.tabs-container {
+    flex-grow: 1; /* Ocupa todo el espacio vertical disponible */
+    overflow-y: auto; /* AÑADE EL SCROLL INTERNO si el contenido se desborda */
+    min-height: 0; /* Un truco de Flexbox para que el scroll interno funcione correctamente */
+}
+
+
+/* ==========================================================
+   2. BARRAS LATERALES (IZQUIERDA Y DERECHA)
+   ========================================================== */
+
+/* --- 2.1. Barra Izquierda (Navegación) --- */
+#macros-sidebar { 
+  display: flex; 
+  flex-direction: column; 
+}
+
+#macros-sidebar h2 {
+  color: #69a3db;
+  margin-top: 0;
+  text-align: center;
+  border-bottom: 2px solid #f0f6fc;
+  padding-bottom: 10px;
+}
+
+.sidebar-client-selector {
+  padding-bottom: 15px;
+  border-bottom: 2px solid #f0f6fc;
+  margin-bottom: 10px;
+}
+
+#sidebarClientSelect {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-top: 5px;
+}
+
+.login-status {
+    font-size: 0.85em; font-weight: bold; text-align: center; margin: 10px 0 0 0;
+    padding: 5px; border-radius: 4px; line-height: 1.4;
+}
+.login-status.active { color: #1c7430; background-color: #d4edda; }
+.login-status.inactive { color: #721c24; background-color: #f8d7da; }
+
+/* Menús colapsables del menú lateral */
+.collapsible-header {
+  color: #558ac7; margin: 20px 0 10px 0; font-size: 1.1em; cursor: pointer;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 5px 0; user-select: none;
+}
+.collapsible-header::after { content: '▶'; font-size: 0.7em; transition: transform 0.3s ease; }
+.collapsible-header.active::after { transform: rotate(90deg); }
+
+.collapsible-content {
+  list-style: none; padding: 0; margin: 0; max-height: 0;
+  overflow: hidden; transition: max-height 0.3s ease-in-out;
+}
+
+#macros-sidebar .macro-item {
+  display: block; padding: 10px 12px; margin-bottom: 5px; background-color: #f8f9fa;
+  border-radius: 5px; color: #333; text-decoration: none; transition: background-color 0.2s, color 0.2s;
+  cursor: pointer; 
+}
+/* Ahora, el estilo azul se aplica tanto al pasar el ratón como cuando el elemento tiene la clase .active */
+#macros-sidebar .macro-item:hover,
+#macros-sidebar .macro-item.active { 
+  background-color: #69a3db; 
+  color: #fff; 
+}
+
+
+/* --- 2.2. Barra Derecha (Log) --- */
+#log-sidebar { 
+  display: flex; 
+  flex-direction: column; 
+  height: calc(100vh - 40px); 
+}
+
+.log-header {
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 2px solid #f0f6fc;
+}
+
+.log-header h2 { padding-bottom: 10px; margin-bottom: 0; border-bottom: none; }
+
+#toggleLogBtn {
+  background: transparent; border: none; border-radius: 50%; width: 28px;
+  height: 28px; cursor: pointer; position: relative;
+}
+#toggleLogBtn::after {
+  content: ''; display: inline-block; width: 8px; height: 8px; border-bottom: 2px solid #6c757d;
+  border-right: 2px solid #6c757d; transition: transform 0.3s, border-color 0.2s;
+  position: absolute; top: 8px; left: 6px; transform: rotate(-45deg);
+}
+#toggleLogBtn:hover::after { border-color: #dc3545; }
+
+.log-block { 
+  margin-top: 15px; 
+  display: flex; 
+  flex-direction: column; 
+  min-height: 0; 
+}
+#log-message-block { flex: 0 1 25%; }
+#log-request-block, #log-response-block { flex: 1 1 37.5%; }
+
+.log-block h4 { 
+  margin: 0 0 8px 0; 
+  color: #558ac7; 
+}
+.log-block pre {
+  flex-grow: 1; background-color: #e9ecef; padding: 10px; border-radius: 5px;
+  margin: 0; overflow-y: auto; white-space: pre-wrap; word-break: break-all;
+  font-size: 0.8em; height: 100%;
+}
+
+/* Estilos para cuando el log está colapsado */
+.app-container.log-collapsed { grid-template-columns: 220px minmax(0, 1fr) 65px; }
+.app-container.log-collapsed .log-header h2, .app-container.log-collapsed .log-block { display: none; }
+.app-container.log-collapsed #toggleLogBtn::after { transform: rotate(135deg); left: 10px; }
+.app-container.log-collapsed #toggleLogBtn:hover::after { border-color: #28a745; }
+
+
+/* ==========================================================
+   3. COMPONENTES COMUNES
+   ========================================================== */
+
+/* --- 3.1. Secciones y Cabeceras --- */
+.section { 
+  display: none; 
+  flex-direction: column; 
+  height: 100%; 
+}
+.section h2 { 
+  color: #69a3db; 
+  text-align: center; 
+  margin: 0 0 20px 0; 
+}
+.section-header {
+    background-color: #fff; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center;
+    padding-bottom: 20px; 
+    border-bottom: 1px solid #e9ecef; 
+    margin-bottom: 20px; 
+    flex-shrink: 0; 
+}
+.header-actions { 
+  display: flex; 
+  gap: 10px; 
+  flex-wrap: wrap; 
+  justify-content: flex-end; 
+}
+
+/* --- 3.2. Botones --- */
+.action-button, .back-button {
+    background-color: #69a3db; color: #fff; border: none; border-radius: 5px;
+    padding: 10px 15px; cursor: pointer; transition: background-color 0.2s; font-weight: bold;
+}
+.action-button:hover { background-color: #558ac7; }
+.back-button { background-color: #6c757d; }
+.back-button:hover { background-color: #5a6268; }
+.action-button.activate-btn, #saveConfigBtn { background-color: #28a745; }
+.action-button.activate-btn:hover, #saveConfigBtn:hover { background-color: #218838; }
+.action-button.delete-btn { background-color: #dc3545; }
+.action-button.delete-btn:hover { background-color: #c82333; }
+.action-button.delete-btn-darker { background-color: #b02a37; }
+.action-button.delete-btn-darker:hover { background-color: #8b212b; }
+.action-button[disabled] {
+  background-color: #cccccc !important; color: #888888 !important;
+  cursor: not-allowed !important; opacity: 0.7 !important;
+}
+
+/* --- 3.3. Formularios y Bloques de Configuración --- */
+.config-section-container .config-block {
+    background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px;
+    padding: 20px; margin-bottom: 20px;
+}
+.config-section-container h3 { color: #558ac7; margin-top: 0; }
+.config-block-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.config-block-header h3 { margin: 0; }
+.config-section-container .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
+.config-section-container label { font-weight: bold; margin-bottom: 5px; color: #333; }
+.config-section-container input[type="text"],
+.config-section-container input[type="email"],
+.config-section-container input[type="password"],
+.config-section-container select {
+    -webkit-appearance: none;
+    appearance: none;
+    background-color: #fff; /* Fondo blanco para que parezca un input */
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 8px;
+    width: 100%;
+    cursor: pointer;
+    background-repeat: no-repeat;
+    background-position: right .7em top 50%, 0 0;
+    background-size: .65em auto, 100%;
+}
+.config-section-container input[disabled] { background-color: #e9ecef; cursor: not-allowed; }
+.config-section-container .checkbox-group { flex-direction: row; align-items: center; }
+.config-section-container .checkbox-group label { margin: 0 8px 0 0; }
+.config-section-container .checkbox-group input[type="checkbox"] { width: auto; }
+.client-management { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; }
+.client-management input, .client-management select { flex-grow: 1; }
+
+/* --- 3.4. Tablas Genéricas --- */
+.table-container { width: 100%; overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #b9d4e7; padding: 10px; text-align: center; vertical-align: middle; }
+th { background-color: #69a3db; color: #fff; position: sticky; top: 0; z-index: 2; }
+tr.selected { background-color: #c5dce6 !important; }
+.sortable-header { cursor: pointer; position: relative; user-select: none; }
+.sortable-header:hover { background-color: #558ac7; }
+.sortable-header::after {
+  content: ''; position: absolute; right: 8px; top: 50%;
+  transform: translateY(-50%); border: 4px solid transparent; opacity: 0.5;
+}
+.sortable-header.sort-asc::after { border-bottom-color: #fff; opacity: 1; }
+.sortable-header.sort-desc::after { border-top-color: #fff; opacity: 1; }
+td a { color: #005A9C; text-decoration: none; font-weight: bold; }
+td a:hover { color: #003366; text-decoration: underline; }
+.editable-row-table tbody tr, #automations-table tbody tr, #journeys-table tbody tr { cursor: pointer; }
+.editable-row-table tbody tr { position: relative; }
+.delete-row-btn {
+  position: absolute; right: -35px; top: 50%; transform: translateY(-50%);
+  background-color: #fce8e6; border: 1px solid #f6ccc7; color: #c5221f;
+  border-radius: 50%; width: 24px; height: 24px; line-height: 22px; text-align: center;
+  font-weight: bold; cursor: pointer; opacity: 0; pointer-events: none; transition: all 0.2s;
+}
+.editable-row-table tbody tr.selected .delete-row-btn { opacity: 1; pointer-events: auto; }
+.delete-row-btn:hover { background-color: #dc3545; color: #fff; }
+
+/* --- 3.5. Pestañas (Tabs) --- */
+.tabs-container { width: 100%; }
+.tab-buttons { display: flex; border-bottom: 2px solid #e0e7ef; margin-bottom: 20px; }
+.tab-button {
+  padding: 10px 20px; cursor: pointer; background-color: transparent; border: none;
+  border-bottom: 3px solid transparent; font-size: 1em; color: #558ac7; transition: all 0.2s;
+}
+.tab-button.active { border-bottom-color: #69a3db; font-weight: bold; }
+.tab-button:hover { background-color: #f8f9fa; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* --- 3.6. Modales y Overlays --- */
+.loader-overlay, .modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background-color: rgba(255, 255, 255, 0.75); display: none;
+  justify-content: center; align-items: center; flex-direction: column; z-index: 9999;
+}
+.loader-spinner {
+  border: 8px solid #f3f3f3; border-top: 8px solid #69a3db;
+  border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.loader-text { margin-top: 20px; font-size: 1.2em; font-weight: bold; color: #558ac7; }
+.app-container.app-locked { filter: blur(5px); pointer-events: none; user-select: none; }
+.modal-overlay { background-color: rgba(0,0,0,0.5); }
+.modal-content {
+  background-color: #fefefe; padding: 20px; border-radius: 10px;
+  width: 80%; max-width: 500px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+.modal-content h3 { margin-top: 0; color: #558ac7; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; }
+
+/* --- 3.7. Filtros y Paginación --- */
+.header-filters {
+    display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;
+}
+.filter-input {
+    padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9em;
+}
+.pagination-controls {
+    display: flex; justify-content: center; align-items: center;
+    gap: 10px; margin-top: 20px; padding: 10px; user-select: none;
+}
+.pagination-controls .page-input { width: 60px; text-align: center; }
+.pagination-controls .page-input::-webkit-outer-spin-button,
+.pagination-controls .page-input::-webkit-inner-spin-button {
+    -webkit-appearance: none; margin: 0;
+}
+.pagination-arrow { padding: 5px 10px; font-size: 1.2em; line-height: 1.2; }
+
+
+/* ==========================================================
+   4. UTILIDADES GENERALES
+   ========================================================== */
+
+.info-text { 
+  font-size: 0.9em; color: #6c757d; text-align: center; margin-top: 20px; 
+}
+.error-text {
+    color: #c5221f; background-color: #fce8e6; border: 1px solid #f6ccc7; padding: 10px;
+    border-radius: 5px; margin: 10px 0 15px 0; text-align: center; font-size: 0.9em; font-weight: bold;
+}
+.hidden { 
+  display: none !important; 
+}

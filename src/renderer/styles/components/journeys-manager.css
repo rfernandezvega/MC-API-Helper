@@ -1,0 +1,52 @@
+/* ===================================================================
+   styles/components/journeys-manager.css
+   Estilos específicos para el modal de flujo de Journey.
+   =================================================================== */
+
+.modal-content.modal-lg {
+  max-width: 800px;
+  width: 90%;
+}
+
+.journey-flow-container {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 5px;
+  padding: 15px;
+  max-height: 60vh;
+  overflow-y: auto;
+  margin-bottom: 15px;
+}
+
+#journey-flow-content {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.85em;
+  white-space: pre;
+  margin: 0;
+}
+
+/* Posiciona el botón de copiar a la izquierda en el modal */
+#copyFlowBtn {
+  margin-right: auto; 
+}
+
+#copyFlowBtn.copied {
+    background-color: #28a745;
+    cursor: default;
+}
+
+/* Botón específico de "Ejecutar" */
+#runAutomationBtn:not([disabled]) {
+    background-color: #f39c12;
+}
+#runAutomationBtn:hover:not([disabled]) {
+    background-color: #e67e22;
+}
+
+/* Botón específico de "Dibujar" */
+#drawJourneyBtn:not([disabled]) {
+    background-color: #f39c12;
+}
+#drawJourneyBtn:hover:not([disabled]) {
+    background-color: #e67e22;
+}

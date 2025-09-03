@@ -1,228 +1,297 @@
 // Fichero: src/renderer/components/fields-table.js
-// Descripción: Módulo que encapsula toda la lógica de la tabla de campos de Data Extension.
+// Descripción: Módulo que encapsula toda la lógica de la tabla de campos de una Data Extension.
 
 import elements from '../ui/dom-elements.js';
 
-// Declaramos el observer aquí, pero NO lo inicializamos.
-let observer;
-const observerConfig = { childList: true, subtree: true, characterData: true };
+let selectedRow = null;
 
 /**
- * Inicializa el componente. Ahora también crea el observer.
+ * Añade una nueva fila vacía a la tabla de campos.
+ */
+function addRow(selectIt = true) {
+    const newRow = elements.fieldsTableBody.insertRow();
+    newRow.innerHTML = `
+        <td contenteditable="true"></td>
+        <td><select class="type-select">
+            <option value="Text"></option>
+            <option value="Number">Number</option>
+            <option value="Date">Date</option>
+            <option value="Boolean">Boolean</option>
+            <option value="EmailAddress">EmailAddress</option>
+            <option value="Phone">Phone</option>
+            <option value="Decimal">Decimal</option>
+            <option value="Locale">Locale</option>
+        </select></td>
+        <td contenteditable="true"></td>
+        <td contenteditable="true"></td>
+        <td><input type="checkbox" class="pk-checkbox"></td>
+        <td><input type="checkbox" class="req-checkbox"></td>
+        <button class="delete-row-btn" title="Eliminar fila">×</button>
+    `;
+    
+    // Añadir listener para la selección de tipo de campo en la nueva fila
+    const typeSelect = newRow.querySelector('.type-select');
+    typeSelect.addEventListener('change', (e) => handleTypeChange(e, newRow));
+    
+    // Seleccionar la nueva fila automáticamente
+     if (selectIt) {
+        if (selectedRow) selectedRow.classList.remove('selected');
+        newRow.classList.add('selected');
+        selectedRow = newRow;
+    }
+}
+
+/**
+ * Gestiona el cambio de tipo de dato en una fila para ajustar la longitud por defecto.
+ * @param {Event} e - El evento de cambio.
+ * @param {HTMLTableRowElement} row - La fila donde ocurrió el cambio.
+ */
+function handleTypeChange(e, row) {
+    const lengthCell = row.cells[2];
+    switch (e.target.value) {
+        case 'EmailAddress': lengthCell.textContent = '254'; break;
+        case 'Phone': lengthCell.textContent = '20'; break;
+        case 'Locale': lengthCell.textContent = '5'; break;
+        case 'Decimal': lengthCell.textContent = '18,2'; break;
+        case 'Text': lengthCell.textContent = '50'; break;
+        default: lengthCell.textContent = ''; break;
+    }
+}
+
+/**
+ * Limpia completamente la tabla de campos.
+ */
+export function clear(addnewRow = true) {
+    elements.fieldsTableBody.innerHTML = '';
+    selectedRow = null;
+    handleSendableChange();
+    if(addnewRow) addRow(false);
+}
+
+/**
+ * Inicializa el módulo, configurando todos sus event listeners.
  */
 export function init() {
-    // CREAMOS el observer aquí, cuando sabemos que 'elements' está listo.
-    observer = new MutationObserver(updateSubscriberKeyFieldOptions);
-    observer.observe(elements.fieldsTableBody, observerConfig);
-
-    let selectedRow = null; // El estado de la fila seleccionada ahora vive aquí.
-
-
-    // --- Listeners de la Tabla de Campos ---
-    elements.createDummyFieldsBtn.addEventListener('click', createDummies);
+    elements.addFieldBtn.addEventListener('click', addRow);
+    elements.createDummyFieldsBtn.addEventListener('click', () => {
+        clear(false);
+        populate([
+            { mc: 'NombreCompleto', type: 'Text', len: '100', pk: true, req: true },
+            { mc: 'SincronizarMC', type: 'Boolean', defaultValue: 'false' },
+            { mc: 'FechaNacimiento', type: 'Date', defaultValue: 'getdate()' },
+            { mc: 'Recibo', type: 'Decimal', len: '18,2' },
+            { mc: 'Telefono', type: 'Phone' },
+            { mc: 'Email', type: 'EmailAddress', len: '254' },
+            { mc: 'Locale', type: 'Locale' },
+            { mc: 'Numero', type: 'Number' }
+        ]);
+    });
     elements.clearFieldsBtn.addEventListener('click', clear);
-    elements.addFieldBtn.addEventListener('click', () => add(true));
+
+    // Listeners para mover filas
+    elements.moveUpBtn.addEventListener('click', () => moveRow(-1));
+    elements.moveDownBtn.addEventListener('click', () => moveRow(1));
+
+    // Listener para la selección de filas en la tabla
     elements.fieldsTableBody.addEventListener('click', (e) => {
         const targetRow = e.target.closest('tr');
         if (!targetRow) return;
+
         if (e.target.matches('.delete-row-btn')) {
-            observer.disconnect();
-            if (targetRow === selectedRow) selectedRow = null;
-            targetRow.remove();
-            updateSubscriberKeyFieldOptions();
-            observer.observe(elements.fieldsTableBody, observerConfig);
-        } else {
-            if (targetRow !== selectedRow) {
-                if (selectedRow) selectedRow.classList.remove('selected');
-                targetRow.classList.add('selected');
-                selectedRow = targetRow;
+            if (targetRow.nextElementSibling) {
+                selectRow(targetRow.nextElementSibling);
+            } else if (targetRow.previousElementSibling) {
+                selectRow(targetRow.previousElementSibling);
+            } else {
+                selectedRow = null;
             }
+            targetRow.remove();
+        } else {
+            selectRow(targetRow);
         }
     });
-    elements.moveUpBtn.addEventListener('click', () => { if (selectedRow?.previousElementSibling) selectedRow.parentNode.insertBefore(selectedRow, selectedRow.previousElementSibling); });
-    elements.moveDownBtn.addEventListener('click', () => { if (selectedRow?.nextElementSibling) selectedRow.parentNode.insertBefore(selectedRow.nextElementSibling, selectedRow); });
-		
+
+    // --- LISTENERS DEL MODAL DE IMPORTACIÓN (RESTAURADOS) ---
+    elements.importFieldsBtn.addEventListener('click', () => { 
+        elements.importModal.style.display = 'flex'; 
+        elements.pasteDataArea.focus(); 
+    });
+    elements.cancelPasteBtn.addEventListener('click', closeImportModal);
+    elements.importModal.addEventListener('click', (e) => { 
+        if (e.target === elements.importModal) closeImportModal(); 
+    });
+    elements.delimiterSelect.addEventListener('change', () => { 
+        elements.customDelimiterInput.classList.toggle('hidden', elements.delimiterSelect.value !== 'other'); 
+        if (elements.delimiterSelect.value === 'other') elements.customDelimiterInput.focus(); 
+    });
+    elements.processPasteBtn.addEventListener('click', processPastedData);
 }
 
 /**
- * Crea una nueva fila <tr> para la tabla de campos.
- * Es una función interna, no necesita ser exportada.
- * @param {object} [data={}] - Datos para pre-rellenar la fila.
- * @returns {HTMLTableRowElement} El elemento de la fila creado.
+ * Selecciona una fila específica en la tabla.
+ * @param {HTMLTableRowElement} rowToSelect - La fila a seleccionar.
  */
-function createTableRow(data = {}) {
-    const row = document.createElement('tr');
-    const fieldData = {
-        name: data.name || '',
-        type: data.type || '',
-        length: data.length || '',
-        defaultValue: data.defaultValue || '',
-        isPrimaryKey: data.isPrimaryKey || false,
-        isRequired: data.isRequired || false
-    };
-    row.innerHTML = `<td contenteditable="true">${fieldData.name}</td><td contenteditable="true">${fieldData.type}</td><td contenteditable="true">${fieldData.length}</td><td contenteditable="true">${fieldData.defaultValue}</td><td><input type="checkbox" ${fieldData.isPrimaryKey ? 'checked' : ''}></td><td><input type="checkbox" ${fieldData.isRequired ? 'checked' : ''}></td>`;
-    const deleteButton = document.createElement('button');
-    deleteButton.className = 'delete-row-btn';
-    deleteButton.title = 'Eliminar fila';
-    deleteButton.textContent = '×';
-    row.appendChild(deleteButton);
-    return row;
-}
-
-/**
- * Rellena la tabla de campos con un array de objetos de campo.
- * @param {Array} [fields=[]] - El array de campos.
- */
-export function populate(fields = []) {
-    // 3. Añadimos una comprobación de seguridad por si se llama antes de init().
-    if (observer) observer.disconnect();
-    
-    elements.fieldsTableBody.innerHTML = '';
-    if (fields.length > 0) {
-        fields.forEach(fieldData => elements.fieldsTableBody.appendChild(createTableRow(fieldData)));
-    } else {
-        add(); // Añade una fila vacía si no hay datos
+function selectRow(rowToSelect) {
+    if (selectedRow) {
+        selectedRow.classList.remove('selected');
     }
-    updateSubscriberKeyFieldOptions();
-    
-    if (observer) observer.observe(elements.fieldsTableBody, observerConfig);
-}
-
-/** Limpia completamente la tabla de campos. */
-export function clear() {
-    populate([]); // Poblar con un array vacío limpia y añade una fila
-    populateDeletionPicklist([]); // También limpia el picklist de borrado
-}
-
-/** Añade una nueva fila vacía a la tabla de campos. */
-export function add() {
-    elements.fieldsTableBody.appendChild(createTableRow());
-}
-
-/** Rellena la tabla con un conjunto de campos de ejemplo. */
-export function createDummies() {
-    const dummyData = [
-        { name: 'NombreCompleto', type: 'Text', length: '100', isPrimaryKey: true, isRequired: true },
-        { name: 'Email', type: 'EmailAddress', length: '254', isPrimaryKey: false, isRequired: true },
-        { name: 'SincronizarMC', type: 'Boolean', defaultValue: 'true' },
-        { name: 'FechaNacimiento', type: 'Date' },
-        { name: 'Recibo', type: 'Decimal', length: '18,2' },
-        { name: 'Telefono', type: 'Phone' },
-        { name: 'Locale', type: 'Locale' },
-        { name: 'Numero', type: 'Number' }
-    ];
-    populate(dummyData);
-    populateDeletionPicklist([]);
+    rowToSelect.classList.add('selected');
+    selectedRow = rowToSelect;
 }
 
 /**
- * Extrae los datos de todas las filas de la tabla de campos.
- * @returns {Array} Un array de objetos, cada uno representando un campo.
+ * Mueve la fila seleccionada hacia arriba o hacia abajo.
+ * @param {number} direction - `-1` para arriba, `1` para abajo.
+ */
+function moveRow(direction) {
+    if (!selectedRow) return;
+    const sibling = direction === -1 ? selectedRow.previousElementSibling : selectedRow.nextElementSibling;
+    if (sibling) {
+        if (direction === -1) {
+            sibling.before(selectedRow);
+        } else {
+            sibling.after(selectedRow);
+        }
+    }
+}
+
+
+/**
+ * Rellena la tabla con un array de datos de campos.
+ * @param {Array<object>} fieldsData - Array de objetos de campo.
+ */
+export function populate(fieldsData) {
+    clear(true);
+    fieldsData.forEach(field => {
+        const newRow = elements.fieldsTableBody.insertRow();
+        newRow.innerHTML = `
+            <td contenteditable="true">${field.mc || ''}</td>
+            <td><select class="type-select">
+                <option value="Text">Text</option><option value="Number">Number</option>
+                <option value="Date">Date</option><option value="Boolean">Boolean</option>
+                <option value="EmailAddress">EmailAddress</option><option value="Phone">Phone</option>
+                <option value="Decimal">Decimal</option><option value="Locale">Locale</option>
+            </select></td>
+            <td contenteditable="true">${field.len || ''}</td>
+            <td contenteditable="true">${field.defaultValue || ''}</td>
+            <td><input type="checkbox" class="pk-checkbox" ${field.pk ? 'checked' : ''}></td>
+            <td><input type="checkbox" class="req-checkbox" ${field.req ? 'checked' : ''}></td>
+            <button class="delete-row-btn" title="Eliminar fila">×</button>
+        `;
+        const typeSelect = newRow.querySelector('.type-select');
+        typeSelect.value = field.type || 'Text';
+        typeSelect.addEventListener('change', (e) => handleTypeChange(e, newRow));
+    });
+    handleSendableChange();
+}
+
+/**
+ * Rellena el desplegable de campos a eliminar.
+ * @param {Array<object>} fields - Array de campos con 'id' y 'mc'.
+ */
+export function populateDeletionPicklist(fields) {
+    elements.targetFieldSelect.innerHTML = '<option value="">-- Seleccione un campo --</option>';
+    if (fields.length > 0) {
+        fields.forEach(f => elements.targetFieldSelect.appendChild(new Option(f.mc, f.id)));
+        elements.targetFieldSelect.disabled = false;
+    } else {
+        elements.targetFieldSelect.disabled = true;
+    }
+}
+
+/**
+ * Recoge los datos de la tabla y los devuelve como un array de objetos.
+ * @returns {Array<object>}
  */
 export function getFieldsData() {
-    return Array.from(elements.fieldsTableBody.querySelectorAll('tr')).map(row => {
-        const cells = row.querySelectorAll('td');
-        const name = cells[0].textContent.trim();
-        const type = cells[1].textContent.trim();
-        return (name && type) ? { 
-            name, 
-            type, 
-            length: cells[2].textContent.trim(), 
-            defaultValue: cells[3].textContent.trim(), 
-            isPrimaryKey: cells[4].querySelector('input').checked, 
-            isRequired: cells[5].querySelector('input').checked 
-        } : null;
-    }).filter(Boolean);
-}
-
-/** Actualiza las opciones del desplegable de Subscriber Key basándose en los campos de la tabla. */
-export function updateSubscriberKeyFieldOptions() {
-    const currentSelection = elements.subscriberKeyFieldSelect.value;
-    elements.subscriberKeyFieldSelect.innerHTML = '<option value="">-- Seleccione un campo --</option>';
-    getFieldsData().forEach(field => {
-        if (field.name) {
-            const option = new Option(field.name, field.name);
-            option.dataset.type = field.type;
-            elements.subscriberKeyFieldSelect.appendChild(option);
-        }
+    const data = [];
+    elements.fieldsTableBody.querySelectorAll('tr').forEach(row => {
+        const field = {
+            mc: row.cells[0].textContent.trim(),
+            type: row.querySelector('.type-select').value,
+            len: row.cells[2].textContent.trim(),
+            defaultValue: row.cells[3].textContent.trim(),
+            pk: row.querySelector('.pk-checkbox').checked,
+            req: row.querySelector('.req-checkbox').checked,
+        };
+        if (field.mc && field.type) data.push(field);
     });
-    const optionExists = Array.from(elements.subscriberKeyFieldSelect.options).some(opt => opt.value === currentSelection);
-    elements.subscriberKeyFieldSelect.value = optionExists ? currentSelection : '';
+    return data;
 }
 
-/** Habilita o deshabilita los campos de "Sendable" según el estado del checkbox. */
+/**
+ * Gestiona el cambio en el checkbox "Is Sendable" para actualizar la UI.
+ */
 export function handleSendableChange() {
     const isChecked = elements.isSendableCheckbox.checked;
     elements.subscriberKeyFieldSelect.disabled = !isChecked;
-    if (!isChecked) {
-        elements.subscriberKeyFieldSelect.value = '';
+    
+    if (isChecked) {
+        const fields = getFieldsData();
+        const currentVal = elements.subscriberKeyFieldSelect.value;
+        elements.subscriberKeyFieldSelect.innerHTML = '<option value="">-- Seleccione un campo --</option>';
+        fields.forEach(f => {
+            const option = new Option(f.mc, f.mc);
+            option.dataset.type = f.type;
+            elements.subscriberKeyFieldSelect.appendChild(option);
+        });
+        elements.subscriberKeyFieldSelect.value = currentVal;
+    } else {
+        elements.subscriberKeyFieldSelect.innerHTML = '<option value="">-- Defina campos --</option>';
         elements.subscriberKeyTypeInput.value = '';
     }
 }
 
 /**
- * Rellena el desplegable de campos a eliminar.
- * @param {Array} fields - Array de campos recuperados de la API.
+ * Prepara la vista de la tabla de campos.
+ * Si la tabla está vacía, añade una primera fila en blanco para empezar a trabajar.
  */
-export function populateDeletionPicklist(fields) {
-    elements.targetFieldSelect.innerHTML = '';
-    const validFields = fields.filter(f => f.name && f.objectId);
-    if (validFields.length > 0) {
-        elements.targetFieldSelect.innerHTML = '<option value="">-- Seleccione un campo --</option>';
-        validFields.forEach(field => {
-            elements.targetFieldSelect.appendChild(new Option(field.name, field.objectId));
-        });
-        elements.targetFieldSelect.disabled = false;
-    } else {
-        elements.targetFieldSelect.innerHTML = '<option value="">No hay campos recuperados</option>';
-        elements.targetFieldSelect.disabled = true;
+export function prepareView() {
+    if (elements.fieldsTableBody.rows.length === 0) {
+        addRow(false);
     }
 }
 
-/** Procesa los datos pegados desde el modal y los añade a la tabla. */
-export function processPastedData() {
-    const text = elements.pasteDataArea.value.trim();
-    if (!text) return;
+// --- FUNCIONES DEL MODAL DE IMPORTACIÓN (RESTAURADAS) ---
 
-    let delimiter;
-    const selectedDelimiter = elements.delimiterSelect.value;
-    if (selectedDelimiter === 'other') delimiter = elements.customDelimiterInput.value;
-    else if (selectedDelimiter === 'comma') delimiter = ',';
-    else if (selectedDelimiter === 'semicolon') delimiter = ';';
-    else delimiter = '\t';
-
-    if (!delimiter) {
-        // Como no tenemos acceso directo a showCustomAlert, hacemos un alert simple
-        // o podrías pasar la función como parámetro si quisieras.
-        alert('Por favor, introduce un separador.');
-        return;
-    }
-
-    const newFields = text.split('\n').map(line => {
-        if (!line.trim()) return null;
-        const [name, type, length] = line.split(delimiter).map(c => c.trim());
-        return (name && type) ? { name, type, length: length || '' } : null;
-    }).filter(Boolean);
-
-    if (newFields.length > 0) {
-        observer.disconnect();
-        // Añadimos las nuevas filas sin borrar las existentes
-        newFields.forEach(fieldData => elements.fieldsTableBody.appendChild(createTableRow(fieldData)));
-        updateSubscriberKeyFieldOptions();
-        observer.observe(elements.fieldsTableBody, observerConfig);
-    }
-    
-    // Cierra el modal
-    elements.importModal.style.display = 'none';
-    elements.pasteDataArea.value = '';
-    elements.delimiterSelect.value = 'tab';
-    elements.customDelimiterInput.classList.add('hidden');
-}
-
-/** Cierra y resetea el modal de importación de campos. */
+/**
+ * Cierra el modal de importación de campos.
+ */
 export function closeImportModal() {
     elements.importModal.style.display = 'none';
     elements.pasteDataArea.value = '';
-    elements.delimiterSelect.value = 'tab';
-    elements.customDelimiterInput.classList.add('hidden');
+}
+
+/**
+ * Procesa los datos pegados desde el portapapeles y los añade a la tabla.
+ */
+export function processPastedData() {
+    const data = elements.pasteDataArea.value.trim();
+    if (!data) return;
+
+    let delimiter = '';
+    switch(elements.delimiterSelect.value) {
+        case 'tab': delimiter = '\t'; break;
+        case 'comma': delimiter = ','; break;
+        case 'semicolon': delimiter = ';'; break;
+        case 'other': delimiter = elements.customDelimiterInput.value; break;
+    }
+    
+    if (!delimiter) {
+        alert('Por favor, selecciona o introduce un separador.');
+        return;
+    }
+
+    const lines = data.split('\n');
+    const newFields = lines.map(line => {
+        const parts = line.split(delimiter);
+        return {
+            mc: parts[0]?.trim() || '',
+            type: parts[1]?.trim() || 'Text',
+            len: parts[2]?.trim() || ''
+        };
+    }).filter(f => f.mc);
+
+    populate(getFieldsData().concat(newFields));
+    closeImportModal();
 }

@@ -1,0 +1,48 @@
+/* ===================================================================
+   styles/components/query-cloner.css
+   Estilos específicos para la herramienta de Clonador de Queries.
+   =================================================================== */
+
+.cloner-step-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.folder-results-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    width: 100%;
+}
+.folder-column h4 {
+    text-align: center;
+    color: #558ac7;
+    margin-top: 0;
+}
+.folder-results-table tbody tr {
+    cursor: pointer;
+}
+#query-selection-table {
+    table-layout: fixed; /* Evita que las columnas se ensanchen con texto largo */
+}
+#query-selection-table th:first-child,
+#query-selection-table td:first-child {
+    width: 50px;
+    text-align: center;
+}
+#query-selection-table td {
+    word-break: break-all; /* Permite que el texto largo se rompa */
+}
+#query-selection-table td[contenteditable="true"] {
+  cursor: text;
+  background-color: #f8f9fa;
+  transition: background-color 0.2s;
+}
+#query-selection-table td[contenteditable="true"]:hover {
+  background-color: #e9ecef;
+}
+#query-selection-table td[contenteditable="true"]:focus {
+  background-color: #fff;
+  outline: 2px solid #69a3db;
+  box-shadow: 0 0 5px rgba(105, 163, 219, 0.5);
+}

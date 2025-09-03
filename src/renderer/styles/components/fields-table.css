@@ -1,0 +1,90 @@
+/* ===================================================================
+   styles/components/fields-table.css
+   Estilos específicos para la tabla de campos y sus controles.
+   =================================================================== */
+
+/* Contenedor principal de la sección "Campos" que usa Flexbox para alinear la tabla y los botones. */
+#campos-section .table-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-right: 40px; /* Deja espacio a la derecha para el botón de borrar fila */
+}
+
+/* Contenedor para los botones de "Añadir Fila", subir y bajar */
+.control-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-left: 15px; /* Espacio entre la tabla y los botones */
+}
+
+/* Estilo de los botones dentro del contenedor de controles */
+.control-buttons button {
+    width: 100px;
+    background-color: #6c757d;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 8px;
+    cursor: pointer;
+}
+
+.control-buttons .action-button{
+    width: 100px;
+    background-color: #69a3db; 
+    color: #fff;
+}
+.control-buttons .action-button:hover {
+     background-color: #558ac7;
+}
+
+/* Estilo para el modal de importación */
+.delimiter-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.delimiter-selector select, .delimiter-selector input {
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+.delimiter-selector input { 
+    width: 40px; 
+    text-align: center; 
+}
+
+.modal-content textarea {
+  width: 100%;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-family: monospace;
+  margin-bottom: 15px;
+}
+
+/* Estilo para el <select> de tipo de campo */
+#myTable .type-select {
+  /* Elimina toda la apariencia por defecto del navegador */
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: transparent;
+  border: none;
+  
+  /* Ajustes para que ocupe el ancho y se centre */
+  width: 100%;
+  padding: 8px; /* Mantenemos el padding para que no se vea pegado */
+  text-align: center;
+  text-align-last: center;
+  
+  /* Hereda los estilos de fuente de la tabla */
+  font-size: inherit;
+  font-family: inherit;
+  
+  /* Indica que es un elemento interactivo */
+  cursor: pointer;
+
+  /* ELIMINAMOS height: 100% PARA EVITAR QUE LA FILA SE ESTIRE */
+}

@@ -63,8 +63,13 @@ async function getFields() {
         const fields = await mcApiService.fetchFieldsForDE(externalKey, apiConfig);
 
         if (fields.length > 0) {
-            fieldsTable.populate(fields);
+            // --- CORRECCIÓN 3: Añadida la llamada que faltaba ---
+            // Rellena la tabla principal en la sección "Campos".
+            fieldsTable.populate(fields); 
+            
+            // Rellena el dropdown en la sección "Gestión de Campos".
             fieldsTable.populateDeletionPicklist(fields);
+            
             logger.logMessage(`${fields.length} campos recuperados y cargados en la tabla.`);
         } else {
             fieldsTable.clear();
