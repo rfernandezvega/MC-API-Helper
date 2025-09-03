@@ -4,8 +4,9 @@
   "description": "Herramienta para interactuar con la API de Marketing Cloud",
   "main": "src/main/main.js",
   "scripts": {
-    "start": "electron .",
-    "dist": "electron-builder --publish always"
+    "start": "npm run build:html && electron .",
+    "dist": "npm run build:html && electron-builder --publish always",
+    "build:html": "node build-html.js"
   },
   "keywords": [],
   "author": "",

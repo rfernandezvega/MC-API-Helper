@@ -1,0 +1,55 @@
+<!-- 3. SECCIÓN: CONFIGURACIÓN DE APIS -->
+<div id="configuracion-apis-section" class="section config-section-container">
+        <div class="section-header">
+        <button class="back-button">← Atrás</button>
+        <div class="header-actions">
+            <button id="saveConfigBtn" class="action-button">Guardar</button>
+            <button id="loginBtn" class="action-button">Login</button>
+            <button id="logoutBtn" class="action-button delete-btn">Logout / Borrar</button>
+        </div>            
+    </div>
+    <h2>Configuración de APIs</h2>
+    <!-- Gestión de Clientes (Crear, Seleccionar) -->
+    <div class="client-management">
+        <input type="text" id="clientName" placeholder="Nombre del Cliente">
+        <select id="savedConfigs">
+            <option value="">Seleccionar configuración...</option>
+        </select>
+    </div>
+    <!-- Datos de la Aplicación API -->
+    <div class="config-block">
+        <h3>Datos Aplicación</h3>
+        <div class="form-group"><label for="businessUnit">Business Unit (MID)</label><input type="text" id="businessUnit"></div>
+        <div class="form-group"><label for="authUri">Auth URI</label><input type="text" id="authUri" placeholder="Ej: https://...mc.auth.marketingcloudapis.com/v2/token"></div>
+        <div class="form-group"><label for="clientId">Client ID</label><input type="text" id="clientId"></div>
+        <div class="form-group"><label for="clientSecret">Client Secret</label><input type="password" id="clientSecret" placeholder="Necesario para el primer login"></div>
+        <div class="form-group"><label for="token">Access Token</label><input type="text" id="token" disabled></div>
+        <div class="form-group"><label for="soapUri">SOAP URI</label><input type="text" id="soapUri" disabled></div>
+        <div class="form-group"><label for="restUri">REST URI</label><input type="text" id="restUri" disabled></div>
+        <div class="form-group"><label for="stackKey">Stack</label><input type="text" id="stackKey" disabled></div>
+    </div>
+    <!-- Configuración de Data Views para el buscador de envíos -->
+    <div class="config-block">
+        <h3>Búsqueda Dinámica en Data Extensions</h3>
+        <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+            Configura las tablas donde se buscará al cliente al pulsar el botón "DEs". Los cambios se guardan junto con el resto de la configuración.
+        </p>
+        <div class="table-container">
+            <table id="sends-config-table" class="editable-row-table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>External Key</th>
+                        <th>Campo de Búsqueda</th>
+                    </tr>
+                </thead>
+                <tbody id="sends-config-tbody">
+                    <!-- Las filas se añadirán/cargarán dinámicamente aquí -->
+                </tbody>
+            </table>
+        </div>
+        <div class="header-actions" style="justify-content: flex-start; margin-top: 15px;">
+            <button id="add-send-config-row-btn" class="action-button">Añadir Fila</button>
+        </div>
+    </div>
+</div>

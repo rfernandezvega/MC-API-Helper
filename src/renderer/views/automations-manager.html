@@ -1,0 +1,39 @@
+<!-- 10. SECCIÓN: GESTIÓN DE AUTOMATISMOS -->
+<div id="gestion-automatismos-section" class="section">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>            
+        <div class="header-actions">
+            <button id="refreshAutomationsTableBtn" class="action-button">Refrescar</button>
+            <button id="activateAutomationBtn" class="action-button activate-btn" disabled>Activar</button>
+            <button id="runAutomationBtn" class="action-button" disabled>Ejecutar</button>
+            <button id="stopAutomationBtn" class="action-button delete-btn" disabled>Parar</button>
+        </div>
+    </div>
+    <h2>Gestión de Automatismos</h2>
+    <!-- Filtros para la tabla de automatismos -->
+    <div class="header-filters">
+        <input type="text" id="automationNameFilter" class="filter-input" placeholder="Buscar por nombre...">
+        <select id="automationStatusFilter" class="filter-input">
+            <option value="">Todos los estados</option>
+        </select>
+    </div>
+    <div class="table-container">
+        <table id="automations-table">
+        <thead>
+            <tr>
+            <th class="sortable-header" data-sort-by="name">Nombre</th>
+            <th class="sortable-header" data-sort-by="lastRunTime">Última Ejecución</th>
+            <th class="sortable-header" data-sort-by="schedule.scheduledTime">Próxima Ejecución</th>
+            <th class="sortable-header" data-sort-by="status">Estado</th>
+            </tr>
+        </thead>
+        <tbody id="automations-tbody"></tbody>
+        </table>
+    </div>
+        <div id="pagination-automations" class="pagination-controls">
+        <button id="prevPageBtnAutomations" class="action-button pagination-arrow">&laquo;</button>
+        <input type="number" id="pageInputAutomations" class="filter-input page-input" min="1">
+        <span id="totalPagesAutomations">/ 1</span>
+        <button id="nextPageBtnAutomations" class="action-button pagination-arrow">&raquo;</button>
+        </div>
+</div>

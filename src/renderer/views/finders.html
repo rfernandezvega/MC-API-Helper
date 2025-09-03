@@ -1,0 +1,166 @@
+ <!-- 9. SECCIÓN: BUSCADORES -->
+<div id="buscadores-section" class="section">
+    <div class="section-header"><button class="back-button">← Atrás</button></div>
+    <h2>Buscadores</h2>
+    <!-- Contenedor de pestañas para los diferentes tipos de búsqueda -->
+    <div class="tabs-container">
+    <div class="tab-buttons">
+        <button class="tab-button active" data-tab="busqueda-de-tab">Data Extensions</button>
+        <button class="tab-button" data-tab="origenes-tab">Origen de datos</button>
+        <button class="tab-button" data-tab="clientes-tab">Clientes</button>
+        <button class="tab-button" data-tab="queries-tab">Texto en Queries</button>
+    </div>
+
+    <!-- Pestaña: Búsqueda de Data Extension -->
+    <div id="busqueda-de-tab" class="tab-content active config-section-container">
+        <div class="config-block">
+            <h3>Parámetros de Búsqueda</h3>
+            <div class="form-group">
+                <label for="deSearchProperty">Buscar por:</label>
+                <select id="deSearchProperty">
+                    <option value="Name">Nombre</option>
+                    <option value="CustomerKey">External Key</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="deSearchValue">Valor:</label>
+                <input type="text" id="deSearchValue" placeholder="Ingresa el valor de búsqueda" maxlength="128">
+            </div>
+            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                <button id="searchDEBtn" class="action-button">Buscar</button>
+            </div>
+        </div>
+            <div class="config-block" style="flex-grow: 1;">
+                <h3>Resultados</h3>
+                <div class="table-container">
+                    <table id="de-search-results-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre Data Extension</th>
+                                <th>Ruta de Carpeta</th>
+                            </tr>
+                        </thead>
+                        <tbody id="de-search-results-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+    </div>
+
+    <!-- Pestaña: Buscador de Orígenes de Datos -->
+    <div id="origenes-tab" class="tab-content config-section-container">
+        <div class="config-block">
+            <h3>Parámetros de Búsqueda</h3>
+            <div class="form-group">
+                <label for="deNameToFind">Nombre de la Data Extension:</label>
+                <input type="text" id="deNameToFind" placeholder="Introduce el nombre exacto de la DE">
+            </div>
+            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                <button id="findDataSourcesBtn" class="action-button">Buscar Orígenes</button>
+            </div>
+        </div>
+        <div class="config-block" style="flex-grow: 1;">
+            <h3>Actividades Encontradas</h3>
+            <div class="table-container">
+                <table id="data-sources-table">
+                    <thead>
+                        <tr>
+                            <th>Actividad</th><th>Tipo</th><th>Automatización</th>
+                            <th>Paso</th><th>Acción</th><th>Descripción / Query</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-sources-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pestaña: Buscador de Clientes (Suscriptores) -->
+    <div id="clientes-tab" class="tab-content config-section-container">
+        <div class="config-block">
+            <h3>Parámetros de Búsqueda</h3>
+            <div class="form-group">
+                <label for="customerSearchValue">Buscar por Subscriber Key o Email:</label>
+                <input type="text" id="customerSearchValue" placeholder="Ingresa el valor a buscar">
+            </div>
+            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                <button id="searchCustomerBtn" class="action-button">Buscar Cliente</button>
+            </div>
+        </div>
+        <!-- Bloque de Resultados de la Búsqueda -->
+        <div class="config-block" style="flex-grow: 1;">
+            <div class="config-block-header">
+                <h3>Resultados</h3>
+                <div class="header-actions">
+                    <button id="getDEsBtn" class="action-button" disabled>DEs</button>
+                    <button id="getCustomerJourneysBtn" class="action-button" disabled>Journeys</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="customer-search-table">
+                    <thead>
+                        <tr>
+                            <th>Subscriber Key</th><th>Email</th><th>Estado</th>
+                            <th>Fecha Creación</th><th>Fecha Baja</th><th>Es Suscriptor</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customer-search-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+        <!-- Bloque de Resultados de Journeys (oculto por defecto) -->
+        <div id="customer-journeys-results-block" class="config-block hidden">
+            <h3>Journeys del Cliente Seleccionado</h3>
+            <div class="table-container">
+                <table id="customer-journeys-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre del Journey</th><th>ID</th><th>Definition Key</th>
+                            <th>Versión</th><th>Fecha Creación</th><th>Fecha Modificación</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customer-journeys-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+        <!-- Bloque de Resultados de Envíos (oculto por defecto) -->
+        <div id="customer-sends-results-block" class="config-block hidden">
+            <h3>Resultados de Búsqueda en Data Extensions</h3>
+            <div id="sends-results-container">
+                <!-- Los resultados se inyectarán aquí dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Pestaña: Buscador de Texto en Queries -->
+    <div id="queries-tab" class="tab-content config-section-container">
+        <div class="config-block">
+            <h3>Parámetros de Búsqueda</h3>
+            <div class="form-group">
+                <label for="querySearchText">Texto a buscar en la Query:</label>
+                <input type="text" id="querySearchText" placeholder="Ej: _Subscribers o Nombre_DE">
+            </div>
+            <div class="form-group checkbox-group" style="justify-content: flex-start;">
+                <label for="showQueryTextCheckbox">Mostrar Query Text:</label>
+                <input type="checkbox" id="showQueryTextCheckbox" checked>
+            </div>
+            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                <button id="searchQueriesByTextBtn" class="action-button">Buscar en Queries</button>
+            </div>
+        </div>
+        <div class="config-block" style="flex-grow: 1;">
+            <h3>Queries Encontradas</h3>
+            <div class="table-container">
+                <table id="query-search-results-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre de la Query</th><th>Automatización</th>
+                            <th>Paso</th><th>Query Text</th>
+                        </tr>
+                    </thead>
+                    <tbody id="query-search-results-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    </div>
+</div>

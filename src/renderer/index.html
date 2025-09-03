@@ -8,6 +8,10 @@
   <link rel="stylesheet" href="styles/style.css">
 </head>
 <body>
+
+<!-- ========================================================== -->
+<!-- START: MODALES Y OVERLAYS GLOBALES -->
+<!-- ========================================================== -->
 <div id="license-modal-overlay" class="modal-overlay" style="display: none;">
     <div class="modal-content">
         <h3>Acceso a la Aplicación</h3>
@@ -28,22 +32,20 @@
         </form>
     </div>
 </div>
-  <div id="loader-overlay" class="loader-overlay" style="display: none;">
+<div id="loader-overlay" class="loader-overlay" style="display: none;">
     <div class="loader-spinner"></div>
     <p id="loader-text" class="loader-text">Cargando...</p>
-  </div>
+</div>
 
 <!-- ===================================================================
      CONTENEDOR PRINCIPAL DE LA APLICACIÓN
-     Utiliza CSS Grid para definir la estructura de 3 columnas.
      =================================================================== -->
 <div class="app-container">
   
   <!-- ========================================================== -->
-  <!-- START: BARRA LATERAL IZQUIERDA (NAVEGACIÓN) -->
+  <!-- BARRA LATERAL IZQUIERDA (NAVEGACIÓN) -->
   <!-- ========================================================== -->
   <aside id="macros-sidebar">
-    
     <!-- Selector de Cliente y Estado de Sesión -->
     <div class="sidebar-client-selector">
       <h2>Cliente</h2>
@@ -52,10 +54,8 @@
       </select>
       <p id="login-status" class="login-status inactive">🔴 Sesión no iniciada</p>
     </div>
-    
     <h2>Vistas</h2>
-    
-    <!-- Menús colapsables para agrupar las funcionalidades de la aplicación -->
+    <!-- Menús colapsables -->
     <div class="collapsible-group">
         <h3 class="collapsible-header">General</h3>
         <ul class="collapsible-content">
@@ -63,7 +63,6 @@
           <li><a class="macro-item" data-macro="configuracionAPIs">Configuración de APIs</a></li>
         </ul>
     </div>
-
     <div class="collapsible-group">
         <h3 class="collapsible-header">Data Extensions</h3>
         <ul class="collapsible-content">
@@ -72,7 +71,6 @@
           <li><a class="macro-item" data-macro="gestionCampos">Recuperación y Borrado de Campos</a></li>
         </ul>
     </div>
-
     <div class="collapsible-group">
         <h3 class="collapsible-header">Funcionalidades</h3>
         <ul class="collapsible-content">
@@ -86,28 +84,208 @@
         </ul>
     </div>
   </aside>
-  <!-- END: BARRA LATERAL IZQUIERDA -->
 
   <!-- ========================================================== -->
-  <!-- START: CONTENIDO PRINCIPAL (VISTAS) -->
+  <!-- CONTENIDO PRINCIPAL (VACÍO) -->
   <!-- ========================================================== -->
-  <main id="main-content">
-    
-    <!-- 1. PANTALLA DE BIENVENIDA (MENÚ PRINCIPAL) -->
-    <div id="main-menu" class="main-menu-container" style="display: flex;">
-      <div class="menu-group">
-        <h3>Panel Principal</h3>
-        <div class="menu-buttons-container">
-         <img src="assets/welcome2.gif" alt="Animación de bienvenida" class="welcome-gif">
-         <p class="info-text">
-            Para empezar, configura un cliente en "Configuración de APIs". Al pulsar en login (o seleccionándolo si ya estaba guardado) se iniciará el proceso de autenticación.
-         </p>
-         
-        </div>
-      </div>
+  <main id="main-content">   
+    <!-- 
+      Este es el marcador de inyección.
+      El script 'build-html.js' leerá todos los ficheros de la carpeta /views
+      y pegará su contenido aquí para construir el 'index.html' final.
+    -->
+    <!-- 3. SECCIÓN: CONFIGURACIÓN DE APIS -->
+<div id="configuracion-apis-section" class="section config-section-container">
+        <div class="section-header">
+        <button class="back-button">← Atrás</button>
+        <div class="header-actions">
+            <button id="saveConfigBtn" class="action-button">Guardar</button>
+            <button id="loginBtn" class="action-button">Login</button>
+            <button id="logoutBtn" class="action-button delete-btn">Logout / Borrar</button>
+        </div>            
     </div>
+    <h2>Configuración de APIs</h2>
+    <!-- Gestión de Clientes (Crear, Seleccionar) -->
+    <div class="client-management">
+        <input type="text" id="clientName" placeholder="Nombre del Cliente">
+        <select id="savedConfigs">
+            <option value="">Seleccionar configuración...</option>
+        </select>
+    </div>
+    <!-- Datos de la Aplicación API -->
+    <div class="config-block">
+        <h3>Datos Aplicación</h3>
+        <div class="form-group"><label for="businessUnit">Business Unit (MID)</label><input type="text" id="businessUnit"></div>
+        <div class="form-group"><label for="authUri">Auth URI</label><input type="text" id="authUri" placeholder="Ej: https://...mc.auth.marketingcloudapis.com/v2/token"></div>
+        <div class="form-group"><label for="clientId">Client ID</label><input type="text" id="clientId"></div>
+        <div class="form-group"><label for="clientSecret">Client Secret</label><input type="password" id="clientSecret" placeholder="Necesario para el primer login"></div>
+        <div class="form-group"><label for="token">Access Token</label><input type="text" id="token" disabled></div>
+        <div class="form-group"><label for="soapUri">SOAP URI</label><input type="text" id="soapUri" disabled></div>
+        <div class="form-group"><label for="restUri">REST URI</label><input type="text" id="restUri" disabled></div>
+        <div class="form-group"><label for="stackKey">Stack</label><input type="text" id="stackKey" disabled></div>
+    </div>
+    <!-- Configuración de Data Views para el buscador de envíos -->
+    <div class="config-block">
+        <h3>Búsqueda Dinámica en Data Extensions</h3>
+        <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+            Configura las tablas donde se buscará al cliente al pulsar el botón "DEs". Los cambios se guardan junto con el resto de la configuración.
+        </p>
+        <div class="table-container">
+            <table id="sends-config-table" class="editable-row-table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>External Key</th>
+                        <th>Campo de Búsqueda</th>
+                    </tr>
+                </thead>
+                <tbody id="sends-config-tbody">
+                    <!-- Las filas se añadirán/cargarán dinámicamente aquí -->
+                </tbody>
+            </table>
+        </div>
+        <div class="header-actions" style="justify-content: flex-start; margin-top: 15px;">
+            <button id="add-send-config-row-btn" class="action-button">Añadir Fila</button>
+        </div>
+    </div>
+</div>
 
-    <!-- 2. SECCIÓN: DOCUMENTACIÓN -->
+<!-- 10. SECCIÓN: GESTIÓN DE AUTOMATISMOS -->
+<div id="gestion-automatismos-section" class="section">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>            
+        <div class="header-actions">
+            <button id="refreshAutomationsTableBtn" class="action-button">Refrescar</button>
+            <button id="activateAutomationBtn" class="action-button activate-btn" disabled>Activar</button>
+            <button id="runAutomationBtn" class="action-button" disabled>Ejecutar</button>
+            <button id="stopAutomationBtn" class="action-button delete-btn" disabled>Parar</button>
+        </div>
+    </div>
+    <h2>Gestión de Automatismos</h2>
+    <!-- Filtros para la tabla de automatismos -->
+    <div class="header-filters">
+        <input type="text" id="automationNameFilter" class="filter-input" placeholder="Buscar por nombre...">
+        <select id="automationStatusFilter" class="filter-input">
+            <option value="">Todos los estados</option>
+        </select>
+    </div>
+    <div class="table-container">
+        <table id="automations-table">
+        <thead>
+            <tr>
+            <th class="sortable-header" data-sort-by="name">Nombre</th>
+            <th class="sortable-header" data-sort-by="lastRunTime">Última Ejecución</th>
+            <th class="sortable-header" data-sort-by="schedule.scheduledTime">Próxima Ejecución</th>
+            <th class="sortable-header" data-sort-by="status">Estado</th>
+            </tr>
+        </thead>
+        <tbody id="automations-tbody"></tbody>
+        </table>
+    </div>
+        <div id="pagination-automations" class="pagination-controls">
+        <button id="prevPageBtnAutomations" class="action-button pagination-arrow">&laquo;</button>
+        <input type="number" id="pageInputAutomations" class="filter-input page-input" min="1">
+        <span id="totalPagesAutomations">/ 1</span>
+        <button id="nextPageBtnAutomations" class="action-button pagination-arrow">&raquo;</button>
+        </div>
+</div>
+
+<!-- 7. SECCIÓN: CALENDARIO DE AUTOMATIZACIONES -->
+<div id="calendario-section" class="section">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>
+            <div class="calendar-controls">
+            <label for="calendarYearSelect">Año:</label>
+            <select id="calendarYearSelect"></select>
+            <button id="refreshAutomationsBtn" class="action-button">Refrescar Automatismos</button>
+            <button id="refreshJourneyAutomationsBtn" class="action-button activate-btn">Refrescar Automatismos de Journeys</button>
+        </div>
+    </div>
+    <div class="calendar-container">
+        <!-- Rejilla de meses del calendario -->
+        <div id="calendar-main" class="calendar-main-view">
+            <h2>Calendario de Automatizaciones</h2>
+            <div id="calendar-grid" class="calendar-grid"></div>
+        </div>
+        <!-- Barra lateral para mostrar detalles del día seleccionado -->
+        <aside id="calendar-sidebar" class="calendar-sidebar">
+            <h3 id="automation-list-header">Automatizaciones del Día</h3>
+            <div id="automation-list">
+                <p>Selecciona un día para ver los detalles.</p>
+            </div>
+        </aside>
+    </div>
+</div>
+
+ <!-- 13. SECCIÓN: GESTIÓN DE CLOUD PAGES -->
+<div id="gestion-cloudpages-section" class="section">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>  
+        <div class="header-actions">
+            <button id="refreshCloudPagesTableBtn" class="action-button">Refrescar</button>
+        </div>          
+    </div>
+    <h2>Gestión de Cloud Pages</h2>
+    <!-- Filtros para la tabla -->
+    <div class="header-filters">
+        <input type="text" id="cloudPageNameFilter" class="filter-input" placeholder="Buscar por nombre...">
+        <select id="cloudPageTypeFilter" class="filter-input">
+            <option value="">Todos los tipos</option>
+            <!-- Opciones se cargarán dinámicamente -->
+        </select>
+    </div>
+    <div class="table-container">
+      <table id="cloudpages-table">
+        <thead>
+          <tr>
+            <th class="sortable-header" data-sort-by="name">Nombre</th>
+            <th class="sortable-header" data-sort-by="assetType.displayName">Tipo</th>
+            <th class="sortable-header" data-sort-by="modifiedDate">Fecha Modificación</th>
+            <th class="sortable-header" data-sort-by="location">Ubicación</th>
+            <th class="sortable-header" data-sort-by="url">URL</th>
+          </tr>
+        </thead>
+        <tbody id="cloudpages-tbody"></tbody>
+      </table>
+    </div>
+     <div id="pagination-cloudpages" class="pagination-controls">
+      <button id="prevPageBtnCloudPages" class="action-button pagination-arrow">&laquo;</button>
+      <input type="number" id="pageInputCloudPages" class="filter-input page-input" min="1">
+      <span id="totalPagesCloudPages">/ 1</span>
+      <button id="nextPageBtnCloudPages" class="action-button pagination-arrow">&raquo;</button>
+    </div>
+</div>
+
+<!-- 4. SECCIÓN: CONFIGURACIÓN DE DATA EXTENSION (Creación) -->
+<div id="configuracion-de-section" class="section config-section-container">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>
+        <div class="header-actions"><button id="createDE" class="action-button">Crear Data Extension</button></div>
+    </div>
+    <h2>Configuración de Data Extension</h2>
+    <!-- Configuración Base de la DE -->
+    <div class="config-block">
+        <h3>Configuración Base</h3>
+        <div class="form-group"><label for="deName">Nombre Data Extension</label><input type="text" id="deName"></div>
+        <div class="form-group"><label for="deDescription">Descripción</label><input type="text" id="deDescription"></div>
+        <div class="form-group"><label for="deExternalKey">External Key</label><input type="text" id="deExternalKey" disabled></div>
+        <div class="form-group"><label for="deFolder">ID de Carpeta (Opcional)</label><input type="text" id="deFolder" placeholder="Ej: 12345"></div>
+    </div>
+    <!-- Configuración Sendable -->
+    <div class="config-block">
+        <h3>Configuración Sendable</h3>
+        <div class="form-group checkbox-group">
+            <label for="isSendable">Es Sendable:</label><input type="checkbox" id="isSendable">
+        </div>
+        <div class="form-group">
+            <label for="subscriberKeyField">Campo SubscriberKey</label>
+            <select id="subscriberKeyField" disabled><option value="">-- Defina campos en la sección 'Campos' --</option></select>
+        </div>
+        <div class="form-group"><label for="subscriberKeyType">Tipo Campo SubscriberKey</label><input type="text" id="subscriberKeyType" disabled></div>
+    </div>
+</div>
+
+<!-- 2. SECCIÓN: DOCUMENTACIÓN -->
     <div id="documentacion-section" class="section">
       <div class="section-header"><button class="back-button">← Atrás</button></div>
       <h2>Documentación y Guía de Uso</h2>
@@ -543,651 +721,470 @@
         </div>
       </div>
     </div>
-    
-    <!-- 3. SECCIÓN: CONFIGURACIÓN DE APIS -->
-    <div id="configuracion-apis-section" class="section config-section-container">
-         <div class="section-header">
-            <button class="back-button">← Atrás</button>
-            <div class="header-actions">
-                <button id="saveConfigBtn" class="action-button">Guardar</button>
-                <button id="loginBtn" class="action-button">Login</button>
-                <button id="logoutBtn" class="action-button delete-btn">Logout / Borrar</button>
-            </div>            
+
+<!-- 8. SECCIÓN: VALIDADOR DE EMAIL -->
+<div id="email-validator-section" class="section config-section-container">
+    <div class="section-header"><button class="back-button">← Atrás</button></div>
+    <h2>Validador de Email</h2>
+    <div class="config-block">
+        <h3>Parámetros de Validación</h3>
+        <div class="form-group">
+            <label for="emailToValidate">Email a validar:</label>
+            <input type="text" id="emailToValidate" placeholder="Introduce la dirección de email">
         </div>
-        <h2>Configuración de APIs</h2>
-        <!-- Gestión de Clientes (Crear, Seleccionar) -->
-        <div class="client-management">
-            <input type="text" id="clientName" placeholder="Nombre del Cliente">
-            <select id="savedConfigs">
-                <option value="">Seleccionar configuración...</option>
-            </select>
+        <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+            <button id="validateEmailBtn" class="action-button">Validar Email</button>
         </div>
-        <!-- Datos de la Aplicación API -->
-        <div class="config-block">
-            <h3>Datos Aplicación</h3>
-            <div class="form-group"><label for="businessUnit">Business Unit (MID)</label><input type="text" id="businessUnit"></div>
-            <div class="form-group"><label for="authUri">Auth URI</label><input type="text" id="authUri" placeholder="Ej: https://...mc.auth.marketingcloudapis.com/v2/token"></div>
-            <div class="form-group"><label for="clientId">Client ID</label><input type="text" id="clientId"></div>
-            <div class="form-group"><label for="clientSecret">Client Secret</label><input type="password" id="clientSecret" placeholder="Necesario para el primer login"></div>
-            <div class="form-group"><label for="token">Access Token</label><input type="text" id="token" disabled></div>
-            <div class="form-group"><label for="soapUri">SOAP URI</label><input type="text" id="soapUri" disabled></div>
-            <div class="form-group"><label for="restUri">REST URI</label><input type="text" id="restUri" disabled></div>
-            <div class="form-group"><label for="stackKey">Stack</label><input type="text" id="stackKey" disabled></div>
+    </div>
+    <div class="config-block">
+        <h3>Resultado de la Validación</h3>
+        <pre id="email-validation-results">El resultado aparecerá aquí.</pre>
+    </div>
+</div>
+
+<!-- 5. SECCIÓN: CAMPOS DE LA DATA EXTENSION -->
+<div id="campos-section" class="section">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>
+        <div class="header-actions">
+            <button id="importFieldsBtn" class="action-button">Importar</button>                
+            <button id="createFieldsBtn" class="action-button activate-btn">Crear/Actualizar Campos</button>
+            <button id="createDummyFieldsBtn" class="action-button">Campos de Ejemplo</button>                
+            <button id="clearFieldsBtn" class="action-button delete-btn">Limpiar Tabla</button>
         </div>
-        <!-- Configuración de Data Views para el buscador de envíos -->
-        <div class="config-block">
-          <h3>Búsqueda Dinámica en Data Extensions</h3>
-          <p class="info-text" style="text-align: left; margin: 0 0 15px;">
-              Configura las tablas donde se buscará al cliente al pulsar el botón "DEs". Los cambios se guardan junto con el resto de la configuración.
-          </p>
-          <div class="table-container">
-              <table id="sends-config-table" class="editable-row-table">
-                  <thead>
-                      <tr>
-                          <th>Nombre</th>
-                          <th>External Key</th>
-                          <th>Campo de Búsqueda</th>
-                      </tr>
-                  </thead>
-                  <tbody id="sends-config-tbody">
-                      <!-- Las filas se añadirán/cargarán dinámicamente aquí -->
-                  </tbody>
-              </table>
-          </div>
-          <div class="header-actions" style="justify-content: flex-start; margin-top: 15px;">
-              <button id="add-send-config-row-btn" class="action-button">Añadir Fila</button>
-          </div>
-      </div>
+    </div>
+    <h2>Campos de la Data Extension</h2>
+    <div class="table-container">
+        <table id="myTable" class="editable-row-table">
+        <thead>
+            <tr><th>Campo MC</th><th>Tipo Campo</th><th>Longitud</th><th>Default</th><th>PK</th><th>Requerido</th></tr>
+        </thead>
+        <tbody></tbody>
+        </table>
+        <!-- Botones para mover filas seleccionadas -->
+        <div class="control-buttons">
+        <button id="addFieldBtn" class="action-button">Añadir Fila</button>
+        <button id="moveUp" title="Mover fila seleccionada hacia arriba">▲</button>
+        <button id="moveDown" title="Mover fila seleccionada hacia abajo">▼</button>
+        </div>
+    </div>
+</div>
+
+<!-- 6. SECCIÓN: GESTIÓN DE CAMPOS (Recuperar/Borrar) -->
+<div id="configuracion-campos-section" class="section config-section-container">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>
+        <div class="header-actions">
+            <button id="getFields" class="action-button">Recuperar Campos</button>
+            <button id="documentDEsBtn" class="action-button">Documentar Data Extensions</button>
+            <button id="deleteField" class="action-button delete-btn">Borrar Campo</button>
+        </div>
+    </div>
+    <h2>Gestión de Campos de Data Extension</h2>
+    <div class="config-block">
+        <h3>Parámetros para recuperación de 1 DE, Actualización de tabla de campos y Borrado</h3>
+        <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+            Introduce la External Key de la DE sobre la que quieres operar y pulsa en <em>Recuperar Campos</em>.  Estos se rellenarán en la picklist y en la sección <em>Campos</em>.
+        </p>
+        <div class="form-group">
+            <label for="recExternalKey">External Key de la DE</label>
+            <input type="text" id="recExternalKey">
+        </div>
+        <div class="form-group">
+            <label for="targetFieldSelect">Campo a eliminar</label>
+            <select id="targetFieldSelect" disabled><option value="">-- Pulsa "Recuperar Campos" --</option></select>
+        </div>
+    </div>
+    <div class="config-block">
+        <h3>Parámetros para generación de CSV con las DEs y sus campos </h3>
+        <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+            Introduce un identificador de carpeta y pulsa en <em>Documentar Data Extensions</em>
+        </p>
+        <div class="form-group">
+            <label for="recCategoryId">Identificador de carpeta</label>
+            <input type="text" id="recCategoryId">
+        </div>
+    </div>
+</div>
+
+ <!-- 9. SECCIÓN: BUSCADORES -->
+<div id="buscadores-section" class="section">
+    <div class="section-header"><button class="back-button">← Atrás</button></div>
+    <h2>Buscadores</h2>
+    <!-- Contenedor de pestañas para los diferentes tipos de búsqueda -->
+    <div class="tabs-container">
+    <div class="tab-buttons">
+        <button class="tab-button active" data-tab="busqueda-de-tab">Data Extensions</button>
+        <button class="tab-button" data-tab="origenes-tab">Origen de datos</button>
+        <button class="tab-button" data-tab="clientes-tab">Clientes</button>
+        <button class="tab-button" data-tab="queries-tab">Texto en Queries</button>
     </div>
 
-    <!-- 4. SECCIÓN: CONFIGURACIÓN DE DATA EXTENSION (Creación) -->
-    <div id="configuracion-de-section" class="section config-section-container">
-        <div class="section-header">
-            <button class="back-button">← Atrás</button>
-            <div class="header-actions"><button id="createDE" class="action-button">Crear Data Extension</button></div>
-        </div>
-        <h2>Configuración de Data Extension</h2>
-        <!-- Configuración Base de la DE -->
+    <!-- Pestaña: Búsqueda de Data Extension -->
+    <div id="busqueda-de-tab" class="tab-content active config-section-container">
         <div class="config-block">
-            <h3>Configuración Base</h3>
-            <div class="form-group"><label for="deName">Nombre Data Extension</label><input type="text" id="deName"></div>
-            <div class="form-group"><label for="deDescription">Descripción</label><input type="text" id="deDescription"></div>
-            <div class="form-group"><label for="deExternalKey">External Key</label><input type="text" id="deExternalKey" disabled></div>
-            <div class="form-group"><label for="deFolder">ID de Carpeta (Opcional)</label><input type="text" id="deFolder" placeholder="Ej: 12345"></div>
-        </div>
-        <!-- Configuración Sendable -->
-        <div class="config-block">
-            <h3>Configuración Sendable</h3>
-            <div class="form-group checkbox-group">
-                <label for="isSendable">Es Sendable:</label><input type="checkbox" id="isSendable">
+            <h3>Parámetros de Búsqueda</h3>
+            <div class="form-group">
+                <label for="deSearchProperty">Buscar por:</label>
+                <select id="deSearchProperty">
+                    <option value="Name">Nombre</option>
+                    <option value="CustomerKey">External Key</option>
+                </select>
             </div>
             <div class="form-group">
-                <label for="subscriberKeyField">Campo SubscriberKey</label>
-                <select id="subscriberKeyField" disabled><option value="">-- Defina campos en la sección 'Campos' --</option></select>
-            </div>
-            <div class="form-group"><label for="subscriberKeyType">Tipo Campo SubscriberKey</label><input type="text" id="subscriberKeyType" disabled></div>
-        </div>
-    </div>
-
-    <!-- 5. SECCIÓN: CAMPOS DE LA DATA EXTENSION -->
-    <div id="campos-section" class="section">
-        <div class="section-header">
-            <button class="back-button">← Atrás</button>
-            <div class="header-actions">
-                <button id="importFieldsBtn" class="action-button">Importar</button>                
-                <button id="createFieldsBtn" class="action-button activate-btn">Crear/Actualizar Campos</button>
-                <button id="createDummyFieldsBtn" class="action-button">Campos de Ejemplo</button>                
-                <button id="clearFieldsBtn" class="action-button delete-btn">Limpiar Tabla</button>
-            </div>
-        </div>
-        <h2>Campos de la Data Extension</h2>
-        <div class="table-container">
-          <table id="myTable" class="editable-row-table">
-            <thead>
-              <tr><th>Campo MC</th><th>Tipo Campo</th><th>Longitud</th><th>Default</th><th>PK</th><th>Requerido</th></tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-          <!-- Botones para mover filas seleccionadas -->
-          <div class="control-buttons">
-            <button id="addFieldBtn" class="action-button">Añadir Fila</button>
-            <button id="moveUp" title="Mover fila seleccionada hacia arriba">▲</button>
-            <button id="moveDown" title="Mover fila seleccionada hacia abajo">▼</button>
-          </div>
-        </div>
-    </div>
-    
-    <!-- 6. SECCIÓN: GESTIÓN DE CAMPOS (Recuperar/Borrar) -->
-    <div id="configuracion-campos-section" class="section config-section-container">
-        <div class="section-header">
-            <button class="back-button">← Atrás</button>
-            <div class="header-actions">
-                <button id="getFields" class="action-button">Recuperar Campos</button>
-                <button id="documentDEsBtn" class="action-button">Documentar Data Extensions</button>
-                <button id="deleteField" class="action-button delete-btn">Borrar Campo</button>
-            </div>
-        </div>
-        <h2>Gestión de Campos de Data Extension</h2>
-        <div class="config-block">
-            <h3>Parámetros para recuperación de 1 DE, Actualización de tabla de campos y Borrado</h3>
-            <p class="info-text" style="text-align: left; margin: 0 0 15px;">
-                Introduce la External Key de la DE sobre la que quieres operar y pulsa en <em>Recuperar Campos</em>.  Estos se rellenarán en la picklist y en la sección <em>Campos</em>.
-            </p>
-            <div class="form-group">
-                <label for="recExternalKey">External Key de la DE</label>
-                <input type="text" id="recExternalKey">
-            </div>
-            <div class="form-group">
-                <label for="targetFieldSelect">Campo a eliminar</label>
-                <select id="targetFieldSelect" disabled><option value="">-- Pulsa "Recuperar Campos" --</option></select>
-            </div>
-        </div>
-        <div class="config-block">
-            <h3>Parámetros para generación de CSV con las DEs y sus campos </h3>
-            <p class="info-text" style="text-align: left; margin: 0 0 15px;">
-                Introduce un identificador de carpeta y pulsa en <em>Documentar Data Extensions</em>
-            </p>
-            <div class="form-group">
-                <label for="recCategoryId">Identificador de carpeta</label>
-                <input type="text" id="recCategoryId">
-            </div>
-        </div>
-    </div>
-
-    <!-- 7. SECCIÓN: CALENDARIO DE AUTOMATIZACIONES -->
-    <div id="calendario-section" class="section">
-        <div class="section-header">
-            <button class="back-button">← Atrás</button>
-             <div class="calendar-controls">
-                <label for="calendarYearSelect">Año:</label>
-                <select id="calendarYearSelect"></select>
-                <button id="refreshAutomationsBtn" class="action-button">Refrescar Automatismos</button>
-                <button id="refreshJourneyAutomationsBtn" class="action-button activate-btn">Refrescar Automatismos de Journeys</button>
-            </div>
-        </div>
-        <div class="calendar-container">
-            <!-- Rejilla de meses del calendario -->
-            <div id="calendar-main" class="calendar-main-view">
-                <h2>Calendario de Automatizaciones</h2>
-                <div id="calendar-grid" class="calendar-grid"></div>
-            </div>
-            <!-- Barra lateral para mostrar detalles del día seleccionado -->
-            <aside id="calendar-sidebar" class="calendar-sidebar">
-                <h3 id="automation-list-header">Automatizaciones del Día</h3>
-                <div id="automation-list">
-                    <p>Selecciona un día para ver los detalles.</p>
-                </div>
-            </aside>
-        </div>
-    </div>
-
-    <!-- 8. SECCIÓN: VALIDADOR DE EMAIL -->
-    <div id="email-validator-section" class="section config-section-container">
-        <div class="section-header"><button class="back-button">← Atrás</button></div>
-        <h2>Validador de Email</h2>
-        <div class="config-block">
-            <h3>Parámetros de Validación</h3>
-            <div class="form-group">
-              <label for="emailToValidate">Email a validar:</label>
-              <input type="text" id="emailToValidate" placeholder="Introduce la dirección de email">
+                <label for="deSearchValue">Valor:</label>
+                <input type="text" id="deSearchValue" placeholder="Ingresa el valor de búsqueda" maxlength="128">
             </div>
             <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-               <button id="validateEmailBtn" class="action-button">Validar Email</button>
+                <button id="searchDEBtn" class="action-button">Buscar</button>
             </div>
         </div>
+            <div class="config-block" style="flex-grow: 1;">
+                <h3>Resultados</h3>
+                <div class="table-container">
+                    <table id="de-search-results-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre Data Extension</th>
+                                <th>Ruta de Carpeta</th>
+                            </tr>
+                        </thead>
+                        <tbody id="de-search-results-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+    </div>
+
+    <!-- Pestaña: Buscador de Orígenes de Datos -->
+    <div id="origenes-tab" class="tab-content config-section-container">
         <div class="config-block">
-            <h3>Resultado de la Validación</h3>
-            <pre id="email-validation-results">El resultado aparecerá aquí.</pre>
-        </div>
-    </div>
-
-    <!-- 9. SECCIÓN: BUSCADORES -->
-    <div id="buscadores-section" class="section">
-      <div class="section-header"><button class="back-button">← Atrás</button></div>
-      <h2>Buscadores</h2>
-      <!-- Contenedor de pestañas para los diferentes tipos de búsqueda -->
-      <div class="tabs-container">
-        <div class="tab-buttons">
-          <button class="tab-button active" data-tab="busqueda-de-tab">Data Extensions</button>
-          <button class="tab-button" data-tab="origenes-tab">Origen de datos</button>
-          <button class="tab-button" data-tab="clientes-tab">Clientes</button>
-          <button class="tab-button" data-tab="queries-tab">Texto en Queries</button>
-        </div>
-
-        <!-- Pestaña: Búsqueda de Data Extension -->
-        <div id="busqueda-de-tab" class="tab-content active config-section-container">
-            <div class="config-block">
-                <h3>Parámetros de Búsqueda</h3>
-                <div class="form-group">
-                    <label for="deSearchProperty">Buscar por:</label>
-                    <select id="deSearchProperty">
-                        <option value="Name">Nombre</option>
-                        <option value="CustomerKey">External Key</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="deSearchValue">Valor:</label>
-                    <input type="text" id="deSearchValue" placeholder="Ingresa el valor de búsqueda" maxlength="128">
-                </div>
-                <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-                    <button id="searchDEBtn" class="action-button">Buscar</button>
-                </div>
+            <h3>Parámetros de Búsqueda</h3>
+            <div class="form-group">
+                <label for="deNameToFind">Nombre de la Data Extension:</label>
+                <input type="text" id="deNameToFind" placeholder="Introduce el nombre exacto de la DE">
             </div>
-             <div class="config-block" style="flex-grow: 1;">
-                  <h3>Resultados</h3>
-                  <div class="table-container">
-                      <table id="de-search-results-table">
-                          <thead>
-                              <tr>
-                                  <th>Nombre Data Extension</th>
-                                  <th>Ruta de Carpeta</th>
-                              </tr>
-                          </thead>
-                          <tbody id="de-search-results-tbody"></tbody>
-                      </table>
-                  </div>
-              </div>
-        </div>
-
-        <!-- Pestaña: Buscador de Orígenes de Datos -->
-        <div id="origenes-tab" class="tab-content config-section-container">
-            <div class="config-block">
-                <h3>Parámetros de Búsqueda</h3>
-                <div class="form-group">
-                    <label for="deNameToFind">Nombre de la Data Extension:</label>
-                    <input type="text" id="deNameToFind" placeholder="Introduce el nombre exacto de la DE">
-                </div>
-                <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-                    <button id="findDataSourcesBtn" class="action-button">Buscar Orígenes</button>
-                </div>
-            </div>
-            <div class="config-block" style="flex-grow: 1;">
-                <h3>Actividades Encontradas</h3>
-                <div class="table-container">
-                    <table id="data-sources-table">
-                        <thead>
-                            <tr>
-                                <th>Actividad</th><th>Tipo</th><th>Automatización</th>
-                                <th>Paso</th><th>Acción</th><th>Descripción / Query</th>
-                            </tr>
-                        </thead>
-                        <tbody id="data-sources-tbody"></tbody>
-                    </table>
-                </div>
+            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                <button id="findDataSourcesBtn" class="action-button">Buscar Orígenes</button>
             </div>
         </div>
-        
-        <!-- Pestaña: Buscador de Clientes (Suscriptores) -->
-        <div id="clientes-tab" class="tab-content config-section-container">
-            <div class="config-block">
-                <h3>Parámetros de Búsqueda</h3>
-                <div class="form-group">
-                    <label for="customerSearchValue">Buscar por Subscriber Key o Email:</label>
-                    <input type="text" id="customerSearchValue" placeholder="Ingresa el valor a buscar">
-                </div>
-                <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-                    <button id="searchCustomerBtn" class="action-button">Buscar Cliente</button>
-                </div>
-            </div>
-            <!-- Bloque de Resultados de la Búsqueda -->
-            <div class="config-block" style="flex-grow: 1;">
-                <div class="config-block-header">
-                    <h3>Resultados</h3>
-                    <div class="header-actions">
-                        <button id="getDEsBtn" class="action-button" disabled>DEs</button>
-                        <button id="getCustomerJourneysBtn" class="action-button" disabled>Journeys</button>
-                    </div>
-                </div>
-                <div class="table-container">
-                    <table id="customer-search-table">
-                        <thead>
-                            <tr>
-                                <th>Subscriber Key</th><th>Email</th><th>Estado</th>
-                                <th>Fecha Creación</th><th>Fecha Baja</th><th>Es Suscriptor</th>
-                            </tr>
-                        </thead>
-                        <tbody id="customer-search-tbody"></tbody>
-                    </table>
-                </div>
-            </div>
-            <!-- Bloque de Resultados de Journeys (oculto por defecto) -->
-            <div id="customer-journeys-results-block" class="config-block hidden">
-                <h3>Journeys del Cliente Seleccionado</h3>
-                <div class="table-container">
-                    <table id="customer-journeys-table">
-                        <thead>
-                            <tr>
-                                <th>Nombre del Journey</th><th>ID</th><th>Definition Key</th>
-                                <th>Versión</th><th>Fecha Creación</th><th>Fecha Modificación</th>
-                            </tr>
-                        </thead>
-                        <tbody id="customer-journeys-tbody"></tbody>
-                    </table>
-                </div>
-            </div>
-            <!-- Bloque de Resultados de Envíos (oculto por defecto) -->
-            <div id="customer-sends-results-block" class="config-block hidden">
-                <h3>Resultados de Búsqueda en Data Extensions</h3>
-                <div id="sends-results-container">
-                    <!-- Los resultados se inyectarán aquí dinámicamente -->
-                </div>
+        <div class="config-block" style="flex-grow: 1;">
+            <h3>Actividades Encontradas</h3>
+            <div class="table-container">
+                <table id="data-sources-table">
+                    <thead>
+                        <tr>
+                            <th>Actividad</th><th>Tipo</th><th>Automatización</th>
+                            <th>Paso</th><th>Acción</th><th>Descripción / Query</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-sources-tbody"></tbody>
+                </table>
             </div>
         </div>
-
-        <!-- Pestaña: Buscador de Texto en Queries -->
-        <div id="queries-tab" class="tab-content config-section-container">
-            <div class="config-block">
-                <h3>Parámetros de Búsqueda</h3>
-                <div class="form-group">
-                    <label for="querySearchText">Texto a buscar en la Query:</label>
-                    <input type="text" id="querySearchText" placeholder="Ej: _Subscribers o Nombre_DE">
-                </div>
-                <div class="form-group checkbox-group" style="justify-content: flex-start;">
-                    <label for="showQueryTextCheckbox">Mostrar Query Text:</label>
-                    <input type="checkbox" id="showQueryTextCheckbox" checked>
-                </div>
-                <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-                    <button id="searchQueriesByTextBtn" class="action-button">Buscar en Queries</button>
-                </div>
-            </div>
-            <div class="config-block" style="flex-grow: 1;">
-                <h3>Queries Encontradas</h3>
-                <div class="table-container">
-                    <table id="query-search-results-table">
-                        <thead>
-                            <tr>
-                                <th>Nombre de la Query</th><th>Automatización</th>
-                                <th>Paso</th><th>Query Text</th>
-                            </tr>
-                        </thead>
-                        <tbody id="query-search-results-tbody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-      </div>
     </div>
     
-    <!-- 10. SECCIÓN: GESTIÓN DE AUTOMATISMOS -->
-    <div id="gestion-automatismos-section" class="section">
-        <div class="section-header">
-            <button class="back-button">← Atrás</button>            
-            <div class="header-actions">
-                <button id="refreshAutomationsTableBtn" class="action-button">Refrescar</button>
-                <button id="activateAutomationBtn" class="action-button activate-btn" disabled>Activar</button>
-                <button id="runAutomationBtn" class="action-button" disabled>Ejecutar</button>
-                <button id="stopAutomationBtn" class="action-button delete-btn" disabled>Parar</button>
+    <!-- Pestaña: Buscador de Clientes (Suscriptores) -->
+    <div id="clientes-tab" class="tab-content config-section-container">
+        <div class="config-block">
+            <h3>Parámetros de Búsqueda</h3>
+            <div class="form-group">
+                <label for="customerSearchValue">Buscar por Subscriber Key o Email:</label>
+                <input type="text" id="customerSearchValue" placeholder="Ingresa el valor a buscar">
+            </div>
+            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                <button id="searchCustomerBtn" class="action-button">Buscar Cliente</button>
             </div>
         </div>
-        <h2>Gestión de Automatismos</h2>
-        <!-- Filtros para la tabla de automatismos -->
-        <div class="header-filters">
-            <input type="text" id="automationNameFilter" class="filter-input" placeholder="Buscar por nombre...">
-            <select id="automationStatusFilter" class="filter-input">
-                <option value="">Todos los estados</option>
-            </select>
-        </div>
-        <div class="table-container">
-          <table id="automations-table">
-            <thead>
-              <tr>
-                <th class="sortable-header" data-sort-by="name">Nombre</th>
-                <th class="sortable-header" data-sort-by="lastRunTime">Última Ejecución</th>
-                <th class="sortable-header" data-sort-by="schedule.scheduledTime">Próxima Ejecución</th>
-                <th class="sortable-header" data-sort-by="status">Estado</th>
-              </tr>
-            </thead>
-            <tbody id="automations-tbody"></tbody>
-          </table>
-        </div>
-          <div id="pagination-automations" class="pagination-controls">
-            <button id="prevPageBtnAutomations" class="action-button pagination-arrow">&laquo;</button>
-            <input type="number" id="pageInputAutomations" class="filter-input page-input" min="1">
-            <span id="totalPagesAutomations">/ 1</span>
-            <button id="nextPageBtnAutomations" class="action-button pagination-arrow">&raquo;</button>
-          </div>
-    </div>
-    
-    <!-- 11. SECCIÓN: GESTIÓN DE JOURNEYS -->
-    <div id="gestion-journeys-section" class="section">
-        <div class="section-header">
-            <button class="back-button">← Atrás</button>  
-            <div class="header-actions">
-                <button id="refreshJourneysTableBtn" class="action-button">Refrescar</button>
-                <button id="getCommunicationsBtn" class="action-button activate-btn" disabled>Comunicaciones</button>
-                <button id="drawJourneyBtn" class="action-button" disabled>Dibujar</button>
-                <button id="copyJourneyBtn" class="action-button" disabled>Copiar</button>
-                <button id="stopJourneyBtn" class="action-button delete-btn" disabled>Parar</button>
-                <button id="deleteJourneyBtn" class="action-button delete-btn-darker" disabled>Borrar</button>
-            </div>          
-        </div>
-        <h2>Gestión de Journeys</h2>
-        <!-- Filtros para la tabla de journeys -->
-        <div class="header-filters">
-            <input type="text" id="journeyNameFilter" class="filter-input" placeholder="Buscar por nombre...">
-            <select id="journeyTypeFilter" class="filter-input">
-                <option value="">Todos los tipos</option>
-                <!-- Opciones se cargarán dinámicamente -->
-            </select>
-            <select id="journeySubtypeFilter" class="filter-input">
-                <option value="">Todos los subtipos</option>
-                <!-- Opciones se cargarán dinámicamente -->
-            </select>
-            <select id="journeyStatusFilter" class="filter-input">
-                <option value="">Todos los estados</option>
-                <!-- Opciones se cargarán dinámicamente -->
-            </select>
-            <input type="text" id="journeyDEFilter" class="filter-input" placeholder="Buscar por Data Extension...">
-        </div>
-        <div class="table-container">
-          <table id="journeys-table">
-            <thead>
-              <tr>
-                <th class="sortable-header" data-sort-by="name">Nombre Journey</th>
-                <th class="sortable-header" data-sort-by="version">Versión</th>
-                <th class="sortable-header" data-sort-by="createdDate">Fecha creación</th>
-                <th class="sortable-header" data-sort-by="modifiedDate">Fecha modificación</th>
-                <th class="sortable-header" data-sort-by="eventType">Tipo</th>
-                <th class="sortable-header" data-sort-by="definitionType">Subtipo</th>
-                <th class="sortable-header" data-sort-by="status">Estado</th>
-                <th class="sortable-header" data-sort-by="location">Ubicación</th>
-                <th class="sortable-header" data-sort-by="dataExtensionName">Data Extension</th>
-                <th class="sortable-header" data-sort-by="hasCommunications">Descargado</th>
-                <th class="sortable-header" data-sort-by="emails">Emails</th>
-                <th class="sortable-header" data-sort-by="sms">SMSs</th>
-                <th class="sortable-header" data-sort-by="pushes">Pushes</th>
-              </tr>
-            </thead>
-            <tbody id="journeys-tbody"></tbody>
-          </table>
-        </div>
-         <div id="pagination-journeys" class="pagination-controls">
-          <button id="prevPageBtnJourneys" class="action-button pagination-arrow">&laquo;</button>
-          <input type="number" id="pageInputJourneys" class="filter-input page-input" min="1">
-          <span id="totalPagesJourneys">/ 1</span>
-          <button id="nextPageBtnJourneys" class="action-button pagination-arrow">&raquo;</button>
-        </div>
-    </div>
-
-        <!-- 12. SECCIÓN: CLONADOR DE QUERIES (CORREGIDO) -->
-    <div id="clonador-queries-section" class="section config-section-container">
-        <!-- ========================================================== -->
-        <!-- PASO 1: CONFIGURACIÓN DE CARPETAS                        -->
-        <!-- ========================================================== -->
-        <div id="queries-cloner-step1" class="cloner-step-container">
-            <div class="section-header">
-                <!-- CORRECCIÓN: Añadida la clase "action-button" -->
-                <button class="action-button back-button">← Atrás</button>
-            </div>
-            <h2>Clonador de Queries - Paso 1: Configuración</h2>
-            
-            <!-- Bloque del Formulario -->
-            <div class="config-block">
-                <h3>Carpetas de Origen y Destino</h3>
-                <div class="form-group">
-                    <label for="querySourceFolderName">Nombre de carpeta con Queries a clonar</label>
-                    <input type="text" id="querySourceFolderName" placeholder="Introduce un nombre o parte de él">
-                </div>
-                <div class="form-group">
-                    <label for="queryTargetFolderName">Nombre de carpeta donde guardar Queries clonadas</label>
-                    <input type="text" id="queryTargetFolderName" placeholder="Introduce un nombre o parte de él">
-                </div>
-                <div class="form-group">
-                    <label for="deTargetFolderName">Nombre de carpeta donde guardar DEs clonadas</label>
-                    <input type="text" id="deTargetFolderName" placeholder="Introduce un nombre o parte de él">
-                </div>
-                <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-                    <button id="queryClonerSearchFoldersBtn" class="action-button" disabled>Buscar Carpetas</button>
+        <!-- Bloque de Resultados de la Búsqueda -->
+        <div class="config-block" style="flex-grow: 1;">
+            <div class="config-block-header">
+                <h3>Resultados</h3>
+                <div class="header-actions">
+                    <button id="getDEsBtn" class="action-button" disabled>DEs</button>
+                    <button id="getCustomerJourneysBtn" class="action-button" disabled>Journeys</button>
                 </div>
             </div>
-
-            <!-- Bloque de Resultados de Búsqueda -->
-            <div id="query-cloner-folder-results" class="config-block hidden">
-                <div class="config-block-header">
-                    <h3>Resultados de Búsqueda</h3>
-                    <div class="header-actions">
-                        <button id="queryClonerContinueBtn" class="action-button" disabled>Continuar →</button>
-                    </div>
-                </div>
-                <div class="folder-results-grid">
-                    <div class="folder-column">
-                        <h4>Posibles carpetas de Queries a clonar</h4>
-                        <div class="table-container">
-                            <table id="query-source-folders-table" class="folder-results-table">
-                                <thead><tr><th>Ruta de Carpeta</th></tr></thead>
-                                <tbody id="query-source-folders-tbody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="folder-column">
-                        <h4>Posibles carpetas para Queries clonadas</h4>
-                        <div class="table-container">
-                            <table id="query-target-folders-table" class="folder-results-table">
-                                <thead><tr><th>Ruta de Carpeta</th></tr></thead>
-                                <tbody id="query-target-folders-tbody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="folder-column">
-                        <h4>Posibles carpetas para DEs clonadas</h4>
-                        <div class="table-container">
-                            <table id="de-target-folders-table" class="folder-results-table">
-                                <thead><tr><th>Ruta de Carpeta</th></tr></thead>
-                                <tbody id="de-target-folders-tbody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+            <div class="table-container">
+                <table id="customer-search-table">
+                    <thead>
+                        <tr>
+                            <th>Subscriber Key</th><th>Email</th><th>Estado</th>
+                            <th>Fecha Creación</th><th>Fecha Baja</th><th>Es Suscriptor</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customer-search-tbody"></tbody>
+                </table>
             </div>
         </div>
-
-        <!-- ========================================================== -->
-        <!-- PASO 2: SELECCIÓN DE QUERIES (Oculto por defecto)        -->
-        <!-- ========================================================== -->
-        <div id="queries-cloner-step2" class="cloner-step-container" style="display: none;">
-             <div class="section-header">
-                <!-- CORRECCIÓN: Añadida la clase "action-button" -->
-                <button id="queryClonerBackBtn" class="action-button">← Atrás</button>
+        <!-- Bloque de Resultados de Journeys (oculto por defecto) -->
+        <div id="customer-journeys-results-block" class="config-block hidden">
+            <h3>Journeys del Cliente Seleccionado</h3>
+            <div class="table-container">
+                <table id="customer-journeys-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre del Journey</th><th>ID</th><th>Definition Key</th>
+                            <th>Versión</th><th>Fecha Creación</th><th>Fecha Modificación</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customer-journeys-tbody"></tbody>
+                </table>
             </div>
-            <h2>Clonador de Queries - Paso 2: Selección</h2>
-            
-            <div class="config-block" style="flex-grow: 1; display: flex; flex-direction: column;">
-                <div class="config-block-header">
-                    <h3>Selecciona las Queries a clonar</h3>
-                    <div class="header-actions">
-                        <button id="queryClonerCloneBtn" class="action-button activate-btn" disabled>Clonar Seleccionadas</button>
-                    </div>
-                </div>
-                <div class="table-container" style="flex-grow: 1;">
-                    <table id="query-selection-table">
-                      <thead>
-                          <tr>
-                              <th><input type="checkbox" id="selectAllQueriesCheckbox" title="Seleccionar Todas"></th>
-                              <th>Query Origen</th>
-                              <th>DE Origen</th>
-                              <th>Query Destino</th>
-                              <th>DE Destino</th>
-                          </tr>
-                      </thead>
-                      <tbody id="query-selection-tbody"></tbody>
-                  </table>
-                </div>
+        </div>
+        <!-- Bloque de Resultados de Envíos (oculto por defecto) -->
+        <div id="customer-sends-results-block" class="config-block hidden">
+            <h3>Resultados de Búsqueda en Data Extensions</h3>
+            <div id="sends-results-container">
+                <!-- Los resultados se inyectarán aquí dinámicamente -->
             </div>
         </div>
     </div>
-    <!-- 13. SECCIÓN: GESTIÓN DE CLOUD PAGES -->
-<div id="gestion-cloudpages-section" class="section">
+
+    <!-- Pestaña: Buscador de Texto en Queries -->
+    <div id="queries-tab" class="tab-content config-section-container">
+        <div class="config-block">
+            <h3>Parámetros de Búsqueda</h3>
+            <div class="form-group">
+                <label for="querySearchText">Texto a buscar en la Query:</label>
+                <input type="text" id="querySearchText" placeholder="Ej: _Subscribers o Nombre_DE">
+            </div>
+            <div class="form-group checkbox-group" style="justify-content: flex-start;">
+                <label for="showQueryTextCheckbox">Mostrar Query Text:</label>
+                <input type="checkbox" id="showQueryTextCheckbox" checked>
+            </div>
+            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                <button id="searchQueriesByTextBtn" class="action-button">Buscar en Queries</button>
+            </div>
+        </div>
+        <div class="config-block" style="flex-grow: 1;">
+            <h3>Queries Encontradas</h3>
+            <div class="table-container">
+                <table id="query-search-results-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre de la Query</th><th>Automatización</th>
+                            <th>Paso</th><th>Query Text</th>
+                        </tr>
+                    </thead>
+                    <tbody id="query-search-results-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    </div>
+</div>
+
+<!-- 11. SECCIÓN: GESTIÓN DE JOURNEYS -->
+<div id="gestion-journeys-section" class="section">
     <div class="section-header">
         <button class="back-button">← Atrás</button>  
         <div class="header-actions">
-            <button id="refreshCloudPagesTableBtn" class="action-button">Refrescar</button>
+            <button id="refreshJourneysTableBtn" class="action-button">Refrescar</button>
+            <button id="getCommunicationsBtn" class="action-button activate-btn" disabled>Comunicaciones</button>
+            <button id="drawJourneyBtn" class="action-button" disabled>Dibujar</button>
+            <button id="copyJourneyBtn" class="action-button" disabled>Copiar</button>
+            <button id="stopJourneyBtn" class="action-button delete-btn" disabled>Parar</button>
+            <button id="deleteJourneyBtn" class="action-button delete-btn-darker" disabled>Borrar</button>
         </div>          
     </div>
-    <h2>Gestión de Cloud Pages</h2>
-    <!-- Filtros para la tabla -->
+    <h2>Gestión de Journeys</h2>
+    <!-- Filtros para la tabla de journeys -->
     <div class="header-filters">
-        <input type="text" id="cloudPageNameFilter" class="filter-input" placeholder="Buscar por nombre...">
-        <select id="cloudPageTypeFilter" class="filter-input">
+        <input type="text" id="journeyNameFilter" class="filter-input" placeholder="Buscar por nombre...">
+        <select id="journeyTypeFilter" class="filter-input">
             <option value="">Todos los tipos</option>
             <!-- Opciones se cargarán dinámicamente -->
         </select>
+        <select id="journeySubtypeFilter" class="filter-input">
+            <option value="">Todos los subtipos</option>
+            <!-- Opciones se cargarán dinámicamente -->
+        </select>
+        <select id="journeyStatusFilter" class="filter-input">
+            <option value="">Todos los estados</option>
+            <!-- Opciones se cargarán dinámicamente -->
+        </select>
+        <input type="text" id="journeyDEFilter" class="filter-input" placeholder="Buscar por Data Extension...">
     </div>
     <div class="table-container">
-      <table id="cloudpages-table">
+        <table id="journeys-table">
         <thead>
-          <tr>
-            <th class="sortable-header" data-sort-by="name">Nombre</th>
-            <th class="sortable-header" data-sort-by="assetType.displayName">Tipo</th>
-            <th class="sortable-header" data-sort-by="modifiedDate">Fecha Modificación</th>
+            <tr>
+            <th class="sortable-header" data-sort-by="name">Nombre Journey</th>
+            <th class="sortable-header" data-sort-by="version">Versión</th>
+            <th class="sortable-header" data-sort-by="createdDate">Fecha creación</th>
+            <th class="sortable-header" data-sort-by="modifiedDate">Fecha modificación</th>
+            <th class="sortable-header" data-sort-by="eventType">Tipo</th>
+            <th class="sortable-header" data-sort-by="definitionType">Subtipo</th>
+            <th class="sortable-header" data-sort-by="status">Estado</th>
             <th class="sortable-header" data-sort-by="location">Ubicación</th>
-            <th class="sortable-header" data-sort-by="url">URL</th>
-          </tr>
+            <th class="sortable-header" data-sort-by="dataExtensionName">Data Extension</th>
+            <th class="sortable-header" data-sort-by="hasCommunications">Descargado</th>
+            <th class="sortable-header" data-sort-by="emails">Emails</th>
+            <th class="sortable-header" data-sort-by="sms">SMSs</th>
+            <th class="sortable-header" data-sort-by="pushes">Pushes</th>
+            </tr>
         </thead>
-        <tbody id="cloudpages-tbody"></tbody>
-      </table>
+        <tbody id="journeys-tbody"></tbody>
+        </table>
     </div>
-     <div id="pagination-cloudpages" class="pagination-controls">
-      <button id="prevPageBtnCloudPages" class="action-button pagination-arrow">&laquo;</button>
-      <input type="number" id="pageInputCloudPages" class="filter-input page-input" min="1">
-      <span id="totalPagesCloudPages">/ 1</span>
-      <button id="nextPageBtnCloudPages" class="action-button pagination-arrow">&raquo;</button>
+        <div id="pagination-journeys" class="pagination-controls">
+        <button id="prevPageBtnJourneys" class="action-button pagination-arrow">&laquo;</button>
+        <input type="number" id="pageInputJourneys" class="filter-input page-input" min="1">
+        <span id="totalPagesJourneys">/ 1</span>
+        <button id="nextPageBtnJourneys" class="action-button pagination-arrow">&raquo;</button>
     </div>
 </div>
+
+<!-- 1. PANTALLA DE BIENVENIDA (MENÚ PRINCIPAL) -->
+<div id="main-menu" class="main-menu-container" style="display: flex;">
+    <div class="menu-group">
+    <h3>Panel Principal</h3>
+    <div class="menu-buttons-container">
+        <img src="assets/welcome2.gif" alt="Animación de bienvenida" class="welcome-gif">
+        <p class="info-text">
+        Para empezar, configura un cliente en "Configuración de APIs". Al pulsar en login (o seleccionándolo si ya estaba guardado) se iniciará el proceso de autenticación.
+        </p>
+        
+    </div>
+    </div>
+</div>
+
+<!-- 12. SECCIÓN: CLONADOR DE QUERIES (CORREGIDO) -->
+<div id="clonador-queries-section" class="section config-section-container">
+    <!-- ========================================================== -->
+    <!-- PASO 1: CONFIGURACIÓN DE CARPETAS                        -->
+    <!-- ========================================================== -->
+    <div id="queries-cloner-step1" class="cloner-step-container">
+        <div class="section-header">
+            <!-- CORRECCIÓN: Añadida la clase "action-button" -->
+            <button class="action-button back-button">← Atrás</button>
+        </div>
+        <h2>Clonador de Queries - Paso 1: Configuración</h2>
+        
+        <!-- Bloque del Formulario -->
+        <div class="config-block">
+            <h3>Carpetas de Origen y Destino</h3>
+            <div class="form-group">
+                <label for="querySourceFolderName">Nombre de carpeta con Queries a clonar</label>
+                <input type="text" id="querySourceFolderName" placeholder="Introduce un nombre o parte de él">
+            </div>
+            <div class="form-group">
+                <label for="queryTargetFolderName">Nombre de carpeta donde guardar Queries clonadas</label>
+                <input type="text" id="queryTargetFolderName" placeholder="Introduce un nombre o parte de él">
+            </div>
+            <div class="form-group">
+                <label for="deTargetFolderName">Nombre de carpeta donde guardar DEs clonadas</label>
+                <input type="text" id="deTargetFolderName" placeholder="Introduce un nombre o parte de él">
+            </div>
+            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                <button id="queryClonerSearchFoldersBtn" class="action-button" disabled>Buscar Carpetas</button>
+            </div>
+        </div>
+
+        <!-- Bloque de Resultados de Búsqueda -->
+        <div id="query-cloner-folder-results" class="config-block hidden">
+            <div class="config-block-header">
+                <h3>Resultados de Búsqueda</h3>
+                <div class="header-actions">
+                    <button id="queryClonerContinueBtn" class="action-button" disabled>Continuar →</button>
+                </div>
+            </div>
+            <div class="folder-results-grid">
+                <div class="folder-column">
+                    <h4>Posibles carpetas de Queries a clonar</h4>
+                    <div class="table-container">
+                        <table id="query-source-folders-table" class="folder-results-table">
+                            <thead><tr><th>Ruta de Carpeta</th></tr></thead>
+                            <tbody id="query-source-folders-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="folder-column">
+                    <h4>Posibles carpetas para Queries clonadas</h4>
+                    <div class="table-container">
+                        <table id="query-target-folders-table" class="folder-results-table">
+                            <thead><tr><th>Ruta de Carpeta</th></tr></thead>
+                            <tbody id="query-target-folders-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="folder-column">
+                    <h4>Posibles carpetas para DEs clonadas</h4>
+                    <div class="table-container">
+                        <table id="de-target-folders-table" class="folder-results-table">
+                            <thead><tr><th>Ruta de Carpeta</th></tr></thead>
+                            <tbody id="de-target-folders-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <!-- PASO 2: SELECCIÓN DE QUERIES (Oculto por defecto)        -->
+    <!-- ========================================================== -->
+    <div id="queries-cloner-step2" class="cloner-step-container" style="display: none;">
+            <div class="section-header">
+            <!-- CORRECCIÓN: Añadida la clase "action-button" -->
+            <button id="queryClonerBackBtn" class="action-button">← Atrás</button>
+        </div>
+        <h2>Clonador de Queries - Paso 2: Selección</h2>
+        
+        <div class="config-block" style="flex-grow: 1; display: flex; flex-direction: column;">
+            <div class="config-block-header">
+                <h3>Selecciona las Queries a clonar</h3>
+                <div class="header-actions">
+                    <button id="queryClonerCloneBtn" class="action-button activate-btn" disabled>Clonar Seleccionadas</button>
+                </div>
+            </div>
+            <div class="table-container" style="flex-grow: 1;">
+                <table id="query-selection-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="selectAllQueriesCheckbox" title="Seleccionar Todas"></th>
+                            <th>Query Origen</th>
+                            <th>DE Origen</th>
+                            <th>Query Destino</th>
+                            <th>DE Destino</th>
+                        </tr>
+                    </thead>
+                    <tbody id="query-selection-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+
   </main> 
 
-  <!-- END: CONTENIDO PRINCIPAL -->
-
   <!-- ========================================================== -->
-  <!-- START: BARRA LATERAL DERECHA (LOG) -->
+  <!-- BARRA LATERAL DERECHA (LOG) -->
   <!-- ========================================================== -->
   <aside id="log-sidebar">
     <div class="log-header">
       <h2>Log de Eventos</h2>
       <button id="toggleLogBtn" title="Colapsar/Expandir Log"></button>
     </div>
-    <!-- Bloque para mensajes de estado de la aplicación -->
     <div id="log-message-block" class="log-block">
       <h4>Mensajes</h4>
       <pre><code id="log-messages">Esperando acciones...</code></pre>
     </div>
-    <!-- Bloque para mostrar el cuerpo de las peticiones API -->
     <div id="log-request-block" class="log-block">
       <h4>Llamada API</h4>
       <pre><code id="log-request"></code></pre>
     </div>
-    <!-- Bloque para mostrar el cuerpo de las respuestas API -->
     <div id="log-response-block" class="log-block">
       <h4>Respuesta API</h4>
       <pre><code id="log-response"></code></pre>
     </div>
   </aside>
-  <!-- END: BARRA LATERAL DERECHA -->
 
-</div>
-<!-- END: CONTENEDOR PRINCIPAL -->
+</div> <!-- FIN .app-container -->
 
 <!-- ========================================================== -->
-<!-- START: MODAL DE IMPORTACIÓN DE CAMPOS -->
+<!-- START: MODALES GLOBALES (parte inferior) -->
 <!-- ========================================================== -->
 <div id="import-modal" class="modal-overlay">
     <div class="modal-content">
@@ -1210,13 +1207,8 @@
         </div>
     </div>
 </div>
-<!-- END: MODAL DE IMPORTACIÓN -->
-
-<!-- ========================================================== -->
-<!-- START: MODAL DE VISUALIZACIÓN DE FLUJO DE JOURNEY -->
-<!-- ========================================================== -->
 <div id="journey-flow-modal" class="modal-overlay">
-    <div class="modal-content modal-lg"> <!-- Añadimos una clase para hacerlo más grande -->
+    <div class="modal-content modal-lg">
         <h3>Flujo del Journey</h3>
         <div class="journey-flow-container">
             <pre id="journey-flow-content">Cargando flujo...</pre>
@@ -1227,11 +1219,6 @@
         </div>
     </div>
 </div>
-<!-- END: MODAL DE FLUJO -->
-
-<!-- ========================================================== -->
-<!-- START: MODAL DE ALERTA PERSONALIZADO -->
-<!-- ========================================================== -->
 <div id="custom-alert-modal" class="modal-overlay">
     <div class="modal-content">
         <h3>Aviso</h3>
@@ -1241,12 +1228,6 @@
         </div>
     </div>
 </div>
-<!-- END: MODAL DE ALERTA -->
-
-
-<!-- ========================================================== -->
-<!-- START: MODAL DE CONFIRMACIÓN PERSONALIZADO -->
-<!-- ========================================================== -->
 <div id="custom-confirm-modal" class="modal-overlay">
     <div class="modal-content">
         <h3>Confirmación Requerida</h3>
@@ -1257,9 +1238,7 @@
         </div>
     </div>
 </div>
-<!-- END: MODAL DE CONFIRMACIÓN -->
  
-<!-- Enlaza el fichero JavaScript al final del body para un rendimiento óptimo -->
 <script type="module" src="app.js"></script>
 </body>
 </html>

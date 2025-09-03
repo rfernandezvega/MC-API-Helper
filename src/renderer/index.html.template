@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Marketing Cloud API Helper</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://*.marketingcloudapis.com https://*.exacttarget.com https://www.googleapis.com">
+  <!-- Enlaza la hoja de estilos principal -->
+  <link rel="stylesheet" href="styles/style.css">
+</head>
+<body>
+
+<!-- ========================================================== -->
+<!-- START: MODALES Y OVERLAYS GLOBALES -->
+<!-- ========================================================== -->
+<div id="license-modal-overlay" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <h3>Acceso a la Aplicación</h3>
+        <p>Por favor, introduce tu email y la clave de acceso para activar la herramienta.</p>
+        <p id="license-error-message" class="error-text" style="display: none;"></p>
+        <form id="license-form" class="config-section-container" style="padding: 0;">
+            <div class="form-group">
+                <label for="license-email">Email de registro</label>
+                <input type="email" id="license-email" required>
+            </div>
+            <div class="form-group">
+                <label for="license-key">Clave de Acceso</label>
+                <input type="password" id="license-key" required>
+            </div>
+            <div class="modal-actions" style="margin-top: 10px;">
+                <button type="submit" id="license-submit-btn" class="action-button">Validar y Acceder</button>
+            </div>
+        </form>
+    </div>
+</div>
+<div id="loader-overlay" class="loader-overlay" style="display: none;">
+    <div class="loader-spinner"></div>
+    <p id="loader-text" class="loader-text">Cargando...</p>
+</div>
+
+<!-- ===================================================================
+     CONTENEDOR PRINCIPAL DE LA APLICACIÓN
+     =================================================================== -->
+<div class="app-container">
+  
+  <!-- ========================================================== -->
+  <!-- BARRA LATERAL IZQUIERDA (NAVEGACIÓN) -->
+  <!-- ========================================================== -->
+  <aside id="macros-sidebar">
+    <!-- Selector de Cliente y Estado de Sesión -->
+    <div class="sidebar-client-selector">
+      <h2>Cliente</h2>
+      <select id="sidebarClientSelect">
+        <option value="">Ninguno seleccionado</option>
+      </select>
+      <p id="login-status" class="login-status inactive">🔴 Sesión no iniciada</p>
+    </div>
+    <h2>Vistas</h2>
+    <!-- Menús colapsables -->
+    <div class="collapsible-group">
+        <h3 class="collapsible-header">General</h3>
+        <ul class="collapsible-content">
+          <li><a class="macro-item" data-macro="docu">Documentación</a></li>
+          <li><a class="macro-item" data-macro="configuracionAPIs">Configuración de APIs</a></li>
+        </ul>
+    </div>
+    <div class="collapsible-group">
+        <h3 class="collapsible-header">Data Extensions</h3>
+        <ul class="collapsible-content">
+          <li><a class="macro-item" data-macro="configuracionDE">Creación de Data Extension</a></li>
+          <li><a class="macro-item" data-macro="campos">Configuración de Campos</a></li>
+          <li><a class="macro-item" data-macro="gestionCampos">Recuperación y Borrado de Campos</a></li>
+        </ul>
+    </div>
+    <div class="collapsible-group">
+        <h3 class="collapsible-header">Funcionalidades</h3>
+        <ul class="collapsible-content">
+          <li><a class="macro-item" data-macro="buscadores">Buscadores</a></li>
+          <li><a class="macro-item" data-macro="calendario">Calendario</a></li>         
+          <li><a class="macro-item" data-macro="gestionAutomatismos">Gestión de automatismos</a></li> 
+          <li><a class="macro-item" data-macro="clonadorQueries">Clonador de Queries</a></li>
+          <li><a class="macro-item" data-macro="gestionJourneys">Gestión de Journeys</a></li>          
+          <li><a class="macro-item" data-macro="gestionCloudPages">Gestión de Cloud Pages</a></li>  
+          <li><a class="macro-item" data-macro="validadorEmail">Validador de Email</a></li>
+        </ul>
+    </div>
+  </aside>
+
+  <!-- ========================================================== -->
+  <!-- CONTENIDO PRINCIPAL (VACÍO) -->
+  <!-- ========================================================== -->
+  <main id="main-content">   
+    <!-- 
+      Este es el marcador de inyección.
+      El script 'build-html.js' leerá todos los ficheros de la carpeta /views
+      y pegará su contenido aquí para construir el 'index.html' final.
+    -->
+    <!-- VIEWS WILL BE INJECTED HERE -->
+  </main> 
+
+  <!-- ========================================================== -->
+  <!-- BARRA LATERAL DERECHA (LOG) -->
+  <!-- ========================================================== -->
+  <aside id="log-sidebar">
+    <div class="log-header">
+      <h2>Log de Eventos</h2>
+      <button id="toggleLogBtn" title="Colapsar/Expandir Log"></button>
+    </div>
+    <div id="log-message-block" class="log-block">
+      <h4>Mensajes</h4>
+      <pre><code id="log-messages">Esperando acciones...</code></pre>
+    </div>
+    <div id="log-request-block" class="log-block">
+      <h4>Llamada API</h4>
+      <pre><code id="log-request"></code></pre>
+    </div>
+    <div id="log-response-block" class="log-block">
+      <h4>Respuesta API</h4>
+      <pre><code id="log-response"></code></pre>
+    </div>
+  </aside>
+
+</div> <!-- FIN .app-container -->
+
+<!-- ========================================================== -->
+<!-- START: MODALES GLOBALES (parte inferior) -->
+<!-- ========================================================== -->
+<div id="import-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Importar Campos desde Portapapeles</h3>
+        <p>Pega aquí los datos. Las columnas deben ser: <b>Nombre</b>, <b>Tipo</b> y <b>Longitud</b> (opcional).</p>
+        <div class="delimiter-selector">
+            <label for="delimiter-select">Separador:</label>
+            <select id="delimiter-select">
+                <option value="tab" selected>Tabulador (Excel)</option>
+                <option value="comma">Coma (,)</option>
+                <option value="semicolon">Punto y coma (;)</option>
+                <option value="other">Otro...</option>
+            </select>
+            <input type="text" id="custom-delimiter-input" class="hidden" maxlength="1" placeholder="|">
+        </div>
+        <textarea id="paste-data-area" rows="10" placeholder="Ciudad	Text	50&#10;Email	EmailAddress	254"></textarea>
+        <div class="modal-actions">
+            <button id="process-paste-btn" class="action-button">Añadir Campos</button>
+            <button id="cancel-paste-btn" class="action-button delete-btn">Cancelar</button>
+        </div>
+    </div>
+</div>
+<div id="journey-flow-modal" class="modal-overlay">
+    <div class="modal-content modal-lg">
+        <h3>Flujo del Journey</h3>
+        <div class="journey-flow-container">
+            <pre id="journey-flow-content">Cargando flujo...</pre>
+        </div>
+        <div class="modal-actions">
+            <button id="copyFlowBtn" class="action-button">Copiar</button>
+            <button id="close-flow-btn" class="action-button">Cerrar</button>
+        </div>
+    </div>
+</div>
+<div id="custom-alert-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Aviso</h3>
+        <p id="custom-alert-message" style="line-height: 1.6;"></p>
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button id="custom-alert-close-btn" class="action-button">Aceptar</button>
+        </div>
+    </div>
+</div>
+<div id="custom-confirm-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Confirmación Requerida</h3>
+        <p id="custom-confirm-message" style="line-height: 1.6;"></p>
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button id="custom-confirm-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="custom-confirm-ok-btn" class="action-button activate-btn">Confirmar</button>
+        </div>
+    </div>
+</div>
+ 
+<script type="module" src="app.js"></script>
+</body>
+</html>

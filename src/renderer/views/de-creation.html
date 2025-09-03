@@ -1,0 +1,28 @@
+<!-- 4. SECCIÓN: CONFIGURACIÓN DE DATA EXTENSION (Creación) -->
+<div id="configuracion-de-section" class="section config-section-container">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>
+        <div class="header-actions"><button id="createDE" class="action-button">Crear Data Extension</button></div>
+    </div>
+    <h2>Configuración de Data Extension</h2>
+    <!-- Configuración Base de la DE -->
+    <div class="config-block">
+        <h3>Configuración Base</h3>
+        <div class="form-group"><label for="deName">Nombre Data Extension</label><input type="text" id="deName"></div>
+        <div class="form-group"><label for="deDescription">Descripción</label><input type="text" id="deDescription"></div>
+        <div class="form-group"><label for="deExternalKey">External Key</label><input type="text" id="deExternalKey" disabled></div>
+        <div class="form-group"><label for="deFolder">ID de Carpeta (Opcional)</label><input type="text" id="deFolder" placeholder="Ej: 12345"></div>
+    </div>
+    <!-- Configuración Sendable -->
+    <div class="config-block">
+        <h3>Configuración Sendable</h3>
+        <div class="form-group checkbox-group">
+            <label for="isSendable">Es Sendable:</label><input type="checkbox" id="isSendable">
+        </div>
+        <div class="form-group">
+            <label for="subscriberKeyField">Campo SubscriberKey</label>
+            <select id="subscriberKeyField" disabled><option value="">-- Defina campos en la sección 'Campos' --</option></select>
+        </div>
+        <div class="form-group"><label for="subscriberKeyType">Tipo Campo SubscriberKey</label><input type="text" id="subscriberKeyType" disabled></div>
+    </div>
+</div>

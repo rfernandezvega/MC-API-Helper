@@ -1,0 +1,106 @@
+<!-- 12. SECCIÓN: CLONADOR DE QUERIES (CORREGIDO) -->
+<div id="clonador-queries-section" class="section config-section-container">
+    <!-- ========================================================== -->
+    <!-- PASO 1: CONFIGURACIÓN DE CARPETAS                        -->
+    <!-- ========================================================== -->
+    <div id="queries-cloner-step1" class="cloner-step-container">
+        <div class="section-header">
+            <!-- CORRECCIÓN: Añadida la clase "action-button" -->
+            <button class="action-button back-button">← Atrás</button>
+        </div>
+        <h2>Clonador de Queries - Paso 1: Configuración</h2>
+        
+        <!-- Bloque del Formulario -->
+        <div class="config-block">
+            <h3>Carpetas de Origen y Destino</h3>
+            <div class="form-group">
+                <label for="querySourceFolderName">Nombre de carpeta con Queries a clonar</label>
+                <input type="text" id="querySourceFolderName" placeholder="Introduce un nombre o parte de él">
+            </div>
+            <div class="form-group">
+                <label for="queryTargetFolderName">Nombre de carpeta donde guardar Queries clonadas</label>
+                <input type="text" id="queryTargetFolderName" placeholder="Introduce un nombre o parte de él">
+            </div>
+            <div class="form-group">
+                <label for="deTargetFolderName">Nombre de carpeta donde guardar DEs clonadas</label>
+                <input type="text" id="deTargetFolderName" placeholder="Introduce un nombre o parte de él">
+            </div>
+            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                <button id="queryClonerSearchFoldersBtn" class="action-button" disabled>Buscar Carpetas</button>
+            </div>
+        </div>
+
+        <!-- Bloque de Resultados de Búsqueda -->
+        <div id="query-cloner-folder-results" class="config-block hidden">
+            <div class="config-block-header">
+                <h3>Resultados de Búsqueda</h3>
+                <div class="header-actions">
+                    <button id="queryClonerContinueBtn" class="action-button" disabled>Continuar →</button>
+                </div>
+            </div>
+            <div class="folder-results-grid">
+                <div class="folder-column">
+                    <h4>Posibles carpetas de Queries a clonar</h4>
+                    <div class="table-container">
+                        <table id="query-source-folders-table" class="folder-results-table">
+                            <thead><tr><th>Ruta de Carpeta</th></tr></thead>
+                            <tbody id="query-source-folders-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="folder-column">
+                    <h4>Posibles carpetas para Queries clonadas</h4>
+                    <div class="table-container">
+                        <table id="query-target-folders-table" class="folder-results-table">
+                            <thead><tr><th>Ruta de Carpeta</th></tr></thead>
+                            <tbody id="query-target-folders-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="folder-column">
+                    <h4>Posibles carpetas para DEs clonadas</h4>
+                    <div class="table-container">
+                        <table id="de-target-folders-table" class="folder-results-table">
+                            <thead><tr><th>Ruta de Carpeta</th></tr></thead>
+                            <tbody id="de-target-folders-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <!-- PASO 2: SELECCIÓN DE QUERIES (Oculto por defecto)        -->
+    <!-- ========================================================== -->
+    <div id="queries-cloner-step2" class="cloner-step-container" style="display: none;">
+            <div class="section-header">
+            <!-- CORRECCIÓN: Añadida la clase "action-button" -->
+            <button id="queryClonerBackBtn" class="action-button">← Atrás</button>
+        </div>
+        <h2>Clonador de Queries - Paso 2: Selección</h2>
+        
+        <div class="config-block" style="flex-grow: 1; display: flex; flex-direction: column;">
+            <div class="config-block-header">
+                <h3>Selecciona las Queries a clonar</h3>
+                <div class="header-actions">
+                    <button id="queryClonerCloneBtn" class="action-button activate-btn" disabled>Clonar Seleccionadas</button>
+                </div>
+            </div>
+            <div class="table-container" style="flex-grow: 1;">
+                <table id="query-selection-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="selectAllQueriesCheckbox" title="Seleccionar Todas"></th>
+                            <th>Query Origen</th>
+                            <th>DE Origen</th>
+                            <th>Query Destino</th>
+                            <th>DE Destino</th>
+                        </tr>
+                    </thead>
+                    <tbody id="query-selection-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

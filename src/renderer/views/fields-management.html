@@ -1,0 +1,36 @@
+<!-- 6. SECCIÓN: GESTIÓN DE CAMPOS (Recuperar/Borrar) -->
+<div id="configuracion-campos-section" class="section config-section-container">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>
+        <div class="header-actions">
+            <button id="getFields" class="action-button">Recuperar Campos</button>
+            <button id="documentDEsBtn" class="action-button">Documentar Data Extensions</button>
+            <button id="deleteField" class="action-button delete-btn">Borrar Campo</button>
+        </div>
+    </div>
+    <h2>Gestión de Campos de Data Extension</h2>
+    <div class="config-block">
+        <h3>Parámetros para recuperación de 1 DE, Actualización de tabla de campos y Borrado</h3>
+        <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+            Introduce la External Key de la DE sobre la que quieres operar y pulsa en <em>Recuperar Campos</em>.  Estos se rellenarán en la picklist y en la sección <em>Campos</em>.
+        </p>
+        <div class="form-group">
+            <label for="recExternalKey">External Key de la DE</label>
+            <input type="text" id="recExternalKey">
+        </div>
+        <div class="form-group">
+            <label for="targetFieldSelect">Campo a eliminar</label>
+            <select id="targetFieldSelect" disabled><option value="">-- Pulsa "Recuperar Campos" --</option></select>
+        </div>
+    </div>
+    <div class="config-block">
+        <h3>Parámetros para generación de CSV con las DEs y sus campos </h3>
+        <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+            Introduce un identificador de carpeta y pulsa en <em>Documentar Data Extensions</em>
+        </p>
+        <div class="form-group">
+            <label for="recCategoryId">Identificador de carpeta</label>
+            <input type="text" id="recCategoryId">
+        </div>
+    </div>
+</div>

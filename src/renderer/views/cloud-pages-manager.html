@@ -1,0 +1,38 @@
+ <!-- 13. SECCIÓN: GESTIÓN DE CLOUD PAGES -->
+<div id="gestion-cloudpages-section" class="section">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>  
+        <div class="header-actions">
+            <button id="refreshCloudPagesTableBtn" class="action-button">Refrescar</button>
+        </div>          
+    </div>
+    <h2>Gestión de Cloud Pages</h2>
+    <!-- Filtros para la tabla -->
+    <div class="header-filters">
+        <input type="text" id="cloudPageNameFilter" class="filter-input" placeholder="Buscar por nombre...">
+        <select id="cloudPageTypeFilter" class="filter-input">
+            <option value="">Todos los tipos</option>
+            <!-- Opciones se cargarán dinámicamente -->
+        </select>
+    </div>
+    <div class="table-container">
+      <table id="cloudpages-table">
+        <thead>
+          <tr>
+            <th class="sortable-header" data-sort-by="name">Nombre</th>
+            <th class="sortable-header" data-sort-by="assetType.displayName">Tipo</th>
+            <th class="sortable-header" data-sort-by="modifiedDate">Fecha Modificación</th>
+            <th class="sortable-header" data-sort-by="location">Ubicación</th>
+            <th class="sortable-header" data-sort-by="url">URL</th>
+          </tr>
+        </thead>
+        <tbody id="cloudpages-tbody"></tbody>
+      </table>
+    </div>
+     <div id="pagination-cloudpages" class="pagination-controls">
+      <button id="prevPageBtnCloudPages" class="action-button pagination-arrow">&laquo;</button>
+      <input type="number" id="pageInputCloudPages" class="filter-input page-input" min="1">
+      <span id="totalPagesCloudPages">/ 1</span>
+      <button id="nextPageBtnCloudPages" class="action-button pagination-arrow">&raquo;</button>
+    </div>
+</div>
