@@ -54,7 +54,7 @@ export async function fetchAllAutomations(apiConfig) {
  */
 export async function activateAutomation(automationId, apiConfig) {
     // 1. Obtener detalles para conseguir el scheduleObject.
-    const detailsUrl = `${apiConfig.restUri}legacy/v_beta/bulk/automations/automation/definition/${automationId}`;
+    const detailsUrl = `${apiConfig.restUri}legacy/v1/beta/bulk/automations/automation/definition/${automationId}`;
     const autoDetails = await executeRestRequest(detailsUrl, { 
         headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } 
     });
@@ -65,7 +65,7 @@ export async function activateAutomation(automationId, apiConfig) {
     
     // 2. Construir el payload y ejecutar la acción de activación.
     const payload = { id: automationId, scheduleObject: { id: autoDetails.scheduleObject.id } };
-    const actionUrl = `${apiConfig.restUri}legacy/v_beta/bulk/automations/automation/definition/?action=schedule`;
+    const actionUrl = `${apiConfig.restUri}legacy/v1/beta/bulk/automations/automation/definition/?action=schedule`;
     const options = {
         method: 'POST',
         headers: { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" },
@@ -524,33 +524,20 @@ export async function createClonedEventDefinition(originalEventDef, clonedDeInfo
  * @returns {Promise<Array>} Un array de objetos de suscriptor.
  */
 export async function searchSubscriberByProperty(property, value, apiConfig) {
-    const url = `${apiConfig.restUri}contacts/v1/addresses/search/ContactKey`;
-    const payload = { "filterConditionOperator": "Is", "filterConditionValue": contactKey };
-    const options = {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${apiConfig.accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    };
-    const responseData = await executeRestRequest(url, options);
-
-    // El resto de la lógica de parseo se mantiene igual
-    const addresses = responseData?.addresses;
-    if (!addresses || addresses.length === 0) return [];
+    const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>Subscriber</ObjectType><Properties>CreatedDate</Properties><Properties>Client.ID</Properties><Properties>EmailAddress</Properties><Properties>SubscriberKey</Properties><Properties>Status</Properties><Properties>UnsubscribedDate</Properties><Filter xsi:type="SimpleFilterPart"><Property>${property}</Property><SimpleOperator>equals</SimpleOperator><Value>${value}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
     
-    const contactData = addresses[0];
-    const key = contactData.contactKey?.value || '---';
-    const primaryValueSet = contactData.valueSets?.find(vs => vs.definitionKey === 'Primary');
-    let createdDate = '---';
-    if (primaryValueSet) {
-        const createdDateValueObject = primaryValueSet.values?.find(v => v.definitionKey === 'CreatedDate');
-        if (createdDateValueObject?.innerValue) {
-            createdDate = new Date(createdDateValueObject.innerValue).toLocaleString();
-        }
-    }
-    return [{
-        subscriberKey: key, emailAddress: '---', status: '---',
-        createdDate: createdDate, unsubscribedDate: '---', isSubscriber: false
-    }];
+    const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(responseText, "application/xml");
+
+    return Array.from(xmlDoc.querySelectorAll("Results")).map(node => ({
+        subscriberKey: node.querySelector("SubscriberKey")?.textContent || '---', 
+        emailAddress: node.querySelector("EmailAddress")?.textContent || '---', 
+        status: node.querySelector("Status")?.textContent || '---', 
+        createdDate: node.querySelector("CreatedDate") ? new Date(node.querySelector("CreatedDate").textContent).toLocaleString() : '---', 
+        unsubscribedDate: node.querySelector("UnsubscribedDate") ? new Date(node.querySelector("UnsubscribedDate").textContent).toLocaleString() : '---', 
+        isSubscriber: true 
+    }));
 }
 
 /**

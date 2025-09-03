@@ -343,6 +343,7 @@ body {
     color: #333; 
 }
 .config-section-container input[type="text"],
+.config-section-container input[type="email"],
 .config-section-container input[type="password"],
 .config-section-container select {
     width: 100%;

@@ -1,435 +1,66 @@
-// ===================================================================
-// Fichero: ui.js
-// Descripción: Gestiona toda la lógica de la interfaz de usuario (UI),
-// las interacciones del usuario, las llamadas a la API de Marketing Cloud
-// y la manipulación dinámica del DOM.
-//
-// ÍNDICE:
-// -------------------------------------------------------------------
-// 1. DECLARACIÓN DE ELEMENTOS DEL DOM Y VARIABLES GLOBALES
-// 2. GESTIÓN DE LA UI (LOGS, ESTADO DE CARGA, NAVEGACIÓN)
-// 3. GESTIÓN DE CONFIGURACIÓN Y SESIÓN
-// 4. MACROS - FUNCIONES PRINCIPALES DE LA API
-//    - 4.1. Autenticación
-//    - 4.2. Gestión de Data Extensions
-//    - 4.3. Gestión de Campos
-//    - 4.4. Funcionalidades de Búsqueda
-//    - 4.5. Gestión de Automatismos
-//    - 4.6. Gestión de Journeys
-// 5. FUNCIONES AUXILIARES (HELPERS)
-//    - 5.1. Helpers de API (SOAP, REST)
-//    - 5.2. Parsers (XML, JSON)
-//    - 5.3. Renderizadores de Tablas
-//    - 5.4. Otros Helpers
-// 6. MANIPULACIÓN DEL DOM Y COMPONENTES
-//    - 6.1. Tabla de Campos
-//    - 6.2. Calendario
-//    - 6.3. Modal de Importación
-//    - 6.4. Menús Colapsables
-//    - 6.5. Configuración de APIs
-//	  - 6.6. Gestión de Journeys
-// 7. EVENT LISTENERS
-// 8. INICIALIZACIÓN DE LA APLICACIÓN
-// ===================================================================
 import * as mcApiService from './api/mc-api-service.js';
+import elements, { init as initDomElements } from './ui/dom-elements.js';
+import * as ui from './ui/ui-helpers.js'; 
+import * as logger from './ui/logger.js';
+import * as fieldsTable from './components/fields-table.js';
+import * as automationsManager from './components/automations-manager.js';
+import * as journeysManager from './components/journeys-manager.js';
+import * as cloudPagesManager from './components/cloud-pages-manager.js';
+import * as queryCloner from './components/query-cloner.js';
+import * as deFinder from './components/de-finder.js';
+import * as dataSourceFinder from './components/data-source-finder.js';
+import * as queryTextFinder from './components/query-text-finder.js';
+import * as customerFinder from './components/customer-finder.js';
+import * as emailValidator from './components/email-validator.js';
+import * as calendar from './components/calendar.js';
 
 document.addEventListener('DOMContentLoaded', function () {
+	initDomElements();
+	// ==========================================================
+	// --- 1. CONSTANTES DE CONFIGURACIÓN ---
+	// ==========================================================
 
-	// ==========================================================
-	// --- 1. DECLARACIÓN DE ELEMENTOS DEL DOM Y VARIABLES GLOBALES ---
-	// ==========================================================
+	// Define el número máximo de registros que se piden a la API en una sola página (para endpoints que lo soporten).
 	const API_PAGE_SIZE = 500;
-
+	// Define cuántos elementos se muestran por página en las tablas de la interfaz de usuario.
 	const ITEMS_PER_PAGE = 15;
 
-	const loaderOverlay = document.getElementById('loader-overlay');
-
-	const licenseModal = document.getElementById('license-modal-overlay');
-	const licenseForm = document.getElementById('license-form');
-	const licenseEmailInput = document.getElementById('license-email');
-	const licenseKeyInput = document.getElementById('license-key');
-	const licenseErrorEl = document.getElementById('license-error-message'); 
-
-	// --- Variables de Estado Global ---
-	let currentUserInfo = null;      // Almacena la información del usuario logueado.
-	let currentOrgInfo = null;       // Almacena la información de la organización (stack, etc.).
-	let selectedRow = null;          // Fila seleccionada en la tabla de campos.
-	let selectedCustomerRow = null;  // Fila seleccionada en la tabla de búsqueda de clientes.
-	let selectedSubscriberData = null; // Datos del suscriptor seleccionado.
-	let navigationHistory = ['main-menu']; // Historial para el botón "Atrás".
-	let allAutomations = [];         // Caché de automatismos para el calendario.
-	let currentClientConfig = null;  // Guardará la config completa del cliente activo
-	let selectedConfigRow = null;    // Para la selección de filas en la tabla de config
-	let fullAutomationList = [];     // Caché de todos los automatismos para la vista de gestión.
-	let dailyFilteredAutomations = [];// Automatismos filtrados para un día específico en el calendario.
-	let calendarDataForClient = '';  // Cliente para el que se han cargado los datos del calendario.
-	let currentSortColumn = 'name';  // Columna de ordenación por defecto para la tabla de automatismos.
-	let currentSortDirection = 'asc';// Dirección de ordenación por defecto.
-	let fullJourneyList = [];        // Caché de todos los journeys para la vista de gestión.
- 	let eventDefinitionsMap = {}; // Caché para mapear EventDefinitions por nombre
-    let journeyFolderMap = {};    // Caché para mapear rutas de carpetas de Journeys
-	let currentPageAutomations = 1; 
-    let currentPageJourneys = 1;    
-	let fullCloudPageList = [];     
-	let currentPageCloudPages = 1;    
-
-	// --- Gestión de Journeys ---
-	const journeysTbody = document.getElementById('journeys-tbody');
-	const journeyNameFilter = document.getElementById('journeyNameFilter');
-	const journeyTypeFilter = document.getElementById('journeyTypeFilter');
-	const journeySubtypeFilter = document.getElementById('journeySubtypeFilter');
-	const refreshJourneysTableBtn = document.getElementById('refreshJourneysTableBtn');
-	const getCommunicationsBtn = document.getElementById('getCommunicationsBtn');
-	const journeyStatusFilter = document.getElementById('journeyStatusFilter');
-    const journeyDEFilter = document.getElementById('journeyDEFilter');
-	const drawJourneyBtn = document.getElementById('drawJourneyBtn'); 
-	const stopJourneyBtn = document.getElementById('stopJourneyBtn');
-	const copyJourneyBtn = document.getElementById('copyJourneyBtn'); 
-	const deleteJourneyBtn = document.getElementById('deleteJourneyBtn');
-
-	// --- Gestión de Cloud Pages ---
-	const cloudPagesTbody = document.getElementById('cloudpages-tbody');
-	const refreshCloudPagesTableBtn = document.getElementById('refreshCloudPagesTableBtn');
-	const cloudPageNameFilter = document.getElementById('cloudPageNameFilter');
-	const cloudPageTypeFilter = document.getElementById('cloudPageTypeFilter');
-
-	 // --- Modal de Flujo de Journey ---
-    const journeyFlowModal = document.getElementById('journey-flow-modal');
-    const journeyFlowContent = document.getElementById('journey-flow-content');
-    const closeFlowBtn = document.getElementById('close-flow-btn');
-	const copyFlowBtn = document.getElementById('copyFlowBtn');
-
-	// --- Modal de Alerta Personalizado ---
-	const customAlertModal = document.getElementById('custom-alert-modal');
-	const customAlertMessage = document.getElementById('custom-alert-message');
-	const customAlertCloseBtn = document.getElementById('custom-alert-close-btn');
-
-	// --- Modal de Confirmación Personalizado ---
-	const customConfirmModal = document.getElementById('custom-confirm-modal');
-	const customConfirmMessage = document.getElementById('custom-confirm-message');
-	const customConfirmOkBtn = document.getElementById('custom-confirm-ok-btn');
-	const customConfirmCancelBtn = document.getElementById('custom-confirm-cancel-btn');
-
-	// Variables de ordenación y filtrado para Journeys
-    let currentJourneySortColumn = 'name';
-    let currentJourneySortDirection = 'asc';
-
-	// --- Búferes para el sistema de Logs Acumulativos ---
-	let logBuffer = [];
-	let requestBuffer = [];
-	let responseBuffer = [];
-
-	// --- Contenedores y Navegación Principal ---
-	const appContainer = document.querySelector('.app-container');
-	const mainMenu = document.getElementById('main-menu');
-	const allSections = document.querySelectorAll('#main-content > .section');
-
-	// --- Barra Lateral Derecha (Log) ---
-	const toggleLogBtn = document.getElementById('toggleLogBtn');
-	const logMessagesEl = document.getElementById('log-messages');
-	const logRequestEl = document.getElementById('log-request');
-	const logResponseEl = document.getElementById('log-response');
-	
-	// --- Configuración de APIs y Sesión ---
-	const clientNameInput = document.getElementById('clientName');
-	const savedConfigsSelect = document.getElementById('savedConfigs');
-	const sidebarClientSelect = document.getElementById('sidebarClientSelect');
-	const loginStatusEl = document.getElementById('login-status');
-	const authUriInput = document.getElementById('authUri');
-	const clientIdInput = document.getElementById('clientId');
-	const clientSecretInput = document.getElementById('clientSecret');
-	const tokenField = document.getElementById('token');
-	const soapUriInput = document.getElementById('soapUri');
-	const restUriInput = document.getElementById('restUri');
-	const businessUnitInput = document.getElementById('businessUnit');
-	const stackKeyInput = document.getElementById('stackKey');
-	const saveConfigBtn = document.getElementById('saveConfigBtn');
-	const loginBtn = document.getElementById('loginBtn');
-	const logoutBtn = document.getElementById('logoutBtn');
-	const sendsConfigTbody = document.getElementById('sends-config-tbody');
-	const addSendConfigRowBtn = document.getElementById('add-send-config-row-btn');
-	const sendsResultsContainer = document.getElementById('sends-results-container');
-
-	// --- Creación de Data Extensions ---
-	const deNameInput = document.getElementById('deName');
-	const deDescriptionInput = document.getElementById('deDescription');
-	const deExternalKeyInput = document.getElementById('deExternalKey');
-	const deFolderInput = document.getElementById('deFolder');
-	const isSendableCheckbox = document.getElementById('isSendable');
-	const subscriberKeyFieldSelect = document.getElementById('subscriberKeyField');
-	const subscriberKeyTypeInput = document.getElementById('subscriberKeyType');
-	const createDEBtn = document.getElementById('createDE');
-
-	// --- Gestión de Campos ---
-	const fieldsTableBody = document.querySelector('#myTable tbody');
-	const addFieldBtn = document.getElementById('addFieldBtn');
-	const createDummyFieldsBtn = document.getElementById('createDummyFieldsBtn');
-	const createFieldsBtn = document.getElementById('createFieldsBtn');
-	const clearFieldsBtn = document.getElementById('clearFieldsBtn');
-	const moveUpBtn = document.getElementById('moveUp');
-	const moveDownBtn = document.getElementById('moveDown');
-	const recExternalKeyInput = document.getElementById('recExternalKey');
-	const recCategoryIdInput = document.getElementById('recCategoryId'); 
-	const targetFieldSelect = document.getElementById('targetFieldSelect');
-	const getFieldsBtn = document.getElementById('getFields');
-	const documentDEsBtn = document.getElementById('documentDEsBtn');
-	const deleteFieldBtn = document.getElementById('deleteField');
-	const importFieldsBtn = document.getElementById('importFieldsBtn');
-
-	// --- Modal de Importación ---
-	const importModal = document.getElementById('import-modal');
-	const pasteDataArea = document.getElementById('paste-data-area');
-	const processPasteBtn = document.getElementById('process-paste-btn');
-	const cancelPasteBtn = document.getElementById('cancel-paste-btn');
-	const delimiterSelect = document.getElementById('delimiter-select');
-	const customDelimiterInput = document.getElementById('custom-delimiter-input');
-
-	// --- Buscadores ---
-	const deSearchProperty = document.getElementById('deSearchProperty');
-	const deSearchValue = document.getElementById('deSearchValue');
-	const deSearchResultsTbody = document.querySelector('#de-search-results-tbody');
-	const deNameToFindInput = document.getElementById('deNameToFind');
-	const dataSourcesTbody = document.getElementById('data-sources-tbody');
-    const customerSearchValue = document.getElementById('customerSearchValue');
-    const customerSearchTbody = document.getElementById('customer-search-tbody');
-	const getDEsBtn = document.getElementById('getDEsBtn');
-    const getCustomerJourneysBtn = document.getElementById('getCustomerJourneysBtn');
-	const customerJourneysResultsBlock = document.getElementById('customer-journeys-results-block');
-    const customerJourneysTbody = document.getElementById('customer-journeys-tbody');
-	const customerSendsResultsBlock = document.getElementById('customer-sends-results-block');
-	const querySearchText = document.getElementById('querySearchText');
-    const querySearchResultsTbody = document.getElementById('query-search-results-tbody');
-	const showQueryTextCheckbox = document.getElementById('showQueryTextCheckbox');
-	const searchDEBtn = document.getElementById('searchDEBtn');
-	const findDataSourcesBtn = document.getElementById('findDataSourcesBtn');
-	const searchCustomerBtn = document.getElementById('searchCustomerBtn');
-	const searchQueriesByTextBtn = document.getElementById('searchQueriesByTextBtn');
-
-	// --- Validador de Email ---
-	const validateEmailBtn = document.getElementById('validateEmailBtn');
-	const emailToValidateInput = document.getElementById('emailToValidate');
-	const emailValidationResults = document.getElementById('email-validation-results');
-
-	// --- Calendario ---
-	const calendarGrid = document.getElementById('calendar-grid');
-	const calendarYearSelect = document.getElementById('calendarYearSelect');
-	const automationList = document.getElementById('automation-list');
-	const automationListHeader = document.getElementById('automation-list-header');
-	const refreshAutomationsBtn = document.getElementById('refreshAutomationsBtn');
-	const refreshJourneyAutomationsBtn = document.getElementById('refreshJourneyAutomationsBtn');
-
-	// --- Gestión de Automatismos ---
-    const automationsTbody = document.getElementById('automations-tbody');
-	const refreshAutomationsTableBtn = document.getElementById('refreshAutomationsTableBtn');
-    const activateAutomationBtn = document.getElementById('activateAutomationBtn');
-    const runAutomationBtn = document.getElementById('runAutomationBtn');
-    const stopAutomationBtn = document.getElementById('stopAutomationBtn');
-	const automationNameFilter = document.getElementById('automationNameFilter');
-    const automationStatusFilter = document.getElementById('automationStatusFilter');
-
-	// --- Paginación de vistas de gestión ---	
-	const prevPageBtnAutomations = document.getElementById('prevPageBtnAutomations');
-    const nextPageBtnAutomations = document.getElementById('nextPageBtnAutomations');
-    const pageInputAutomations = document.getElementById('pageInputAutomations');
-    const totalPagesAutomations = document.getElementById('totalPagesAutomations');
-	const prevPageBtnJourneys = document.getElementById('prevPageBtnJourneys');
-    const nextPageBtnJourneys = document.getElementById('nextPageBtnJourneys');
-    const pageInputJourneys = document.getElementById('pageInputJourneys');
-    const totalPagesJourneys = document.getElementById('totalPagesJourneys');
-
-	// --- Componentes Generales ---
-	const tabButtons = document.querySelectorAll('.tab-button');
-	const tabContents = document.querySelectorAll('.tab-content');
-	const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
-
-	// --- Observer para la tabla de campos ---
-	// Detecta cambios en la tabla para actualizar dinámicamente el desplegable de Subscriber Key.
-	const observer = new MutationObserver(updateSubscriberKeyFieldOptions);
-	const observerConfig = { childList: true, subtree: true, characterData: true };
-
-	// --- Clonador de Queries ---
-	const querySourceFolderNameInput = document.getElementById('querySourceFolderName');
-	const queryTargetFolderNameInput = document.getElementById('queryTargetFolderName');
-	const deTargetFolderNameInput = document.getElementById('deTargetFolderName');
-	const queryClonerSearchFoldersBtn = document.getElementById('queryClonerSearchFoldersBtn');
-	const queryClonerContinueBtn = document.getElementById('queryClonerContinueBtn');
-	const queryClonerBackBtn = document.getElementById('queryClonerBackBtn');
-	const queryClonerCloneBtn = document.getElementById('queryClonerCloneBtn');
-	const queryClonerFolderResultsBlock = document.getElementById('query-cloner-folder-results');
-	const querySourceFoldersTbody = document.getElementById('query-source-folders-tbody');
-	const queryTargetFoldersTbody = document.getElementById('query-target-folders-tbody');
-	const deTargetFoldersTbody = document.getElementById('de-target-folders-tbody');
-	const queriesClonerStep1 = document.getElementById('queries-cloner-step1');
-	const queriesClonerStep2 = document.getElementById('queries-cloner-step2');
-	const querySelectionTbody = document.getElementById('query-selection-tbody');
-	const selectAllQueriesCheckbox = document.getElementById('selectAllQueriesCheckbox');
-
-	// --- Paginación de Cloud Pages ---
-	const prevPageBtnCloudPages = document.getElementById('prevPageBtnCloudPages');
-	const nextPageBtnCloudPages = document.getElementById('nextPageBtnCloudPages');
-	const pageInputCloudPages = document.getElementById('pageInputCloudPages');
-	const totalPagesCloudPages = document.getElementById('totalPagesCloudPages');
-
-	// Variables de ordenación y filtrado para Cloud Pages
-	let currentCloudPageSortColumn = 'name';
-	let currentCloudPageSortDirection = 'asc';
-
-	// --- Variables de estado para el clonador ---
-	let clonerState = {
-		sourceQueryFolder: null,
-		targetQueryFolder: null,
-		targetDEFolder: null,
-		queriesInSourceFolder: []
-	};
 
 	// ==========================================================
-	// --- 2. GESTIÓN DE LA UI (LOGS, ESTADO DE CARGA, NAVEGACIÓN) ---
+	// --- 2. VARIABLES DE ESTADO DE LA APLICACIÓN ---
 	// ==========================================================
-	/**
-	 * Muestra un modal de alerta no bloqueante. Reemplaza a la función alert() nativa.
-	 * @param {string} message - El mensaje a mostrar en la alerta.
-	 */
-	function showCustomAlert(message) {
-		customAlertMessage.textContent = message;
-		customAlertModal.style.display = 'flex';
-	}
+	// Estas variables 'let' almacenan el estado dinámico de la aplicación:
+	// selecciones del usuario, datos cacheados, estado de la paginación, etc.
 
-	/** Cierra el modal de alerta personalizado. */
-	function closeCustomAlert() {
-		customAlertModal.style.display = 'none';
-	}
+	// --- 2.1. Estado de la Sesión y del Cliente Activo ---
+	let currentUserInfo = null;     // Almacena el objeto 'user' de la API tras un login exitoso. Usado para mostrar el email en la UI.
+	let currentOrgInfo = null;      // Almacena el objeto 'organization' de la API. Usado para obtener el 'stack_key' y construir URLs.
+	let currentClientConfig = null; // Guarda la configuración completa (cargada de localStorage) del cliente seleccionado.
 
-	/**
-	 * Muestra un modal de confirmación no bloqueante. Reemplaza a confirm() nativo.
-	 * @param {string} message - El mensaje de confirmación a mostrar.
-	 * @returns {Promise<boolean>} - Una promesa que resuelve a `true` si se confirma, o `false` si se cancela.
-	 */
-	function showCustomConfirm(message) {
-		return new Promise(resolve => {
-			customConfirmMessage.textContent = message;
-			customConfirmModal.style.display = 'flex';
+	// --- 2.2. Estado de la Navegación y Selección en la UI ---
+	let navigationHistory = ['main-menu']; // Pila que registra las vistas visitadas para que funcione el botón "Atrás".
+	let selectedConfigRow = null;    // Referencia a la fila <tr> seleccionada en la tabla de configuración de Data Views.
 
-			const closeAndResolve = (value) => {
-				customConfirmModal.style.display = 'none';
-				resolve(value);
-			};
 
-			// Usamos { once: true } para que los listeners se eliminen solos después de un clic
-			customConfirmOkBtn.addEventListener('click', () => closeAndResolve(true), { once: true });
-			customConfirmCancelBtn.addEventListener('click', () => closeAndResolve(false), { once: true });
-			customConfirmModal.addEventListener('click', (e) => {
-				if (e.target === customConfirmModal) {
-					closeAndResolve(false);
-				}
-			}, { once: true });
-		});
-	}
+
+	// ==========================================================
+	// --- 3. COMPONENTES TÉCNICOS ---
+	// ==========================================================
+
 
 	// --- Sistema de Logs Acumulativos ---
 	// En lugar de escribir directamente en el DOM, estas funciones acumulan los logs
 	// en búferes. Esto permite mostrar un registro completo de acciones con múltiples pasos.
 
-	/**
-	 * Inicia el proceso de almacenamiento de logs en búfer. Limpia los búferes anteriores.
-	 * Debe llamarse al inicio de cada macro.
-	 */
-	function startLogBuffering() {
-		logBuffer = [];
-		requestBuffer = [];
-		responseBuffer = [];
-	}
-
-	/**
-	 * Formatea y muestra el contenido de los búferes de logs en el DOM.
-	 * Debe llamarse al final de cada macro (idealmente en un bloque `finally`).
-	 */
-	function endLogBuffering() {
-		const separator = '\n\n----------------------------------------\n\n';
-		const formatEntry = (entry) => (typeof entry === 'object') ? JSON.stringify(entry, null, 2) : entry;
-	
-		logMessagesEl.textContent = logBuffer.map(formatEntry).join(separator);
-		logRequestEl.textContent = requestBuffer.map(formatEntry).join(separator);
-		logResponseEl.textContent = responseBuffer.map(formatEntry).join(separator);
-	}
-
-	/**
-	 * Añade un mensaje informativo al búfer de logs.
-	 * @param {string} message - El texto a añadir.
-	 */
-	function logMessage(message) {
-		logBuffer.push(message);
-	}
-
-	/**
-	 * Añade los detalles de una petición API al búfer de peticiones.
-	 * @param {object|string} requestData - El objeto de la petición o texto plano.
-	 */
-	function logApiCall(requestData) {
-		requestBuffer.push(requestData);
-	}
-
-	/**
-	 * Añade los detalles de una respuesta API al búfer de respuestas.
-	 * @param {object|string} responseData - El objeto de la respuesta o texto plano.
-	 */
-	function logApiResponse(responseData) {
-		responseBuffer.push(responseData);
-	}
 	
 	/**
-	 * Muestra un overlay de carga para prevenir interacciones durante una operación asíncrona.
-	 * @param {string} [message='Cargando...'] - El mensaje a mostrar bajo el spinner.
+	 * Muestra una sección y la añade al historial de navegación.
+	 * @param {string} sectionId - El ID de la sección a mostrar.
 	 */
-	function blockUI(message = 'Cargando...') {
-		if (document.activeElement) document.activeElement.blur();
-		
-		const loaderText = document.getElementById('loader-text');
-		if (loaderText) {
-			loaderText.textContent = message;
-		}
-		
-		loaderOverlay.style.display = 'flex';
+	function showSection(sectionId) {
+		// Llamamos al helper, pasándole el historial para que lo pueda modificar.
+		ui.showSection(sectionId, navigationHistory, true);
 	}
-
-	/**
-	 * Oculta el overlay de carga una vez que la operación ha finalizado.
-	 */
-	function unblockUI() {
-		loaderOverlay.style.display = 'none';
-		 // Esto soluciona un bug de renderizado de Chromium/Electron donde los inputs
-		// dejan de responder después de ocultar un overlay. Al cambiar brevemente
-		// el display del contenedor principal, forzamos al motor a recalcular
-		// el layout y los eventos, "despertando" los inputs.
-		appContainer.style.display = 'none';
-		void appContainer.offsetHeight; // Esta línea fuerza al navegador a aplicar el cambio de estilo.
-		appContainer.style.display = ''; // Al quitar el estilo en línea, vuelve al 'grid' definido en el CSS.
-
-		setTimeout(() => {
-			document.body.focus();
-		}, 0);
-	}
-	
-	/**
-	 * Muestra una sección específica del contenido principal y oculta las demás.
-	 * @param {string} sectionId - El ID del elemento de la sección a mostrar.
-	 * @param {boolean} [addToHistory=true] - Si es `false`, no añade la vista al historial.
-	 */
-	window.showSection = function (sectionId, addToHistory = true) {
-		mainMenu.style.display = 'none';
-		allSections.forEach(s => s.style.display = 'none');
-
-		const sectionToShow = document.getElementById(sectionId);
-		if (sectionToShow) {
-			sectionToShow.style.display = 'flex';
-		} else {
-			mainMenu.style.display = 'flex';
-			sectionId = 'main-menu';
-		}
-
-		if (addToHistory && navigationHistory[navigationHistory.length - 1] !== sectionId) {
-			navigationHistory.push(sectionId);
-		}
-	};
 
 	/**
 	 * Navega a la sección anterior registrada en el historial.
@@ -439,7 +70,8 @@ document.addEventListener('DOMContentLoaded', function () {
 			navigationHistory.pop();
 		}
 		const previousSectionId = navigationHistory[navigationHistory.length - 1];
-		showSection(previousSectionId, false);
+		// Llamamos al helper, pero sin añadir al historial (addToHistory = false).
+		ui.showSection(previousSectionId, navigationHistory, false);
 	}
 
 
@@ -452,10 +84,10 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * @returns {object} Un objeto con la configuración segura del cliente.
 	 */
 	const getConfigToSave = () => ({
-		authUri: authUriInput.value,
-		businessUnit: businessUnitInput.value,
-		clientId: clientIdInput.value,
-		stackKey: stackKeyInput.value,
+		authUri: elements.authUriInput.value,
+		businessUnit: elements.businessUnitInput.value,
+		clientId: elements.clientIdInput.value,
+		stackKey: elements.stackKeyInput.value,
 		dvConfigs: getDvConfigsFromTable()
 	});
 
@@ -464,15 +96,15 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * @param {object} config - El objeto de configuración a cargar en el formulario.
 	 */
 	const setClientConfigForm = (config) => {
-		businessUnitInput.value = config.businessUnit || '';
-		authUriInput.value = config.authUri || '';
-		clientIdInput.value = config.clientId || '';
-		stackKeyInput.value = config.stackKey || '';
+		elements.businessUnitInput.value = config.businessUnit || '';
+		elements.authUriInput.value = config.authUri || '';
+		elements.clientIdInput.value = config.clientId || '';
+		elements.stackKeyInput.value = config.stackKey || '';
 		populateDvConfigsTable(config.dvConfigs); 
-		tokenField.value = '';
-		soapUriInput.value = '';
-		restUriInput.value = '';
-		clientSecretInput.value = '';
+		elements.tokenField.value = '';
+		elements.soapUriInput.value = '';
+		elements.restUriInput.value = '';
+		elements.clientSecretInput.value = '';
 	};
 
 	/**
@@ -480,15 +112,15 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	const loadConfigsIntoSelect = () => {
 		const configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
-		const currentValue = sidebarClientSelect.value || savedConfigsSelect.value;
-		savedConfigsSelect.innerHTML = '<option value="">Seleccionar configuración...</option>';
-		sidebarClientSelect.innerHTML = '<option value="">Ninguno seleccionado</option>';
+		const currentValue = elements.sidebarClientSelect.value || elements.savedConfigsSelect.value;
+		elements.savedConfigsSelect.innerHTML = '<option value="">Seleccionar configuración...</option>';
+		elements.sidebarClientSelect.innerHTML = '<option value="">Ninguno seleccionado</option>';
 		for (const name in configs) {
-			savedConfigsSelect.appendChild(new Option(name, name));
-			sidebarClientSelect.appendChild(new Option(name, name));
+			elements.savedConfigsSelect.appendChild(new Option(name, name));
+			elements.sidebarClientSelect.appendChild(new Option(name, name));
 		}
-		savedConfigsSelect.value = currentValue;
-		sidebarClientSelect.value = currentValue;
+		elements.savedConfigsSelect.value = currentValue;
+		elements.sidebarClientSelect.value = currentValue;
 	};
 
 	/**
@@ -496,56 +128,45 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * @param {string} clientName - El nombre del cliente a cargar.
 	 */
 	function loadAndSyncClientConfig(clientName) {
-		startLogBuffering();
+		logger.startLogBuffering();
 		try {
 			const configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
-			tokenField.value = '';
-			soapUriInput.value = '';
-			restUriInput.value = '';
+			elements.tokenField.value = '';
+			elements.soapUriInput.value = '';
+			elements.restUriInput.value = '';
 			updateLoginStatus(false);
-			clearCalendarData();
-			fullAutomationList = [];
-			automationNameFilter.value = '';
-			populateStatusFilter([]);
-			renderAutomationsTable([]);
-			updateAutomationButtonsState();
-
-			fullJourneyList = [];
-            eventDefinitionsMap = {};
-            journeyFolderMap = {};
-            if (journeyNameFilter) journeyNameFilter.value = '';
-            if (journeyTypeFilter) journeyTypeFilter.value = '';
-			if (journeySubtypeFilter) journeySubtypeFilter.value = '';
-            if (journeyStatusFilter) journeyStatusFilter.value = '';
-            if (journeyDEFilter) journeyDEFilter.value = '';
-            if (journeysTbody) journeysTbody.innerHTML = ''; // Limpia la tabla visualmente
-            updateJourneyActionButtonsState();
+			
+			calendar.clearData();
+			automationsManager.clearCache();
+			journeysManager.clearCache();	
+			cloudPagesManager.clearCache();		
 
 			currentClientConfig = null; 
 
 			if (clientName) {
-				blockUI("Cargando configuración de cliente...");
+				ui.blockUI("Cargando configuración de cliente...");
 				const configToLoad = configs[clientName] || {};
 				currentClientConfig = configToLoad;
+				customerFinder.updateClientConfig(currentClientConfig);
 				setClientConfigForm(configToLoad);
-				clientNameInput.value = clientName;
-				savedConfigsSelect.value = clientName;
-				sidebarClientSelect.value = clientName;
+				elements.clientNameInput.value = clientName;
+				elements.savedConfigsSelect.value = clientName;
+				elements.sidebarClientSelect.value = clientName;
 
-				logMessage(`Cliente "${clientName}" cargado. Comprobando sesión...`);
+				logger.logMessage(`Cliente "${clientName}" cargado. Comprobando sesión...`);
 				getAuthenticatedConfig()
 					.catch(() => { /* El error ya se gestiona y loguea dentro de getAuthenticatedConfig */ })
-					.finally(unblockUI);
+					.finally(ui.unblockUI);
 			} else {
 				setClientConfigForm({});
-				clientNameInput.value = '';
-				savedConfigsSelect.value = '';
-				sidebarClientSelect.value = '';
-				stackKeyInput.value = '';
-				logMessage("Ningún cliente seleccionado.");
+				elements.clientNameInput.value = '';
+				elements.savedConfigsSelect.value = '';
+				elements.sidebarClientSelect.value = '';
+				elements.stackKeyInput.value = '';
+				logger.logMessage("Ningún cliente seleccionado.");
 			}
 		} finally {
-			endLogBuffering();
+			logger.endLogBuffering();
 		}
 	}
 	
@@ -561,11 +182,11 @@ document.addEventListener('DOMContentLoaded', function () {
 			if (userInfo && userInfo.email) {
 				statusHTML += `<br><small style="font-weight: normal;">Usuario: ${userInfo.email}</small>`;
 			}
-			loginStatusEl.innerHTML = statusHTML;
-			loginStatusEl.className = 'login-status active';
+			elements.loginStatusEl.innerHTML = statusHTML;
+			elements.loginStatusEl.className = 'login-status active';
 		} else {
-			loginStatusEl.innerHTML = '🔴 Sesión no iniciada';
-			loginStatusEl.className = 'login-status inactive';
+			elements.loginStatusEl.innerHTML = '🔴 Sesión no iniciada';
+			elements.loginStatusEl.className = 'login-status inactive';
 		}
 	}
 
@@ -582,23 +203,24 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * @throws {Error} Si no hay un cliente seleccionado o si la sesión no puede ser validada.
 	 */
 	async function getAuthenticatedConfig() {
-		const clientName = clientNameInput.value.trim();
+		const clientName = elements.clientNameInput.value.trim();
 		if (!clientName) throw new Error("No hay ningún cliente seleccionado.");
 		const apiConfig = await window.electronAPI.getApiConfig(clientName);
 		if (!apiConfig || !apiConfig.accessToken) {
 			updateLoginStatus(false);
-			stackKeyInput.value = '';
+			elements.stackKeyInput.value = '';
 			throw new Error("Sesión no activa. Por favor, inicia sesión.");
 		}
-		tokenField.value = apiConfig.accessToken;
-		soapUriInput.value = apiConfig.soapUri;
-		restUriInput.value = apiConfig.restUri;
+		elements.tokenField.value = apiConfig.accessToken;
+		elements.soapUriInput.value = apiConfig.soapUri;
+		elements.restUriInput.value = apiConfig.restUri;
 		currentUserInfo = apiConfig.userInfo;
 		currentOrgInfo = apiConfig.orgInfo;
-		stackKeyInput.value = currentOrgInfo?.stack_key || 'No disponible';
+		elements.stackKeyInput.value = currentOrgInfo?.stack_key || 'No disponible';
+		queryTextFinder.updateOrgInfo(apiConfig.orgInfo);
 		updateLoginStatus(true, clientName, currentUserInfo);
 
-		apiConfig.businessUnit = businessUnitInput.value.trim();
+		apiConfig.businessUnit = elements.businessUnitInput.value.trim();
 
 		return apiConfig;
 	}
@@ -610,24 +232,24 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Recoge los datos del formulario y llama al servicio de API.
 	 */
 	async function macroCreateDE() {
-		blockUI("Creando Data Extension...");
-		startLogBuffering();
+		ui.blockUI("Creando Data Extension...");
+		logger.startLogBuffering();
 		try {
-			logMessage("Iniciando creación de Data Extension...");
+			logger.logMessage("Iniciando creación de Data Extension...");
 			const apiConfig = await getAuthenticatedConfig();
 
-			mcApiService.setLogger({ logApiCall, logApiResponse }); 
+			mcApiService.setLogger({ logApiCall: logger.logApiCall, logApiResponse: logger.logApiResponse }); 
 
 			// 1. Recoger datos del DOM
 			const deData = {
-				name: deNameInput.value.trim(),
-				externalKey: deExternalKeyInput.value.trim(),
-				description: deDescriptionInput.value.trim(),
-				folderId: deFolderInput.value.trim(),
-				isSendable: isSendableCheckbox.checked,
-				subscriberKeyField: subscriberKeyFieldSelect.value,
-				subscriberKeyType: subscriberKeyTypeInput.value.trim(),
-				fields: getFieldsDataFromTable()
+				name: elements.deNameInput.value.trim(),
+				externalKey: elements.deExternalKeyInput.value.trim(),
+				description: elements.deDescriptionInput.value.trim(),
+				folderId: elements.deFolderInput.value.trim(),
+				isSendable: elements.isSendableCheckbox.checked,
+				subscriberKeyField: elements.subscriberKeyFieldSelect.value,
+				subscriberKeyType: elements.subscriberKeyTypeInput.value.trim(),
+				fields: fieldsTable.getFieldsData()
 			};
 
 			// 2. Validar datos (lógica de UI)
@@ -646,15 +268,15 @@ document.addEventListener('DOMContentLoaded', function () {
 			
 			// 4. Gestionar éxito
 			const successMessage = `¡Data Extension "${deData.name}" creada con éxito!`;
-			logMessage(successMessage);
-			showCustomAlert(successMessage);
+			logger.logMessage(successMessage);
+			ui.showCustomAlert(successMessage);
 
 		} catch (error) {
-			logMessage(`Error al crear la Data Extension: ${error.message}`);
-			showCustomAlert(`Error: ${error.message}`);
+			logger.logMessage(`Error al crear la Data Extension: ${error.message}`);
+			ui.showCustomAlert(`Error: ${error.message}`);
 		} finally {
-			unblockUI();
-			endLogBuffering();
+			ui.unblockUI();
+			logger.endLogBuffering();
 		}
 	}
 
@@ -664,16 +286,16 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para crear o actualizar (upsert) campos en una Data Extension existente.
 	 */
 	async function macroCreateFields() {
-		blockUI("Creando campos...");
-		startLogBuffering();
+		ui.blockUI("Creando campos...");
+		logger.startLogBuffering();
 		try {
-			logMessage(`Iniciando creación/actualización de campos...`);
+			logger.logMessage(`Iniciando creación/actualización de campos...`);
 			const apiConfig = await getAuthenticatedConfig();
-			mcApiService.setLogger({ logApiCall, logApiResponse });
+			mcApiService.setLogger({ logApiCall: logger.logApiCall, logApiResponse: logger.logApiResponse });
 			
 			// 1. Recoger datos del DOM
-			const externalKey = recExternalKeyInput.value.trim();
-			const fieldsData = getFieldsDataFromTable();
+			const externalKey = elements.recExternalKeyInput.value.trim();
+			const fieldsData = fieldsTable.getFieldsData();
 
 			// 2. Validar datos
 			if (!externalKey) {
@@ -688,15 +310,15 @@ document.addEventListener('DOMContentLoaded', function () {
 			
 			// 4. Gestionar éxito
 			const successMessage = `¡Éxito! ${fieldsData.length} campos creados/actualizados en la DE ${externalKey}.`;
-			logMessage(successMessage);
-			showCustomAlert(successMessage);
+			logger.logMessage(successMessage);
+			ui.showCustomAlert(successMessage);
 
 		} catch (error) {
-			logMessage(`Error al crear los campos: ${error.message}`);
-			showCustomAlert(`Error: ${error.message}`);
+			logger.logMessage(`Error al crear los campos: ${error.message}`);
+			ui.showCustomAlert(`Error: ${error.message}`);
 		} finally {
-			unblockUI();
-			endLogBuffering();
+			ui.unblockUI();
+			logger.endLogBuffering();
 		}
 	}
 
@@ -704,34 +326,34 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para recuperar todos los campos de una Data Extension y mostrarlos en la tabla.
 	 */
 	async function macroGetFields() {
-		blockUI("Recuperando campos...");
-		startLogBuffering();
+		ui.blockUI("Recuperando campos...");
+		logger.startLogBuffering();
 		try {
 			const apiConfig = await getAuthenticatedConfig();
-			mcApiService.setLogger({ logApiCall, logApiResponse });
+			mcApiService.setLogger({ logApiCall: logger.logApiCall, logApiResponse: logger.logApiResponse });
 			
-			const externalKey = recExternalKeyInput.value.trim();
+			const externalKey = elements.recExternalKeyInput.value.trim();
 			if (!externalKey) throw new Error('Introduzca la "External Key de la DE".');
 			
-			logMessage(`Recuperando campos para la DE: ${externalKey}`);
+			logger.logMessage(`Recuperando campos para la DE: ${externalKey}`);
 			
 			const fields = await mcApiService.fetchFieldsForDE(externalKey, apiConfig);
 
 			if (fields.length > 0) {
-				populateFieldsTable(fields);
-				populateDeletionPicklist(fields);
-				logMessage(`${fields.length} campos recuperados y cargados en la tabla.`);
+				fieldsTable.populate(fields);
+				fieldsTable.populateDeletionPicklist(fields);
+				logger.logMessage(`${fields.length} campos recuperados y cargados en la tabla.`);
 			} else {
-				clearFieldsTable();
-				populateDeletionPicklist([]);
-				logMessage('Llamada exitosa pero no se encontraron campos para esta DE.');
+				fieldsTable.clear();
+				fieldsTable.populateDeletionPicklist([]);
+				logger.logMessage('Llamada exitosa pero no se encontraron campos para esta DE.');
 			}
 		} catch (error) {
-			logMessage(`Error al recuperar campos: ${error.message}`);
-			showCustomAlert(`Error: ${error.message}`);
+			logger.logMessage(`Error al recuperar campos: ${error.message}`);
+			ui.showCustomAlert(`Error: ${error.message}`);
 		} finally {
-			unblockUI();
-			endLogBuffering();
+			ui.unblockUI();
+			logger.endLogBuffering();
 		}
 	}
 
@@ -740,51 +362,51 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	async function macroDeleteField() {
 		// NO bloqueamos la UI todavía.
-		startLogBuffering();
+		logger.startLogBuffering();
 		try {
 			const apiConfig = await getAuthenticatedConfig();
 
-			mcApiService.setLogger({ logApiCall, logApiResponse });
+			mcApiService.setLogger({ logApiCall: logger.logApiCall, logApiResponse: logger.logApiResponse });
 			
-			const externalKey = recExternalKeyInput.value.trim();
-			const fieldObjectId = targetFieldSelect.value;
-			const selectedFieldName = targetFieldSelect.selectedOptions[0]?.text;
+			const externalKey = elements.recExternalKeyInput.value.trim();
+			const fieldObjectId = elements.targetFieldSelect.value;
+			const selectedFieldName = elements.targetFieldSelect.selectedOptions[0]?.text;
 
 			if (!externalKey || !fieldObjectId) {
 				throw new Error('Introduzca la External Key y seleccione un campo a eliminar.');
 			}
 			
 			// 1. PRIMERO, preguntamos al usuario.
-			const userConfirmed = await showCustomConfirm(`¿Seguro que quieres eliminar el campo "${selectedFieldName}"? Esta acción no se puede deshacer.`);
+			const userConfirmed = await ui.showCustomConfirm(`¿Seguro que quieres eliminar el campo "${selectedFieldName}"? Esta acción no se puede deshacer.`);
 
 			// 2. Si el usuario cancela, salimos limpiamente.
 			if (!userConfirmed) {
-				logMessage("Borrado cancelado por el usuario.");
-				endLogBuffering();
+				logger.logMessage("Borrado cancelado por el usuario.");
+				logger.endLogBuffering();
 				return; // Salimos de la función.
 			}
 
 			// 3. SI el usuario ha confirmado, AHORA bloqueamos la UI y procedemos.
-			blockUI("Borrando campo...");
+			ui.blockUI("Borrando campo...");
 			
-			logMessage(`Iniciando borrado del campo "${selectedFieldName}"...`);
+			logger.logMessage(`Iniciando borrado del campo "${selectedFieldName}"...`);
 			
 			await mcApiService.deleteDataExtensionField(externalKey, fieldObjectId, apiConfig);
 			
 			const successMessage = `Campo "${selectedFieldName}" eliminado con éxito.`;
-			logMessage(successMessage);
-			showCustomAlert(successMessage);
+			logger.logMessage(successMessage);
+			ui.showCustomAlert(successMessage);
 			
 			// La UI ya está bloqueada, así que macroGetFields puede ejecutarse sin problemas.
 			// Al terminar, macroGetFields se encargará de desbloquearla.
 			await macroGetFields();
 
 		} catch (error) {
-			logMessage(`Error al eliminar el campo: ${error.message}`);
-			showCustomAlert(`Error: ${error.message}`);
+			logger.logMessage(`Error al eliminar el campo: ${error.message}`);
+			ui.showCustomAlert(`Error: ${error.message}`);
 			// Si hay un error, nos aseguramos de desbloquear la UI.
-			unblockUI();
-			endLogBuffering();
+			ui.unblockUI();
+			logger.endLogBuffering();
 		}
 	}
 
@@ -792,31 +414,31 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para documentar todas las Data Extensions de una carpeta en un CSV.
 	 */
 	async function macroDocumentDataExtensions() {
-		blockUI("Documentando Data Extensions...");
-		startLogBuffering();
+		ui.blockUI("Documentando Data Extensions...");
+		logger.startLogBuffering();
 		try {
 			const apiConfig = await getAuthenticatedConfig();
-			mcApiService.setLogger({ logApiCall, logApiResponse });
+			mcApiService.setLogger({ logApiCall: logger.logApiCall, logApiResponse: logger.logApiResponse });
 
-			const categoryId = recCategoryIdInput.value.trim();
+			const categoryId = elements.recCategoryIdInput.value.trim();
 			if (!categoryId) throw new Error('Introduzca el "Identificador de carpeta".');
 
-			logMessage(`Paso 1: Recuperando Data Extensions de la carpeta ID: ${categoryId}`);
+			logger.logMessage(`Paso 1: Recuperando Data Extensions de la carpeta ID: ${categoryId}`);
 			const deList = await getDEsFromFolder(categoryId, apiConfig);
 
 			if (deList.length === 0) {
-				showCustomAlert(`No se encontraron Data Extensions en la carpeta con ID ${categoryId}.`);
+				ui.showCustomAlert(`No se encontraron Data Extensions en la carpeta con ID ${categoryId}.`);
 				return;
 			}
-			logMessage(`Se encontraron ${deList.length} Data Extensions. Recuperando campos para cada una...`);
+			logger.logMessage(`Se encontraron ${deList.length} Data Extensions. Recuperando campos para cada una...`);
 			
 			const allFieldsData = [];
 			let deCounter = 0;
 
 			for (const de of deList) {
 				deCounter++;
-				blockUI(`Procesando ${deCounter}/${deList.length}: ${de.name}`);
-				logMessage(` - Procesando: ${de.name} (Key: ${de.customerKey})`);
+				ui.blockUI(`Procesando ${deCounter}/${deList.length}: ${de.name}`);
+				logger.logMessage(` - Procesando: ${de.name} (Key: ${de.customerKey})`);
 
 				try {
 					const fields = await mcApiService.fetchFieldsForDE(de.customerKey, apiConfig);
@@ -833,26 +455,26 @@ document.addEventListener('DOMContentLoaded', function () {
 						});
 					});
 				} catch (fieldError) {
-					logMessage(`   -> Error al recuperar campos para ${de.name}: ${fieldError.message}`);
+					logger.logMessage(`   -> Error al recuperar campos para ${de.name}: ${fieldError.message}`);
 					// Continuar con la siguiente DE aunque una falle
 				}
 			}
 
 			if (allFieldsData.length === 0) {
-				showCustomAlert('No se pudieron recuperar campos para ninguna de las Data Extensions encontradas.');
+				ui.showCustomAlert('No se pudieron recuperar campos para ninguna de las Data Extensions encontradas.');
 				return;
 			}
 			
-			logMessage(`Paso 3: Generando CSV con ${allFieldsData.length} filas.`);
+			logger.logMessage(`Paso 3: Generando CSV con ${allFieldsData.length} filas.`);
 			generateAndDownloadCsv(allFieldsData, `DEs_Carpeta_${categoryId}.csv`);
-			showCustomAlert('Documentación generada con éxito. Revisa tus descargas.');
+			ui.showCustomAlert('Documentación generada con éxito. Revisa tus descargas.');
 
 		} catch (error) {
-			logMessage(`Error al documentar las Data Extensions: ${error.message}`);
-			showCustomAlert(`Error: ${error.message}`);
+			logger.logMessage(`Error al documentar las Data Extensions: ${error.message}`);
+			ui.showCustomAlert(`Error: ${error.message}`);
 		} finally {
-			unblockUI();
-			endLogBuffering();
+			ui.unblockUI();
+			logger.endLogBuffering();
 		}
 	}
 
@@ -912,887 +534,12 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 	}
 
-	// --- 4.4. Funcionalidades de Búsqueda y Validación ---
-	
-	/**
-	 * Macro para buscar una Data Extension y mostrar su ruta de carpetas completa.
-	 */
-	async function macroSearchDE() {
-		blockUI("Buscando Data Extension...");
-		startLogBuffering();
-		deSearchResultsTbody.innerHTML = '<tr><td colspan="2">Buscando...</td></tr>';
-		try {
-			const apiConfig = await getAuthenticatedConfig();
-			mcApiService.setLogger({ logApiCall, logApiResponse });
-
-			const property = deSearchProperty.value;
-			const value = deSearchValue.value.trim();
-			if (!value) throw new Error("El campo 'Valor' no puede estar vacío.");
-
-			logMessage(`Buscando DE por ${property} que contenga: ${value}`);
-			
-			// 1. Llamar al servicio para obtener la lista de DEs
-			const deList = await mcApiService.searchDataExtensions(property, value, apiConfig);
-
-			if (deList.length === 0) {
-				renderDESearchResultsTable([]);
-				logMessage("No se encontraron resultados.");
-				return;
-			}
-
-			logMessage(`Se encontraron ${deList.length} DEs. Obteniendo rutas de carpeta...`);
-
-			// 2. Enriquecer los resultados con las rutas de las carpetas
-			const pathPromises = deList.map(async (deInfo) => {
-				if (!deInfo.categoryId || parseInt(deInfo.categoryId) === 0) {
-					return { name: deInfo.deName, path: 'Data Extensions' };
-				}
-				// Llamamos al helper que también está en el servicio
-				const folderPath = await mcApiService.getFolderPath(deInfo.categoryId, apiConfig);
-				return { name: deInfo.deName, path: folderPath || 'Data Extensions' };
-			});
-
-			const resultsWithPaths = await Promise.all(pathPromises);
-			
-			// 3. Renderizar la tabla final
-			renderDESearchResultsTable(resultsWithPaths);
-			logMessage("Visualización de resultados completada.");
-
-		} catch (error) {
-			logMessage(`Error al buscar la DE: ${error.message}`);
-			deSearchResultsTbody.innerHTML = `<tr><td colspan="2" style="color: red;">Error: ${error.message}</td></tr>`;
-		} finally {
-			unblockUI();
-			endLogBuffering();
-		}
-	}
-
-	/**
-	 * Macro para validar una dirección de email utilizando la API REST.
-	 */
-	async function macroValidateEmail() {
-		blockUI("Validando email...");
-		startLogBuffering();
-		emailValidationResults.textContent = 'Validando...';
-		try {
-			const apiConfig = await getAuthenticatedConfig();
-			mcApiService.setLogger({ logApiCall, logApiResponse }); 
-			
-			const emailToValidate = emailToValidateInput.value.trim();
-			if (!emailToValidate) {
-				throw new Error("Introduzca un email para validar.");
-			}
-			
-			logMessage(`Validando email: ${emailToValidate}`);
-			
-			const responseData = await mcApiService.validateEmail(emailToValidate, apiConfig); // <-- Llamada al servicio
-
-			if (responseData.valid) {
-				emailValidationResults.textContent = `El email "${responseData.email}" es VÁLIDO.`;
-			} else {
-				emailValidationResults.textContent = `El email "${responseData.email}" es INVÁLIDO.\nRazón: ${responseData.failedValidation}`;
-			}
-
-		} catch (error) {
-			logMessage(`Error al validar el email: ${error.message}`);
-			emailValidationResults.textContent = `Error: ${error.message}`;
-		} finally {
-			unblockUI();
-			endLogBuffering();
-		}
-	}
-
-	/**
-	 * Macro para encontrar todas las actividades que tienen como destino una Data Extension.
-	 */
-	async function macroFindDataSources() {
-		blockUI("Buscando origenes de datos...");
-		startLogBuffering();
-		dataSourcesTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
-		try {
-			const apiConfig = await getAuthenticatedConfig();
-			mcApiService.setLogger({ logApiCall, logApiResponse });
-
-			const deName = deNameToFindInput.value.trim();
-			if (!deName) throw new Error('Introduzca el nombre de la Data Extension.');
-			
-			logMessage(`Buscando orígenes para la DE: "${deName}"`);
-			
-			// 1. Obtener el ObjectID de la DE
-			const deObjectId = await mcApiService.getDEObjectIdByName(deName, apiConfig);
-			logMessage(`ObjectID de la DE: ${deObjectId}`);
-
-			// 2. Buscar imports y queries en paralelo
-			const [imports, queries] = await Promise.all([
-				mcApiService.findImportsTargetingDE(deObjectId, apiConfig),
-				mcApiService.searchQueriesBySimpleFilter({
-					property: 'DataExtensionTarget.Name',
-					simpleOperator: 'equals',
-					value: deName
-				}, apiConfig)
-			]);
-
-			// 3. Unir, ordenar y renderizar
-			const allSources = [...imports, ...queries].sort((a, b) => a.name.localeCompare(b.name));
-			renderDataSourcesTable(allSources);
-			logMessage(`Búsqueda completada. Se encontraron ${allSources.length} actividades.`);
-
-		} catch (error) {
-			logMessage(`Error al buscar orígenes: ${error.message}`);
-			dataSourcesTbody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${error.message}</td></tr>`;
-		} finally {
-			unblockUI();
-			endLogBuffering();
-		}
-	}
-
-	/**
-	 * Macro para buscar un cliente (suscriptor) por Subscriber Key o Email.
-	 */
-	async function macroSearchCustomer() {
-		blockUI("Buscando cliente...");
-		startLogBuffering();
-		customerSearchTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
-		
-		if (selectedCustomerRow) selectedCustomerRow.classList.remove('selected');
-		selectedCustomerRow = null;
-		selectedSubscriberData = null;
-		getDEsBtn.disabled = true;
-		getCustomerJourneysBtn.disabled = true;
-		customerJourneysResultsBlock.classList.add('hidden');
-		customerSendsResultsBlock.classList.add('hidden');
-
-		try {
-			const apiConfig = await getAuthenticatedConfig();
-			mcApiService.setLogger({ logApiCall, logApiResponse });
-
-			const value = customerSearchValue.value.trim();
-			if (!value) throw new Error("El campo de búsqueda no puede estar vacío.");
-			
-			let finalResults = [];
-
-			// PASO 1: Búsqueda como Subscriber por ID (SubscriberKey)
-			logMessage(`Paso 1/3: Buscando como Suscriptor por ID: ${value}`);
-			finalResults = await mcApiService.searchSubscriberByProperty('SubscriberKey', value, apiConfig);
-
-			// PASO 2: Si no hay resultados, busca como Subscriber por Email
-			if (finalResults.length === 0) {
-				logMessage(`Paso 2/3: No encontrado por ID. Buscando como Suscriptor por Email: ${value}`);
-				finalResults = await mcApiService.searchSubscriberByProperty('EmailAddress', value, apiConfig);
-			}
-
-			// PASO 3: Si sigue sin haber resultados, busca como Contact
-			if (finalResults.length === 0) {
-				logMessage(`Paso 3/3: No encontrado como Suscriptor. Buscando como Contacto por ContactKey: ${value}`);
-				finalResults = await mcApiService.searchContactByKey(value, apiConfig);
-			}
-
-			renderCustomerSearchResults(finalResults);
-			logMessage(`Búsqueda completada. Se encontraron ${finalResults.length} resultado(s).`);
-
-		} catch (error) {
-			logMessage(`Error al buscar clientes: ${error.message}`);
-			customerSearchTbody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${error.message}</td></tr>`;
-		} finally {
-			unblockUI();
-			endLogBuffering();
-		}
-	}
-
-	/**
-	 * Macro para obtener los Journeys en los que se encuentra un cliente.
-	 */
-	async function macroGetCustomerJourneys() {
-		if (!selectedSubscriberData?.subscriberKey) return;
-		
-		blockUI("Buscando Journeys...");
-		startLogBuffering();
-		customerJourneysResultsBlock.classList.remove('hidden');
-		customerJourneysTbody.innerHTML = '<tr><td colspan="6">Buscando membresías de Journey...</td></tr>';
-		
-		try {
-			const apiConfig = await getAuthenticatedConfig();
-			mcApiService.setLogger({ logApiCall, logApiResponse });
-
-			const contactKey = selectedSubscriberData.subscriberKey;
-			logMessage(`Buscando Journeys para el Contact Key: ${contactKey}`);
-
-			// 1. Obtener lista de membresías desde el servicio
-			const memberships = await mcApiService.fetchContactJourneyMemberships(contactKey, apiConfig);
-			
-			if (memberships.length === 0) {
-				customerJourneysTbody.innerHTML = '<tr><td colspan="6">Este contacto no se encuentra en ningún Journey.</td></tr>';
-				logMessage("Búsqueda completada. El contacto no está en ningún Journey.");
-				return; 
-			}
-			
-			customerJourneysTbody.innerHTML = '<tr><td colspan="6">Membresías encontradas. Obteniendo detalles...</td></tr>';
-			
-			// 2. Obtener detalles de cada Journey único en paralelo
-			const uniqueDefinitionKeys = [...new Set(memberships.map(m => m.definitionKey))];
-			const detailPromises = uniqueDefinitionKeys.map(key => 
-				mcApiService.fetchJourneyDetailsByKey(key, apiConfig)
-			);
-			
-			const journeyDetails = await Promise.all(detailPromises);
-
-			// 3. Renderizar la tabla final
-			renderCustomerJourneysTable(journeyDetails.filter(Boolean)); // Filtramos por si alguna llamada falló
-			logMessage(`Búsqueda completada. Se encontraron detalles para ${journeyDetails.length} Journey(s).`);
-
-		} catch (error) {
-			logMessage(`Error al buscar journeys: ${error.message}`);
-			customerJourneysTbody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${error.message}</td></tr>`;
-		} finally {
-			unblockUI();
-			endLogBuffering();
-		}
-	}
-
-	/**
-	 * Macro para obtener los datos de las DEs configuradas a nivel de cliente
-	 */
-	async function macroGetCustomerDEs() {
-		if (!selectedSubscriberData?.subscriberKey) return;
-		
-		blockUI("Buscando en Data Extensions...");
-		startLogBuffering();
-		
-		customerSendsResultsBlock.classList.remove('hidden');
-		sendsResultsContainer.innerHTML = ''; // Limpiamos resultados anteriores
-
-		try {
-			const apiConfig = await getAuthenticatedConfig();
-			mcApiService.setLogger({ logApiCall, logApiResponse }); 
-
-			const searchValue = selectedSubscriberData.subscriberKey;
-			
-			const configs = currentClientConfig?.dvConfigs?.filter(c => c.deKey && c.field) || [];
-
-			if (configs.length === 0) {
-				sendsResultsContainer.innerHTML = '<p>No hay Data Extensions configuradas para la búsqueda. Ve a "Configuración de APIs" para definirlas y guardarlas.</p>';
-				return; 
-			}
-			
-			logMessage(`Iniciando búsqueda para '${searchValue}' en ${configs.length} DE(s).`);
-
-			// Iteramos sobre cada configuración y ejecutamos la búsqueda
-			for (const config of configs) {
-				const resultBlock = document.createElement('div');
-				resultBlock.className = 'sends-dataview-block';
-				resultBlock.innerHTML = `
-					<h4>${config.title} <small>(${config.deKey})</small></h4>
-					<div class="table-container">
-						<p>Buscando...</p>
-					</div>
-				`;
-				sendsResultsContainer.appendChild(resultBlock);
-				const tableContainer = resultBlock.querySelector('.table-container');
-
-				try {
-					logMessage(`Consultando DE: ${config.deKey} en el campo "${config.field}"...`);
-					
-					// Llamada al nuevo servicio
-					const items = await mcApiService.searchDataExtensionRows(config.deKey, config.field, searchValue, apiConfig);
-										
-					renderDEs(tableContainer, items);
-				
-				} catch (error) {
-					logMessage(`Error consultando ${config.deKey}: ${error.message}`);
-					tableContainer.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
-				}
-			}
-			
-			logMessage("Búsqueda en Data Extensions completada.");
-
-		} catch (error) {
-			logMessage(`Error fatal durante la búsqueda de envíos: ${error.message}`);
-			sendsResultsContainer.innerHTML = `<p style="color: red;">${error.message}</p>`;
-		} finally {
-			unblockUI();
-			endLogBuffering();
-		}
-	}
-
-	/**
-	 * Macro para buscar en el texto de todas las Query Activities.
-	 */
-	async function macroSearchQueriesByText() {
-		blockUI("Buscando Queries...");
-		startLogBuffering();
-		querySearchResultsTbody.innerHTML = '<tr><td colspan="4">Buscando en todas las queries...</td></tr>';
-		try {
-			const apiConfig = await getAuthenticatedConfig();
-			mcApiService.setLogger({ logApiCall, logApiResponse });
-
-			const searchText = querySearchText.value.trim();
-			if (!searchText) throw new Error("El campo 'Texto a buscar' no puede estar vacío.");
-
-			logMessage(`Buscando queries que contengan: "${searchText}"`);
-
-			const allQueries = await mcApiService.searchQueriesBySimpleFilter({
-				property: 'QueryText',
-				simpleOperator: 'like',
-				value: searchText
-			}, apiConfig);
-			
-			renderQuerySearchResults(allQueries);
-			logMessage(`Búsqueda completada. Se encontraron ${allQueries.length} queries.`);
-
-		} catch (error) {
-			logMessage(`Error al buscar en queries: ${error.message}`);
-			querySearchResultsTbody.innerHTML = `<tr><td colspan="4" style="color: red;">Error: ${error.message}</td></tr>`;
-		} finally {
-			unblockUI();
-			endLogBuffering();
-		}
-	}
-
-	// --- 4.5. Gestión de Automatismos ---
-	
-	/**
-	 * Macro para obtener la lista COMPLETA de todas las automatizaciones.
-	 * Ahora actúa como un controlador que llama al servicio de API.
-	 * @returns {Promise<Array>} Una promesa que resuelve a la lista de automatismos.
-	 */
-	async function macroFetchAllAutomations() {
-		try {
-			logMessage("Recuperando todas las definiciones de automatismos...");
-			const apiConfig = await getAuthenticatedConfig();
-            mcApiService.setLogger({ logApiCall, logApiResponse });
-
-			// Llamamos a nuestra función del servicio.
-			const allItems = await  mcApiService.fetchAllAutomations(apiConfig);
-			
-			logMessage(`Recuperación completa. Se encontraron ${allItems.length} definiciones.`);
-			
-			return allItems;
-
-		} catch (error) {
-			// Si fetchAllAutomations lanza un error, lo capturamos aquí.
-			logMessage(`Error al recuperar automatismos: ${error.message}`);
-			showCustomAlert(`Error: ${error.message}`);
-			return []; // Devolvemos un array vacío para no romper las funciones que dependen de esto.
-		}
-	}
-
-	/**
-	 * Macro para poblar la vista "Gestión de Automatismos" con todos los datos.
-	 */
-	async function macroGetAllAutomationDetails() {
-		const allItems = await macroFetchAllAutomations();
-		fullAutomationList = allItems;
-		populateStatusFilter(fullAutomationList);
-		applyFiltersAndRender();
-	}
-
-	/**
-	 * Macro para obtener las automatizaciones PROGRAMADAS y mostrarlas en el calendario.
-	 */
-	async function macroGetAutomations() {
-		const allItems = await macroFetchAllAutomations();
-		const scheduledItems = allItems.filter(item => item.status === 'Scheduled' && item.scheduledTime);
-		processAndStoreAutomations(scheduledItems);
-		const currentClient = clientNameInput.value;
-		localStorage.setItem('calendarAutomations', JSON.stringify({ client: currentClient, automations: allAutomations }));
-		calendarDataForClient = currentClient;
-		generateCalendar();
-		logMessage(`Calendario actualizado con ${allAutomations.length} automatismos programados.`);
-	}
-
-	// --- 4.6. Gestión de Journeys ---
-
-	/**
-	 * Macro para obtener solo los JOURNEYS PROGRAMADOS y mostrarlos en el calendario.
-	 */
-	async function macroGetJourneyAutomations() {
-		const allItems = await macroFetchAllAutomations();
-		fullAutomationList = allItems; 
-		const scheduledItems = allItems.filter(item => item.status === 'Scheduled' && item.scheduledTime);
-		const journeyAutomations = scheduledItems.filter(auto => auto.processes?.some(proc => proc.workerCounts?.some(wc => wc.objectTypeId === 952)));
-		logMessage(`Se encontraron ${journeyAutomations.length} automatismos de Journeys programados.`);
-		processAndStoreAutomations(journeyAutomations);
-		const currentClient = clientNameInput.value;
-		localStorage.setItem('calendarAutomations', JSON.stringify({ client: currentClient, automations: allAutomations }));
-		calendarDataForClient = currentClient;
-		generateCalendar();
-		logMessage(`Calendario actualizado con ${allAutomations.length} Journeys programados.`);
-	}
-
-	/**
-     * Macro para realizar una acción masiva (activar, ejecutar, parar) sobre los automatismos.
-     * @param {string} actionName - La acción a realizar ('activate', 'run', 'pause').
-     */
-	async function macroPerformAutomationAction(actionName) { // actionName es 'activate', 'run', 'pause'
-		const selectedRows = document.querySelectorAll('#automations-table tbody tr.selected');
-		if (selectedRows.length === 0) return;
-		
-		const selectedAutomations = Array.from(selectedRows).map(row => fullAutomationList.find(auto => auto.id === row.dataset.automationId)).filter(Boolean);
-		if (selectedAutomations.length === 0) return;
-		
-		if (!await showCustomConfirm(`¿Seguro que quieres '${actionName}' ${selectedAutomations.length} automatismo(s)?`)) return;
-		
-		blockUI(`Realizando acción ${actionName}...`);
-		startLogBuffering();
-		const successes = [];
-		const failures = [];
-
-		try {
-			const apiConfig = await getAuthenticatedConfig();
-
-			mcApiService.setLogger({ logApiCall, logApiResponse });
-			
-			// Creamos un mapa de acciones para llamar a la función de servicio correcta
-			const actionServiceMap = {
-				activate: mcApiService.activateAutomation,
-				run: mcApiService.runAutomation,
-				pause: mcApiService.pauseAutomation
-			};
-
-			for (const auto of selectedAutomations) {
-				try {
-					logMessage(`Procesando '${auto.name}'...`);
-					
-                    // Llamamos a la función de servicio correspondiente del mapa
-					const response = await actionServiceMap[actionName](auto.id, apiConfig);
-
-					successes.push({ name: auto.name });
-
-				} catch (error) {
-					failures.push({ name: auto.name, reason: error.message });
-				}
-			}
-		} catch (error) {
-			logMessage(`Error fatal durante la acción '${actionName}': ${error.message}`);
-			showCustomAlert(`Error fatal: ${error.message}`);
-		} finally {
-			const alertSummary = `Acción '${actionName}' completada. Éxitos: ${successes.length}, Fallos: ${failures.length}.`;
-			logMessage(alertSummary + (failures.length > 0 ? `\n\n--- Detalles de Fallos ---\n${failures.map(f => `  - ${f.name}: ${f.reason}`).join('\n')}` : ''));
-			showCustomAlert(alertSummary);
-			unblockUI();
-			endLogBuffering();
-			refreshAutomationsTableBtn.click();
-		}
-	}
-
-	/**
-	 * Macro para obtener y procesar las comunicaciones (Emails, SMS, Pushes) de todos los journeys.
-	 * Es una operación pesada y solo se ejecuta si los datos no están ya en caché.
-	 */
-	async function macroGetJourneyCommunications() {
-        const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
-		if (selectedRows.length === 0) {
-			showCustomAlert("Por favor, selecciona al menos un journey de la lista.");
-			return;
-		}
-
-        const journeysToProcess = Array.from(selectedRows).map(row => 
-            fullJourneyList.find(j => j.id === row.dataset.journeyId)
-        ).filter(Boolean);
-
-		blockUI("Recuperando comunicaciones...");
-		startLogBuffering();
-		try {
-			logMessage(`Iniciando obtención de detalles de comunicación para ${journeysToProcess.length} journey(s)...`);
-			const apiConfig = await getAuthenticatedConfig();
-
-			mcApiService.setLogger({ logApiCall, logApiResponse });
-
-			for (const journey of journeysToProcess) {
-				if (journey.hasCommunications) {
-					logMessage(`Saltando ${journey.name}, ya tiene los datos.`);
-					continue;
-				}
-				
-                try {
-					logMessage(`Obteniendo actividades para: ${journey.name}`);
-					const journeyDetails = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
-					
-					const communications = parseJourneyActivities(journeyDetails.activities);
-					
-					journey.emails = communications.emails;
-					journey.sms = communications.sms;
-					journey.pushes = communications.pushes;
-					journey.activities = journeyDetails.activities || [];
-					journey.hasCommunications = true;
-
-				} catch (error) {
-					logMessage(` -> Error de red al procesar ${journey.name}: ${error.message}`);
-				}
-			}
-
-			logMessage("Proceso de obtención de comunicaciones finalizado.");
-			showCustomAlert("Comunicaciones actualizadas para los journeys seleccionados.");
-			
-            applyJourneyFiltersAndRender();
-            updateJourneyActionButtonsState();
-
-		} catch (error) {
-			logMessage(`Error fatal durante la obtención de comunicaciones: ${error.message}`);
-			showCustomAlert(`Error: ${error.message}`);
-		} finally {
-			unblockUI();
-			endLogBuffering();
-		}
-	}
-
-	/**
-	 * Macro para parar los Journeys seleccionados.
-	 */
-	async function macroStopJourneys() {
-		const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
-		if (selectedRows.length === 0) return;
-
-		const journeysToStop = Array.from(selectedRows).map(row => 
-            fullJourneyList.find(j => j.id === row.dataset.journeyId)
-        ).filter(Boolean);
-		if (journeysToStop.length === 0) return;
-
-		if (!await showCustomConfirm(`¿Seguro que quieres parar ${journeysToStop.length} journey(s)? Esta acción intentará detener la versión activa.`)) return;
-
-		blockUI(`Parando ${journeysToStop.length} journey(s)...`);
-		startLogBuffering();
-		const successes = [];
-		const failures = [];
-
-		try {
-			const apiConfig = await getAuthenticatedConfig();
-			mcApiService.setLogger({ logApiCall, logApiResponse });
-
-			for (const journey of journeysToStop) {
-				try {
-					logMessage(`Procesando parada para: "${journey.name}" (Versión ${journey.version})`);
-					const response = await mcApiService.stopJourney(journey.id, journey.version, apiConfig);
-					successes.push({ name: journey.name });
-				} catch (error) {
-					failures.push({ name: journey.name, reason: error.message });
-				}
-			}
-		} catch (error) {
-			logMessage(`Error fatal durante la acción de parar journeys: ${error.message}`);
-			showCustomAlert(`Error fatal: ${error.message}`);
-		} finally {
-			const alertSummary = `Acción 'Parar' completada. Éxitos: ${successes.length}, Fallos: ${failures.length}.`;
-			let logSummary = alertSummary;
-			if (failures.length > 0) {
-				const failureDetails = failures.map(f => `  - ${f.name}: ${f.reason}`).join('\n');
-				logSummary += `\n\n--- Detalles de Fallos ---\n${failureDetails}`;
-			}
-			logMessage(logSummary);
-			showCustomAlert(alertSummary);
-			unblockUI();
-			endLogBuffering();
-			refreshJourneysTableBtn.click();
-		}
-	}
-
 	
 
-	/**
-	 * Macro principal para orquestar la copia de un Journey.
-	 */
-	async function macroCopyJourney() {
-		const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
-		if (selectedRows.length !== 1) return;
-
-		const journeyId = selectedRows[0].dataset.journeyId;
-		const journey = fullJourneyList.find(j => j.id === journeyId);
-		if (!journey) return;
-
-		if (!await showCustomConfirm(`Se va a crear una copia completa del journey "${journey.name}", incluyendo su Data Extension de entrada. ¿Continuar?`)) return;
-
-		blockUI("Iniciando copia de Journey...");
-		startLogBuffering();
-
-		try {
-			const apiConfig = await getAuthenticatedConfig();
-
-			// Crea un objeto con nuestras funciones de log y pásalo al servicio.
-			const logger = { logApiCall, logApiResponse };
-			mcApiService.setLogger(logger);
-			
-			// PASO 1: Obtener detalles del Journey original
-			logMessage(`PASO 1/6: Obteniendo definición de "${journey.name}"...`);
-			blockUI(`Paso 1/6: Obteniendo Journey original...`);
-			const originalJourney = await mcApiService.fetchJourneyDetailsById(journeyId, apiConfig);
-			const originalEventDefId = originalJourney.triggers?.[0]?.metaData?.eventDefinitionId;
-			if (!originalEventDefId) throw new Error("No se pudo encontrar el Event Definition ID en el trigger del Journey.");
-
-			// PASO 2: Obtener detalles del Event Definition
-			logMessage(`PASO 2/6: Obteniendo Event Definition...`);
-			blockUI(`Paso 2/6: Obteniendo Event Definition...`);
-			const originalEventDef = await mcApiService.getEventDefinitionById(originalEventDefId, apiConfig);
-			const originalDeName = originalEventDef.dataExtensionName;
-			if (!originalDeName) throw new Error("No se pudo encontrar el nombre de la DE en el Event Definition.");
-
-			// PASO 3: Encontrar detalles de la DE original (incluyendo su CategoryID)
-			logMessage(`PASO 3/6: Buscando detalles (Key y Carpeta) para la DE "${originalDeName}"...`);
-			blockUI(`Paso 3/6: Buscando DE de origen...`);
-			const originalDeDetails = await mcApiService.getDataExtensionDetailsByName(originalDeName, apiConfig);
-			if (!originalDeDetails.customerKey) throw new Error(`No se pudo encontrar la CustomerKey para la DE "${originalDeName}"`);
-			
-			// PASO 4: Clonar la Data Extension en la CARPETA CORRECTA
-			logMessage(`PASO 4/6: Clonando la Data Extension...`);
-			blockUI(`Paso 4/6: Clonando Data Extension...`);
-			const newDeName = `${originalDeName}_Copy`;
-			const clonedDeInfo = await mcApiService.cloneDataExtension(originalDeDetails.customerKey, newDeName, "", originalDeDetails.categoryId, apiConfig);
-
-			// PASO 5: Crear el nuevo Event Definition
-			logMessage(`PASO 5/6: Creando nuevo Event Definition...`);
-			blockUI(`Paso 5/6: Creando nuevo Event Definition...`);
-			const newEventDef = await mcApiService.createClonedEventDefinition(originalEventDef, clonedDeInfo, apiConfig);
-
-			// PASO 6: Crear el nuevo Journey
-			logMessage(`PASO 6/6: Creando la copia final del Journey...`);
-			blockUI(`Paso 6/6: Creando copia del Journey...`);
-			const copyPayload = prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef);
-			const newJourneyData = await mcApiService.createJourney(copyPayload, apiConfig);
-
-			showCustomAlert(`¡Éxito! Se ha creado la copia "${newJourneyData.name}". Refrescando la lista...`);
-			refreshJourneysTableBtn.click();
-
-		} catch (error) {
-			logMessage(`ERROR en la copia del journey: ${error.message}`);
-			showCustomAlert(`Se produjo un error durante la copia: ${error.message}`);
-		} finally {
-			unblockUI();
-			endLogBuffering();
-		}
-	}
-
+	
 	
 
-	/**
-	 * Helper para parsear el array de actividades de un journey y extraer los nombres de las comunicaciones.
-	 * @param {Array} activities - El array 'activities' de la respuesta detallada del journey.
-	 * @returns {object} Un objeto con arrays de nombres para emails, sms y pushes.
-	 */
-	function parseJourneyActivities(activities = []) {
-		const communications = {
-			emails: [],
-			sms: [],
-			pushes: []
-		};
-
-		if (!activities || activities.length === 0) {
-			return communications;
-		}
-
-		for (const activity of activities) {
-			switch (activity.type) {
-				case 'EMAILV2':
-					communications.emails.push(activity.name);
-					break;
-				case 'SMS':
-					communications.sms.push(activity.name);
-					break;
-				case 'INAPP': 
-				case 'INBOX':
-				case 'MOBILEPUSH':
-					communications.pushes.push(activity.name);
-					break;
-			}
-		}
-		return communications;
-	}
-
-	/**
-	 * Macro para borrar los Journeys seleccionados.
-	 */
-	async function macroDeleteJourneys() {
-		const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
-		if (selectedRows.length === 0) return;
-
-		const journeysToDelete = Array.from(selectedRows).map(row => 
-            fullJourneyList.find(j => j.id === row.dataset.journeyId)
-        ).filter(Boolean);
-		if (journeysToDelete.length === 0) return;
-
-		if (!await showCustomConfirm(`¿Seguro que quieres borrar permanentemente ${journeysToDelete.length} journey(s)? Esta acción no se puede deshacer.`)) return;
-
-		blockUI(`Borrando ${journeysToDelete.length} journey(s)...`);
-		startLogBuffering();
-		const successes = [];
-		const failures = [];
-
-		try {
-			const apiConfig = await getAuthenticatedConfig();
-			mcApiService.setLogger({ logApiCall, logApiResponse });
-
-			for (const journey of journeysToDelete) {
-				try {
-					logMessage(`Procesando borrado para: "${journey.name}" (ID: ${journey.id})`);
-					const response = await mcApiService.deleteJourney(journey.id, apiConfig);
-					successes.push({ name: journey.name });
-				} catch (error) {
-					failures.push({ name: journey.name, reason: error.message });
-				}
-			}
-		} catch (error) {
-			logMessage(`Error fatal durante la acción de borrado: ${error.message}`);
-			showCustomAlert(`Error fatal: ${error.message}`);
-		} finally {
-			const alertSummary = `Proceso de borrado finalizado. Éxitos: ${successes.length}, Fallos: ${failures.length}.`;
-			let logSummary = alertSummary;
-			if (failures.length > 0) {
-				const failureDetails = failures.map(f => `  - ${f.name}: ${f.reason}`).join('\n');
-				logSummary += `\n\n--- Detalles de Fallos ---\n${failureDetails}`;
-			}
-			logMessage(logSummary);
-			showCustomAlert(alertSummary);
-			unblockUI();
-			endLogBuffering();
-			refreshJourneysTableBtn.click();
-		}
-	}
-
-	// --- 4.7. Clonador Masivo de Queries ---
-
-	/**
-	 * Macro principal que busca las carpetas especificadas por el usuario.
-	 */
-	async function macroSearchCloneFolders() {
-		blockUI("Buscando carpetas...");
-		startLogBuffering();
-		try {
-			const apiConfig = await getAuthenticatedConfig();
-			mcApiService.setLogger({ logApiCall, logApiResponse });
-
-			const sourceQueryName = querySourceFolderNameInput.value.trim();
-			const targetQueryName = queryTargetFolderNameInput.value.trim();
-			const targetDEName = deTargetFolderNameInput.value.trim();
-
-			resetFolderSelection();
-
-			logMessage("Iniciando búsqueda de carpetas...");
-			const [sourceQueryFolders, targetQueryFolders, targetDEFolders] = await Promise.all([
-				mcApiService.findDataFolders(sourceQueryName, 'queryactivity', apiConfig),
-				mcApiService.findDataFolders(targetQueryName, 'queryactivity', apiConfig),
-				mcApiService.findDataFolders(targetDEName, 'dataextension', apiConfig)
-			]);
-			
-			logMessage(`Resultados: ${sourceQueryFolders.length} (Origen), ${targetQueryFolders.length} (Destino Query), ${targetDEFolders.length} (Destino DE)`);
-			
-			renderFolderResultsTable(querySourceFoldersTbody, sourceQueryFolders);
-			renderFolderResultsTable(queryTargetFoldersTbody, targetQueryFolders);
-			renderFolderResultsTable(deTargetFoldersTbody, targetDEFolders);
-
-			queryClonerFolderResultsBlock.classList.remove('hidden');
-
-		} catch (error) {
-			logMessage(`Error al buscar carpetas: ${error.message}`);
-			showCustomAlert(`Error: ${error.message}`);
-		} finally {
-			unblockUI();
-			endLogBuffering();
-		}
-	}
-
-	/**
-	 * Macro que avanza al paso 2, recuperando las queries de la carpeta de origen.
-	 */
-	async function macroDisplayQuerySelection() {
-		blockUI("Cargando Queries...");
-		startLogBuffering();
-		try {
-			const apiConfig = await getAuthenticatedConfig();
-			mcApiService.setLogger({ logApiCall, logApiResponse });
-
-			if (!clonerState.sourceQueryFolder) throw new Error("No se ha seleccionado una carpeta de origen.");
-
-			logMessage(`Recuperando queries de la carpeta ID: ${clonerState.sourceQueryFolder.id}`);
-			const queries = await mcApiService.getQueriesFromFolder(clonerState.sourceQueryFolder.id, apiConfig);
-			
-			clonerState.queriesInSourceFolder = queries.map(q => ({
-				...q,
-				newQueryName: `${q.name}_Copy`,
-				newDeName: q.targetDE.name ? `${q.targetDE.name}_Copy` : '', // Manejar si no hay DE de destino
-				selected: false
-			}));
-			
-			renderQuerySelectionTable(clonerState.queriesInSourceFolder);
-
-			queriesClonerStep1.style.display = 'none';
-			queriesClonerStep2.style.display = 'flex';
-			queriesClonerStep2.style.flexDirection = 'column';
-			queriesClonerStep2.style.height = '100%';
-			
-		} catch (error) {
-			logMessage(`Error al obtener las queries: ${error.message}`);
-			showCustomAlert(`Error: ${error.message}`);
-		} finally {
-			unblockUI();
-			endLogBuffering();
-		}
-	}
-
 	
-	/**
-	 * Macro final que ejecuta el proceso de clonación para las queries seleccionadas.
-	 */
-	async function macroCloneSelectedQueries() {
-		const selectedQueries = clonerState.queriesInSourceFolder.filter(q => q.selected);
-		if (selectedQueries.length === 0) return showCustomAlert("No has seleccionado ninguna query para clonar.");
-
-		if (!await showCustomConfirm(`Se clonarán ${selectedQueries.length} Query Activities y sus Data Extensions de destino. ¿Continuar?`)) return;
-
-		startLogBuffering();
-		let successCount = 0;
-		let failCount = 0;
-
-		try {
-			const apiConfig = await getAuthenticatedConfig();
-			mcApiService.setLogger({ logApiCall, logApiResponse });
-
-			logMessage(`Iniciando clonación masiva de ${selectedQueries.length} queries...`);
-
-			for (let i = 0; i < selectedQueries.length; i++) {
-				const query = selectedQueries[i]; 
-				const progress = `(${i + 1}/${selectedQueries.length})`;
-
-				try {
-					logMessage(`\n--- ${progress} Procesando Query: ${query.name} ---`);
-					if (!query.targetDE.customerKey) {
-						throw new Error("La query original no tiene una Data Extension de destino válida.");
-					}
-					
-					// 1. Clonar la Data Extension con logging
-					blockUI(`${progress} Clonando DE como "${query.newDeName}"...`);
-					logMessage(`  - Paso 1: Clonando DE de destino (Key: ${query.targetDE.customerKey})`);					
-					
-					const clonedDE = await mcApiService.cloneDataExtension(query.targetDE.customerKey, query.newDeName, "", clonerState.targetDEFolder.id, apiConfig);
-					logMessage(`  - Éxito: Nueva DE "${clonedDE.name}" creada con Key: ${clonedDE.customerKey}`);
-
-					// 2. Crear la nueva Query con logging
-					blockUI(`${progress} Creando Query como "${query.newQueryName}"...`);
-					logMessage(`  - Paso 2: Creando la nueva Query Activity apuntando a la DE clonada.`);					
-					
-					await mcApiService.createClonedQuery(query, clonedDE, query.newQueryName, clonerState.targetQueryFolder.id, apiConfig);
-					logMessage(`  - Éxito: Query "${query.newQueryName}" creada.`);
-
-					successCount++;
-
-				} catch (cloneError) {
-					logMessage(`  - ERROR al procesar "${query.name}": ${cloneError.message}`);
-					failCount++;
-				}
-			}
-
-			showCustomAlert(`Proceso de clonación finalizado.\nÉxitos: ${successCount}\nFallos: ${failCount}\n\nRevisa el log para más detalles.`);
-			
-			queriesClonerStep2.style.display = 'none';
-			queriesClonerStep1.style.display = 'flex';
-			resetFolderSelection();
-			queryClonerFolderResultsBlock.classList.add('hidden');
-
-		} catch (error) {
-			logMessage(`Error fatal durante el proceso de clonación: ${error.message}`);
-			showCustomAlert(`Error fatal: ${error.message}`);
-		} finally {
-			unblockUI();
-			endLogBuffering();
-		}
-	}
 
 	// --- Helpers para el Clonador de Queries ---
 
@@ -1839,104 +586,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		await executeSoapRequest(apiConfig.soapUri, soapPayload, null);
 	}
-
-
-	/**
-	 * Helper para extraer la URL de una Cloud Page desde su campo 'content' o 'meta'.
-	 * @param {object} item - El objeto del asset.
-	 * @returns {string} La URL o 'N/A'.
-	 */
-	function extractCloudPageUrl(item) {
-
-		// 1. Intento Principal: Buscar en el campo 'content' a nivel raíz.
-		//    Común en Landing Pages publicadas.
-		try {
-			if (item.content && item.content.trim().startsWith('{')) {
-				const contentJson = JSON.parse(item.content);
-				if (contentJson.url) {
-					return contentJson.url;
-				}
-			}
-		} catch (e) { /* Ignorar error de parseo, continuar al siguiente intento. */ }
-
-		// 2. Segundo Intento: Buscar en la estructura anidada 'data.site.content'.
-		//    Como bien indicaste, es donde aparece para los Code Resources.
-		try {
-			// Comprobamos que cada nivel del objeto existe para evitar errores.
-			if (item.data && item.data.site && item.data.site.content && item.data.site.content.trim().startsWith('{')) {
-				const nestedContentJson = JSON.parse(item.data.site.content);
-				if (nestedContentJson.url) {
-					return nestedContentJson.url;
-				}
-			}
-		} catch (e) { /* Ignorar error de parseo, continuar al siguiente intento. */ }
-
-		// 3. Tercer Intento (Fallback): Buscar en el campo 'meta'.
-		//    A veces la URL se encuentra aquí.
-		if (item.meta && item.meta.cloudPages && item.meta.cloudPages.url) {
-			return item.meta.cloudPages.url;
-		}
-
-		// 4. Si ninguno de los intentos anteriores funcionó, devolvemos un único mensaje de fallo.
-		return 'URL no encontrada';
-	}
+	
 
 	// ==========================================================
 	// --- 5. FUNCIONES AUXILIARES (HELPERS) ---
 	// ==========================================================
-	
-/**
- * Prepara el payload para crear una copia de un Journey, actualizando todas las referencias.
- * @param {object} originalJourney - El objeto de Journey completo.
- * @param {object} originalEventDef - El objeto de Event Definition original para obtener la clave antigua.
- * @param {object} newEventDef - El objeto del nuevo Event Definition para obtener los nuevos IDs y Key.
- * @returns {object} Un objeto JSON listo para ser enviado en la petición de creación.
- */
-function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
-    const oldEventDefKey = originalEventDef.eventDefinitionKey;
-    const newEventDefKey = newEventDef.eventDefinitionKey;
-    
-    if (!oldEventDefKey || !newEventDefKey) {
-        throw new Error("No se pudieron obtener las claves de Event Definition para el reemplazo.");
-    }
-
-    let journeyString = JSON.stringify(originalJourney);
-    const regex = new RegExp(oldEventDefKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-    journeyString = journeyString.replace(regex, newEventDefKey);
-    
-    let finalPayload = JSON.parse(journeyString);
-
-    // Limpiamos las actividades: quitamos 'id' y 'schema' de cada una.
-    finalPayload.activities = finalPayload.activities.map(({ id, schema, ...rest }) => rest);
-
-    // Limpiamos los triggers y nos aseguramos de que tienen los nuevos IDs y Key correctos.
-    finalPayload.triggers = finalPayload.triggers.map(trigger => {
-        const { id, ...rest } = trigger;
-        rest.type = 'EmailAudience'; 
-        if (rest.metaData) {
-            rest.metaData.eventDefinitionKey = newEventDef.eventDefinitionKey; 
-            rest.metaData.eventDefinitionId = newEventDef.id;
-        }
-        return rest;
-    });
-    
-    // Eliminamos las propiedades del nivel superior que no deben ir en una creación.
-    delete finalPayload.id;
-    delete finalPayload.version;
-    delete finalPayload.createdDate;
-    delete finalPayload.modifiedDate;
-    delete finalPayload.lastPublishedDate;
-    delete finalPayload.definitionId;
-    delete finalPayload.status;
-    delete finalPayload.stats;
-    
-    // Asignamos un nuevo nombre y una nueva 'key' para el Journey clonado.
-    finalPayload.name = `${originalJourney.name}_Copy`;
-    finalPayload.key = crypto.randomUUID();
-
-    return finalPayload;
-}
-	
+		
 
 	/**
 	 * Recupera los detalles de una Data Extension.
@@ -2051,512 +706,12 @@ function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
 		return [result];
 	}
 
-	// --- 5.3. Renderizadores de Tablas ---
-	/**
-	 * Dibuja la tabla de resultados para el buscador de Data Extensions.
-	 * @param {Array} results - Array de objetos con { name, path }.
-	 */
-	function renderDESearchResultsTable(results) {
-		deSearchResultsTbody.innerHTML = '';
-		if (!results || results.length === 0) {
-			deSearchResultsTbody.innerHTML = '<tr><td colspan="2">No se encontraron Data Extensions con ese criterio.</td></tr>';
-			return;
-		}
 
-		// Ordenamos los resultados alfabéticamente por la ruta completa para agrupar carpetas
-		results.sort((a, b) => (a.path + a.name).localeCompare(b.path + b.name));
-
-		results.forEach(result => {
-			const row = deSearchResultsTbody.insertRow();
-			row.innerHTML = `<td>${result.name}</td><td>${result.path}</td>`;
-		});
-	}
-
-	/**
-	 * Dibuja la tabla de resultados para el buscador de orígenes de datos.
-	 * @param {Array} sources - Array de actividades (imports, queries) encontradas.
-	 */
-	function renderDataSourcesTable(sources) {
-		dataSourcesTbody.innerHTML = '';
-		if (sources.length === 0) {
-			dataSourcesTbody.innerHTML = '<tr><td colspan="6">No se encontraron orígenes.</td></tr>';
-			return;
-		}
-		sources.forEach(source => {
-			const row = document.createElement('tr');
-			row.innerHTML = `<td>${source.name || '---'}</td><td>${source.type || '---'}</td><td>${source.automationName || '---'}</td><td>${source.step || '---'}</td><td>${source.action || '---'}</td><td style="white-space: pre-wrap; word-break: break-all;">${source.description || '---'}</td>`;
-			dataSourcesTbody.appendChild(row);
-		});
-	}
-
-	/** 
-	 * Pinta los resultados de la búsqueda de clientes en la tabla y gestiona la selección automática.
-	 * @param {Array} results - El array de suscriptores encontrados.
-	 */
-	function renderCustomerSearchResults(results) {
-		customerSearchTbody.innerHTML = '';
-		selectedCustomerRow = null;
-		selectedSubscriberData = null;
-		getDEsBtn.disabled = false;
-		getCustomerJourneysBtn.disabled = true;
-		if (!results || results.length === 0) {
-			customerSearchTbody.innerHTML = '<tr><td colspan="6">No se encontraron clientes con ese criterio.</td></tr>';
-			return;
-		}
-		results.forEach((sub, index) => {
-			const row = document.createElement('tr');
-			row.dataset.subscriberKey = sub.subscriberKey;
-			row.dataset.isSubscriber = sub.isSubscriber;
-			row.innerHTML = `<td>${sub.subscriberKey}</td><td>${sub.emailAddress}</td><td>${sub.status}</td><td>${sub.createdDate}</td><td>${sub.unsubscribedDate}</td><td>${sub.isSubscriber ? 'Sí' : 'No'}</td>`;
-			if (results.length === 1 && index === 0) {
-				row.classList.add('selected');
-				selectedCustomerRow = row;
-				selectedSubscriberData = { subscriberKey: sub.subscriberKey, isSubscriber: sub.isSubscriber };
-				getCustomerJourneysBtn.disabled = false;
-				getDEsBtn.disabled = false;
-			}
-			customerSearchTbody.appendChild(row);
-		});
-	}
 	
-	/**
-	 * Pinta los detalles de los journeys de un cliente en su tabla correspondiente.
-	 * @param {Array} journeys - Array de objetos de Journey.
-	 */
-	function renderCustomerJourneysTable(journeys) {
-		customerJourneysTbody.innerHTML = '';
-		if (!journeys || journeys.length === 0) {
-			customerJourneysTbody.innerHTML = '<tr><td colspan="6">No se pudieron recuperar los detalles de los Journeys.</td></tr>';
-			return;
-		}
-		journeys.forEach(journey => {
-			const row = document.createElement('tr');
-			row.innerHTML = `<td>${journey.name || '---'}</td><td>${journey.id || '---'}</td><td>${journey.key || '---'}</td><td>${journey.version || '---'}</td><td>${journey.createdDate ? new Date(journey.createdDate).toLocaleString() : '---'}</td><td>${journey.modifiedDate ? new Date(journey.modifiedDate).toLocaleString() : '---'}</td>`;
-			customerJourneysTbody.appendChild(row);
-		});
-	}
-	
-	/**
-	 * Renderiza una tabla dinámica a partir de los items de una Data View.
-	 * @param {HTMLElement} containerElement - El div donde se inyectará la tabla.
-	 * @param {Array} items - El array de 'items' de la respuesta de la API.
-	 */
-	function renderDEs(containerElement, items) {
-		containerElement.innerHTML = '';
-		if (!items || items.length === 0) {
-			containerElement.innerHTML = '<p>No se encontraron registros.</p>';
-			return;
-		}
-		const table = document.createElement('table');
-		const thead = document.createElement('thead');
-		const tbody = document.createElement('tbody');
-		const headerRow = document.createElement('tr');
-		const headers = Object.keys(items[0].values);
-		headers.forEach(headerText => {
-			const th = document.createElement('th');
-			th.textContent = headerText;
-			headerRow.appendChild(th);
-		});
-		thead.appendChild(headerRow);
-		items.forEach(item => {
-			const row = document.createElement('tr');
-			headers.forEach(header => {
-				const td = document.createElement('td');
-				td.textContent = item.values[header] || '---';
-				row.appendChild(td);
-			});
-			tbody.appendChild(row);
-		});
-		table.append(thead, tbody);
-		containerElement.appendChild(table);
-	}
 
-	/**
-	 * Pinta los resultados de la búsqueda de texto en queries en su tabla.
-	 * @param {Array} queries - Array de queries encontradas.
-	 */
-	function renderQuerySearchResults(queries) {
-		querySearchResultsTbody.innerHTML = '';
-		const showQuery = showQueryTextCheckbox.checked;
-		const displayStyle = showQuery ? '' : 'none';
-		const table = document.getElementById('query-search-results-table');
-		table.querySelector('thead th:nth-child(4)').style.display = displayStyle;
-		if (queries.length === 0) {
-			querySearchResultsTbody.innerHTML = '<tr><td colspan="4">No se encontraron queries con ese texto.</td></tr>';
-			return;
-		}
-		queries.forEach(query => {
-			const row = document.createElement('tr');
-			const queryLink = constructQueryLink(query.objectID);
-			const queryNameCell = queryLink ? `<td><a href="${queryLink}" class="external-link" title="Abrir query en Marketing Cloud">${query.name}</a></td>` : `<td>${query.name}</td>`;
-			row.innerHTML = `${queryNameCell}<td>${query.automationName || '---'}</td><td>${query.step || '---'}</td><td style="white-space: pre-wrap; word-break: break-all; display: ${displayStyle};">${query.description}</td>`;
-			querySearchResultsTbody.appendChild(row);
-		});
-	}
-
-	/**
-     * Dibuja la tabla de la vista "Gestión de Automatismos" con los datos proporcionados.
-     * @param {Array} automations - El array de automatismos a mostrar.
-     */
-	function renderAutomationsTable(automationsToRender) {
-		automationsTbody.innerHTML = '';
-		updateSortIndicators(); // Esto se mantiene
-
-		if (!automationsToRender || automationsToRender.length === 0) {
-			automationsTbody.innerHTML = '<tr><td colspan="4">No hay automatismos para mostrar.</td></tr>';
-			return;
-		}
-		
-		automationsToRender.forEach(auto => {
-			const row = document.createElement('tr');
-			row.dataset.automationId = auto.id;
-			row.innerHTML = `<td>${auto.name || 'Sin Nombre'}</td><td>${formatDateToSpanishTime(auto.lastRunTime)}</td><td>${formatDateToSpanishTime(auto.scheduledTime)}</td><td>${auto.status || '---'}</td>`;
-			automationsTbody.appendChild(row);
-		});
-	}
-
-	/**
-	 * Pinta una tabla de resultados de búsqueda de carpetas.
-	 * @param {HTMLElement} tbody - El elemento tbody de la tabla a rellenar.
-	 * @param {Array} folders - La lista de carpetas con { id, name, fullPath }.
-	 */
-	function renderFolderResultsTable(tbody, folders) {
-		tbody.innerHTML = '';
-		if (!folders || folders.length === 0) {
-			tbody.innerHTML = '<tr><td>No se encontraron carpetas.</td></tr>';
-			return;
-		}
-		folders.forEach(folder => {
-			const row = tbody.insertRow();
-			row.dataset.folderId = folder.id;
-			row.dataset.folderName = folder.name;
-			row.innerHTML = `<td>${folder.fullPath}</td>`;
-		});
-
-		// Si solo hay un resultado, seleccionarlo automáticamente
-		if (folders.length === 1) {
-			const singleRow = tbody.querySelector('tr');
-			singleRow.classList.add('selected');
-			// Disparamos un evento de clic para que la lógica de selección se ejecute
-			singleRow.click();
-		}
-	}
-
-	/**
-	 * Pinta la tabla de selección de queries en el paso 2.
-	 * @param {Array} queries - La lista de queries a mostrar.
-	 */
-	function renderQuerySelectionTable(queries) {
-		querySelectionTbody.innerHTML = '';
-		selectAllQueriesCheckbox.checked = false;
-		if (!queries || queries.length === 0) {
-			// Actualizamos el colspan a 5
-			querySelectionTbody.innerHTML = '<tr><td colspan="5">No se encontraron Queries en esta carpeta.</td></tr>';
-			return;
-		}
-
-		queries.forEach((query, index) => {
-			const row = querySelectionTbody.insertRow();
-			row.dataset.queryIndex = index;
-			// Nueva estructura de la fila con celdas editables
-			row.innerHTML = `
-				<td><input type="checkbox"></td>
-				<td>${query.name}</td>
-				<td>${query.targetDE.name}</td>
-				<td contenteditable="true" data-type="query-name">${query.newQueryName}</td>
-				<td contenteditable="true" data-type="de-name">${query.newDeName}</td>
-			`;
-		});
-	}
-
-	/** Resetea el estado y la UI del clonador de queries. */
-	function resetFolderSelection() {
-		clonerState.sourceQueryFolder = null;
-		clonerState.targetQueryFolder = null;
-		clonerState.targetDEFolder = null;
-		
-		[querySourceFoldersTbody, queryTargetFoldersTbody, deTargetFoldersTbody].forEach(tbody => {
-			tbody.innerHTML = '';
-		});
-		
-		queryClonerContinueBtn.disabled = true;
-	}
 
 	// --- 5.4. Otros Helpers ---
-	
-	/**
-	 * Construye la URL para abrir una Query Activity en la UI de Automation Studio.
-	 * @param {string} queryObjectId - El ObjectID de la Query Definition.
-	 * @returns {string|null} La URL completa o null si falta información.
-	 */
-	function constructQueryLink(queryObjectId) {
-		if (!currentOrgInfo || !currentOrgInfo.stack_key || !businessUnitInput.value) return null;
-		const stack = currentOrgInfo.stack_key.toLowerCase();
-		const mid = businessUnitInput.value;
-		return `https://mc.${stack}.exacttarget.com/cloud/#app/Automation%20Studio/AutomationStudioFuel3/%23ActivityDetails/300/${queryObjectId}`;
-	}
 
-	/**
-     * Formatea una cadena de fecha ISO (UTC) a una cadena legible en horario de España.
-     * @param {string} dateString - La fecha en formato ISO (ej: "2025-08-19T19:34:00Z").
-     * @returns {string} La fecha formateada o '---' si no es válida.
-     */
-	function formatDateToSpanishTime(dateString) {
-		if (!dateString || dateString.startsWith('0001-01-01')) return '---';
-		try {
-			const date = new Date(dateString);
-			return date.toLocaleString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Europe/Madrid' });
-		} catch (error) {
-			return 'Fecha inválida';
-		}
-	}
-
-	/**
-     * Rellena el desplegable de estados con los estados únicos de la lista de automatismos.
-     * @param {Array} automations - La lista completa de automatismos.
-     */
-	function populateStatusFilter(automations) {
-		const currentSelectedValue = automationStatusFilter.value;
-		automationStatusFilter.innerHTML = '<option value="">Todos los estados</option>';
-		const statuses = [...new Set(automations.map(auto => auto.status).filter(Boolean))].sort();
-		statuses.forEach(status => automationStatusFilter.appendChild(new Option(status, status)));
-		automationStatusFilter.value = currentSelectedValue;
-	}
-
-	/**
-	 * Aplica los filtros actuales a la lista completa de automatismos y luego la renderiza.
-	 * ESTA FUNCIÓN DEBE LLAMARSE CUANDO SE CAMBIA UN FILTRO (nombre o estado).
-	 */
-	function applyFiltersAndRender() {
-		currentPageAutomations = 1; // Resetea a la página 1 cada vez que se filtra
-		
-		const nameFilter = automationNameFilter.value.toLowerCase().trim();
-		const statusFilter = automationStatusFilter.value;
-		
-		let filteredAutomations = fullAutomationList;
-		if (nameFilter) {
-			filteredAutomations = filteredAutomations.filter(auto => auto.name.toLowerCase().includes(nameFilter));
-		}
-		if (statusFilter) {
-			filteredAutomations = filteredAutomations.filter(auto => auto.status === statusFilter);
-		}
-		
-		// Ahora llamamos a la función de renderizado con la lista ya filtrada
-		renderPaginatedAutomations(filteredAutomations);
-	}
-
-	/**
-	 * Toma una lista de automatismos, la pagina y la muestra en la tabla.
-	 * ESTA FUNCIÓN DEBE LLAMARSE CUANDO SE CAMBIA DE PÁGINA.
-	 */
-	function renderPaginatedAutomations(automations) {
-		// La lógica de paginación se mueve de renderAutomationsTable aquí
-		const startIndex = (currentPageAutomations - 1) * ITEMS_PER_PAGE;
-		const endIndex = startIndex + ITEMS_PER_PAGE;
-		
-		// Ordenamos la lista ANTES de paginarla
-		const sortedAndPaginatedItems = sortAutomations(automations).slice(startIndex, endIndex);
-		
-		// Actualizamos la UI de paginación con el total de items FILTRADOS
-		updateAutomationPaginationUI(automations.length);
-		
-		// Finalmente, llamamos a la función que dibuja la tabla
-		renderAutomationsTable(sortedAndPaginatedItems);
-	}
-
-	/**
-     * Evalúa la selección de automatismos y actualiza el estado (habilitado/deshabilitado)
-     * de los botones de acción masiva.
-     */
-	function updateAutomationButtonsState() {
-		const selectedRows = document.querySelectorAll('#automations-table tbody tr.selected');
-		const selectedAutomations = Array.from(selectedRows).map(row => fullAutomationList.find(auto => auto.id === row.dataset.automationId)).filter(Boolean);
-		if (selectedAutomations.length === 0) {
-			activateAutomationBtn.disabled = true; runAutomationBtn.disabled = true; stopAutomationBtn.disabled = true;
-			return;
-		}
-		const statuses = [...new Set(selectedAutomations.map(auto => auto.status))];
-		if (statuses.length > 1) {
-			activateAutomationBtn.disabled = true; runAutomationBtn.disabled = true; stopAutomationBtn.disabled = true;
-			return;
-		}
-		const singleStatus = statuses[0].toLowerCase();
-		switch (singleStatus) {
-			case 'pausedschedule':
-			case 'stopped':
-				activateAutomationBtn.disabled = false; runAutomationBtn.disabled = false; stopAutomationBtn.disabled = true;
-				break;
-			case 'scheduled':
-			case 'ready':
-				activateAutomationBtn.disabled = true; runAutomationBtn.disabled = true; stopAutomationBtn.disabled = false;
-				break;
-			default:
-				activateAutomationBtn.disabled = true; runAutomationBtn.disabled = true; stopAutomationBtn.disabled = true;
-		}
-	}
-	
-	/**
-     * Ordena un array de automatismos según la columna y dirección actuales.
-     * @param {Array} dataToSort - El array de automatismos a ordenar.
-     * @returns {Array} El array ordenado.
-     */
-	function sortAutomations(dataToSort) {
-		const sortKey = currentSortColumn;
-		const direction = currentSortDirection === 'asc' ? 1 : -1;
-		const getValue = (obj, key) => (key === 'schedule.scheduledTime') ? obj.schedule?.scheduledTime : obj[key];
-		return [...dataToSort].sort((a, b) => {
-			let valA = getValue(a, sortKey);
-			let valB = getValue(b, sortKey);
-			if (valA == null) return 1;
-			if (valB == null) return -1;
-			let compareResult = 0;
-			if (sortKey.includes('Time')) compareResult = new Date(valA) - new Date(valB);
-			else compareResult = String(valA).localeCompare(String(valB), undefined, { sensitivity: 'base' });
-			const finalResult = compareResult * direction;
-			if (finalResult === 0 && sortKey !== 'name') {
-				return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
-			}
-			return finalResult;
-		});
-	}
-
-	/**
-     * Actualiza los indicadores visuales de ordenación (flechas) en las cabeceras de la tabla.
-     */
-	function updateSortIndicators() {
-		document.querySelectorAll('#automations-table .sortable-header').forEach(header => {
-			header.classList.remove('sort-asc', 'sort-desc');
-			if (header.dataset.sortBy === currentSortColumn) {
-				header.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
-			}
-		});
-	}
-
-	/**
-	 * Rellena los desplegables de filtro para Journeys.
-	 * @param {Array} journeys - La lista completa de Journeys.
-	 */
-	function populateJourneyFilters(journeys) {
-		const currentType = journeyTypeFilter.value;
-		journeyTypeFilter.innerHTML = '<option value="">Todos los tipos</option>';
-		const types = [...new Set(journeys.map(j => j.eventType).filter(Boolean))].sort();
-		types.forEach(type => journeyTypeFilter.appendChild(new Option(type, type)));
-		journeyTypeFilter.value = currentType;	
-
-		const currentSubtype = journeySubtypeFilter.value;
-		journeySubtypeFilter.innerHTML = '<option value="">Todos los subtipos</option>';
-		const subtypes = [...new Set(journeys.map(j => j.definitionType).filter(Boolean))].sort();
-		subtypes.forEach(subtype => journeySubtypeFilter.appendChild(new Option(subtype, subtype)));
-		journeySubtypeFilter.value = currentSubtype;
-
-        const currentStatus = journeyStatusFilter.value;
-        journeyStatusFilter.innerHTML = '<option value="">Todos los estados</option>';
-        const statuses = [...new Set(journeys.map(j => j.status).filter(Boolean))].sort();
-        statuses.forEach(status => journeyStatusFilter.appendChild(new Option(status, status)));
-        journeyStatusFilter.value = currentStatus;
-	}
-
-	/**
-	 * Aplica los filtros de nombre y tipo a la lista de Journeys y redibuja la tabla.
-	 */
-	function applyJourneyFiltersAndRender() {
-		currentPageJourneys = 1; // Resetea a la página 1 cada vez que se filtra
-
-		const nameFilter = journeyNameFilter.value.toLowerCase().trim();
-		const typeFilter = journeyTypeFilter.value;
-		const subtypeFilter = journeySubtypeFilter.value;
-		const statusFilter = journeyStatusFilter.value;
-		const deFilter = journeyDEFilter.value.toLowerCase().trim();
-
-		let filteredJourneys = fullJourneyList;
-
-		if (nameFilter) {
-			filteredJourneys = filteredJourneys.filter(j => j.name.toLowerCase().includes(nameFilter));
-		}
-		if (typeFilter) {
-			filteredJourneys = filteredJourneys.filter(j => j.eventType === typeFilter);
-		}
-		if (subtypeFilter) {
-			filteredJourneys = filteredJourneys.filter(j => j.definitionType === subtypeFilter);
-		}
-		if (statusFilter) {
-			filteredJourneys = filteredJourneys.filter(j => j.status === statusFilter);
-		}
-		if (deFilter) {
-			filteredJourneys = filteredJourneys.filter(j => j.dataExtensionName && j.dataExtensionName.toLowerCase().includes(deFilter));
-		}
-		
-		// Ahora llamamos a la función de renderizado con la lista ya filtrada
-		renderPaginatedJourneys(filteredJourneys);
-	}
-
-	function renderPaginatedJourneys(journeys) {
-		const startIndex = (currentPageJourneys - 1) * ITEMS_PER_PAGE;
-		const endIndex = startIndex + ITEMS_PER_PAGE;
-		const sortedAndPaginatedItems = sortJourneys(journeys).slice(startIndex, endIndex);
-		updateJourneyPaginationUI(journeys.length);
-		renderJourneysTable(sortedAndPaginatedItems);
-	}
-
-	/**
-	 * Ordena un array de Journeys según la columna y dirección actuales.
-	 * @param {Array} dataToSort - El array de Journeys a ordenar.
-	 * @returns {Array} El array ordenado.
-	 */
-	function sortJourneys(dataToSort) {
-		const sortKey = currentJourneySortColumn;
-		const direction = currentJourneySortDirection === 'asc' ? 1 : -1;
-
-		return [...dataToSort].sort((a, b) => {
-			// Pre-procesamos los valores para las columnas de comunicación
-			const getValue = (obj, key) => {
-				if (['emails', 'sms', 'pushes'].includes(key)) {
-					return obj[key] ? obj[key].join(', ') : '';
-				}
-				return obj[key];
-			}
-
-			let valA = getValue(a, sortKey);
-			let valB = getValue(b, sortKey);
-
-			if (valA == null) return 1;
-			if (valB == null) return -1;
-
-			let compareResult = 0;
-			
-			if (sortKey.includes('Date')) {
-				compareResult = new Date(valA) - new Date(valB);
-			} 
-			else if (sortKey === 'version') {
-				compareResult = (parseInt(valA) || 0) - (parseInt(valB) || 0);
-			}
-			else if (sortKey === 'hasCommunications') {
-                compareResult = (valA === valB) ? 0 : valA ? -1 : 1; // Pone 'Sí' (true) primero
-            }
-			else {
-				compareResult = String(valA).localeCompare(String(valB), undefined, { sensitivity: 'base' });
-			}
-			
-			const finalResult = compareResult * direction;
-			
-			if (finalResult === 0 && sortKey !== 'name') {
-				return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
-			}
-			return finalResult;
-		});
-	}
-
-	/**
-	 * Actualiza los indicadores visuales de ordenación (flechas) en las cabeceras de la tabla de Journeys.
-	 */
-	function updateJourneySortIndicators() {
-		document.querySelectorAll('#journeys-table .sortable-header').forEach(header => {
-			header.classList.remove('sort-asc', 'sort-desc');
-			if (header.dataset.sortBy === currentJourneySortColumn) {
-				header.classList.add(currentJourneySortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
-			}
-		});
-	}
 
 	/**
      * Actualiza la UI de los controles de paginación para la tabla de Automatismos.
@@ -2564,12 +719,12 @@ function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
      */
     function updateAutomationPaginationUI(totalItems) {
         const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
-        totalPagesAutomations.textContent = `/ ${totalPages}`;
-        pageInputAutomations.value = currentPageAutomations;
-        pageInputAutomations.max = totalPages;
+        elements.totalPagesAutomations.textContent = `/ ${totalPages}`;
+        elements.pageInputAutomations.value = currentPageAutomations;
+        elements.pageInputAutomations.max = totalPages;
 
-        prevPageBtnAutomations.disabled = currentPageAutomations === 1;
-        nextPageBtnAutomations.disabled = currentPageAutomations >= totalPages;
+        elements.prevPageBtnAutomations.disabled = currentPageAutomations === 1;
+        elements.nextPageBtnAutomations.disabled = currentPageAutomations >= totalPages;
     }
 
     /**
@@ -2578,332 +733,25 @@ function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
      */
     function updateJourneyPaginationUI(totalItems) {
         const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
-        totalPagesJourneys.textContent = `/ ${totalPages}`;
-        pageInputJourneys.value = currentPageJourneys;
-        pageInputJourneys.max = totalPages;
+        elements.totalPagesJourneys.textContent = `/ ${totalPages}`;
+        elements.pageInputJourneys.value = currentPageJourneys;
+        elements.pageInputJourneys.max = totalPages;
 
-        prevPageBtnJourneys.disabled = currentPageJourneys === 1;
-        nextPageBtnJourneys.disabled = currentPageJourneys >= totalPages;
+        elements.prevPageBtnJourneys.disabled = currentPageJourneys === 1;
+        elements.nextPageBtnJourneys.disabled = currentPageJourneys >= totalPages;
     }
 
 	// ==========================================================
 	// --- 6. MANIPULACIÓN DEL DOM Y COMPONENTES ---
 	// ==========================================================
 	
-	// --- 6.1. Tabla de Campos ---
-
-	/**
-	 * Crea una nueva fila <tr> para la tabla de campos.
-	 * @param {object} [data={}] - Objeto opcional con datos para pre-rellenar la fila.
-	 *                           Espera el formato de nombres de propiedad claro (name, length, etc.).
-	 * @returns {HTMLTableRowElement} El elemento de la fila creado.
-	 */
-	function createTableRow(data = {}) {
-		const row = document.createElement('tr');
-		
-		// Simplemente usamos los datos como vienen, con valores por defecto si no existen.
-		const fieldData = {
-			name: data.name || '',
-			type: data.type || '',
-			length: data.length || '',
-			defaultValue: data.defaultValue || '',
-			isPrimaryKey: data.isPrimaryKey || false,
-			isRequired: data.isRequired || false
-		};
-
-		row.innerHTML = `<td contenteditable="true">${fieldData.name}</td><td contenteditable="true">${fieldData.type}</td><td contenteditable="true">${fieldData.length}</td><td contenteditable="true">${fieldData.defaultValue}</td><td><input type="checkbox" ${fieldData.isPrimaryKey ? 'checked' : ''}></td><td><input type="checkbox" ${fieldData.isRequired ? 'checked' : ''}></td>`;
-		
-		const deleteButton = document.createElement('button');
-		deleteButton.className = 'delete-row-btn';
-		deleteButton.title = 'Eliminar fila';
-		deleteButton.textContent = '×';
-		row.appendChild(deleteButton);
-		return row;
-	}
-	/**
-	 * Rellena la tabla de campos con un array de objetos de campo.
-	 * @param {Array} [fields=[]] - El array de campos.
-	 */
-	function populateFieldsTable(fields = []) {
-		observer.disconnect();
-		fieldsTableBody.innerHTML = '';
-		if (fields.length > 0) {
-			fields.forEach(fieldData => fieldsTableBody.appendChild(createTableRow(fieldData)));
-		} else {
-			addNewField(false);
-		}
-		updateSubscriberKeyFieldOptions();
-		observer.observe(fieldsTableBody, observerConfig);
-	}
-	
-	/** Limpia completamente la tabla de campos y añade una fila vacía. */
-	function clearFieldsTable() {
-		observer.disconnect();
-		fieldsTableBody.innerHTML = '';
-		selectedRow = null;
-		addNewField(false);
-		updateSubscriberKeyFieldOptions();
-		populateDeletionPicklist([]);
-		observer.observe(fieldsTableBody, observerConfig);
-	}
-	
-	/** Añade una nueva fila vacía a la tabla de campos. */
-	function addNewField(observe = true) {
-		if (!observe) observer.disconnect();
-		fieldsTableBody.appendChild(createTableRow());
-		if (!observe) {
-			updateSubscriberKeyFieldOptions();
-			observer.observe(fieldsTableBody, observerConfig);
-		}
-	}
-	
-	/** Rellena la tabla con un conjunto de campos de ejemplo. */
-	function createDummyFields() {
-		populateFieldsTable([
-			{ name: 'NombreCompleto', type: 'Text', length: '100', isPrimaryKey: true, isRequired: true },
-			{ name: 'Email', type: 'EmailAddress', length: '254', isPrimaryKey: false, isRequired: true },
-			{ name: 'SincronizarMC', type: 'Boolean', defaultValue: 'true', isPrimaryKey: false, isRequired: false },
-			{ name: 'FechaNacimiento', type: 'Date', isPrimaryKey: false, isRequired: false },
-			{ name: 'Recibo', type: 'Decimal', length: '18,2', isPrimaryKey: false, isRequired: false },
-			{ name: 'Telefono', type: 'Phone', isPrimaryKey: false, isRequired: false },
-			{ name: 'Locale', type: 'Locale', isPrimaryKey: false, isRequired: false },
-			{ name: 'Numero', type: 'Number', isPrimaryKey: false, isRequired: false }
-		]);
-		populateDeletionPicklist([]);
-	}
-	
-	/**
-	 * Extrae los datos de todas las filas de la tabla de campos.
-	 * @returns {Array} Un array de objetos, cada uno representando un campo.
-	 */
-	function getFieldsDataFromTable() {
-		return Array.from(fieldsTableBody.querySelectorAll('tr')).map(row => {
-			const cells = row.querySelectorAll('td');
-			const name = cells[0].textContent.trim();
-			const type = cells[1].textContent.trim();
-			return (name && type) ? { 
-				name: name, 
-				type: type, 
-				length: cells[2].textContent.trim(), 
-				defaultValue: cells[3].textContent.trim(), 
-				isPrimaryKey: cells[4].querySelector('input').checked, 
-				isRequired: cells[5].querySelector('input').checked 
-			} : null;
-
-		}).filter(Boolean);
-	}
-	
-	/** Actualiza las opciones del desplegable de Subscriber Key basándose en los campos de la tabla. */
-	function updateSubscriberKeyFieldOptions() {
-		const currentSelection = subscriberKeyFieldSelect.value;
-		subscriberKeyFieldSelect.innerHTML = '<option value="">-- Seleccione un campo --</option>';
-		getFieldsDataFromTable().forEach(field => {
-			if (field.name) {
-				const option = new Option(field.name, field.name);
-				option.dataset.type = field.type;
-				subscriberKeyFieldSelect.appendChild(option);
-			}
-		});
-		subscriberKeyFieldSelect.value = Array.from(subscriberKeyFieldSelect.options).some(opt => opt.value === currentSelection) ? currentSelection : '';
-	}
-	
-	/** Habilita o deshabilita los campos de "Sendable" según el estado del checkbox. */
-	function handleSendableChange() {
-		subscriberKeyFieldSelect.disabled = !isSendableCheckbox.checked;
-		if (!isSendableCheckbox.checked) {
-			subscriberKeyFieldSelect.value = '';
-			subscriberKeyTypeInput.value = '';
-		}
-	}
-	
-	/**
-	 * Rellena el desplegable de campos a eliminar con los campos recuperados de una DE.
-	 * @param {Array} fields - Array de campos recuperados de la API.
-	 *                       Espera el formato de nombres de propiedad claro (name, objectId, etc.).
-	 */
-	function populateDeletionPicklist(fields) {
-		targetFieldSelect.innerHTML = '';
-
-		const validFields = fields.filter(f => f.name && f.objectId); // <-- CAMBIO 1: Buscamos 'name'
-
-		if (validFields.length > 0) {
-			targetFieldSelect.innerHTML = '<option value="">-- Seleccione un campo --</option>';
-			
-			validFields.forEach(field => {
-				targetFieldSelect.appendChild(new Option(field.name, field.objectId)); // <-- CAMBIO 2: Usamos 'name'
-			});
-
-			targetFieldSelect.disabled = false;
-		} else {
-			targetFieldSelect.innerHTML = '<option value="">No hay campos recuperados</option>';
-			targetFieldSelect.disabled = true;
-		}
-	}
-
-	// --- 6.2. Calendario ---
-
-	/** Muestra la sección del calendario y la inicializa. */
-	function viewCalendar() {
-		showSection('calendario-section');
-		populateCalendarYearSelect();
-		const savedDataRaw = localStorage.getItem('calendarAutomations');
-		if (savedDataRaw) {
-			const savedData = JSON.parse(savedDataRaw);
-			if (savedData.client === clientNameInput.value) {
-				allAutomations = savedData.automations;
-				calendarDataForClient = savedData.client;
-				startLogBuffering();
-				logMessage(`${allAutomations.length} automatizaciones cargadas de la memoria local.`);
-				endLogBuffering();
-				generateCalendar();
-				return;
-			}
-		}
-		allAutomations = [];
-		generateCalendar();
-		startLogBuffering();
-		logMessage('No hay datos de calendario. Pulsa "Refrescar Datos".');
-		endLogBuffering();
-	}
-	
-	/** Limpia los datos del calendario y resetea la vista. */
-	function clearCalendarData() {
-		allAutomations = [];
-		calendarDataForClient = '';
-		if (automationList) automationList.innerHTML = '<p>Selecciona un día para ver los detalles.</p>';
-		if (calendarGrid) generateCalendar();
-	}
-	
-	/**
-	 * Procesa los datos crudos de automatización de la API a un formato simple para el calendario.
-	 * @param {Array} items - Array de automatismos crudos de la API.
-	 */
-	function processAndStoreAutomations(items) {
-		allAutomations = items.map(auto => {
-			const dateToUse = auto.scheduledTime;
-			if (!dateToUse) return null;
-			const dateObj = new Date(dateToUse);
-			if (isNaN(dateObj.getTime())) return null;
-			return { name: auto.name, status: auto.status, scheduledTime: dateObj.toISOString().split('T')[0], scheduledHour: dateObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid' }) };
-		}).filter(Boolean);
-	}
-	
-	/** Dibuja la estructura completa del calendario para el año seleccionado. */
-	function generateCalendar() {
-		const year = calendarYearSelect.value;
-		calendarGrid.innerHTML = "";
-		const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-		const days = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sa", "Do"];
-		for (let i = 0; i < 12; i++) {
-			const monthDiv = document.createElement("div");
-			monthDiv.className = "calendar-month";
-			monthDiv.innerHTML = `<h3>${months[i]} ${year}</h3>`;
-			const table = document.createElement("table");
-			table.innerHTML = `<thead><tr>${days.map(d => `<th>${d}</th>`).join('')}</tr></thead>`;
-			const tbody = document.createElement("tbody");
-			let firstDay = (new Date(year, i, 1).getDay() + 6) % 7;
-			const totalDays = new Date(year, i + 1, 0).getDate();
-			let date = 1;
-			for (let rowIdx = 0; rowIdx < 6 && date <= totalDays; rowIdx++) {
-				const row = document.createElement("tr");
-				for (let colIdx = 0; colIdx < 7; colIdx++) {
-					const cell = document.createElement("td");
-					if ((rowIdx > 0 || colIdx >= firstDay) && date <= totalDays) {
-						const currentDate = `${year}-${String(i + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
-						cell.innerText = date;
-						cell.dataset.date = currentDate;
-						if (allAutomations.some(auto => auto.scheduledTime === currentDate)) cell.classList.add("has-automation");
-						if (colIdx >= 5) cell.classList.add("weekend");
-						date++;
-					}
-					row.appendChild(cell);
-				}
-				tbody.appendChild(row);
-			}
-			table.appendChild(tbody);
-			monthDiv.appendChild(table);
-			calendarGrid.appendChild(monthDiv);
-		}
-	}
-	
-	/**
-	 * Muestra en la barra lateral del calendario las automatizaciones para un día específico.
-	 * @param {string} date - La fecha seleccionada en formato YYYY-MM-DD.
-	 */
-	function filterAutomationsForDay(date) {
-		automationList.innerHTML = '';
-		dailyFilteredAutomations = allAutomations.filter(auto => auto.scheduledTime === date).sort((a, b) => a.scheduledHour.localeCompare(b.scheduledHour));
-		automationListHeader.classList.toggle('clickable', dailyFilteredAutomations.length > 0);
-		if (dailyFilteredAutomations.length > 0) {
-			dailyFilteredAutomations.forEach(auto => {
-				const itemDiv = document.createElement('div');
-				itemDiv.className = 'automation-item';
-				itemDiv.innerHTML = `<div class="automation-name">${auto.name}</div><div class="automation-details">${auto.status} - ${auto.scheduledHour}</div>`;
-				automationList.appendChild(itemDiv);
-			});
-		} else {
-			automationList.innerHTML = "<p>No hay automatizaciones programadas.</p>";
-		}
-	}
-	
-	/** Rellena el selector de año del calendario. */
-	function populateCalendarYearSelect() {
-		const currentYear = new Date().getFullYear();
-		if (calendarYearSelect.options.length === 0) {
-			for (let i = currentYear - 2; i <= currentYear + 3; i++) {
-				calendarYearSelect.appendChild(new Option(i, i));
-			}
-		}
-		calendarYearSelect.value = currentYear;
-	}
-
-	// --- 6.3. Modal de Importación ---
-	
-	/** Cierra y resetea el modal de importación de campos. */
-	function closeImportModal() {
-		importModal.style.display = 'none';
-		pasteDataArea.value = '';
-		delimiterSelect.value = 'tab';
-		customDelimiterInput.classList.add('hidden');
-	}
-
-	/** Procesa los datos pegados en el modal y los añade a la tabla de campos. */
-	function processPastedData() {
-		startLogBuffering();
-		try {
-			const text = pasteDataArea.value.trim();
-			if (!text) return;
-			let delimiter;
-			const selectedDelimiter = delimiterSelect.value;
-			if (selectedDelimiter === 'other') delimiter = customDelimiterInput.value;
-			else if (selectedDelimiter === 'comma') delimiter = ',';
-			else if (selectedDelimiter === 'semicolon') delimiter = ';';
-			else delimiter = '\t';
-			if (!delimiter) return showCustomAlert('Por favor, introduce un separador.');
-			const newFields = text.split('\n').map(line => {
-				if (!line.trim()) return null;
-				const [name, type, length] = line.split(delimiter).map(c => c.trim());
-				return (name && type) ? { name: name, type: type, length: length || '' } : null;
-			}).filter(Boolean);
-			if (newFields.length > 0) {
-				observer.disconnect();
-				newFields.forEach(fieldData => fieldsTableBody.appendChild(createTableRow(fieldData)));
-				updateSubscriberKeyFieldOptions();
-				observer.observe(fieldsTableBody, observerConfig);
-				logMessage(`${newFields.length} campos importados.`);
-			}
-			closeImportModal();
-		} finally {
-			endLogBuffering();
-		}
-	}
 	
 	// --- 6.4. Menús Colapsables y Automatismos ---
 	
 	/** Restaura el estado (abierto/cerrado) de los menús colapsables al iniciar la app. */
 	function initializeCollapsibleMenus() {
 		const collapsibleStates = JSON.parse(localStorage.getItem('collapsibleStates')) || {};
-		collapsibleHeaders.forEach(header => {
+		elements.collapsibleHeaders.forEach(header => {
 			const headerText = header.textContent.trim();
 			if (collapsibleStates[headerText]) {
 				header.classList.add('active');
@@ -2912,39 +760,7 @@ function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
 		});
 	}
 
-	/**
-	 * Muestra la vista de "Gestión de Automatismos" y la puebla con datos.
-	 * @param {Array|null} [automationsToShow=null] - Si se proporciona, muestra solo estos automatismos.
-	 */
-	async function viewAutomations(automationsToShow = null) {
-        showSection('gestion-automatismos-section');
-        document.querySelectorAll('#automations-table tbody tr.selected').forEach(row => row.classList.remove('selected'));
-        
-        if (automationsToShow) {
-            renderAutomationsTable(automationsToShow);
-        } else {
-            // Si la lista no está en caché, la cargamos
-            if (fullAutomationList.length === 0) {
-                blockUI("Recuperando automatismos..."); 
-                startLogBuffering();
-                try {
-                    logMessage("Cargando lista de Automatismos por primera vez...");
-                    await macroGetAllAutomationDetails();
-                } catch (error) {
-                    const errorMessage = error.message || "Error desconocido al cargar Automatismos.";
-                    logMessage(`Error: ${errorMessage}`);
-                    showCustomAlert(`Error al cargar Automatismos: ${errorMessage}`);
-                    automationsTbody.innerHTML = `<tr><td colspan="4" style="color:red;">Error al cargar: ${errorMessage}</td></tr>`;
-                } finally {
-                    unblockUI(); 
-                    endLogBuffering();
-                }
-            } else {
-                // Si ya está en caché, simplemente la mostramos
-                applyFiltersAndRender();
-            }
-        }
-    }
+	
 
 	// --- 6.5. Configuración de APIs ---
 	/**
@@ -2952,7 +768,7 @@ function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
 	 * @returns {Array<object>}
 	 */
 	function getDvConfigsFromTable() {
-		return Array.from(sendsConfigTbody.querySelectorAll('tr')).map(row => {
+		return Array.from(elements.sendsConfigTbody.querySelectorAll('tr')).map(row => {
 			const cells = row.querySelectorAll('td');
 			return {
 				title: cells[0].textContent.trim(),
@@ -2967,7 +783,7 @@ function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
 	 * @param {Array<object>} configs - El array de configuraciones a pintar.
 	 */
 	function populateDvConfigsTable(configs = []) {
-		sendsConfigTbody.innerHTML = ''; // Limpia la tabla
+		elements.sendsConfigTbody.innerHTML = ''; // Limpia la tabla
 		if (!configs || configs.length === 0) {
 			// Si no hay configs guardadas, crea 4 filas por defecto
 			configs = [
@@ -2976,7 +792,7 @@ function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
 		}
 		
 		configs.forEach(config => {
-			const newRow = sendsConfigTbody.insertRow();
+			const newRow = elements.sendsConfigTbody.insertRow();
 			// Creamos las celdas editables
 			newRow.innerHTML = `
 				<td contenteditable="true">${config.title}</td>
@@ -2991,324 +807,7 @@ function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
 			newRow.appendChild(deleteButton);
 		});
 	}
-
-	// --- 6.6. Gestión de Journeys --- 
-
-	/**
-	 * Muestra la vista de "Gestión de Journeys" y la puebla con datos si es necesario.
-	 */
-	async function viewJourneys() {
-		showSection('gestion-journeys-section');
-
-		document.querySelectorAll('#journeys-table thead th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
-		document.querySelector(`#journeys-table thead th[data-sort-by="${currentJourneySortColumn}"]`).classList.add(currentJourneySortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
-
-		if (fullJourneyList.length === 0) {
-			blockUI("Recuperando Journeys...");
-			startLogBuffering();
-			try {
-				logMessage("Cargando lista de Journeys y dependencias por primera vez...");
-				const apiConfig = await getAuthenticatedConfig();
-
-				mcApiService.setLogger({ logApiCall, logApiResponse }); 
-				
-                // 1. Llamar a los servicios para obtener todos los datos necesarios en paralelo
-				logMessage("Recuperando EventDefinitions y Journeys...");
-				const [events, journeys] = await Promise.all([
-                    mcApiService.fetchAllEventDefinitions(apiConfig),
-                    mcApiService.fetchAllJourneys(apiConfig)
-                ]);
-
-                eventDefinitionsMap = events; // Guardamos el resultado en el estado global
-				
-                // 2. Construir el mapa de carpetas (depende de la lista de journeys)
-				logMessage("Construyendo ruta de carpetas...");
-                journeyFolderMap = await mcApiService.buildJourneyFolderMap(journeys, apiConfig);
-				
-                // 3. Enriquecer y guardar lista completa
-				logMessage("Enriqueciendo journeys...");
-                fullJourneyList = enrichJourneys(journeys); // enrichJourneys se queda en app.js porque manipula el estado global
-
-				logMessage("Cargando filtros y tabla...");
-                populateJourneyFilters(fullJourneyList);
-				applyJourneyFiltersAndRender();
-                
-			} catch (error) {
-				const errorMessage = error.message || "Error desconocido al cargar Journeys.";
-				logMessage(`Error al obtener journeys: ${errorMessage}`);
-				showCustomAlert(`Error al cargar Journeys: ${errorMessage}`);
-				journeysTbody.innerHTML = `<tr><td colspan="9" style="color:red;">Error al cargar journeys: ${errorMessage}</td></tr>`;
-			} finally {
-				unblockUI();
-				endLogBuffering();
-			}
-		} else {
-			applyJourneyFiltersAndRender();
-		}
-	}
-
-
-	/**
-	 * Enriquece la lista de Journeys con datos de EventDefinitions y rutas de carpeta.
-	 * @param {Array} journeys - La lista base de Journeys.
-	 * @returns {Array} La lista enriquecida.
-	 */
-	function enrichJourneys(journeys) {
-		return journeys.map(journey => {
-			const eventDef = eventDefinitionsMap[journey.name];
-			const folderPath = journeyFolderMap[journey.categoryId] || 'Carpeta raíz / No especificado';
-			
-			return {
-				...journey,
-				// Datos existentes
-				type: journey.type || 'N/A',
-				version: journey.version,
-				createdDate: journey.createdDate,
-				modifiedDate: journey.modifiedDate,
-				entryMode: journey.entryMode || 'N/A',
-				status: journey.status || 'N/A',
-
-				// Datos enriquecidos
-				eventType: eventDef?.type || 'No asociado',
-				definitionType: journey.definitionType || 'N/A',
-				dataExtensionName: eventDef?.dataExtensionName || 'No asociado',
-				location: folderPath,
-
-                // Propiedades para las comunicaciones, inicializadas
-                emails: [],
-                sms: [],
-                pushes: [],
-				activities: null,
-                hasCommunications: false // Flag para saber si ya hemos pedido los detalles
-			};
-		});
-	}
-
-	/**
-     * Dibuja la tabla de la vista "Gestión de Journeys" con los datos proporcionados.
-     * @param {Array} journeys - El array de journeys a mostrar.
-     */
-	function renderJourneysTable(journeysToRender) {
-		journeysTbody.innerHTML = '';
-		updateJourneySortIndicators(); 
-
-		if (!journeysToRender || journeysToRender.length === 0) {
-			journeysTbody.innerHTML = '<tr><td colspan="13">No se encontraron journeys con los filtros aplicados.</td></tr>';
-			return;
-		}
-
-		journeysToRender.forEach(journey => {
-			const row = document.createElement('tr');
-			row.dataset.journeyId = journey.id;
-			
-			if (document.querySelector(`#journeys-table tbody tr.selected[data-journey-id="${journey.id}"]`)) {
-				row.classList.add('selected');
-			}
-
-			row.innerHTML = `
-				<td>${journey.name || '---'}</td>
-				<td>${journey.version || '---'}</td>
-				<td>${formatDateToSpanishTime(journey.createdDate)}</td>
-				<td>${formatDateToSpanishTime(journey.modifiedDate)}</td>
-				<td>${journey.eventType || '---'}</td> 
-				<td>${journey.definitionType || '---'}</td>
-				<td>${journey.status || '---'}</td>
-				<td>${journey.location || '---'}</td>
-				<td>${journey.dataExtensionName || '---'}</td>
-				<td>${journey.hasCommunications ? 'Sí' : 'No'}</td>
-				<td>${journey.emails && journey.emails.length > 0 ? journey.emails.join(', ') : '---'}</td>
-				<td>${journey.sms && journey.sms.length > 0 ? journey.sms.join(', ') : '---'}</td>
-				<td>${journey.pushes && journey.pushes.length > 0 ? journey.pushes.join(', ') : '---'}</td>
-			`;
-			journeysTbody.appendChild(row);
-		});
-	}
-
-	/**
-	 * Muestra el modal con el flujo del journey en formato de texto.
-	 * @param {string} flowText - El texto preformateado del flujo del journey.
-	 */
-	function showJourneyFlowModal(flowText) {
-		journeyFlowContent.textContent = flowText;
-		journeyFlowModal.style.display = 'flex';
-	}
-
-	/**
-	 * Cierra el modal de visualización del flujo.
-	 */
-	function closeJourneyFlowModal() {
-		journeyFlowModal.style.display = 'none';
-		journeyFlowContent.textContent = 'Cargando flujo...'; // Resetear contenido
-	}
-
-	/**
-	 * Parsea la estructura de un journey y la convierte en una representación textual con indentación.
-	 * @param {object} journey - El objeto de journey completo con su array de 'activities'.
-	 * @returns {string} El flujo del journey formateado como texto.
-	 */
-	function generateJourneyFlowText(journey) {
-		if (!journey || !journey.activities || journey.activities.length === 0) {
-			return "No se han cargado los detalles de las actividades para este journey.";
-		}
-
-		// (El mapa de actividades se mantiene igual)
-		const ACTIVITY_TYPE_MAP = {
-			'EMAILV2': '[EMAIL]', 'SMS': '[SMS]', 'MOBILEPUSH': '[PUSH]', 'PUSHNOTIFICATIONACTIVITY': '[PUSH]',
-			'WHATSAPPACTIVITY': '[WHATSAPP]', 'INBOX': '[INBOX MSG]', 'INAPP': '[IN-APP MSG]', 'WAIT': '[ESPERA]',
-			'WAITBYDURATION': '[ESPERA]', 'WAITBYATTRIBUTE': '[ESPERA POR ATRIBUTO]', 'WAITBYEVENT': '[ESPERA HASTA EVENTO]',
-			'WAITUNTILDATE': '[ESPERA HASTA FECHA]', 'STOWAIT': '[ESPERA EINSTEIN STO]', 'MULTICRITERIARDECISION': '[DIVISIÓN]',
-			'MULTICRITERIADECISIONV2': '[DIVISIÓN]', 'RANDOMSPLIT': '[DIVISIÓN A/B]', 'RANDOMSPLITV2': '[DIVISIÓN A/B]',
-			'ENGAGEMENTDECISION': '[DIVISIÓN POR ENGAGEMENT]', 'ENGAGEMENTSPLITV2': '[DIVISIÓN POR ENGAGEMENT]',
-			'PATHOPTIMIZER': '[OPTIMIZADOR DE RUTA]', 'UPDATECONTACTDATA': '[ACTUALIZAR CONTACTO]',
-			'UPDATECONTACTDATAV2': '[ACTUALIZAR CONTACTO]', 'ADDAUDIENCE': '[AÑADIR A AUDIENCIA]',
-			'CONTACTUPDATE': '[ACTUALIZAR CONTACTO]', 'EINSTEINSPLIT': '[DIVISIÓN EINSTEIN SCORE]',
-			'EINSTEINMESSAGINGSPLIT': '[DIVISIÓN EINSTEIN INSIGHTS]', 'EINSTEIN_EMAIL_OPEN': '[DIVISIÓN EINSTEIN OPEN]',
-			'EINSTEIN_MC_EMAIL_CLICK': '[DIVISIÓN EINSTEIN CLICK]', 'SALESFORCESALESCLOUDACTIVITY': '[ACCIÓN SALESFORCE]',
-			'OBJECTACTIVITY': '[ACCIÓN OBJETO SALESFORCE]', 'LEAD': '[ACCIÓN LEAD SALESFORCE]',
-			'CAMPAIGNMEMBER': '[ACCIÓN MIEMBRO DE CAMPAÑA]', 'REST': '[API REST (CUSTOM)]', 'SETCONTACTKEY': '[ESTABLECER CONTACT KEY]',
-			'EVENT': '[EVENTO]', 'SMSSYNC': '[SMS]' // Tratamos SMSSYNC como un envío de SMS
-		};
-
-		const activitiesMap = new Map(journey.activities.map(act => [act.key, act]));
-		const activityKeyToLineNum = new Map();
-		const output = [];
-		let lineCounter = 1;
-
-		function processActivity(activityKey, prefix) {
-			if (!activityKey || activityKeyToLineNum.has(activityKey)) return;
-
-			const activity = activitiesMap.get(activityKey);
-			if (!activity) {
-				output.push(`${prefix}Error: Actividad con key '${activityKey}' no encontrada.`);
-				return;
-			}
-
-			const lineNum = lineCounter++;
-			activityKeyToLineNum.set(activityKey, lineNum);
-
-			const type = ACTIVITY_TYPE_MAP[activity.type] || `[${activity.type}]`;
-			const name = activity.name || '*Actividad sin nombre*';
-			let details = '';
-
-			// Detalles mejorados para actividades comunes
-			if (activity.type.startsWith('WAIT')) {
-				const config = activity.configurationArguments;
-				if (config.waitDuration) details = ` (${config.waitDuration} ${config.waitUnit || ''})`;
-				else if (config.waitEndDateAttributeExpression) details = ` (hasta ${config.waitEndDateAttributeExpression.replace(/{{|}}/g, '')})`;
-			} else if (activity.type.includes('ENGAGEMENT')) {
-				const config = activity.configurationArguments;
-				const activityName = config.refActivityName || '';
-				if (config.statsTypeId === 2) details = ` (Open: ${activityName})`;
-				else if (config.statsTypeId === 3) details = ` (Click: ${activityName})`;
-			}
-
-			output.push(`${prefix}${lineNum}. ${type} ${name}${details}`);
-
-			const outcomes = activity.outcomes || [];
-			
-			// LÓGICA MEJORADA: Distinguir entre flujo lineal y ramas
-			if (outcomes.length === 1) {
-				// Flujo lineal (sin ramas), no se muestra "RAMA 1"
-				const nextKey = outcomes[0].next;
-				if (nextKey) {
-					if (activityKeyToLineNum.has(nextKey)) {
-						output.push(`${prefix}   └─> [UNIÓN] ➡️ ${activityKeyToLineNum.get(nextKey)}`);
-					} else {
-						processActivity(nextKey, `${prefix}   `);
-					}
-				} else {
-					output.push(`${prefix}   └─> 🔴`);
-				}
-			} else if (outcomes.length > 1) {
-				// Múltiples ramas, se dibuja el árbol
-				outcomes.forEach((outcome, index) => {
-					const isLastBranch = index === outcomes.length - 1;
-					const branchPrefix = isLastBranch ? '└─' : '├─';
-					const nextPrefix = isLastBranch ? '   ' : '│  ';
-					
-					let branchLabel = `[RAMA ${index + 1}]`;
-					if (outcome.metaData && outcome.metaData.label) {
-						branchLabel = `[RAMA: ${outcome.metaData.label}]`;
-					} else if (activity.type.includes('RANDOMSPLIT') && outcome.arguments.percentage) {
-						branchLabel = `[RAMA: ${outcome.arguments.percentage}%]`;
-					}
-
-					output.push(`${prefix}${branchPrefix} ${branchLabel}`);
-					
-					const nextKey = outcome.next;
-					if (nextKey) {
-						if (activityKeyToLineNum.has(nextKey)) {
-							output.push(`${prefix}${nextPrefix}  └─> [UNIÓN] ➡️ ${activityKeyToLineNum.get(nextKey)}`);
-						} else {
-							processActivity(nextKey, `${prefix}${nextPrefix}`);
-						}
-					} else {
-						output.push(`${prefix}${nextPrefix}  └─> 🔴`);
-					}
-				});
-			}
-		}
-
-		// Lógica de inicio
-		const trigger = journey.triggers ? journey.triggers[0] : null;
-		if (trigger && trigger.outcomes && trigger.outcomes.length > 0 && trigger.outcomes[0].next) {
-			output.push(`[INICIO] Fuente: ${trigger.type || 'Desconocida'}`);
-			processActivity(trigger.outcomes[0].next, '');
-		} else if (journey.activities.length > 0) {
-			output.push(`[INICIO] Fuente: No definida en Trigger (usando primera actividad)`);
-			processActivity(journey.activities[0].key, '');
-		}
-		
-		return output.join('\n');
-	}
-
-	/**
-	 * Actualiza el estado de los botones de acción ("Comunicaciones" y "Dibujar")
-	 * basándose en la selección actual de filas en la tabla de journeys.
-	 */
-	function updateJourneyActionButtonsState() {
-		const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
-		const selectionCount = selectedRows.length;
-
-		// Lógica para los botones existentes (Comunicaciones, Dibujar, Copiar)
-		getCommunicationsBtn.disabled = selectionCount === 0;
-
-		if (selectionCount === 1) {
-			const journeyId = selectedRows[0].dataset.journeyId;
-			const journey = fullJourneyList.find(j => j.id === journeyId);
-			drawJourneyBtn.disabled = !(journey && journey.hasCommunications);
-			copyJourneyBtn.disabled = !(journey && (journey.eventType === 'EmailAudience' || journey.eventType === 'AutomationAudience'));
-			if (!copyJourneyBtn.disabled) {
-				copyJourneyBtn.style.backgroundColor = '#7700ffff';
-			} else {
-				copyJourneyBtn.style.backgroundColor = '';
-			}
-		} else {
-			drawJourneyBtn.disabled = true;
-			copyJourneyBtn.disabled = true;
-			copyJourneyBtn.style.backgroundColor = '';
-		}
-
-		// Lógica para los botones de acción masiva (Parar, Borrar)
-		if (selectionCount > 0) {
-			const selectedJourneys = Array.from(selectedRows).map(row => {
-				return fullJourneyList.find(j => j.id === row.dataset.journeyId);
-			}).filter(Boolean);
-
-			// Lógica para el botón "Parar"
-			const allArePublished = selectedJourneys.every(j => j.status === 'Published');
-			stopJourneyBtn.disabled = !allArePublished;
-
-			// Se habilita solo si hay seleccionados Y TODOS son de subtipo 'Quicksend'
-			const allAreQuicksend = selectedJourneys.every(j => j.definitionType === 'Quicksend');
-			deleteJourneyBtn.disabled = !allAreQuicksend;
-
-		} else {
-			// Si no hay nada seleccionado, todos los botones de acción se deshabilitan
-			stopJourneyBtn.disabled = true;
-			deleteJourneyBtn.disabled = true;
-		}
-	}
+	
 
 	/**
 	 * Gestiona el envío del formulario de licencia.
@@ -3317,22 +816,21 @@ function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
 	 */
 	async function handleLicenseSubmit(event) {
 		event.preventDefault(); // Evita que la página se recargue
-		const email = licenseEmailInput.value.trim();
-		const key = licenseKeyInput.value.trim();
-		const submitBtn = document.getElementById('license-submit-btn');
+		const email = elements.licenseEmailInput.value.trim();
+		const key = elements.licenseKeyInput.value.trim();
 
 		// Ocultamos cualquier error anterior al iniciar la validación
-    	licenseErrorEl.style.display = 'none';
+    	elements.licenseErrorEl.style.display = 'none';
 
 		if (!email || !key) {
-			showCustomAlert('Por favor, completa ambos campos.');
-			licenseErrorEl.style.display = 'block';
+			ui.showCustomAlert('Por favor, completa ambos campos.');
+			elements.licenseErrorEl.style.display = 'block';
 			return;
 		}
 
 		// Bloqueamos el botón para evitar múltiples envíos
-		submitBtn.disabled = true;
-		submitBtn.textContent = 'Validando...';
+		elements.submitBtn.disabled = true;
+		elements.submitBtn.textContent = 'Validando...';
 
 		// Llamamos a la función del proceso principal
 		const result = await window.electronAPI.validateLicense({ email, key });
@@ -3340,10 +838,10 @@ function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
 		// Si el resultado es un objeto, es un error del backend
 		if (result && result.error) {
 			// Mostramos el error de configuración en el modal
-			licenseErrorEl.textContent = `Error de configuración: ${result.error}`;
-			licenseErrorEl.style.display = 'block';
-			submitBtn.disabled = false;
-			submitBtn.textContent = 'Validar y Acceder';
+			elements.licenseErrorEl.textContent = `Error de configuración: ${result.error}`;
+			elements.licenseErrorEl.style.display = 'block';
+			elements.submitBtn.disabled = false;
+			elements.submitBtn.textContent = 'Validar y Acceder';
 			return;
 		}
 
@@ -3351,190 +849,18 @@ function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
 			// Éxito
 			const licenseData = { email, key };
 			localStorage.setItem('isKeyValid', JSON.stringify(licenseData));
-			appContainer.classList.remove('app-locked');
-			licenseModal.style.display = 'none';
+			elements.appContainer.classList.remove('app-locked');
+			elements.licenseModal .style.display = 'none';
 			startFullApp();
 		} else {
 			// Error de validación
-			licenseErrorEl.textContent = 'El email o la clave de acceso no son válidos, o el usuario no está activo.';
-			licenseErrorEl.style.display = 'block';
-			submitBtn.disabled = false;
-			submitBtn.textContent = 'Validar y Acceder';
+			elements.licenseErrorEl.textContent = 'El email o la clave de acceso no son válidos, o el usuario no está activo.';
+			elements.licenseErrorEl.style.display = 'block';
+			elements.submitBtn.disabled = false;
+			elements.submitBtn.textContent = 'Validar y Acceder';
 		}
 	}
 
-	// --- 6.7. Gestión de Cloud Pages ---
-
-	/**
-	 * Muestra la vista de "Gestión de Cloud Pages" y la puebla con datos si es necesario.
-	 */
-	async function viewCloudPages() {
-		showSection('gestion-cloudpages-section');
-
-		if (fullCloudPageList.length === 0) {
-			blockUI("Recuperando Cloud Pages...");
-			startLogBuffering();
-			try {
-				logMessage("Cargando lista de Cloud Pages por primera vez...");
-				const apiConfig = await getAuthenticatedConfig();
-
-				mcApiService.setLogger({ logApiCall, logApiResponse });
-				
-				// 1. Obtener la lista base de assets
-				const rawAssets = await mcApiService.fetchAllCloudPages(apiConfig);
-				logMessage(`Se encontraron ${rawAssets.length} assets. Obteniendo rutas de carpeta...`);
-
-				// 2. Enriquecer los assets con las rutas
-				const assetsWithFolders = await mcApiService.enrichCloudPagesWithFolders(rawAssets, apiConfig);
-				logMessage("Rutas obtenidas. Procesando URLs...");
-
-				// 3. El enriquecimiento final (extraer URL) se queda aquí porque es lógica de UI
-				fullCloudPageList = assetsWithFolders.map(item => ({
-					...item,
-					url: extractCloudPageUrl(item) 
-				}));
-				
-				populateCloudPageFilters(fullCloudPageList);
-				applyCloudPageFiltersAndRender();
-				
-			} catch (error) {
-				const errorMessage = error.message || "Error desconocido al cargar Cloud Pages.";
-				logMessage(`Error al obtener assets: ${errorMessage}`);
-				showCustomAlert(`Error al cargar Cloud Pages: ${errorMessage}`);
-				cloudPagesTbody.innerHTML = `<tr><td colspan="6" style="color:red;">Error al cargar: ${errorMessage}</td></tr>`;
-			} finally {
-				unblockUI();
-				endLogBuffering();
-			}
-		} else {
-			applyCloudPageFiltersAndRender();
-		}
-	}
-
-	/**
-	 * Rellena el desplegable de filtro de tipo de asset.
-	 * @param {Array} cloudPages - La lista completa de Cloud Pages.
-	 */
-	function populateCloudPageFilters(cloudPages) {
-		const currentType = cloudPageTypeFilter.value;
-		cloudPageTypeFilter.innerHTML = '<option value="">Todos los tipos</option>';
-		const types = [...new Set(cloudPages.map(p => p.assetType.displayName).filter(Boolean))].sort();
-		types.forEach(type => cloudPageTypeFilter.appendChild(new Option(type, type)));
-		cloudPageTypeFilter.value = currentType;
-	}
-
-	/**
-	 * Aplica los filtros a la lista de Cloud Pages y redibuja la tabla.
-	 */
-	function applyCloudPageFiltersAndRender() {
-		currentPageCloudPages = 1;
-		const nameFilter = cloudPageNameFilter.value.toLowerCase().trim();
-		const typeFilter = cloudPageTypeFilter.value;
-		
-		let filteredList = fullCloudPageList;
-		if (nameFilter) {
-			filteredList = filteredList.filter(p => p.name.toLowerCase().includes(nameFilter));
-		}
-		if (typeFilter) {
-			filteredList = filteredList.filter(p => p.assetType.displayName === typeFilter);
-		}
-		
-		renderPaginatedCloudPages(filteredList);
-	}
-
-	/**
-	 * Toma una lista de Cloud Pages, la pagina y la muestra en la tabla.
-	 */
-	function renderPaginatedCloudPages(pages) {
-		const startIndex = (currentPageCloudPages - 1) * ITEMS_PER_PAGE;
-		const endIndex = startIndex + ITEMS_PER_PAGE;
-		const sortedAndPaginatedItems = sortCloudPages(pages).slice(startIndex, endIndex);
-		updateCloudPagePaginationUI(pages.length);
-		renderCloudPagesTable(sortedAndPaginatedItems);
-	}
-
-	/**
-	 * Dibuja la tabla de Cloud Pages con los datos proporcionados.
-	 * @param {Array} pagesToRender - El array de assets a mostrar.
-	 */
-	function renderCloudPagesTable(pagesToRender) {
-		cloudPagesTbody.innerHTML = '';
-		updateCloudPageSortIndicators();
-
-		if (!pagesToRender || pagesToRender.length === 0) {
-       		cloudPagesTbody.innerHTML = '<tr><td colspan="5">No se encontraron Cloud Pages con los filtros aplicados.</td></tr>';
-			return;
-		}
-
-		pagesToRender.forEach(page => {
-			const row = document.createElement('tr');
-			row.dataset.assetId = page.id;
-			
-			const urlCell = page.url.startsWith('http') 
-				? `<td><a href="${page.url}" class="external-link" title="Abrir URL en el navegador">${page.url}</a></td>` 
-				: `<td>${page.url}</td>`;
-
-			row.innerHTML = `
-				<td>${page.name || '---'}</td>
-				<td>${page.assetType.displayName || '---'}</td>
-				<td>${formatDateToSpanishTime(page.modifiedDate)}</td>
-				<td>${page.location || '---'}</td>
-				${urlCell}
-			`;
-			cloudPagesTbody.appendChild(row);
-		});
-	}
-
-	/**
-	 * Ordena un array de Cloud Pages según la columna y dirección actuales.
-	 */
-	function sortCloudPages(dataToSort) {
-		const sortKey = currentCloudPageSortColumn;
-		const direction = currentCloudPageSortDirection === 'asc' ? 1 : -1;
-
-		const getValue = (obj, key) => {
-			if (key === 'assetType.displayName') return obj.assetType?.displayName;
-			return obj[key];
-		};
-
-		return [...dataToSort].sort((a, b) => {
-			let valA = getValue(a, sortKey);
-			let valB = getValue(b, sortKey);
-
-			if (valA == null) return 1;
-			if (valB == null) return -1;
-
-			if (sortKey.includes('Date')) {
-				return (new Date(valA) - new Date(valB)) * direction;
-			} else {
-				return String(valA).localeCompare(String(valB), undefined, { sensitivity: 'base' }) * direction;
-			}
-		});
-	}
-
-	/**
-	 * Actualiza los indicadores visuales de ordenación en las cabeceras de la tabla.
-	 */
-	function updateCloudPageSortIndicators() {
-		document.querySelectorAll('#cloudpages-table .sortable-header').forEach(header => {
-			header.classList.remove('sort-asc', 'sort-desc');
-			if (header.dataset.sortBy === currentCloudPageSortColumn) {
-				header.classList.add(currentCloudPageSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
-			}
-		});
-	}
-
-	/**
-	 * Actualiza la UI de los controles de paginación para la tabla de Cloud Pages.
-	 */
-	function updateCloudPagePaginationUI(totalItems) {
-		const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
-		totalPagesCloudPages.textContent = `/ ${totalPages}`;
-		pageInputCloudPages.value = currentPageCloudPages;
-		pageInputCloudPages.max = totalPages;
-		prevPageBtnCloudPages.disabled = currentPageCloudPages === 1;
-		nextPageBtnCloudPages.disabled = currentPageCloudPages >= totalPages;
-	}
 
 	// ==========================================================
 	// --- 7. EVENT LISTENERS ---
@@ -3544,123 +870,134 @@ function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
 	 * Configura todos los event listeners de la aplicación una sola vez.
 	 */
 	function setupEventListeners() {
-		licenseForm.addEventListener('submit', handleLicenseSubmit);
+		elements.licenseForm.addEventListener('submit', handleLicenseSubmit);
 
 		// Listeners para el nuevo modal de alerta
-		customAlertCloseBtn.addEventListener('click', closeCustomAlert);
-		customAlertModal.addEventListener('click', (e) => {
-			if (e.target === customAlertModal) {
-				closeCustomAlert();
+		elements.customAlertCloseBtn.addEventListener('click', ui.closeCustomAlert);
+		elements.customAlertModal.addEventListener('click', (e) => {
+			if (e.target === elements.customAlertModal) {
+				ui.closeCustomAlert();
 			}
 		});
 
 		// --- Listeners de Configuración y Sesión ---
-		saveConfigBtn.addEventListener('click', () => {
-			startLogBuffering();
+		elements.saveConfigBtn.addEventListener('click', () => {
+			logger.startLogBuffering();
 			try {
-				const clientName = clientNameInput.value.trim();
-				if (!clientName) return showCustomAlert('Introduzca un nombre para el cliente antes de guardar.');
+				const clientName = elements.clientNameInput.value.trim();
+				if (!clientName) return ui.showCustomAlert('Introduzca un nombre para el cliente antes de guardar.');
 				let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
 				configs[clientName] = getConfigToSave();
 				localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
 				loadConfigsIntoSelect();
-				logMessage(`Configuración para "${clientName}" guardada localmente.`);
-				showCustomAlert(`Configuración para "${clientName}" guardada.`);
+				logger.logMessage(`Configuración para "${clientName}" guardada localmente.`);
+				ui.showCustomAlert(`Configuración para "${clientName}" guardada.`);
 			} finally {
-				endLogBuffering();
+				logger.endLogBuffering();
 			}
 		});
 
-		loginBtn.addEventListener('click', () => {
-			startLogBuffering();
+		elements.loginBtn.addEventListener('click', () => {
+			logger.startLogBuffering();
 			try {
-				const clientName = clientNameInput.value.trim();
-				if (!clientName) return showCustomAlert('Introduzca un nombre para el cliente.');
-				const config = { clientName, authUri: authUriInput.value.trim(), clientId: clientIdInput.value.trim(), clientSecret: clientSecretInput.value.trim(), businessUnit: businessUnitInput.value.trim() };
-				if (!config.authUri || !config.clientId || !config.clientSecret || !config.businessUnit) return showCustomAlert('Se necesitan Auth URI, Client ID, Client Secret y MID para el login.');
+				const clientName = elements.clientNameInput.value.trim();
+				if (!clientName) return ui.showCustomAlert('Introduzca un nombre para el cliente.');
+				const config = { clientName, authUri: elements.authUriInput.value.trim(), clientId: elements.clientIdInput.value.trim(), clientSecret: elements.clientSecretInput.value.trim(), businessUnit: elements.businessUnitInput.value.trim() };
+				if (!config.authUri || !config.clientId || !config.clientSecret || !config.businessUnit) return ui.showCustomAlert('Se necesitan Auth URI, Client ID, Client Secret y MID para el login.');
 				let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
 				configs[clientName] = getConfigToSave();
 				localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
 				loadConfigsIntoSelect();
-				logMessage("Configuración guardada. Iniciando login...");
-				blockUI("Iniciando login...");
+				logger.logMessage("Configuración guardada. Iniciando login...");
+				ui.blockUI("Iniciando login...");
 				window.electronAPI.startLogin(config);
 			} finally {
-				endLogBuffering();
+				logger.endLogBuffering();
 			}
 		});
 
-		logoutBtn.addEventListener('click', async () => {
-			startLogBuffering();
+		elements.logoutBtn.addEventListener('click', async () => {
+			logger.startLogBuffering();
 			try {
-				const clientName = savedConfigsSelect.value;
-				if (!clientName) return showCustomAlert("Seleccione un cliente para hacer logout.");
-				if (await showCustomConfirm(`Esto borrará la configuración y cerrará la sesión para "${clientName}". ¿Continuar?`)) {
+				const clientName = elements.savedConfigsSelect.value;
+				if (!clientName) return ui.showCustomAlert("Seleccione un cliente para hacer logout.");
+				if (await ui.showCustomConfirm(`Esto borrará la configuración y cerrará la sesión para "${clientName}". ¿Continuar?`)) {
 					let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
 					delete configs[clientName];
 					localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
 					window.electronAPI.logout(clientName);
 				}
 			} finally {
-				endLogBuffering();
+				logger.endLogBuffering();
 			}
 		});
 
-		savedConfigsSelect.addEventListener('change', (e) => loadAndSyncClientConfig(e.target.value));
-		sidebarClientSelect.addEventListener('change', (e) => loadAndSyncClientConfig(e.target.value));
+		elements.savedConfigsSelect.addEventListener('change', (e) => loadAndSyncClientConfig(e.target.value));
+		elements.sidebarClientSelect.addEventListener('change', (e) => loadAndSyncClientConfig(e.target.value));
 
 		// --- Listeners de Eventos desde el Proceso Principal (main.js) ---
 		window.electronAPI.onTokenReceived(result => {
-			unblockUI();
-			startLogBuffering();
+			ui.unblockUI();
+			logger.startLogBuffering();
 			if (result.success) {
-				logMessage("Login exitoso. Sesión activa.");
-				showCustomAlert("Login completado con éxito.");
-				loadAndSyncClientConfig(clientNameInput.value);
+				logger.logMessage("Login exitoso. Sesión activa.");
+				ui.showCustomAlert("Login completado con éxito.");
+				loadAndSyncClientConfig(elements.clientNameInput.value);
 			} else {
-				logMessage(`Error durante el login: ${result.error}`);
-				showCustomAlert(`Hubo un error en el login: ${result.error}`);
+				logger.logMessage(`Error durante el login: ${result.error}`);
+				ui.showCustomAlert(`Hubo un error en el login: ${result.error}`);
 				updateLoginStatus(false);
 			}
-			endLogBuffering();
+			logger.endLogBuffering();
 		});
 
 		window.electronAPI.onLogoutSuccess(() => {
-			startLogBuffering();
-			showCustomAlert(`Sesión cerrada y configuración borrada.`);
-			logMessage("Sesión cerrada y configuración borrada.");
+			logger.startLogBuffering();
+			ui.showCustomAlert(`Sesión cerrada y configuración borrada.`);
+			logger.logMessage("Sesión cerrada y configuración borrada.");
 			loadConfigsIntoSelect();
 			loadAndSyncClientConfig('');
-			endLogBuffering();
+			logger.endLogBuffering();
 		});
 
 		window.electronAPI.onRequireLogin(data => {
-			startLogBuffering();
-			showCustomAlert(`La sesión ha expirado o no es válida. Por favor, haz login de nuevo.\n\nMotivo: ${data.message}`);
-			logMessage(`LOGIN REQUERIDO: ${data.message}`);
+			logger.startLogBuffering();
+			ui.showCustomAlert(`La sesión ha expirado o no es válida. Por favor, haz login de nuevo.\n\nMotivo: ${data.message}`);
+			logger.logMessage(`LOGIN REQUERIDO: ${data.message}`);
 			updateLoginStatus(false);
-			endLogBuffering();
+			logger.endLogBuffering();
 		});
 
 		// --- Listeners de Navegación ---
 		document.querySelectorAll('.back-button').forEach(b => b.addEventListener('click', goBack));
 		document.querySelectorAll('.macro-item').forEach(item => {
-			item.addEventListener('click', (e) => {
+			item.addEventListener('click', async (e) => {
 				e.preventDefault();
 				const macro = e.target.getAttribute('data-macro');
 				const sectionMap = { 'docu': 'documentacion-section', 'configuracionAPIs': 'configuracion-apis-section', 'configuracionDE': 'configuracion-de-section', 'campos': 'campos-section', 'gestionCampos': 'configuracion-campos-section', 'validadorEmail': 'email-validator-section', 'buscadores': 'buscadores-section' };
 				if (sectionMap[macro]) showSection(sectionMap[macro]);
-				else if (macro === 'calendario') viewCalendar();
-				else if (macro === 'gestionAutomatismos') viewAutomations();
-				else if (macro === 'gestionJourneys') viewJourneys();
-				else if (macro === 'gestionCloudPages') viewCloudPages();
+				else if (macro === 'calendario'){
+					calendar.view(); 
+				}
+				else if (macro === 'gestionAutomatismos'){
+					showSection('gestion-automatismos-section');
+					await automationsManager.view(); 
+				}
+				else if (macro === 'gestionJourneys') {
+					showSection('gestion-journeys-section');
+					await journeysManager.view();
+				}
+				else if (macro === 'gestionCloudPages'){
+					showSection('gestion-cloudpages-section');
+					await cloudPagesManager.view();
+				}
 				else if (macro === 'clonadorQueries') showSection('clonador-queries-section');
 			});
 		});
 
 		// --- Listeners de la Tabla de Configuración de Envíos ---
-		addSendConfigRowBtn.addEventListener('click', () => {
-			const newRow = sendsConfigTbody.insertRow();
+		elements.addSendConfigRowBtn.addEventListener('click', () => {
+			const newRow = elements.sendsConfigTbody.insertRow();
 			newRow.innerHTML = `
 				<td contenteditable="true"></td>
 				<td contenteditable="true"></td>
@@ -3673,7 +1010,7 @@ function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
 			newRow.appendChild(deleteButton);
 		});
 
-		sendsConfigTbody.addEventListener('click', (e) => {
+		elements.sendsConfigTbody.addEventListener('click', (e) => {
 			const targetRow = e.target.closest('tr');
 			if (!targetRow) return;
 
@@ -3691,62 +1028,32 @@ function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
 		});
 
 		// --- Listeners de Botones de Macros ---
-		documentDEsBtn.addEventListener('click', macroDocumentDataExtensions);
-		createDEBtn.addEventListener('click', macroCreateDE);
-		createFieldsBtn.addEventListener('click', macroCreateFields);
-		getFieldsBtn.addEventListener('click', macroGetFields);
-		deleteFieldBtn.addEventListener('click', macroDeleteField);
-		searchDEBtn.addEventListener('click', macroSearchDE);
-		validateEmailBtn.addEventListener('click', macroValidateEmail);
-		findDataSourcesBtn.addEventListener('click', macroFindDataSources);
-		searchCustomerBtn.addEventListener('click', macroSearchCustomer);
-		searchQueriesByTextBtn.addEventListener('click', macroSearchQueriesByText);
-		getDEsBtn.addEventListener('click', () => { if (selectedSubscriberData) macroGetCustomerDEs(); });
-		getCustomerJourneysBtn.addEventListener('click', () => { if (selectedSubscriberData) macroGetCustomerJourneys(); });
-
-		// --- Listeners de la Tabla de Campos ---
-		createDummyFieldsBtn.addEventListener('click', createDummyFields);
-		clearFieldsBtn.addEventListener('click', clearFieldsTable);
-		addFieldBtn.addEventListener('click', () => addNewField(true));
-		fieldsTableBody.addEventListener('click', (e) => {
-			const targetRow = e.target.closest('tr');
-			if (!targetRow) return;
-			if (e.target.matches('.delete-row-btn')) {
-				observer.disconnect();
-				if (targetRow === selectedRow) selectedRow = null;
-				targetRow.remove();
-				updateSubscriberKeyFieldOptions();
-				observer.observe(fieldsTableBody, observerConfig);
-			} else {
-				if (targetRow !== selectedRow) {
-					if (selectedRow) selectedRow.classList.remove('selected');
-					targetRow.classList.add('selected');
-					selectedRow = targetRow;
-				}
-			}
-		});
-		moveUpBtn.addEventListener('click', () => { if (selectedRow?.previousElementSibling) selectedRow.parentNode.insertBefore(selectedRow, selectedRow.previousElementSibling); });
-		moveDownBtn.addEventListener('click', () => { if (selectedRow?.nextElementSibling) selectedRow.parentNode.insertBefore(selectedRow.nextElementSibling, selectedRow); });
-		isSendableCheckbox.addEventListener('change', handleSendableChange);
-		subscriberKeyFieldSelect.addEventListener('change', () => { subscriberKeyTypeInput.value = subscriberKeyFieldSelect.options[subscriberKeyFieldSelect.selectedIndex]?.dataset.type || ''; });
-		deNameInput.addEventListener('input', () => { deExternalKeyInput.value = deNameInput.value.replace(/\s+/g, '_') + '_CK'; });
-		authUriInput.addEventListener('blur', () => {
-			const uri = authUriInput.value.trim();
+		elements.documentDEsBtn.addEventListener('click', macroDocumentDataExtensions);
+		elements.createDEBtn.addEventListener('click', macroCreateDE);
+		elements.createFieldsBtn.addEventListener('click', macroCreateFields);
+		elements.getFieldsBtn.addEventListener('click', macroGetFields);
+		elements.deleteFieldBtn.addEventListener('click', macroDeleteField);
+		
+		elements.isSendableCheckbox.addEventListener('change', fieldsTable.handleSendableChange);
+		elements.subscriberKeyFieldSelect.addEventListener('change', () => { elements.subscriberKeyTypeInput.value = elements.subscriberKeyFieldSelect.options[elements.subscriberKeyFieldSelect.selectedIndex]?.dataset.type || ''; });
+		elements.deNameInput.addEventListener('input', () => { elements.deExternalKeyInput.value = elements.deNameInput.value.replace(/\s+/g, '_') + '_CK'; });
+		elements.authUriInput.addEventListener('blur', () => {
+			const uri = elements.authUriInput.value.trim();
 			if (uri && !uri.endsWith('v2/token')) {
-				authUriInput.value = (uri.endsWith('/') ? uri : uri + '/') + 'v2/token';
+				elements.authUriInput.value = (uri.endsWith('/') ? uri : uri + '/') + 'v2/token';
 			}
 		});
 
 		// --- Listeners del Modal de Importación ---
-		importFieldsBtn.addEventListener('click', () => { importModal.style.display = 'flex'; pasteDataArea.focus(); });
-		cancelPasteBtn.addEventListener('click', closeImportModal);
-		importModal.addEventListener('click', (e) => { if (e.target === importModal) closeImportModal(); });
-		delimiterSelect.addEventListener('change', () => { customDelimiterInput.classList.toggle('hidden', delimiterSelect.value !== 'other'); if (delimiterSelect.value === 'other') customDelimiterInput.focus(); });
-		processPasteBtn.addEventListener('click', processPastedData);
+		elements.importFieldsBtn.addEventListener('click', () => { elements.importModal.style.display = 'flex'; elements.pasteDataArea.focus(); });
+		elements.cancelPasteBtn.addEventListener('click', fieldsTable.closeImportModal);
+		elements.importModal.addEventListener('click', (e) => { if (e.target === elements.importModal) fieldsTable.closeImportModal(); });
+		elements.delimiterSelect.addEventListener('change', () => { elements.customDelimiterInput.classList.toggle('hidden', elements.delimiterSelect.value !== 'other'); if (elements.delimiterSelect.value === 'other') elements.customDelimiterInput.focus(); });
+		elements.processPasteBtn.addEventListener('click', fieldsTable.processPastedData);
 		
 		// --- Listeners de Componentes de UI Generales ---
-		toggleLogBtn.addEventListener('click', () => { const isCollapsed = appContainer.classList.toggle('log-collapsed'); localStorage.setItem('logCollapsedState', isCollapsed); });
-		tabButtons.forEach(button => button.addEventListener('click', () => {
+		elements.toggleLogBtn.addEventListener('click', () => { const isCollapsed = elements.appContainer.classList.toggle('log-collapsed'); localStorage.setItem('logCollapsedState', isCollapsed); });
+		elements.tabButtons.forEach(button => button.addEventListener('click', () => {
 			const tabId = button.getAttribute('data-tab');
 			const parent = button.closest('.tabs-container');
 			parent.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
@@ -3754,7 +1061,7 @@ function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
 			button.classList.add('active');
 			parent.querySelector(`#${tabId}`).classList.add('active');
 		}));
-		collapsibleHeaders.forEach(header => header.addEventListener('click', () => {
+		elements.collapsibleHeaders.forEach(header => header.addEventListener('click', () => {
 			const content = header.nextElementSibling;
 			const isExpanded = header.classList.toggle('active');
 			content.style.maxHeight = isExpanded ? content.scrollHeight + "px" : "0px";
@@ -3762,445 +1069,11 @@ function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
 			states[header.textContent.trim()] = isExpanded;
 			localStorage.setItem('collapsibleStates', JSON.stringify(states));
 		}));
-		querySearchResultsTbody.addEventListener('click', (e) => {
+		elements.querySearchResultsTbody.addEventListener('click', (e) => {
 			const link = e.target.closest('a.external-link');
 			if (link) { e.preventDefault(); window.electronAPI.openExternalLink(link.href); }
-		});
-		showQueryTextCheckbox.addEventListener('change', () => {
-			const isChecked = showQueryTextCheckbox.checked;
-			const displayStyle = isChecked ? '' : 'none';
-			const table = document.getElementById('query-search-results-table');
-			table.querySelectorAll('thead th:nth-child(4), tbody td:nth-child(4)').forEach(cell => {
-				cell.style.display = displayStyle;
-			});
-		});
+		});		
 
-		// --- Listeners del Calendario ---
-		refreshAutomationsBtn.addEventListener('click', async () => {
-			automationList.innerHTML = '<p>Selecciona un día para ver los detalles.</p>';
-			document.querySelectorAll('.calendar-month td.selected').forEach(c => c.classList.remove('selected'));
-
-			blockUI("Refrescando automatismos...");
-			startLogBuffering();
-			try {
-				await macroGetAutomations();
-			} catch (e) {
-				logMessage(`Error al refrescar automatismos del calendario: ${e.message}`);
-				showCustomAlert(`Error: ${e.message}`);
-			} finally {
-				unblockUI();
-				endLogBuffering();
-			}
-		});
-		refreshJourneyAutomationsBtn.addEventListener('click', async () => {
-			automationList.innerHTML = '<p>Selecciona un día para ver los detalles.</p>';
-			document.querySelectorAll('.calendar-month td.selected').forEach(c => c.classList.remove('selected'));
-
-			blockUI("Refrescando Journeys...");
-			startLogBuffering();
-			try {
-				await macroGetJourneyAutomations();
-			} catch (e) {
-				logMessage(`Error al refrescar journeys del calendario: ${e.message}`);
-				showCustomAlert(`Error: ${e.message}`);
-			} finally {
-				unblockUI();
-				endLogBuffering();
-			}
-		});
-		calendarYearSelect.addEventListener('change', generateCalendar);
-		calendarGrid.addEventListener('click', (e) => {
-			if (e.target.tagName === 'TD' && e.target.dataset.date) {
-				document.querySelectorAll('.calendar-month td.selected').forEach(c => c.classList.remove('selected'));
-				e.target.classList.add('selected');
-				filterAutomationsForDay(e.target.dataset.date);
-			}
-		});
-		automationListHeader.addEventListener('click', () => {
-            if (automationListHeader.classList.contains('clickable')) {
-                const detailedAutomations = fullAutomationList.filter(fullAuto => dailyFilteredAutomations.some(dailyAuto => dailyAuto.name === fullAuto.name));
-                viewAutomations(detailedAutomations);
-            }
-        });
-
-		// --- Listeners de Búsqueda de Clientes ---
-		customerSearchTbody.addEventListener('click', (e) => {
-			const clickedRow = e.target.closest('tr');
-			if (!clickedRow || !clickedRow.dataset.subscriberKey) return;
-			if (selectedCustomerRow) selectedCustomerRow.classList.remove('selected');
-			clickedRow.classList.add('selected');
-			selectedCustomerRow = clickedRow;
-			selectedSubscriberData = { subscriberKey: clickedRow.dataset.subscriberKey, isSubscriber: clickedRow.dataset.isSubscriber === 'true' };
-			getCustomerJourneysBtn.disabled = false;
-			getDEsBtn.disabled = !selectedSubscriberData.isSubscriber;
-			customerJourneysResultsBlock.classList.add('hidden');
-			customerSendsResultsBlock.classList.add('hidden');
-		});
-
-		function reRenderAutomations() {
-			// Esta función auxiliar obtiene la lista filtrada actual y la re-renderiza
-			const nameFilter = automationNameFilter.value.toLowerCase().trim();
-			const statusFilter = automationStatusFilter.value;
-			let filteredAutomations = fullAutomationList;
-			if (nameFilter) {
-				filteredAutomations = filteredAutomations.filter(auto => auto.name.toLowerCase().includes(nameFilter));
-			}
-			if (statusFilter) {
-				filteredAutomations = filteredAutomations.filter(auto => auto.status === statusFilter);
-			}
-			renderPaginatedAutomations(filteredAutomations);
-		}
-
-		prevPageBtnAutomations.addEventListener('click', () => {
-			if (currentPageAutomations > 1) {
-				currentPageAutomations--;
-				reRenderAutomations();
-			}
-		});
-
-		nextPageBtnAutomations.addEventListener('click', () => {
-			const maxPage = parseInt(pageInputAutomations.max, 10);
-			if (currentPageAutomations < maxPage) {
-				currentPageAutomations++;
-				reRenderAutomations();
-			}
-		});
-
-		pageInputAutomations.addEventListener('input', () => {
-			let newPage = parseInt(pageInputAutomations.value, 10);
-			// No hacemos nada si el campo está vacío, para que el usuario pueda borrar y escribir
-			if (isNaN(newPage)) {
-				return; 
-			}
-			const maxPage = parseInt(pageInputAutomations.max, 10);
-			if (newPage < 1) newPage = 1;
-			if (newPage > maxPage) newPage = maxPage;
-			
-			currentPageAutomations = newPage;
-			reRenderAutomations();
-		});
-
-		// Corrección para cuando el usuario hace clic fuera (blur)
-		pageInputAutomations.addEventListener('change', () => {
-			if (pageInputAutomations.value === '') {
-				currentPageAutomations = 1;
-				reRenderAutomations();
-			}
-		});
-
-        // --- Listeners de Paginación de Journeys ---
-        function reRenderJourneys() {
-			// Función auxiliar que obtiene la lista filtrada actual y la re-renderiza
-			const nameFilter = journeyNameFilter.value.toLowerCase().trim();
-			const typeFilter = journeyTypeFilter.value;
-			const statusFilter = journeyStatusFilter.value;
-			const deFilter = journeyDEFilter.value.toLowerCase().trim();
-			let filteredJourneys = fullJourneyList;
-			if (nameFilter) {
-				filteredJourneys = filteredJourneys.filter(j => j.name.toLowerCase().includes(nameFilter));
-			}
-			if (typeFilter) {
-				filteredJourneys = filteredJourneys.filter(j => j.eventType === typeFilter);
-			}
-			if (statusFilter) {
-				filteredJourneys = filteredJourneys.filter(j => j.status === statusFilter);
-			}
-			if (deFilter) {
-				filteredJourneys = filteredJourneys.filter(j => j.dataExtensionName && j.dataExtensionName.toLowerCase().includes(deFilter));
-			}
-			renderPaginatedJourneys(filteredJourneys);
-		}
-
-		prevPageBtnJourneys.addEventListener('click', () => {
-			if (currentPageJourneys > 1) {
-				currentPageJourneys--;
-				reRenderJourneys();
-			}
-		});
-
-		nextPageBtnJourneys.addEventListener('click', () => {
-			const maxPage = parseInt(pageInputJourneys.max, 10);
-			if (currentPageJourneys < maxPage) {
-				currentPageJourneys++;
-				reRenderJourneys();
-			}
-		});
-
-		pageInputJourneys.addEventListener('input', () => {
-			let newPage = parseInt(pageInputJourneys.value, 10);
-			if (isNaN(newPage)) {
-				return; 
-			}
-			const maxPage = parseInt(pageInputJourneys.max, 10);
-			if (newPage < 1) newPage = 1;
-			if (newPage > maxPage) newPage = maxPage;
-			
-			currentPageJourneys = newPage;
-			reRenderJourneys();
-		});
-
-		pageInputJourneys.addEventListener('change', () => {
-			if (pageInputJourneys.value === '') {
-				currentPageJourneys = 1;
-				reRenderJourneys();
-			}
-		});
-
-		// --- Listeners de Gestión de Automatismos ---
-		automationsTbody.addEventListener('click', (e) => {
-            const clickedRow = e.target.closest('tr');
-            if (!clickedRow || !clickedRow.dataset.automationId) return;
-            clickedRow.classList.toggle('selected');
-            updateAutomationButtonsState();
-        });
-		activateAutomationBtn.addEventListener('click', () => macroPerformAutomationAction('activate'));
-        runAutomationBtn.addEventListener('click', () => macroPerformAutomationAction('run'));
-        stopAutomationBtn.addEventListener('click', () => macroPerformAutomationAction('pause'));
-		refreshAutomationsTableBtn.addEventListener('click', async () => {
-			blockUI("Refrescando automatismos...");
-			startLogBuffering();
-			try {
-				logMessage("Refrescando lista de automatismos...");
-				fullAutomationList = [];
-				automationNameFilter.value = '';
-				automationStatusFilter.value = '';
-				await viewAutomations();
-			} finally {
-				unblockUI();
-				endLogBuffering();
-			}
-        });
-		document.querySelector('#automations-table thead').addEventListener('click', (e) => {
-            const header = e.target.closest('.sortable-header');
-            if (!header) return;
-            const newSortColumn = header.dataset.sortBy;
-            if (currentSortColumn === newSortColumn) {
-                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
-            } else {
-                currentSortColumn = newSortColumn;
-                currentSortDirection = 'asc';
-            }
-            applyFiltersAndRender();
-        });
-		automationNameFilter.addEventListener('input', applyFiltersAndRender);
-        automationStatusFilter.addEventListener('change', applyFiltersAndRender);
-
-		// --- Listeners de Gestión de Journeys ---
-		journeyNameFilter.addEventListener('input', applyJourneyFiltersAndRender);
-		journeyTypeFilter.addEventListener('change', applyJourneyFiltersAndRender);
-		journeySubtypeFilter.addEventListener('change', applyJourneyFiltersAndRender);
-        journeyStatusFilter.addEventListener('change', applyJourneyFiltersAndRender);
-        journeyDEFilter.addEventListener('input', applyJourneyFiltersAndRender);
-
-        getCommunicationsBtn.addEventListener('click', macroGetJourneyCommunications);
-		copyJourneyBtn.addEventListener('click', macroCopyJourney);
-		stopJourneyBtn.addEventListener('click', macroStopJourneys);
-		deleteJourneyBtn.addEventListener('click', macroDeleteJourneys);
-
-		refreshJourneysTableBtn.addEventListener('click', async () => {
-			// Añadimos el patrón de bloqueo/desbloqueo seguro
-			blockUI("Refrescando Journeys...");
-			startLogBuffering();
-			try {
-				// Vaciamos todas las cachés para forzar una recarga completa
-				fullJourneyList = [];
-				eventDefinitionsMap = {};
-				journeyFolderMap = {};
-				journeyNameFilter.value = '';
-				journeyTypeFilter.value = '';
-				journeySubtypeFilter.value = ''; 
-				journeyStatusFilter.value = '';
-				journeyDEFilter.value = '';
-				updateJourneyActionButtonsState();
-				// Llamamos a viewJourneys y esperamos a que termine
-				await viewJourneys();
-			} catch (error) {
-				logMessage(`Error en el proceso de refresco de Journeys: ${error.message}`);
-				showCustomAlert(`Se produjo un error al refrescar: ${error.message}`);
-			} finally {
-				unblockUI();
-				endLogBuffering();
-			}
-		});
-
-        drawJourneyBtn.addEventListener('click', () => {
-            const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
-            if (selectedRows.length !== 1) return; // Solo funciona si hay exactamente una fila seleccionada
-            
-            const journeyId = selectedRows[0].dataset.journeyId;
-			const journey = fullJourneyList.find(j => j.id === journeyId);
-            
-            if (journey && journey.hasCommunications) {
-				const flowText = generateJourneyFlowText(journey);
-				showJourneyFlowModal(flowText);
-			}
-        });
-
-		document.querySelector('#journeys-table thead').addEventListener('click', (e) => {
-            const header = e.target.closest('.sortable-header');
-            if (!header) return;
-            const newSortColumn = header.dataset.sortBy;
-            
-            if (currentJourneySortColumn === newSortColumn) {
-                currentJourneySortDirection = currentJourneySortDirection === 'asc' ? 'desc' : 'asc';
-            } else {
-                currentJourneySortColumn = newSortColumn;
-                currentJourneySortDirection = 'asc';
-            }
-            applyJourneyFiltersAndRender();
-        });
-
-        // Listener para multiselección de filas
-		journeysTbody.addEventListener('click', (e) => {
-			const clickedRow = e.target.closest('tr');
-			if (!clickedRow || !clickedRow.dataset.journeyId) return;
-
-            // Simplemente alterna la clase 'selected' en la fila clicada
-			clickedRow.classList.toggle('selected');
-			
-            // Actualiza el estado de los botones después de cualquier cambio en la selección
-			updateJourneyActionButtonsState();
-		});
-
-		// Listeners para cerrar el modal de flujo
-		closeFlowBtn.addEventListener('click', closeJourneyFlowModal);
-		journeyFlowModal.addEventListener('click', (e) => {
-			if (e.target === journeyFlowModal) {
-				closeJourneyFlowModal();
-			}
-		});
-
-        // Listener para el botón "Copiar"
-        copyFlowBtn.addEventListener('click', () => {
-			const textToCopy = journeyFlowContent.textContent;
-
-			// Usamos el método clásico y más robusto para copiar, que evita problemas de foco y CSP.
-			const textArea = document.createElement('textarea');
-			textArea.value = textToCopy;
-
-			// Hacemos el textarea invisible y lo añadimos al DOM
-			textArea.style.position = 'absolute';
-			textArea.style.left = '-9999px';
-			document.body.appendChild(textArea);
-
-			// Seleccionamos el contenido y ejecutamos el comando de copia
-			textArea.select();
-			
-			try {
-				const successful = document.execCommand('copy');
-				if (successful) {
-					const originalText = copyFlowBtn.textContent;
-					copyFlowBtn.textContent = '¡Copiado!';
-					copyFlowBtn.classList.add('copied');
-					setTimeout(() => {
-						copyFlowBtn.textContent = originalText;
-						copyFlowBtn.classList.remove('copied');
-					}, 2000);
-				} else {
-					throw new Error('Fallback copy command failed.');
-				}
-			} catch (err) {
-				console.error('Error al intentar copiar al portapapeles con el método clásico:', err);
-				showCustomAlert('No se pudo copiar el texto. Inténtalo manualmente (Ctrl+C).');
-			} finally {
-				// Siempre eliminamos el textarea del DOM
-				document.body.removeChild(textArea);
-			}
-		});
-
-		// --- Listeners del Clonador de Queries ---
-		const queryClonerInputs = [querySourceFolderNameInput, queryTargetFolderNameInput, deTargetFolderNameInput];
-		
-		queryClonerInputs.forEach(input => {
-			input.addEventListener('input', () => {
-				const allFilled = queryClonerInputs.every(i => i.value.trim() !== '');
-				queryClonerSearchFoldersBtn.disabled = !allFilled;
-			});
-		});
-
-		queryClonerSearchFoldersBtn.addEventListener('click', macroSearchCloneFolders);
-		queryClonerContinueBtn.addEventListener('click', macroDisplayQuerySelection);
-		queryClonerCloneBtn.addEventListener('click', macroCloneSelectedQueries);
-
-		queryClonerBackBtn.addEventListener('click', () => {
-			queriesClonerStep2.style.display = 'none';
-			queriesClonerStep1.style.display = 'flex';
-			clonerState.queriesInSourceFolder = []; // Limpiar estado
-			querySelectionTbody.innerHTML = ''; // Limpiar tabla
-		});
-
-		// Lógica de selección para las tablas de carpetas
-		function handleFolderTableClick(event, stateKey) {
-			const tbody = event.currentTarget;
-			const clickedRow = event.target.closest('tr');
-			if (!clickedRow || !clickedRow.dataset.folderId) return;
-			
-			// Deseleccionar la fila anterior en la misma tabla
-			const previouslySelected = tbody.querySelector('tr.selected');
-			if (previouslySelected) previouslySelected.classList.remove('selected');
-
-			// Seleccionar la nueva fila y guardar el estado
-			clickedRow.classList.add('selected');
-			clonerState[stateKey] = {
-				id: clickedRow.dataset.folderId,
-				name: clickedRow.dataset.folderName
-			};
-
-			// Comprobar si se puede continuar
-			queryClonerContinueBtn.disabled = !(clonerState.sourceQueryFolder && clonerState.targetQueryFolder && clonerState.targetDEFolder);
-		}
-
-		querySourceFoldersTbody.addEventListener('click', (e) => handleFolderTableClick(e, 'sourceQueryFolder'));
-		queryTargetFoldersTbody.addEventListener('click', (e) => handleFolderTableClick(e, 'targetQueryFolder'));
-		deTargetFoldersTbody.addEventListener('click', (e) => handleFolderTableClick(e, 'targetDEFolder'));
-
-		// Lógica de selección para la tabla de queries
-		querySelectionTbody.addEventListener('click', (e) => {
-			const row = e.target.closest('tr');
-			if (!row) return;
-			
-			const checkbox = row.querySelector('input[type="checkbox"]');
-			const queryIndex = parseInt(row.dataset.queryIndex, 10);
-			
-			// Si el clic no fue en el checkbox, lo marcamos/desmarcamos igualmente
-			if (e.target.type !== 'checkbox') {
-				checkbox.checked = !checkbox.checked;
-			}
-			
-			clonerState.queriesInSourceFolder[queryIndex].selected = checkbox.checked;
-
-			const anySelected = clonerState.queriesInSourceFolder.some(q => q.selected);
-			queryClonerCloneBtn.disabled = !anySelected;
-
-			const allSelected = clonerState.queriesInSourceFolder.every(q => q.selected);
-			selectAllQueriesCheckbox.checked = allSelected;
-		});
-
-		selectAllQueriesCheckbox.addEventListener('change', (e) => {
-			const isChecked = e.target.checked;
-			clonerState.queriesInSourceFolder.forEach(q => q.selected = isChecked);
-			
-			querySelectionTbody.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = isChecked);
-
-			queryClonerCloneBtn.disabled = !isChecked && clonerState.queriesInSourceFolder.length > 0;
-		});
-
-		// --- Listener para edición en la tabla de selección de queries ---
-		querySelectionTbody.addEventListener('input', (e) => {
-			const cell = e.target.closest('td[contenteditable="true"]');
-			if (!cell) return;
-
-			const row = cell.closest('tr');
-			const index = parseInt(row.dataset.queryIndex, 10);
-			const dataType = cell.dataset.type;
-			const newValue = cell.textContent.trim();
-
-			if (dataType === 'query-name') {
-				clonerState.queriesInSourceFolder[index].newQueryName = newValue;
-			} else if (dataType === 'de-name') {
-				clonerState.queriesInSourceFolder[index].newDeName = newValue;
-			}
-		});
 
 		// --- Listener para el Acordeón de la Documentación ---
 		const allAccordionHeaders = document.querySelectorAll('.docu-accordion-header');
@@ -4227,82 +1100,14 @@ function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
 					content.style.maxHeight = content.scrollHeight + "px"; // Expandir
 				}
 			});
-		});
-
-		// --- Listeners de Gestión de Cloud Pages ---
-		refreshCloudPagesTableBtn.addEventListener('click', async () => {
-			blockUI("Refrescando Cloud Pages...");
-			startLogBuffering();
-			try {
-				fullCloudPageList = [];
-				cloudPageNameFilter.value = '';
-				cloudPageTypeFilter.value = '';
-				await viewCloudPages();
-			} finally {
-				unblockUI();
-				endLogBuffering();
-			}
-		});
-
-		cloudPageNameFilter.addEventListener('input', applyCloudPageFiltersAndRender);
-		cloudPageTypeFilter.addEventListener('change', applyCloudPageFiltersAndRender);
-
-		document.querySelector('#cloudpages-table thead').addEventListener('click', (e) => {
-			const header = e.target.closest('.sortable-header');
-			if (!header) return;
-			const newSortColumn = header.dataset.sortBy;
-			
-			if (currentCloudPageSortColumn === newSortColumn) {
-				currentCloudPageSortDirection = currentCloudPageSortDirection === 'asc' ? 'desc' : 'asc';
-			} else {
-				currentCloudPageSortColumn = newSortColumn;
-				currentCloudPageSortDirection = 'asc';
-			}
-			applyCloudPageFiltersAndRender();
-		});
-
-		function reRenderCloudPages() {
-			const nameFilter = cloudPageNameFilter.value.toLowerCase().trim();
-			const typeFilter = cloudPageTypeFilter.value;
-			let filteredList = fullCloudPageList;
-			if (nameFilter) filteredList = filteredList.filter(p => p.name.toLowerCase().includes(nameFilter));
-			if (typeFilter) filteredList = filteredList.filter(p => p.assetType.displayName === typeFilter);
-			renderPaginatedCloudPages(filteredList);
-		}
-
-		prevPageBtnCloudPages.addEventListener('click', () => {
-			if (currentPageCloudPages > 1) {
-				currentPageCloudPages--;
-				reRenderCloudPages();
-			}
-		});
-
-		nextPageBtnCloudPages.addEventListener('click', () => {
-			const maxPage = parseInt(pageInputCloudPages.max, 10);
-			if (currentPageCloudPages < maxPage) {
-				currentPageCloudPages++;
-				reRenderCloudPages();
-			}
-		});
-
-		pageInputCloudPages.addEventListener('change', () => {
-			let newPage = parseInt(pageInputCloudPages.value, 10) || 1;
-			const maxPage = parseInt(pageInputCloudPages.max, 10);
-			if (newPage < 1) newPage = 1;
-			if (newPage > maxPage) newPage = maxPage;
-			currentPageCloudPages = newPage;
-			reRenderCloudPages();
-		});
-
-		cloudPagesTbody.addEventListener('click', (e) => {
-			const link = e.target.closest('a.external-link');
-			if (link) { 
-				e.preventDefault(); 
-				window.electronAPI.openExternalLink(link.href); 
-			}
-		});	
+		});		
 	}
-
+	async function showFilteredAutomations(automationNames) {
+		// 1. Navega a la sección correcta
+		showSection('gestion-automatismos-section');
+		// 2. Llama al gestor de automatismos, pasándole los nombres para filtrar
+		await automationsManager.view(automationNames);
+	}
 
 	// ==========================================================
 	// --- 8. INICIALIZACIÓN DE LA APLICACIÓN ---
@@ -4313,59 +1118,52 @@ function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
 	 * Actúa como un guardián: comprueba si la licencia es válida antes de iniciar la app.
 	 */
 	async function initializeApp() {
+		initDomElements();
 		setupEventListeners();
 
 		const licenseInfoRaw = localStorage.getItem('isKeyValid');
 
-		if (licenseInfoRaw) {
-			// --- INICIO CON VALIDACIÓN EXPLÍCITA ---
+		if (!licenseInfoRaw) {
+			// Si no hay clave, directamente mostramos el modal. Fin de la función.
+			elements.appContainer.classList.add('app-locked');
+			elements.licenseModal.style.display = 'flex';
+			return; 
+		}
 
-			// 1. Mostramos el spinner INMEDIATAMENTE. El usuario sabe que algo está pasando.
-			blockUI("Validando licencia...");
-
-			try {
-				const licenseInfo = JSON.parse(licenseInfoRaw);
-				if (!licenseInfo.email || !licenseInfo.key) {
-					// Si los datos están corruptos, lo tratamos como un fallo.
-					throw new Error("Datos de licencia locales corruptos.");
-				}
-
-				// 2. Realizamos la validación. Esta llamada ya no bloquea la ventana,
-				// pero sí esperamos su resultado antes de continuar.
-				const isValid = await window.electronAPI.validateLicense({ email: licenseInfo.email, key: licenseInfo.key });
-				
-				// 3. Actuamos según el resultado.
-				if (isValid === true) {
-					// Éxito: Ocultamos el spinner y arrancamos la aplicación.
-					unblockUI();
-					startFullApp();
-				} else {
-					// Fallo (acceso revocado): Ocultamos el spinner, borramos los datos malos y mostramos el modal.
-					unblockUI();
-					localStorage.removeItem('isKeyValid');
-					
-					const licenseErrorEl = document.getElementById('license-error-message');
-					if(licenseErrorEl) {
-						licenseErrorEl.textContent = 'Tu acceso ha sido revocado. Por favor, introduce credenciales válidas.';
-						licenseErrorEl.style.display = 'block';
-					}
-					
-					appContainer.classList.add('app-locked');
-					licenseModal.style.display = 'flex';
-				}
-			} catch (e) {
-				// Si hay cualquier otro error (ej. JSON mal formado), hacemos lo mismo: revocamos el acceso.
-				unblockUI();
-				localStorage.removeItem('isKeyValid');
-				appContainer.classList.add('app-locked');
-				licenseModal.style.display = 'flex';
+		// Si llegamos aquí, la clave EXISTE. Ahora la validamos.
+		ui.blockUI("Validando licencia...");
+		let isValid = false;
+		try {
+			const licenseInfo = JSON.parse(licenseInfoRaw);
+			if (!licenseInfo.email || !licenseInfo.key) {
+				throw new Error("Datos de licencia locales corruptos.");
 			}
+			// La validación en sí misma también puede fallar (ej. sin internet),
+			// por eso está dentro del try.
+			isValid = await window.electronAPI.validateLicense({ email: licenseInfo.email, key: licenseInfo.key });
 
+		} catch (e) {
+			// Si el parseo o la validación fallan, isValid sigue siendo false.
+			console.error("Error validando la licencia:", e);
+		}
+
+		// Ahora, fuera del try...catch, decidimos qué hacer.
+		ui.unblockUI();
+
+		if (isValid === true) {
+			// ¡Éxito! La clave es válida. Arrancamos la aplicación.
+			// Cualquier error que ocurra a partir de ahora NO borrará la licencia.
+			startFullApp();
 		} else {
-			// --- PRIMERA EJECUCIÓN ---
-			// No hay licencia, mostramos el modal (comportamiento sin cambios).
-			appContainer.classList.add('app-locked');
-			licenseModal.style.display = 'flex';
+			// La clave existía pero no es válida (o hubo un error).
+			// AHORA es el único momento en que borramos la clave.
+			localStorage.removeItem('isKeyValid');
+			if(elements.licenseErrorEl) {
+				elements.licenseErrorEl.textContent = 'Tu acceso ha sido revocado o la validación falló. Por favor, introduce credenciales válidas.';
+				elements.licenseErrorEl.style.display = 'block';
+			}
+			elements.appContainer.classList.add('app-locked');
+			elements.licenseModal.style.display = 'flex'; 
 		}
 	}
 
@@ -4374,15 +1172,33 @@ function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
 	 * Solo se ejecuta una vez que la licencia ha sido validada.
 	 */
 	function startFullApp() {
-		startLogBuffering();
-		if (localStorage.getItem('logCollapsedState') === 'true') appContainer.classList.add('log-collapsed');
+		logger.startLogBuffering();
+		if (localStorage.getItem('logCollapsedState') === 'true') 
+		{
+			elements.appContainer.classList.add('log-collapsed');
+		}
 		loadConfigsIntoSelect();
 		loadAndSyncClientConfig(''); // Inicia sin ningún cliente seleccionado.
-		clearFieldsTable();
-		observer.observe(fieldsTableBody, observerConfig);
+
+		fieldsTable.init();
+		fieldsTable.clear();
+		automationsManager.init({ getAuthenticatedConfig });
+		journeysManager.init({ getAuthenticatedConfig });
+		cloudPagesManager.init({ getAuthenticatedConfig });
+		queryCloner.init({ getAuthenticatedConfig });
+		deFinder.init({ getAuthenticatedConfig }); 
+		dataSourceFinder.init({ getAuthenticatedConfig });
+		queryTextFinder.init({ getAuthenticatedConfig });
+		customerFinder.init({ getAuthenticatedConfig });
+		emailValidator.init({ getAuthenticatedConfig });
+		calendar.init({ 
+			getAuthenticatedConfig, 
+			showAutomationsView: showFilteredAutomations  
+		});
+
 		initializeCollapsibleMenus();
-		logMessage("Aplicación lista. Selecciona un cliente o configura uno nuevo.");
-		endLogBuffering();
+		logger.logMessage("Aplicación lista. Selecciona un cliente o configura uno nuevo.");
+		logger.endLogBuffering();
 	}
 
 	// Inicia la aplicación.
