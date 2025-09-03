@@ -2,60 +2,55 @@
 
 MC API Helper es una aplicación de escritorio construida con **Electron**, diseñada para simplificar y automatizar tareas complejas en **Salesforce Marketing Cloud**. La herramienta proporciona una interfaz de usuario intuitiva para agilizar el trabajo diario de desarrolladores y administradores de la plataforma.
 
-![Captura de MC API Helper](src/renderer/assets/screenshot.png)
-
 ---
 
 ## ➤ Arquitectura y Estructura de Ficheros
 
 La aplicación sigue una arquitectura modular que separa claramente las responsabilidades entre el proceso principal (backend) y el proceso de renderizado (frontend).
 .
-├── dist/ # Carpeta de salida para el instalador (generada por npm run dist)
-├── node_modules/ # Dependencias del proyecto
+├── dist/                     # Carpeta de salida para el instalador (generada por `npm run dist`)
+├── node_modules/             # Dependencias del proyecto
 ├── src/
-│ ├── main/ # Lógica del Proceso Principal (Backend de Electron)
-│ │ ├── main.js # Punto de entrada principal, gestiona la ventana, autenticación y seguridad.
-│ │ └── preload.js # Script de puente seguro entre el backend (main) y el frontend (renderer).
-│ │
-│ └── renderer/ # Lógica del Proceso de Renderizado (Frontend)
-│ ├── api/
-│ │ └── mc-api-service.js # Módulo que centraliza todas las llamadas a la API de SFMC.
-│ ├── assets/ # Recursos estáticos como imágenes y GIFs.
-│ ├── components/ # Módulos de JavaScript para cada funcionalidad específica.
-│ │ ├── automations-manager.js
-│ │ ├── calendar.js
-│ │ ├── cloud-pages-manager.js
-│ │ ├── customer-finder.js
-│ │ ├── data-source-finder.js
-│ │ ├── de-creator.js
-│ │ ├── de-finder.js
-│ │ ├── documentation-manager.js
-│ │ ├── email-validator.js
-│ │ ├── field-manager.js
-│ │ ├── fields-table.js
-│ │ ├── journeys-manager.js
-│ │ ├── org-manager.js
-│ │ ├── query-cloner.js
-│ │ └── query-text-finder.js
-│ ├── styles/ # Ficheros de estilo CSS.
-│ │ ├── components/ # CSS específico para cada componente.
-│ │ └── common.css # Estilos globales y reutilizables.
-│ │ └── style.css # Fichero principal que importa todos los demás CSS.
-│ ├── ui/ # Módulos de ayuda para la interfaz de usuario.
-│ │ ├── dom-elements.js # Centraliza todas las referencias a los elementos del DOM.
-│ │ ├── logger.js # Gestiona el panel de logs.
-│ │ └── ui-helpers.js # Funciones para modales, loaders, etc.
-│ ├── views/ # Fragmentos de HTML para cada vista de la aplicación.
-│ ├── app.js # Orquestador principal del frontend.
-│ └── index.html # Fichero HTML final (generado automáticamente).
+│   ├── main/                 # Lógica del Proceso Principal (Backend de Electron)
+│   │   ├── main.js           # Punto de entrada principal, gestiona la ventana, autenticación y seguridad.
+│   │   └── preload.js        # Script de puente seguro entre el backend (main) y el frontend (renderer).
+│   │
+│   └── renderer/             # Lógica del Proceso de Renderizado (Frontend)
+│       ├── api/
+│       │   └── mc-api-service.js # Módulo que centraliza todas las llamadas a la API de SFMC.
+│       ├── assets/             # Recursos estáticos como imágenes y GIFs.
+│       ├── components/         # Módulos de JavaScript para cada funcionalidad específica.
+│       │   ├── automations-manager.js
+│       │   ├── calendar.js
+│       │   ├── cloud-pages-manager.js
+│       │   ├── customer-finder.js
+│       │   ├── data-source-finder.js
+│       │   ├── de-creator.js
+│       │   ├── de-finder.js
+│       │   ├── documentation-manager.js
+│       │   ├── email-validator.js
+│       │   ├── field-manager.js
+│       │   ├── fields-table.js
+│       │   ├── journeys-manager.js
+│       │   ├── org-manager.js
+│       │   ├── query-cloner.js
+│       │   └── query-text-finder.js
+│       ├── styles/             # Ficheros de estilo CSS.
+│       │   ├── components/     # CSS específico para cada componente.
+│       │   ├── common.css      # Estilos globales y reutilizables.
+│       │   └── style.css       # Fichero principal que importa todos los demás CSS.
+│       ├── ui/                 # Módulos de ayuda para la interfaz de usuario.
+│       │   ├── dom-elements.js # Centraliza todas las referencias a los elementos del DOM.
+│       │   ├── logger.js       # Gestiona el panel de logs.
+│       │   └── ui-helpers.js   # Funciones para modales, loaders, etc.
+│       ├── views/              # Fragmentos de HTML para cada vista de la aplicación.
+│       ├── app.js              # Orquestador principal del frontend.
+│       └── index.html          # Fichero HTML final (generado automáticamente).
 │
 ├── .gitignore
-├── build-html.js # Script para ensamblar el index.html a partir de las vistas.
+├── build-html.js             # Script para ensamblar el index.html a partir de las vistas.
 ├── dev-app-update.yml
-├── google-credentials.json # Claves de la cuenta de servicio de Google (requerido).
-├── icon.ico
-├── package.json
-└── package-lock.json
+├── google-credentials.json   # Claves de la cuenta
 
 
 ### Descripción Detallada
