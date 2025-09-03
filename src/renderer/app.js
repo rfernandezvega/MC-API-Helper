@@ -33,8 +33,6 @@
 // ===================================================================
 import * as mcApiService from './api/mc-api-service.js';
 
-import { buildFieldXml } from './api/mc-api-service.js';
-
 document.addEventListener('DOMContentLoaded', function () {
 
 	// ==========================================================
@@ -599,6 +597,9 @@ document.addEventListener('DOMContentLoaded', function () {
 		currentOrgInfo = apiConfig.orgInfo;
 		stackKeyInput.value = currentOrgInfo?.stack_key || 'No disponible';
 		updateLoginStatus(true, clientName, currentUserInfo);
+
+		apiConfig.businessUnit = businessUnitInput.value.trim();
+
 		return apiConfig;
 	}
 
@@ -614,6 +615,8 @@ document.addEventListener('DOMContentLoaded', function () {
 		try {
 			logMessage("Iniciando creación de Data Extension...");
 			const apiConfig = await getAuthenticatedConfig();
+
+			mcApiService.setLogger({ logApiCall, logApiResponse }); 
 
 			// 1. Recoger datos del DOM
 			const deData = {
@@ -639,7 +642,6 @@ document.addEventListener('DOMContentLoaded', function () {
 			}
 
 			// 3. Llamar al servicio
-			logApiCall({ service: 'mc-api-service', function: 'createDataExtension', data: deData });
 			await mcApiService.createDataExtension(deData, apiConfig);
 			
 			// 4. Gestionar éxito
@@ -667,13 +669,28 @@ document.addEventListener('DOMContentLoaded', function () {
 		try {
 			logMessage(`Iniciando creación/actualización de campos...`);
 			const apiConfig = await getAuthenticatedConfig();
+			mcApiService.setLogger({ logApiCall, logApiResponse });
+			
+			// 1. Recoger datos del DOM
 			const externalKey = recExternalKeyInput.value.trim();
-			if (!externalKey) throw new Error('Defina una "External Key de la DE" en "Gestión de Campos".');
-			const validFieldsData = getFieldsDataFromTable();
-			if (validFieldsData.length === 0) throw new Error('No hay campos válidos en la tabla.');
-			const fieldsXmlString = validFieldsData.map(buildFieldXml).join('');
-			const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Update</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><UpdateRequest xmlns="http://exacttarget.com/wsdl/partnerAPI"><Objects xsi:type="DataExtension"><CustomerKey>${externalKey}</CustomerKey><Fields>${fieldsXmlString}</Fields></Objects></UpdateRequest></s:Body></s:Envelope>`;
-			await executeSoapRequest(apiConfig.soapUri, soapPayload.trim(), `¡Éxito! ${validFieldsData.length} campos creados/actualizados.`);
+			const fieldsData = getFieldsDataFromTable();
+
+			// 2. Validar datos
+			if (!externalKey) {
+				throw new Error('Defina una "External Key de la DE" en "Gestión de Campos".');
+			}
+			if (fieldsData.length === 0) {
+				throw new Error('No hay campos válidos en la tabla.');
+			}
+
+			// 3. Llamar al servicio
+			await mcApiService.createOrUpdateFields(externalKey, fieldsData, apiConfig);
+			
+			// 4. Gestionar éxito
+			const successMessage = `¡Éxito! ${fieldsData.length} campos creados/actualizados en la DE ${externalKey}.`;
+			logMessage(successMessage);
+			showCustomAlert(successMessage);
+
 		} catch (error) {
 			logMessage(`Error al crear los campos: ${error.message}`);
 			showCustomAlert(`Error: ${error.message}`);
@@ -691,12 +708,14 @@ document.addEventListener('DOMContentLoaded', function () {
 		startLogBuffering();
 		try {
 			const apiConfig = await getAuthenticatedConfig();
+			mcApiService.setLogger({ logApiCall, logApiResponse });
+			
 			const externalKey = recExternalKeyInput.value.trim();
 			if (!externalKey) throw new Error('Introduzca la "External Key de la DE".');
 			
 			logMessage(`Recuperando campos para la DE: ${externalKey}`);
 			
-			const fields = await fetchFieldsForDE(externalKey, apiConfig);
+			const fields = await mcApiService.fetchFieldsForDE(externalKey, apiConfig);
 
 			if (fields.length > 0) {
 				populateFieldsTable(fields);
@@ -720,23 +739,50 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Macro para eliminar un campo específico de una Data Extension.
 	 */
 	async function macroDeleteField() {
-		blockUI("Borrando campo...");
+		// NO bloqueamos la UI todavía.
 		startLogBuffering();
 		try {
 			const apiConfig = await getAuthenticatedConfig();
+
+			mcApiService.setLogger({ logApiCall, logApiResponse });
+			
 			const externalKey = recExternalKeyInput.value.trim();
 			const fieldObjectId = targetFieldSelect.value;
 			const selectedFieldName = targetFieldSelect.selectedOptions[0]?.text;
-			if (!externalKey || !fieldObjectId) throw new Error('Introduzca la External Key y seleccione un campo a eliminar.');
-			if (!await showCustomConfirm(`¿Seguro que quieres eliminar el campo "${selectedFieldName}"? Esta acción no se puede deshacer.`)) return;
+
+			if (!externalKey || !fieldObjectId) {
+				throw new Error('Introduzca la External Key y seleccione un campo a eliminar.');
+			}
+			
+			// 1. PRIMERO, preguntamos al usuario.
+			const userConfirmed = await showCustomConfirm(`¿Seguro que quieres eliminar el campo "${selectedFieldName}"? Esta acción no se puede deshacer.`);
+
+			// 2. Si el usuario cancela, salimos limpiamente.
+			if (!userConfirmed) {
+				logMessage("Borrado cancelado por el usuario.");
+				endLogBuffering();
+				return; // Salimos de la función.
+			}
+
+			// 3. SI el usuario ha confirmado, AHORA bloqueamos la UI y procedemos.
+			blockUI("Borrando campo...");
+			
 			logMessage(`Iniciando borrado del campo "${selectedFieldName}"...`);
-			const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth><a:Action s:mustUnderstand="1">Delete</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To></s:Header><s:Body xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><DeleteRequest xmlns="http://exacttarget.com/wsdl/partnerAPI"><Objects xsi:type="DataExtension"><CustomerKey>${externalKey}</CustomerKey><Fields><Field><ObjectID>${fieldObjectId}</ObjectID></Field></Fields></Objects></DeleteRequest></s:Body></s:Envelope>`;
-			await executeSoapRequest(apiConfig.soapUri, soapPayload.trim(), `Campo "${selectedFieldName}" eliminado.`);
+			
+			await mcApiService.deleteDataExtensionField(externalKey, fieldObjectId, apiConfig);
+			
+			const successMessage = `Campo "${selectedFieldName}" eliminado con éxito.`;
+			logMessage(successMessage);
+			showCustomAlert(successMessage);
+			
+			// La UI ya está bloqueada, así que macroGetFields puede ejecutarse sin problemas.
+			// Al terminar, macroGetFields se encargará de desbloquearla.
 			await macroGetFields();
+
 		} catch (error) {
 			logMessage(`Error al eliminar el campo: ${error.message}`);
 			showCustomAlert(`Error: ${error.message}`);
-		} finally {
+			// Si hay un error, nos aseguramos de desbloquear la UI.
 			unblockUI();
 			endLogBuffering();
 		}
@@ -750,6 +796,8 @@ document.addEventListener('DOMContentLoaded', function () {
 		startLogBuffering();
 		try {
 			const apiConfig = await getAuthenticatedConfig();
+			mcApiService.setLogger({ logApiCall, logApiResponse });
+
 			const categoryId = recCategoryIdInput.value.trim();
 			if (!categoryId) throw new Error('Introduzca el "Identificador de carpeta".');
 
@@ -771,7 +819,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				logMessage(` - Procesando: ${de.name} (Key: ${de.customerKey})`);
 
 				try {
-					const fields = await fetchFieldsForDE(de.customerKey, apiConfig);
+					const fields = await mcApiService.fetchFieldsForDE(de.customerKey, apiConfig);
 					fields.forEach(field => {
 						allFieldsData.push({
 							'Name': de.name,
@@ -808,23 +856,6 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 	}
 
-	/**
-	 * Lógica reutilizable para obtener los campos de una DE.
-	 * @param {string} customerKey - La External Key de la DE.
-	 * @param {object} apiConfig - La configuración de la API.
-	 * @returns {Promise<Array>} Un array de objetos de campo.
-	 */
-	async function fetchFieldsForDE(customerKey, apiConfig) {
-		// El payload se construye en el servicio, aquí solo registramos la llamada.
-		logApiCall({ service: 'mc-api-service', function: 'fetchFieldsForDE', customerKey });
-		
-		const response = await mcApiService.fetchFieldsForDE(customerKey, apiConfig); // <-- Cambio clave
-		
-		// El parsing también se hace en el servicio, aquí solo registramos la respuesta.
-		logApiResponse({ status: 'Success', fieldsCount: response.length });
-
-		return response;
-	}
 
 	/**
 	 * Recupera la lista de Data Extensions de una carpeta específica.
@@ -892,37 +923,38 @@ document.addEventListener('DOMContentLoaded', function () {
 		deSearchResultsTbody.innerHTML = '<tr><td colspan="2">Buscando...</td></tr>';
 		try {
 			const apiConfig = await getAuthenticatedConfig();
+			mcApiService.setLogger({ logApiCall, logApiResponse });
+
 			const property = deSearchProperty.value;
 			const value = deSearchValue.value.trim();
 			if (!value) throw new Error("El campo 'Valor' no puede estar vacío.");
 
 			logMessage(`Buscando DE por ${property} que contenga: ${value}`);
 			
-			// Usamos 'like' y envolvemos el valor con '%' para buscar coincidencias parciales
-			const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>Name</Properties><Properties>CategoryID</Properties><Filter xsi:type="SimpleFilterPart"><Property>${property}</Property><SimpleOperator>like</SimpleOperator><Value>%${value}%</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-			
-			const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload, "Búsqueda de DE completada.");
-			const deList = await parseDESearchResponse(responseText);
+			// 1. Llamar al servicio para obtener la lista de DEs
+			const deList = await mcApiService.searchDataExtensions(property, value, apiConfig);
 
 			if (deList.length === 0) {
-				renderDESearchResultsTable([]); // Renderiza la tabla vacía con mensaje
+				renderDESearchResultsTable([]);
 				logMessage("No se encontraron resultados.");
 				return;
 			}
 
-			logMessage(`Se encontraron ${deList.length} Data Extensions. Obteniendo rutas de carpeta...`);
+			logMessage(`Se encontraron ${deList.length} DEs. Obteniendo rutas de carpeta...`);
 
-			// Usamos Promise.all para obtener todas las rutas de carpeta en paralelo, mucho más rápido.
+			// 2. Enriquecer los resultados con las rutas de las carpetas
 			const pathPromises = deList.map(async (deInfo) => {
 				if (!deInfo.categoryId || parseInt(deInfo.categoryId) === 0) {
-					return { name: deInfo.deName, path: 'Data Extensions' }; // DE en la raíz
+					return { name: deInfo.deName, path: 'Data Extensions' };
 				}
-				const folderPath = await getFolderPath(deInfo.categoryId, apiConfig);
+				// Llamamos al helper que también está en el servicio
+				const folderPath = await mcApiService.getFolderPath(deInfo.categoryId, apiConfig);
 				return { name: deInfo.deName, path: folderPath || 'Data Extensions' };
 			});
 
 			const resultsWithPaths = await Promise.all(pathPromises);
 			
+			// 3. Renderizar la tabla final
 			renderDESearchResultsTable(resultsWithPaths);
 			logMessage("Visualización de resultados completada.");
 
@@ -944,17 +976,23 @@ document.addEventListener('DOMContentLoaded', function () {
 		emailValidationResults.textContent = 'Validando...';
 		try {
 			const apiConfig = await getAuthenticatedConfig();
+			mcApiService.setLogger({ logApiCall, logApiResponse }); 
+			
 			const emailToValidate = emailToValidateInput.value.trim();
-			if (!emailToValidate) throw new Error("Introduzca un email para validar.");
+			if (!emailToValidate) {
+				throw new Error("Introduzca un email para validar.");
+			}
+			
 			logMessage(`Validando email: ${emailToValidate}`);
-			const validateUrl = `${apiConfig.restUri}address/v1/validateEmail`;
-			const payload = { "email": emailToValidate, "validators": ["SyntaxValidator", "MXValidator", "ListDetectiveValidator"] };
-			logApiCall({ endpoint: validateUrl, body: payload });
-			const response = await fetch(validateUrl, { method: 'POST', headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiConfig.accessToken}` }, body: JSON.stringify(payload) });
-			const responseData = await response.json();
-			logApiResponse({ status: response.status, body: responseData });
-			if (!response.ok) throw new Error(responseData.message || `Error API: ${response.status}`);
-			emailValidationResults.textContent = responseData.valid ? `El email "${responseData.email}" es VÁLIDO.` : `El email "${responseData.email}" es INVÁLIDO.\nRazón: ${responseData.failedValidation}`;
+			
+			const responseData = await mcApiService.validateEmail(emailToValidate, apiConfig); // <-- Llamada al servicio
+
+			if (responseData.valid) {
+				emailValidationResults.textContent = `El email "${responseData.email}" es VÁLIDO.`;
+			} else {
+				emailValidationResults.textContent = `El email "${responseData.email}" es INVÁLIDO.\nRazón: ${responseData.failedValidation}`;
+			}
+
 		} catch (error) {
 			logMessage(`Error al validar el email: ${error.message}`);
 			emailValidationResults.textContent = `Error: ${error.message}`;
@@ -973,18 +1011,32 @@ document.addEventListener('DOMContentLoaded', function () {
 		dataSourcesTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
 		try {
 			const apiConfig = await getAuthenticatedConfig();
+			mcApiService.setLogger({ logApiCall, logApiResponse });
+
 			const deName = deNameToFindInput.value.trim();
 			if (!deName) throw new Error('Introduzca el nombre de la Data Extension.');
+			
 			logMessage(`Buscando orígenes para la DE: "${deName}"`);
-			const deDetails = await getDeObjectId(deName, apiConfig);
-			logMessage(`ObjectID de la DE: ${deDetails.ObjectID}`);
+			
+			// 1. Obtener el ObjectID de la DE
+			const deObjectId = await mcApiService.getDEObjectIdByName(deName, apiConfig);
+			logMessage(`ObjectID de la DE: ${deObjectId}`);
+
+			// 2. Buscar imports y queries en paralelo
 			const [imports, queries] = await Promise.all([
-				findImportsForDE(deDetails.ObjectID, apiConfig),
-				findQueriesForDE(deName, apiConfig)
+				mcApiService.findImportsTargetingDE(deObjectId, apiConfig),
+				mcApiService.searchQueriesBySimpleFilter({
+					property: 'DataExtensionTarget.Name',
+					simpleOperator: 'equals',
+					value: deName
+				}, apiConfig)
 			]);
+
+			// 3. Unir, ordenar y renderizar
 			const allSources = [...imports, ...queries].sort((a, b) => a.name.localeCompare(b.name));
 			renderDataSourcesTable(allSources);
 			logMessage(`Búsqueda completada. Se encontraron ${allSources.length} actividades.`);
+
 		} catch (error) {
 			logMessage(`Error al buscar orígenes: ${error.message}`);
 			dataSourcesTbody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${error.message}</td></tr>`;
@@ -999,59 +1051,40 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	async function macroSearchCustomer() {
 		blockUI("Buscando cliente...");
-		startLogBuffering(); // <-- Adaptado a la nueva estructura de logs
+		startLogBuffering();
 		customerSearchTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
 		
-		// Resetea el estado completo de la UI
 		if (selectedCustomerRow) selectedCustomerRow.classList.remove('selected');
 		selectedCustomerRow = null;
 		selectedSubscriberData = null;
-		getDEsBtn.disabled = false;
+		getDEsBtn.disabled = true;
 		getCustomerJourneysBtn.disabled = true;
 		customerJourneysResultsBlock.classList.add('hidden');
 		customerSendsResultsBlock.classList.add('hidden');
 
 		try {
 			const apiConfig = await getAuthenticatedConfig();
+			mcApiService.setLogger({ logApiCall, logApiResponse });
+
 			const value = customerSearchValue.value.trim();
 			if (!value) throw new Error("El campo de búsqueda no puede estar vacío.");
 			
 			let finalResults = [];
 
-			// --- PASO 1: Búsqueda como Subscriber por ID (SubscriberKey) ---
+			// PASO 1: Búsqueda como Subscriber por ID (SubscriberKey)
 			logMessage(`Paso 1/3: Buscando como Suscriptor por ID: ${value}`);
-			finalResults = await searchSubscriberByProperty('SubscriberKey', value, apiConfig);
+			finalResults = await mcApiService.searchSubscriberByProperty('SubscriberKey', value, apiConfig);
 
-			// --- PASO 2: Si no hay resultados, busca como Subscriber por Email ---
+			// PASO 2: Si no hay resultados, busca como Subscriber por Email
 			if (finalResults.length === 0) {
 				logMessage(`Paso 2/3: No encontrado por ID. Buscando como Suscriptor por Email: ${value}`);
-				finalResults = await searchSubscriberByProperty('EmailAddress', value, apiConfig);
+				finalResults = await mcApiService.searchSubscriberByProperty('EmailAddress', value, apiConfig);
 			}
 
-			// --- PASO 3: Si sigue sin haber resultados, busca como Contact ---
+			// PASO 3: Si sigue sin haber resultados, busca como Contact
 			if (finalResults.length === 0) {
 				logMessage(`Paso 3/3: No encontrado como Suscriptor. Buscando como Contacto por ContactKey: ${value}`);
-				
-				const contactUrl = `${apiConfig.restUri}contacts/v1/addresses/search/ContactKey`;
-				const contactPayload = { "filterConditionOperator": "Is", "filterConditionValue": value };
-
-				logApiCall({ endpoint: contactUrl, body: contactPayload });
-
-				const contactResponse = await fetch(contactUrl, {
-					method: 'POST',
-					headers: { 'Authorization': `Bearer ${apiConfig.accessToken}`, 'Content-Type': 'application/json' },
-					body: JSON.stringify(contactPayload)
-				});
-				
-				const contactData = await contactResponse.json();
-				logApiResponse(contactData);
-
-				if (!contactResponse.ok) {
-					const errorMessage = contactData.message || `Error API al buscar contactos: ${contactResponse.statusText}`;
-					throw new Error(errorMessage);
-				}
-				
-				finalResults = parseContactAddressSearchResponse(contactData);
+				finalResults = await mcApiService.searchContactByKey(value, apiConfig);
 			}
 
 			renderCustomerSearchResults(finalResults);
@@ -1062,7 +1095,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			customerSearchTbody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${error.message}</td></tr>`;
 		} finally {
 			unblockUI();
-			endLogBuffering(); // <-- Adaptado a la nueva estructura de logs
+			endLogBuffering();
 		}
 	}
 
@@ -1071,38 +1104,42 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	async function macroGetCustomerJourneys() {
 		if (!selectedSubscriberData?.subscriberKey) return;
+		
 		blockUI("Buscando Journeys...");
 		startLogBuffering();
 		customerJourneysResultsBlock.classList.remove('hidden');
 		customerJourneysTbody.innerHTML = '<tr><td colspan="6">Buscando membresías de Journey...</td></tr>';
+		
 		try {
 			const apiConfig = await getAuthenticatedConfig();
+			mcApiService.setLogger({ logApiCall, logApiResponse });
+
 			const contactKey = selectedSubscriberData.subscriberKey;
 			logMessage(`Buscando Journeys para el Contact Key: ${contactKey}`);
-			const membershipUrl = `${apiConfig.restUri}interaction/v1/interactions/contactMembership`;
-			const membershipPayload = { "ContactKeyList": [contactKey] };
-			logApiCall({ endpoint: membershipUrl, body: membershipPayload });
-			const membershipResponse = await fetch(membershipUrl, { method: 'POST', headers: { 'Authorization': `Bearer ${apiConfig.accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(membershipPayload) });
-			const membershipData = await membershipResponse.json();
-			logApiResponse(membershipData);
-			if (!membershipResponse.ok) throw new Error(`Error API al buscar membresías: ${membershipResponse.statusText}`);
-			const memberships = membershipData.results?.contactMemberships || [];
+
+			// 1. Obtener lista de membresías desde el servicio
+			const memberships = await mcApiService.fetchContactJourneyMemberships(contactKey, apiConfig);
+			
 			if (memberships.length === 0) {
 				customerJourneysTbody.innerHTML = '<tr><td colspan="6">Este contacto no se encuentra en ningún Journey.</td></tr>';
 				logMessage("Búsqueda completada. El contacto no está en ningún Journey.");
-				return;
+				return; 
 			}
+			
 			customerJourneysTbody.innerHTML = '<tr><td colspan="6">Membresías encontradas. Obteniendo detalles...</td></tr>';
+			
+			// 2. Obtener detalles de cada Journey único en paralelo
 			const uniqueDefinitionKeys = [...new Set(memberships.map(m => m.definitionKey))];
-			const detailPromises = uniqueDefinitionKeys.map(key => {
-				const detailUrl = `${apiConfig.restUri}interaction/v1/interactions/key:${key}`;
-				logApiCall({ step: 'Get Journey Details', endpoint: detailUrl });
-				return fetch(detailUrl, { method: 'GET', headers: { 'Authorization': `Bearer ${apiConfig.accessToken}` } }).then(res => res.json());
-			});
+			const detailPromises = uniqueDefinitionKeys.map(key => 
+				mcApiService.fetchJourneyDetailsByKey(key, apiConfig)
+			);
+			
 			const journeyDetails = await Promise.all(detailPromises);
-			logApiResponse({ step: 'All Journey Details', responses: journeyDetails });
-			renderCustomerJourneysTable(journeyDetails);
+
+			// 3. Renderizar la tabla final
+			renderCustomerJourneysTable(journeyDetails.filter(Boolean)); // Filtramos por si alguna llamada falló
 			logMessage(`Búsqueda completada. Se encontraron detalles para ${journeyDetails.length} Journey(s).`);
+
 		} catch (error) {
 			logMessage(`Error al buscar journeys: ${error.message}`);
 			customerJourneysTbody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${error.message}</td></tr>`;
@@ -1113,10 +1150,11 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 
 	/**
-	 * Macro para obtener los datos de envíos desde las Data Views configuradas.
+	 * Macro para obtener los datos de las DEs configuradas a nivel de cliente
 	 */
-	async function macroGetCustomerSends() {
+	async function macroGetCustomerDEs() {
 		if (!selectedSubscriberData?.subscriberKey) return;
+		
 		blockUI("Buscando en Data Extensions...");
 		startLogBuffering();
 		
@@ -1125,14 +1163,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		try {
 			const apiConfig = await getAuthenticatedConfig();
+			mcApiService.setLogger({ logApiCall, logApiResponse }); 
+
 			const searchValue = selectedSubscriberData.subscriberKey;
 			
-			// Leemos la configuración guardada del cliente activo
 			const configs = currentClientConfig?.dvConfigs?.filter(c => c.deKey && c.field) || [];
 
 			if (configs.length === 0) {
 				sendsResultsContainer.innerHTML = '<p>No hay Data Extensions configuradas para la búsqueda. Ve a "Configuración de APIs" para definirlas y guardarlas.</p>';
-				return;
+				return; 
 			}
 			
 			logMessage(`Iniciando búsqueda para '${searchValue}' en ${configs.length} DE(s).`);
@@ -1148,31 +1187,23 @@ document.addEventListener('DOMContentLoaded', function () {
 					</div>
 				`;
 				sendsResultsContainer.appendChild(resultBlock);
-				const container = resultBlock.querySelector('.table-container');
+				const tableContainer = resultBlock.querySelector('.table-container');
 
 				try {
-					logMessage(`Consultando DE: ${config.deKey} con el campo "${config.field}"...`);
-					const filter = encodeURIComponent(`"${config.field}"='${searchValue}'`);
-					const url = `${apiConfig.restUri}data/v1/customobjectdata/key/${config.deKey}/rowset?$filter=${filter}`;
+					logMessage(`Consultando DE: ${config.deKey} en el campo "${config.field}"...`);
 					
-					logApiCall({ endpoint: url, method: 'GET' });
-					const response = await fetch(url, { method: 'GET', headers: { 'Authorization': `Bearer ${apiConfig.accessToken}` } });
-					const responseData = await response.json();
-					logApiResponse({ request: url, response: responseData });
-
-					if (!response.ok) {
-						throw new Error(responseData.message || response.statusText);
-					}
-					
-					renderDEs(container, responseData.items);
+					// Llamada al nuevo servicio
+					const items = await mcApiService.searchDataExtensionRows(config.deKey, config.field, searchValue, apiConfig);
+										
+					renderDEs(tableContainer, items);
 				
 				} catch (error) {
 					logMessage(`Error consultando ${config.deKey}: ${error.message}`);
-					container.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+					tableContainer.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
 				}
 			}
 			
-			logMessage("Búsqueda de envíos completada.");
+			logMessage("Búsqueda en Data Extensions completada.");
 
 		} catch (error) {
 			logMessage(`Error fatal durante la búsqueda de envíos: ${error.message}`);
@@ -1192,13 +1223,22 @@ document.addEventListener('DOMContentLoaded', function () {
 		querySearchResultsTbody.innerHTML = '<tr><td colspan="4">Buscando en todas las queries...</td></tr>';
 		try {
 			const apiConfig = await getAuthenticatedConfig();
+			mcApiService.setLogger({ logApiCall, logApiResponse });
+
 			const searchText = querySearchText.value.trim();
 			if (!searchText) throw new Error("El campo 'Texto a buscar' no puede estar vacío.");
+
 			logMessage(`Buscando queries que contengan: "${searchText}"`);
-			const filterXml = `<Filter xsi:type="SimpleFilterPart"><Property>QueryText</Property><SimpleOperator>like</SimpleOperator><Value>%${searchText}%</Value></Filter>`;
-			const allQueries = await findQueriesByFilter(filterXml, apiConfig);
+
+			const allQueries = await mcApiService.searchQueriesBySimpleFilter({
+				property: 'QueryText',
+				simpleOperator: 'like',
+				value: searchText
+			}, apiConfig);
+			
 			renderQuerySearchResults(allQueries);
 			logMessage(`Búsqueda completada. Se encontraron ${allQueries.length} queries.`);
+
 		} catch (error) {
 			logMessage(`Error al buscar en queries: ${error.message}`);
 			querySearchResultsTbody.innerHTML = `<tr><td colspan="4" style="color: red;">Error: ${error.message}</td></tr>`;
@@ -1216,16 +1256,14 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * @returns {Promise<Array>} Una promesa que resuelve a la lista de automatismos.
 	 */
 	async function macroFetchAllAutomations() {
-		// La lógica de la UI (logs, alertas) se queda aquí.
 		try {
 			logMessage("Recuperando todas las definiciones de automatismos...");
 			const apiConfig = await getAuthenticatedConfig();
+            mcApiService.setLogger({ logApiCall, logApiResponse });
 
-			// ¡Aquí está la magia! Llamamos a nuestra función del servicio.
-			logApiCall({ service: 'mc-api-service', function: 'fetchAllAutomations' });
-			const allItems = await  mcApiService.fetchAllAutomations(apiConfig); // <-- Cambio clave
+			// Llamamos a nuestra función del servicio.
+			const allItems = await  mcApiService.fetchAllAutomations(apiConfig);
 			
-			logApiResponse({ status: 'Success', count: allItems.length });
 			logMessage(`Recuperación completa. Se encontraron ${allItems.length} definiciones.`);
 			
 			return allItems;
@@ -1285,55 +1323,43 @@ document.addEventListener('DOMContentLoaded', function () {
      * Macro para realizar una acción masiva (activar, ejecutar, parar) sobre los automatismos.
      * @param {string} actionName - La acción a realizar ('activate', 'run', 'pause').
      */
-	async function macroPerformAutomationAction(actionName) {
+	async function macroPerformAutomationAction(actionName) { // actionName es 'activate', 'run', 'pause'
 		const selectedRows = document.querySelectorAll('#automations-table tbody tr.selected');
 		if (selectedRows.length === 0) return;
+		
 		const selectedAutomations = Array.from(selectedRows).map(row => fullAutomationList.find(auto => auto.id === row.dataset.automationId)).filter(Boolean);
 		if (selectedAutomations.length === 0) return;
+		
 		if (!await showCustomConfirm(`¿Seguro que quieres '${actionName}' ${selectedAutomations.length} automatismo(s)?`)) return;
 		
-		blockUI("Realizando acción "+actionName+"...");
+		blockUI(`Realizando acción ${actionName}...`);
 		startLogBuffering();
 		const successes = [];
 		const failures = [];
 
 		try {
 			const apiConfig = await getAuthenticatedConfig();
-			const headers = { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" };
-			const baseActionURL = `${apiConfig.restUri}legacy/v1/beta/bulk/automations/automation/definition/`;
-			let actionURL;
-			switch (actionName) {
-				case 'pause': actionURL = `${baseActionURL}?action=pauseSchedule`; break;
-				case 'run': actionURL = `${baseActionURL}?action=start`; break;
-				case 'activate': actionURL = `${baseActionURL}?action=schedule`; break;
-				default: throw new Error(`Acción desconocida: ${actionName}`);
-			}
+
+			mcApiService.setLogger({ logApiCall, logApiResponse });
+			
+			// Creamos un mapa de acciones para llamar a la función de servicio correcta
+			const actionServiceMap = {
+				activate: mcApiService.activateAutomation,
+				run: mcApiService.runAutomation,
+				pause: mcApiService.pauseAutomation
+			};
 
 			for (const auto of selectedAutomations) {
-				let payload = { id: auto.id };
-				logMessage(`Procesando '${auto.name}'...`);
-				if (actionName === 'activate') {
-					try {
-						const detailUrl = `${apiConfig.restUri}legacy/v1/beta/bulk/automations/automation/definition/${auto.id}`;
-						logApiCall({ step: `Get schedule for ${auto.name}`, endpoint: detailUrl });
-						const detailResponse = await fetch(detailUrl, { headers });
-						const autoDetails = await detailResponse.json();
-						if (!autoDetails.scheduleObject?.id) throw new Error("No se pudo obtener el 'scheduleObject.id'");
-						payload = { id: auto.id, scheduleObject: { id: autoDetails.scheduleObject.id } };
-					} catch (error) {
-						failures.push({ name: auto.name, reason: error.message });
-						continue;
-					}
-				}
-				logApiCall({ action: actionName, endpoint: actionURL, payload });
-				const actionResponse = await fetch(actionURL, { method: 'POST', headers, body: JSON.stringify(payload) });
-				if (actionResponse.ok) {
+				try {
+					logMessage(`Procesando '${auto.name}'...`);
+					
+                    // Llamamos a la función de servicio correspondiente del mapa
+					const response = await actionServiceMap[actionName](auto.id, apiConfig);
+
 					successes.push({ name: auto.name });
-					logApiResponse({ for: auto.name, status: 'Success' });
-				} else {
-					const responseData = await actionResponse.json();
-					failures.push({ name: auto.name, reason: responseData.message || `Error ${actionResponse.status}` });
-					logApiResponse({ for: auto.name, status: 'Failure', response: responseData });
+
+				} catch (error) {
+					failures.push({ name: auto.name, reason: error.message });
 				}
 			}
 		} catch (error) {
@@ -1341,12 +1367,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			showCustomAlert(`Error fatal: ${error.message}`);
 		} finally {
 			const alertSummary = `Acción '${actionName}' completada. Éxitos: ${successes.length}, Fallos: ${failures.length}.`;
-			let logSummary = alertSummary;
-			if (failures.length > 0) {
-				const failureDetails = failures.map(f => `  - ${f.name}: ${f.reason}`).join('\n');
-				logSummary += `\n\n--- Detalles de Fallos ---\n${failureDetails}`;
-			}
-			logMessage(logSummary);
+			logMessage(alertSummary + (failures.length > 0 ? `\n\n--- Detalles de Fallos ---\n${failures.map(f => `  - ${f.name}: ${f.reason}`).join('\n')}` : ''));
 			showCustomAlert(alertSummary);
 			unblockUI();
 			endLogBuffering();
@@ -1365,36 +1386,28 @@ document.addEventListener('DOMContentLoaded', function () {
 			return;
 		}
 
-        const journeysToProcess = Array.from(selectedRows).map(row => {
-            return fullJourneyList.find(j => j.id === row.dataset.journeyId);
-        }).filter(Boolean); // Filtra por si acaso
+        const journeysToProcess = Array.from(selectedRows).map(row => 
+            fullJourneyList.find(j => j.id === row.dataset.journeyId)
+        ).filter(Boolean);
 
 		blockUI("Recuperando comunicaciones...");
 		startLogBuffering();
 		try {
-			logMessage(`Iniciando obtención de detalles de comunicación para ${journeysToProcess.length} journey(s) seleccionado(s)...`);
+			logMessage(`Iniciando obtención de detalles de comunicación para ${journeysToProcess.length} journey(s)...`);
 			const apiConfig = await getAuthenticatedConfig();
-			let processedCount = 0;
+
+			mcApiService.setLogger({ logApiCall, logApiResponse });
 
 			for (const journey of journeysToProcess) {
-				// Aunque el botón se deshabilita, una doble comprobación no hace daño
 				if (journey.hasCommunications) {
 					logMessage(`Saltando ${journey.name}, ya tiene los datos.`);
-					processedCount++;
 					continue;
 				}
 				
                 try {
-					logMessage(`(${processedCount + 1}/${journeysToProcess.length}) Obteniendo actividades para: ${journey.name}`);
-					const url = `${apiConfig.restUri}interaction/v1/interactions/${journey.id}`;
-					const response = await fetch(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
+					logMessage(`Obteniendo actividades para: ${journey.name}`);
+					const journeyDetails = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
 					
-					if (!response.ok) {
-						logMessage(` -> Error ${response.status} al obtener detalles para ${journey.name}.`);
-						continue;
-					}
-
-					const journeyDetails = await response.json();
 					const communications = parseJourneyActivities(journeyDetails.activities);
 					
 					journey.emails = communications.emails;
@@ -1405,8 +1418,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 				} catch (error) {
 					logMessage(` -> Error de red al procesar ${journey.name}: ${error.message}`);
-				} finally {
-					processedCount++;
 				}
 			}
 
@@ -1414,7 +1425,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			showCustomAlert("Comunicaciones actualizadas para los journeys seleccionados.");
 			
             applyJourneyFiltersAndRender();
-            updateJourneyActionButtonsState(); // Actualizamos el estado de los botones
+            updateJourneyActionButtonsState();
 
 		} catch (error) {
 			logMessage(`Error fatal durante la obtención de comunicaciones: ${error.message}`);
@@ -1432,10 +1443,9 @@ document.addEventListener('DOMContentLoaded', function () {
 		const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
 		if (selectedRows.length === 0) return;
 
-		const journeysToStop = Array.from(selectedRows).map(row => {
-			return fullJourneyList.find(j => j.id === row.dataset.journeyId);
-		}).filter(Boolean);
-
+		const journeysToStop = Array.from(selectedRows).map(row => 
+            fullJourneyList.find(j => j.id === row.dataset.journeyId)
+        ).filter(Boolean);
 		if (journeysToStop.length === 0) return;
 
 		if (!await showCustomConfirm(`¿Seguro que quieres parar ${journeysToStop.length} journey(s)? Esta acción intentará detener la versión activa.`)) return;
@@ -1447,26 +1457,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		try {
 			const apiConfig = await getAuthenticatedConfig();
-			const headers = { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" };
+			mcApiService.setLogger({ logApiCall, logApiResponse });
 
 			for (const journey of journeysToStop) {
-				logMessage(`Procesando parada para: "${journey.name}" (Versión ${journey.version})`);
-				const url = `${apiConfig.restUri}interaction/v1/interactions/stop/${journey.id}?versionNumber=${journey.version}`;
-				logApiCall({ action: 'stop', endpoint: url });
-
 				try {
-					const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify({}) });
-					const responseData = await response.json();
-					logApiResponse({ for: journey.name, status: response.status, response: responseData });
-
-					if (response.ok) {
-						successes.push({ name: journey.name });
-					} else {
-						failures.push({ name: journey.name, reason: responseData.message || `Error ${response.status}` });
-					}
+					logMessage(`Procesando parada para: "${journey.name}" (Versión ${journey.version})`);
+					const response = await mcApiService.stopJourney(journey.id, journey.version, apiConfig);
+					successes.push({ name: journey.name });
 				} catch (error) {
 					failures.push({ name: journey.name, reason: error.message });
-					logApiResponse({ for: journey.name, status: 'Failure', response: error.message });
 				}
 			}
 		} catch (error) {
@@ -1483,74 +1482,11 @@ document.addEventListener('DOMContentLoaded', function () {
 			showCustomAlert(alertSummary);
 			unblockUI();
 			endLogBuffering();
-			// Refrescamos la tabla para ver los cambios de estado
 			refreshJourneysTableBtn.click();
 		}
 	}
 
-	/**
-	 * Prepara el payload para crear una copia de un Journey, actualizando todas las referencias.
-	 * @param {object} originalJourney - El objeto de Journey completo.
-	 * @param {object} originalEventDef - El objeto de Event Definition original para obtener la clave antigua.
-	 * @param {object} newEventDef - El objeto del nuevo Event Definition para obtener los nuevos IDs y Key.
-	 * @returns {object} Un objeto JSON listo para ser enviado en la petición de creación.
-	 */
-	function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
-		// 1. Obtenemos las claves antigua y nueva para el reemplazo.
-		const oldEventDefKey = originalEventDef.eventDefinitionKey;
-		const newEventDefKey = newEventDef.eventDefinitionKey;
-		
-		if (!oldEventDefKey || !newEventDefKey) {
-			throw new Error("No se pudieron obtener las claves de Event Definition para el reemplazo.");
-		}
-
-		// 2. Creamos una copia profunda del objeto original para no modificarlo.
-		let journeyCopy = JSON.parse(JSON.stringify(originalJourney));
-		
-		// 3. Convertimos la copia a una cadena de texto para hacer un reemplazo global y seguro.
-		let journeyString = JSON.stringify(journeyCopy);
-
-		// 4. Reemplazamos TODAS las ocurrencias de la antigua eventDefinitionKey por la nueva.
-		// Esto soluciona el problema de las referencias en 'activities' y 'defaults'.
-		const regex = new RegExp(oldEventDefKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-		journeyString = journeyString.replace(regex, newEventDefKey);
-		
-		// 5. Volvemos a convertir la cadena a un objeto JSON.
-		let finalPayload = JSON.parse(journeyString);
-
-		// 6. Limpiamos las actividades: quitamos 'id' y 'schema' de cada una.
-		finalPayload.activities = finalPayload.activities.map(activity => {
-			const { id, schema, ...rest } = activity;
-			return rest;
-		});
-
-		// 7. Limpiamos los triggers y nos aseguramos de que tienen los nuevos IDs y Key correctos.
-		finalPayload.triggers = finalPayload.triggers.map(trigger => {
-			const { id, ...rest } = trigger;
-			rest.type = 'EmailAudience'; 
-			if (rest.metaData) {
-				rest.metaData.eventDefinitionKey = newEventDef.eventDefinitionKey; 
-				rest.metaData.eventDefinitionId = newEventDef.id;
-			}
-			return rest;
-		});
-		
-		// 8. Eliminamos las propiedades del nivel superior que no deben ir en una creación.
-		delete finalPayload.id;
-		delete finalPayload.version;
-		delete finalPayload.createdDate;
-		delete finalPayload.modifiedDate;
-		delete finalPayload.lastPublishedDate;
-		delete finalPayload.definitionId;
-		delete finalPayload.status;
-		delete finalPayload.stats;
-		
-		// 9. Asignamos un nuevo nombre y una nueva 'key' para el Journey clonado.
-		finalPayload.name = `${originalJourney.name}_Copy`;
-		finalPayload.key = crypto.randomUUID();
-
-		return finalPayload;
-	}
+	
 
 	/**
 	 * Macro principal para orquestar la copia de un Journey.
@@ -1570,62 +1506,47 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		try {
 			const apiConfig = await getAuthenticatedConfig();
+
+			// Crea un objeto con nuestras funciones de log y pásalo al servicio.
+			const logger = { logApiCall, logApiResponse };
+			mcApiService.setLogger(logger);
 			
-			// --- PASO 1: Obtener la definición completa del Journey original ---
-			logMessage(`PASO 1/6: Obteniendo definición completa de "${journey.name}"...`);
+			// PASO 1: Obtener detalles del Journey original
+			logMessage(`PASO 1/6: Obteniendo definición de "${journey.name}"...`);
 			blockUI(`Paso 1/6: Obteniendo Journey original...`);
-			const getJourneyUrl = `${apiConfig.restUri}interaction/v1/interactions/${journeyId}`;
-			const responseGetJourney = await fetch(getJourneyUrl, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
-			if (!responseGetJourney.ok) throw new Error(`Error obteniendo Journey. Status: ${responseGetJourney.status}`);
-			const originalJourney = await responseGetJourney.json();
+			const originalJourney = await mcApiService.fetchJourneyDetailsById(journeyId, apiConfig);
 			const originalEventDefId = originalJourney.triggers?.[0]?.metaData?.eventDefinitionId;
 			if (!originalEventDefId) throw new Error("No se pudo encontrar el Event Definition ID en el trigger del Journey.");
-			logApiResponse({ step: 1, response: "Definición de Journey obtenida." });
 
-			// --- PASO 2: Obtener la definición del Event Definition original ---
-			logMessage(`PASO 2/6: Obteniendo Event Definition original (ID: ${originalEventDefId})...`);
+			// PASO 2: Obtener detalles del Event Definition
+			logMessage(`PASO 2/6: Obteniendo Event Definition...`);
 			blockUI(`Paso 2/6: Obteniendo Event Definition...`);
-			const getEventDefUrl = `${apiConfig.restUri}interaction/v1/eventDefinitions/${originalEventDefId}`;
-			const responseGetEventDef = await fetch(getEventDefUrl, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
-			if (!responseGetEventDef.ok) throw new Error(`Error obteniendo Event Definition. Status: ${responseGetEventDef.status}`);
-			const originalEventDef = await responseGetEventDef.json();
+			const originalEventDef = await mcApiService.getEventDefinitionById(originalEventDefId, apiConfig);
 			const originalDeName = originalEventDef.dataExtensionName;
-			if (!originalDeName) throw new Error("No se pudo encontrar el nombre (dataExtensionName) de la DE en el Event Definition.");
-			logApiResponse({ step: 2, response: `Event Definition obtenido. Nombre de la DE de origen: ${originalDeName}` });
+			if (!originalDeName) throw new Error("No se pudo encontrar el nombre de la DE en el Event Definition.");
 
-			// --- PASO 3: Encontrar la CustomerKey de la DE original usando su Nombre ---
-			logMessage(`PASO 3/6: Buscando CustomerKey para la DE con nombre "${originalDeName}"...`);
+			// PASO 3: Encontrar detalles de la DE original (incluyendo su CategoryID)
+			logMessage(`PASO 3/6: Buscando detalles (Key y Carpeta) para la DE "${originalDeName}"...`);
 			blockUI(`Paso 3/6: Buscando DE de origen...`);
-			const findKeyPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>CustomerKey</Properties><Filter xsi:type="SimpleFilterPart"><Property>Name</Property><SimpleOperator>equals</SimpleOperator><Value>${originalDeName}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-			const findKeyResponseText = await executeSoapRequest(apiConfig.soapUri, findKeyPayload, null); // Pasamos null para suprimir la alerta de éxito
-			const keyParser = new DOMParser();
-			const keyDoc = keyParser.parseFromString(findKeyResponseText, "application/xml");
-			const originalDeCustomerKey = keyDoc.querySelector("CustomerKey")?.textContent;
-			if (!originalDeCustomerKey) throw new Error(`No se pudo encontrar una Data Extension con el nombre exacto "${originalDeName}".`);
-			logApiResponse({ step: 3, response: `CustomerKey encontrada: ${originalDeCustomerKey}` });
+			const originalDeDetails = await mcApiService.getDataExtensionDetailsByName(originalDeName, apiConfig);
+			if (!originalDeDetails.customerKey) throw new Error(`No se pudo encontrar la CustomerKey para la DE "${originalDeName}"`);
 			
-			// --- PASO 4: Clonar la Data Extension ---
-			logMessage(`PASO 4/6: Clonando la Data Extension "${originalDeCustomerKey}"...`);
+			// PASO 4: Clonar la Data Extension en la CARPETA CORRECTA
+			logMessage(`PASO 4/6: Clonando la Data Extension...`);
 			blockUI(`Paso 4/6: Clonando Data Extension...`);
-			const clonedDeInfo = await cloneDataExtension(originalDeCustomerKey, apiConfig);
-			logApiResponse({ step: 4, response: `DE clonada con éxito. Nueva Key: ${clonedDeInfo.customerKey}, Nuevo ObjectID: ${clonedDeInfo.objectID}` });
+			const newDeName = `${originalDeName}_Copy`;
+			const clonedDeInfo = await mcApiService.cloneDataExtension(originalDeDetails.customerKey, newDeName, "", originalDeDetails.categoryId, apiConfig);
 
-			// --- PASO 5: Crear el nuevo Event Definition ---
-			logMessage(`PASO 5/6: Creando nuevo Event Definition para la DE clonada...`);
+			// PASO 5: Crear el nuevo Event Definition
+			logMessage(`PASO 5/6: Creando nuevo Event Definition...`);
 			blockUI(`Paso 5/6: Creando nuevo Event Definition...`);
-			const newEventDef = await createClonedEventDefinition(originalEventDef, clonedDeInfo, apiConfig);
-			logApiResponse({ step: 5, response: `Nuevo Event Definition creado. Nuevo ID: ${newEventDef.eventDefinitionId}. Nueva Key: ${newEventDef.eventDefinitionKey}` });
+			const newEventDef = await mcApiService.createClonedEventDefinition(originalEventDef, clonedDeInfo, apiConfig);
 
-			// --- PASO 6: Crear el nuevo Journey ---
+			// PASO 6: Crear el nuevo Journey
 			logMessage(`PASO 6/6: Creando la copia final del Journey...`);
 			blockUI(`Paso 6/6: Creando copia del Journey...`);
 			const copyPayload = prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef);
-			const postJourneyUrl = `${apiConfig.restUri}interaction/v1/interactions/`;
-			logApiCall({ action: 'create_copy', endpoint: postJourneyUrl, payload: copyPayload });
-			const responsePostJourney = await fetch(postJourneyUrl, { method: 'POST', headers: { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(copyPayload) });
-			const newJourneyData = await responsePostJourney.json();
-			logApiResponse({ step: 6, status: responsePostJourney.status, response: newJourneyData });
-			if (!responsePostJourney.ok) throw new Error(newJourneyData.message || `Error al crear la copia. Status: ${responsePostJourney.status}`);
+			const newJourneyData = await mcApiService.createJourney(copyPayload, apiConfig);
 
 			showCustomAlert(`¡Éxito! Se ha creado la copia "${newJourneyData.name}". Refrescando la lista...`);
 			refreshJourneysTableBtn.click();
@@ -1639,131 +1560,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 	}
 
-	/**
-	 * Clona una Data Extension, incluyendo su estructura y campos.
-	 * @param {string} originalDeCustomerKey - La CustomerKey de la DE a clonar.
-	 * @param {object} newDeName - El nombre de la nueva DE.
-	 * @param {object} apiConfig - El objeto de configuración de la API.
-	 * @param {string} targetCategoryId - El ID de la carpeta donde se guardará la nueva DE.
-	 * @returns {Promise<{objectID: string, customerKey: string, name: string}>} - Promesa con IDs y nombre de la nueva DE.
-	 */
-	async function cloneDataExtension(originalDeCustomerKey, newDeName, apiConfig, targetCategoryId) {
-		const businessUnitId = businessUnitInput.value.trim();
-
-		// 1. Recuperar detalles de la DE original usando su CustomerKey
-		logMessage(`  - Subpaso 1: Recuperando detalles de la DE (${originalDeCustomerKey})...`);
-		const retrieveDeDetailsPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>Name</Properties><Properties>Description</Properties><Properties>IsSendable</Properties><Properties>SendableDataExtensionField.Name</Properties><Properties>SendableSubscriberField.Name</Properties><Filter xsi:type="SimpleFilterPart"><Property>CustomerKey</Property><SimpleOperator>equals</SimpleOperator><Value>${originalDeCustomerKey}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-		const deDetailsText = await executeSoapRequest(apiConfig.soapUri, retrieveDeDetailsPayload, null);
-		const deParser = new DOMParser();
-		const deDoc = deParser.parseFromString(deDetailsText, "application/xml");
-		const deResultNode = deDoc.querySelector("Results");
-
-		if (!deResultNode) {
-			throw new Error(`No se encontraron detalles para la Data Extension con CustomerKey: ${originalDeCustomerKey}`);
-		}
-
-		const originalDeDetails = {
-			name: deResultNode.querySelector("Name")?.textContent,
-			description: deResultNode.querySelector("Description")?.textContent || "",
-			isSendable: deResultNode.querySelector("IsSendable")?.textContent === 'true',
-			sendableField: deResultNode.querySelector("SendableDataExtensionField > Name")?.textContent
-		};
-		logMessage(`  - Detalles recuperados: Nombre='${originalDeDetails.name}', Sendable=${originalDeDetails.isSendable}`);
-
-		// 2. Recuperar todos los campos de la DE original
-		logMessage("  - Subpaso 2: Recuperando campos de la DE original...");
-		const fields = await fetchFieldsForDE(originalDeCustomerKey, apiConfig);
-		if (fields.length === 0) throw new Error("No se pudieron recuperar los campos de la DE original.");
-
-		const fieldsXmlString = fields.map(buildFieldXml).join('');
-		const sendableFieldType = fields.find(f => f.mc === originalDeDetails.sendableField)?.type;
-
-		// 3. Crear la nueva DE con una CustomerKey VACÍA
-		logMessage(`  - Subpaso 3: Creando la nueva DE clonada con nombre "${newDeName}" en la carpeta ID ${targetCategoryId}...`);
-		const descriptionXml = originalDeDetails.description ? `<Description>${originalDeDetails.description}</Description>` : '';
-		const clientXml = businessUnitId ? `<Client><ClientID>${businessUnitId}</ClientID></Client>` : '';
-
-		let sendableXml = '';
-		if (originalDeDetails.isSendable && originalDeDetails.sendableField && sendableFieldType) {
-			sendableXml = `<SendableDataExtensionField><CustomerKey>${originalDeDetails.sendableField}</CustomerKey><Name>${originalDeDetails.sendableField}</Name><FieldType>${sendableFieldType}</FieldType></SendableDataExtensionField><SendableSubscriberField><Name>Subscriber Key</Name><Value/></SendableSubscriberField>`;
-		}
-
-		const createDePayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Create</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><CreateRequest xmlns="http://exacttarget.com/wsdl/partnerAPI"><Objects xsi:type="DataExtension">${clientXml}<CustomerKey></CustomerKey>${descriptionXml}<Name>${newDeName}</Name><CategoryID>${targetCategoryId}</CategoryID><IsSendable>${originalDeDetails.isSendable}</IsSendable>${sendableXml}<Fields>${fieldsXmlString}</Fields></Objects></CreateRequest></s:Body></s:Envelope>`;
-		const createResponseText = await executeSoapRequest(apiConfig.soapUri, createDePayload, null);
-
-		const createParser = new DOMParser();
-		const createDoc = createParser.parseFromString(createResponseText, "application/xml");
-		if (createDoc.querySelector("OverallStatus")?.textContent !== 'OK') {
-			const errorMessage = createDoc.querySelector("StatusMessage")?.textContent || "Error desconocido al crear la DE clonada.";
-			throw new Error(errorMessage);
-		}
-		logMessage(`  - Subpaso 4: DE "${newDeName}" creada. Recuperando su nueva CustomerKey...`);
-
-		// 4. Recuperar la DE recién creada por su nombre para obtener la CustomerKey generada
-		const retrieveNewDePayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>CustomerKey</Properties><Properties>ObjectID</Properties><Filter xsi:type="SimpleFilterPart"><Property>Name</Property><SimpleOperator>equals</SimpleOperator><Value>${newDeName}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-		const newDeText = await executeSoapRequest(apiConfig.soapUri, retrieveNewDePayload, null);
-		const newDeDoc = new DOMParser().parseFromString(newDeText, "application/xml");
-		const newDeNode = newDeDoc.querySelector("Results");
-
-		if (!newDeNode) {
-			throw new Error(`No se pudo recuperar la DE recién creada con el nombre "${newDeName}".`);
-		}
-		
-		const newObjectID = newDeNode.querySelector("ObjectID")?.textContent;
-		const createdCustomerKey = newDeNode.querySelector("CustomerKey")?.textContent;
-		if (!newObjectID || !createdCustomerKey) {
-			throw new Error("No se pudo obtener el ID/Key de la nueva DE creada tras la recuperación.");
-		}
-
-		return { objectID: newObjectID, customerKey: createdCustomerKey, name: newDeName };
-	}
-
-
-	/**
-	 * Crea un nuevo Event Definition apuntando a una DE clonada.
-	 * @param {object} originalEventDef - El objeto del Event Definition original.
-	 * @param {{objectID: string, customerKey: string}} clonedDeInfo - IDs de la nueva DE.
-	 * @param {object} apiConfig - El objeto de configuración de la API.
-	 * @returns {Promise<object>} - Una promesa que resuelve con el nuevo Event Definition creado.
-	 */
-	async function createClonedEventDefinition(originalEventDef, clonedDeInfo, apiConfig) {
-		// CORRECCIÓN FINAL: Generamos un UUID estándar. Es único y tiene exactamente 36 caracteres.
-		const newEventDefKey = crypto.randomUUID();
-
-		// Construimos el payload basándonos estrictamente en la documentación para la creación.
-		const payload = {
-			type: 'EmailAudience'/*originalEventDef.type*/,
-			name: `${originalEventDef.name}_Copy`,
-			description: originalEventDef.description || "",
-			mode: originalEventDef.mode || "Production",
-			eventDefinitionKey: newEventDefKey,
-			dataExtensionId: clonedDeInfo.objectID,
-			iconUrl: originalEventDef.iconUrl,
-			isVisibleInPicker: originalEventDef.isVisibleInPicker,
-			category: originalEventDef.category,
-			// Incluimos el schema, que es necesario para que el evento sepa qué esperar de la DE
-			schema: originalEventDef.schema 
-		};
-
-		const url = `${apiConfig.restUri}interaction/v1/eventDefinitions/`;
-		logApiCall({ step: "createClonedEventDefinition", payload: payload });
-		
-		const response = await fetch(url, {
-			method: 'POST',
-			headers: { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" },
-			body: JSON.stringify(payload)
-		});
-		
-		const responseData = await response.json();
-		logApiResponse({ step: "createClonedEventDefinition", response: responseData });
-		
-		if (!response.ok) {
-			const errorMessage = responseData.message || "Error desconocido al crear el Event Definition clonado.";
-			throw new Error(`Error en Event Definition: ${errorMessage}`);
-		}
-		
-		return responseData;
-	}
+	
 
 	/**
 	 * Helper para parsear el array de actividades de un journey y extraer los nombres de las comunicaciones.
@@ -1806,15 +1603,12 @@ document.addEventListener('DOMContentLoaded', function () {
 		const selectedRows = document.querySelectorAll('#journeys-table tbody tr.selected');
 		if (selectedRows.length === 0) return;
 
-		const journeysToDelete = Array.from(selectedRows).map(row => {
-			return fullJourneyList.find(j => j.id === row.dataset.journeyId);
-		}).filter(Boolean);
-
+		const journeysToDelete = Array.from(selectedRows).map(row => 
+            fullJourneyList.find(j => j.id === row.dataset.journeyId)
+        ).filter(Boolean);
 		if (journeysToDelete.length === 0) return;
 
-		if (!await showCustomConfirm(`¿Seguro que quieres borrar permanentemente ${journeysToDelete.length} journey(s)? Esta acción no se puede deshacer.`)) {
-			return;
-		}
+		if (!await showCustomConfirm(`¿Seguro que quieres borrar permanentemente ${journeysToDelete.length} journey(s)? Esta acción no se puede deshacer.`)) return;
 
 		blockUI(`Borrando ${journeysToDelete.length} journey(s)...`);
 		startLogBuffering();
@@ -1823,28 +1617,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		try {
 			const apiConfig = await getAuthenticatedConfig();
-			const headers = { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" };
+			mcApiService.setLogger({ logApiCall, logApiResponse });
 
 			for (const journey of journeysToDelete) {
-				logMessage(`Procesando borrado para: "${journey.name}" (ID: ${journey.id})`);
-				const deleteUrl = `${apiConfig.restUri}interaction/v1/interactions/${journey.id}`;
-				logApiCall({ action: 'DELETE', endpoint: deleteUrl });
-
 				try {
-					const response = await fetch(deleteUrl, { method: 'DELETE', headers });
-					
-					// La API de borrado responde con 200 OK y un cuerpo vacío en caso de éxito
-					if (response.ok) {
-						successes.push({ name: journey.name });
-						logApiResponse({ for: journey.name, status: 'Success', response: 'Borrado con éxito.' });
-					} else {
-						const responseData = await response.json(); // Intentamos leer el error
-						failures.push({ name: journey.name, reason: responseData.message || `Error ${response.status}` });
-						logApiResponse({ for: journey.name, status: 'Failure', response: responseData });
-					}
+					logMessage(`Procesando borrado para: "${journey.name}" (ID: ${journey.id})`);
+					const response = await mcApiService.deleteJourney(journey.id, apiConfig);
+					successes.push({ name: journey.name });
 				} catch (error) {
 					failures.push({ name: journey.name, reason: error.message });
-					logApiResponse({ for: journey.name, status: 'Failure', response: error.message });
 				}
 			}
 		} catch (error) {
@@ -1861,8 +1642,6 @@ document.addEventListener('DOMContentLoaded', function () {
 			showCustomAlert(alertSummary);
 			unblockUI();
 			endLogBuffering();
-			
-			// Refrescamos la tabla para que desaparezcan los journeys borrados
 			refreshJourneysTableBtn.click();
 		}
 	}
@@ -1877,21 +1656,22 @@ document.addEventListener('DOMContentLoaded', function () {
 		startLogBuffering();
 		try {
 			const apiConfig = await getAuthenticatedConfig();
+			mcApiService.setLogger({ logApiCall, logApiResponse });
+
 			const sourceQueryName = querySourceFolderNameInput.value.trim();
 			const targetQueryName = queryTargetFolderNameInput.value.trim();
 			const targetDEName = deTargetFolderNameInput.value.trim();
 
-			// Limpiar resultados anteriores
 			resetFolderSelection();
 
 			logMessage("Iniciando búsqueda de carpetas...");
 			const [sourceQueryFolders, targetQueryFolders, targetDEFolders] = await Promise.all([
-				findDataFolders(sourceQueryName, 'queryactivity', apiConfig),
-				findDataFolders(targetQueryName, 'queryactivity', apiConfig),
-				findDataFolders(targetDEName, 'dataextension', apiConfig)
+				mcApiService.findDataFolders(sourceQueryName, 'queryactivity', apiConfig),
+				mcApiService.findDataFolders(targetQueryName, 'queryactivity', apiConfig),
+				mcApiService.findDataFolders(targetDEName, 'dataextension', apiConfig)
 			]);
 			
-			logMessage(`Resultados: ${sourceQueryFolders.length} (Query Origen), ${targetQueryFolders.length} (Query Destino), ${targetDEFolders.length} (DE Destino)`);
+			logMessage(`Resultados: ${sourceQueryFolders.length} (Origen), ${targetQueryFolders.length} (Destino Query), ${targetDEFolders.length} (Destino DE)`);
 			
 			renderFolderResultsTable(querySourceFoldersTbody, sourceQueryFolders);
 			renderFolderResultsTable(queryTargetFoldersTbody, targetQueryFolders);
@@ -1916,17 +1696,20 @@ document.addEventListener('DOMContentLoaded', function () {
 		startLogBuffering();
 		try {
 			const apiConfig = await getAuthenticatedConfig();
+			mcApiService.setLogger({ logApiCall, logApiResponse });
+
 			if (!clonerState.sourceQueryFolder) throw new Error("No se ha seleccionado una carpeta de origen.");
 
 			logMessage(`Recuperando queries de la carpeta ID: ${clonerState.sourceQueryFolder.id}`);
-			const queries = await getQueriesFromFolder(clonerState.sourceQueryFolder.id, apiConfig);
+			const queries = await mcApiService.getQueriesFromFolder(clonerState.sourceQueryFolder.id, apiConfig);
+			
 			clonerState.queriesInSourceFolder = queries.map(q => ({
 				...q,
 				newQueryName: `${q.name}_Copy`,
-				newDeName: `${q.targetDE.name}_Copy`
+				newDeName: q.targetDE.name ? `${q.targetDE.name}_Copy` : '', // Manejar si no hay DE de destino
+				selected: false
 			}));
 			
-			// Pasamos el nuevo estado enriquecido a la función de renderizado
 			renderQuerySelectionTable(clonerState.queriesInSourceFolder);
 
 			queriesClonerStep1.style.display = 'none';
@@ -1942,6 +1725,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			endLogBuffering();
 		}
 	}
+
 	
 	/**
 	 * Macro final que ejecuta el proceso de clonación para las queries seleccionadas.
@@ -1958,6 +1742,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		try {
 			const apiConfig = await getAuthenticatedConfig();
+			mcApiService.setLogger({ logApiCall, logApiResponse });
+
 			logMessage(`Iniciando clonación masiva de ${selectedQueries.length} queries...`);
 
 			for (let i = 0; i < selectedQueries.length; i++) {
@@ -1966,19 +1752,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
 				try {
 					logMessage(`\n--- ${progress} Procesando Query: ${query.name} ---`);
+					if (!query.targetDE.customerKey) {
+						throw new Error("La query original no tiene una Data Extension de destino válida.");
+					}
 					
-					// 1. Clonar la Data Extension 
+					// 1. Clonar la Data Extension con logging
 					blockUI(`${progress} Clonando DE como "${query.newDeName}"...`);
-					logMessage(`  - Paso 1: Clonando DE de destino (Key: ${query.targetDE.customerKey})`);
-					// Pasamos el nuevo nombre de la DE como argumento
-					const clonedDE = await cloneDataExtension(query.targetDE.customerKey, query.newDeName, apiConfig, clonerState.targetDEFolder.id);
+					logMessage(`  - Paso 1: Clonando DE de destino (Key: ${query.targetDE.customerKey})`);					
+					
+					const clonedDE = await mcApiService.cloneDataExtension(query.targetDE.customerKey, query.newDeName, "", clonerState.targetDEFolder.id, apiConfig);
 					logMessage(`  - Éxito: Nueva DE "${clonedDE.name}" creada con Key: ${clonedDE.customerKey}`);
 
-					// 2. Crear la nueva Query 
+					// 2. Crear la nueva Query con logging
 					blockUI(`${progress} Creando Query como "${query.newQueryName}"...`);
-					logMessage(`  - Paso 2: Creando la nueva Query Activity apuntando a la DE clonada.`);
-					// Pasamos el nuevo nombre de la Query y el objeto de la DE clonada
-					await createClonedQuery(query, clonedDE, query.newQueryName, clonerState.targetQueryFolder.id, apiConfig);
+					logMessage(`  - Paso 2: Creando la nueva Query Activity apuntando a la DE clonada.`);					
+					
+					await mcApiService.createClonedQuery(query, clonedDE, query.newQueryName, clonerState.targetQueryFolder.id, apiConfig);
 					logMessage(`  - Éxito: Query "${query.newQueryName}" creada.`);
 
 					successCount++;
@@ -1991,7 +1780,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 			showCustomAlert(`Proceso de clonación finalizado.\nÉxitos: ${successCount}\nFallos: ${failCount}\n\nRevisa el log para más detalles.`);
 			
-			// Resetear la vista
 			queriesClonerStep2.style.display = 'none';
 			queriesClonerStep1.style.display = 'flex';
 			resetFolderSelection();
@@ -2008,30 +1796,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	// --- Helpers para el Clonador de Queries ---
 
-	/**
-	 * Busca carpetas por nombre y tipo de contenido.
-	 * @param {string} folderName - El nombre (o parte del nombre) a buscar.
-	 * @param {string} contentType - 'queryactivity' o 'dataextension'.
-	 * @param {object} apiConfig - La configuración de la API.
-	 * @returns {Promise<Array>} Lista de objetos de carpeta con { id, name, fullPath }.
-	 */
-	async function findDataFolders(folderName, contentType, apiConfig) {
-		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataFolder</ObjectType><Properties>Name</Properties><Properties>ID</Properties><Properties>ParentFolder.ID</Properties><Properties>ContentType</Properties><Filter xsi:type="ComplexFilterPart"><LeftOperand xsi:type="SimpleFilterPart"><Property>Name</Property><SimpleOperator>like</SimpleOperator><Value>%${folderName}%</Value></LeftOperand><LogicalOperator>AND</LogicalOperator><RightOperand xsi:type="SimpleFilterPart"><Property>ContentType</Property><SimpleOperator>equals</SimpleOperator><Value>${contentType}</Value></RightOperand></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-		const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload, null);
-		const parser = new DOMParser();
-		const xmlDoc = parser.parseFromString(responseText, "application/xml");
-		
-		const folderNodes = Array.from(xmlDoc.querySelectorAll("Results"));
-		const pathPromises = folderNodes.map(async (node) => {
-			const id = node.querySelector("ID")?.textContent;
-			const name = node.querySelector("Name")?.textContent;
-			if (!id || !name) return null;
-			const fullPath = await getFolderPath(id, apiConfig);
-			return { id, name, fullPath };
-		});
-		
-		return (await Promise.all(pathPromises)).filter(Boolean);
-	}
+	
 
 	/**
 	 * Recupera las queries de una carpeta específica.
@@ -2075,89 +1840,6 @@ document.addEventListener('DOMContentLoaded', function () {
 		await executeSoapRequest(apiConfig.soapUri, soapPayload, null);
 	}
 
-	// --- 4.8. Gestión de Cloud Pages ---
-
-	/**
-	 * Macro para obtener la lista COMPLETA de todos los assets de tipo Cloud Page.
-	 * @param {object} apiConfig - La configuración de la API autenticada.
-	 * @returns {Promise<Array>} Una promesa que resuelve a la lista de assets.
-	 */
-	async function macroFetchAllCloudPages(apiConfig) {
-		let allItems = [];
-		let page = 1;
-		let totalCount = 0;
-		const pageSize = 500;
-
-		logMessage("Recuperando todos los assets de Cloud Pages...");
-		
-		const queryBody = {
-			"query": {
-				"property": "assetType.id",
-				"simpleOperator": "in",
-				"values": [240, 241, 242, 243, 244, 245, 247, 248, 249]
-			},
-			"sort": [{ "property": "id", "direction": "ASC" }],
-			"fields": ["id", "name", "assetType", "modifiedDate", "category", "content", "meta"]
-		};
-
-		do {
-			const url = `${apiConfig.restUri}asset/v1/content/assets/query`;
-			const body = { ...queryBody, page: { page: page, pageSize: pageSize } };
-
-			logApiCall({ endpoint: url, method: 'POST', page: page, body });
-			
-			const response = await fetch(url, { 
-				method: 'POST',
-				headers: { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" },
-				body: JSON.stringify(body)
-			});
-			
-			if (!response.ok) {
-				const errorText = await response.text();
-				
-				logApiResponse({ status: response.status, body: errorText });
-				throw new Error(`Error ${response.status}: ${errorText}`);
-			}
-			
-			const data = await response.json();
-
-			logApiResponse({ status: response.status, body: data });
-
-			const pageItems = data.items || [];
-			allItems = allItems.concat(pageItems);
-			totalCount = data.count;
-			
-			logMessage(`Página ${page} recuperada. Items totales: ${allItems.length} de ${totalCount}`);
-			page++;
-
-		} while (allItems.length < totalCount);
-		
-		logMessage(`Recuperación completa. Se encontraron ${allItems.length} assets.`);
-		return allItems;
-	}
-
-	/**
-	 * Enriquece la lista de Cloud Pages con la URL y la ruta de la carpeta.
-	 * @param {Array} items - La lista de assets de la API.
-	 * @param {object} apiConfig - La configuración de la API.
-	 * @returns {Promise<Array>} La lista enriquecida.
-	 */
-	async function enrichCloudPages(items, apiConfig) {
-		logMessage(`Enriqueciendo ${items.length} assets con URLs y rutas de carpeta...`);
-
-		// NOTA: Para las carpetas de 'asset', la API de SOAP sigue siendo necesaria
-		// si no se ha implementado la caché de carpetas REST. Usaremos el método existente.
-		const pathPromises = items.map(async (item) => {
-			const location = item.category.id ? await getFolderPath(item.category.id, apiConfig) : 'Carpeta Raíz';
-			return {
-				...item,
-				url: extractCloudPageUrl(item),
-				location: location
-			};
-		});
-
-		return Promise.all(pathPromises);
-	}
 
 	/**
 	 * Helper para extraer la URL de una Cloud Page desde su campo 'content' o 'meta'.
@@ -2203,34 +1885,58 @@ document.addEventListener('DOMContentLoaded', function () {
 	// --- 5. FUNCIONES AUXILIARES (HELPERS) ---
 	// ==========================================================
 	
-	// --- 5.1. Helpers de API (SOAP, REST) ---
+/**
+ * Prepara el payload para crear una copia de un Journey, actualizando todas las referencias.
+ * @param {object} originalJourney - El objeto de Journey completo.
+ * @param {object} originalEventDef - El objeto de Event Definition original para obtener la clave antigua.
+ * @param {object} newEventDef - El objeto del nuevo Event Definition para obtener los nuevos IDs y Key.
+ * @returns {object} Un objeto JSON listo para ser enviado en la petición de creación.
+ */
+function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef) {
+    const oldEventDefKey = originalEventDef.eventDefinitionKey;
+    const newEventDefKey = newEventDef.eventDefinitionKey;
+    
+    if (!oldEventDefKey || !newEventDefKey) {
+        throw new Error("No se pudieron obtener las claves de Event Definition para el reemplazo.");
+    }
 
-	/**
-	 * Ejecuta una petición SOAP genérica, maneja la respuesta y los errores.
-	 * @param {string} soapUri - La URL del endpoint SOAP.
-	 * @param {string} soapPayload - El cuerpo XML de la petición.
-	 * @param {string} successMessage - Mensaje a mostrar en caso de éxito.
-	 * @returns {Promise<string>} La respuesta XML en formato de texto.
-	 */
-	async function executeSoapRequest(soapUri, soapPayload, successMessage) {
-		logApiCall({ endpoint: soapUri, payload: soapPayload });
-		const response = await fetch(soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload });
-		const responseText = await response.text();
-		logApiResponse({ status: response.status, body: responseText });
-		if (responseText.includes('<OverallStatus>OK</OverallStatus>')) {
-			if (successMessage) {
-				logMessage(successMessage);
-				// Y solo mostrar la alerta si el mensaje existe Y no es una búsqueda.
-				if (!successMessage.includes("Búsqueda")) {
-					showCustomAlert(successMessage);
-				}
-			}
-			return responseText;
-		} else {
-			const errorMatch = responseText.match(/<StatusMessage>(.*?)<\/StatusMessage>/);
-			throw new Error(errorMatch ? errorMatch[1] : 'Error desconocido en la respuesta SOAP.');
-		}
-	}
+    let journeyString = JSON.stringify(originalJourney);
+    const regex = new RegExp(oldEventDefKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+    journeyString = journeyString.replace(regex, newEventDefKey);
+    
+    let finalPayload = JSON.parse(journeyString);
+
+    // Limpiamos las actividades: quitamos 'id' y 'schema' de cada una.
+    finalPayload.activities = finalPayload.activities.map(({ id, schema, ...rest }) => rest);
+
+    // Limpiamos los triggers y nos aseguramos de que tienen los nuevos IDs y Key correctos.
+    finalPayload.triggers = finalPayload.triggers.map(trigger => {
+        const { id, ...rest } = trigger;
+        rest.type = 'EmailAudience'; 
+        if (rest.metaData) {
+            rest.metaData.eventDefinitionKey = newEventDef.eventDefinitionKey; 
+            rest.metaData.eventDefinitionId = newEventDef.id;
+        }
+        return rest;
+    });
+    
+    // Eliminamos las propiedades del nivel superior que no deben ir en una creación.
+    delete finalPayload.id;
+    delete finalPayload.version;
+    delete finalPayload.createdDate;
+    delete finalPayload.modifiedDate;
+    delete finalPayload.lastPublishedDate;
+    delete finalPayload.definitionId;
+    delete finalPayload.status;
+    delete finalPayload.stats;
+    
+    // Asignamos un nuevo nombre y una nueva 'key' para el Journey clonado.
+    finalPayload.name = `${originalJourney.name}_Copy`;
+    finalPayload.key = crypto.randomUUID();
+
+    return finalPayload;
+}
+	
 
 	/**
 	 * Recupera los detalles de una Data Extension.
@@ -2250,109 +1956,8 @@ document.addEventListener('DOMContentLoaded', function () {
 		
 		return doc.querySelector("Results");
 	}
-
-
 	
 
-	/**
-	 * Obtiene la ruta completa de una carpeta de forma recursiva.
-	 * @param {string} folderId - El ID de la carpeta a buscar.
-	 * @param {object} apiConfig - La configuración de la API autenticada.
-	 * @returns {Promise<string>} La ruta completa de la carpeta (ej. "Carpeta A > Carpeta B").
-	 */
-	async function getFolderPath(folderId, apiConfig) {
-		if (!folderId || isNaN(parseInt(folderId))) return '';
-		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataFolder</ObjectType><Properties>Name</Properties><Properties>ParentFolder.ID</Properties><Filter xsi:type="SimpleFilterPart"><Property>ID</Property><SimpleOperator>equals</SimpleOperator><Value>${folderId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-		
-		const responseText = await (await fetch(apiConfig.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload })).text();
-		const resultNode = new DOMParser().parseFromString(responseText, "application/xml").querySelector("Results");
-		if (!resultNode) return '';
-		const name = resultNode.querySelector("Name")?.textContent;
-		const parentId = resultNode.querySelector("ParentFolder > ID")?.textContent;
-		const parentPath = await getFolderPath(parentId, apiConfig);
-		return parentPath ? `${parentPath} > ${name}` : name;
-	}
-
-	/**
-	 * Obtiene el ObjectID de una Data Extension a partir de su nombre.
-	 * @param {string} deName - El nombre de la DE.
-	 * @param {object} apiConfig - Configuración de la API.
-	 * @returns {Promise<object>} Un objeto con la propiedad `ObjectID`.
-	 */
-	async function getDeObjectId(deName, apiConfig) {
-		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>ObjectID</Properties><Filter xsi:type="SimpleFilterPart"><Property>Name</Property><SimpleOperator>equals</SimpleOperator><Value>${deName}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-		const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload, `ObjectID para '${deName}' obtenido.`);
-		const objectIDNode = new DOMParser().parseFromString(responseText, "application/xml").querySelector("Results > ObjectID");
-		if (!objectIDNode) throw new Error(`No se encontró DE con el nombre "${deName}".`);
-		return { ObjectID: objectIDNode.textContent };
-	}
-
-	/**
-	 * Busca actividades de importación que apunten a un ObjectID de una DE.
-	 * @param {string} deObjectId - El ObjectID de la DE de destino.
-	 * @param {object} apiConfig - Configuración de la API.
-	 * @returns {Promise<Array>} Un array de objetos de importación encontrados.
-	 */
-	async function findImportsForDE(deObjectId, apiConfig) {
-		logMessage(`Buscando Imports para el ObjectID: ${deObjectId}`);
-		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>ImportDefinition</ObjectType><Properties>Name</Properties><Properties>Description</Properties><Filter xsi:type="SimpleFilterPart"><Property>DestinationObject.ObjectID</Property><SimpleOperator>equals</SimpleOperator><Value>${deObjectId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-		const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload, `Búsqueda de Imports completada.`);
-		return Array.from(new DOMParser().parseFromString(responseText, "application/xml").querySelectorAll("Results")).map(node => ({
-			name: node.querySelector("Name")?.textContent || 'N/A',
-			type: 'Import',
-			description: node.querySelector("Description")?.textContent || '---'
-		}));
-	}
-	
-	/**
-	 * Busca QueryDefinitions que apunten a una DE por su nombre.
-	 * @param {string} deName - El nombre de la DE de destino.
-	 * @param {object} apiConfig - Configuración de la API.
-	 * @returns {Promise<Array>} Un array de objetos de query encontrados.
-	 */
-	async function findQueriesForDE(deName, apiConfig) {
-		logMessage(`Buscando Queries que apunten a la DE: ${deName}`);
-		const filterXml = `<Filter xsi:type="SimpleFilterPart"><Property>DataExtensionTarget.Name</Property><SimpleOperator>equals</SimpleOperator><Value>${deName}</Value></Filter>`;
-		return findQueriesByFilter(filterXml, apiConfig);
-	}
-
-	/**
-	 * Busca QueryDefinitions en base a un filtro SOAP genérico y enriquece los resultados.
-	 * @param {string} filterXml - El fragmento XML del filtro a aplicar.
-	 * @param {object} apiConfig - La configuración de la API.
-	 * @returns {Promise<Array>} Una promesa que resuelve a un array de queries encontradas.
-	 */
-	async function findQueriesByFilter(filterXml, apiConfig) {
-		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>QueryDefinition</ObjectType><Properties>Name</Properties><Properties>QueryText</Properties><Properties>TargetUpdateType</Properties><Properties>ObjectID</Properties>${filterXml}</RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-		const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload, `Búsqueda de Queries completada.`);
-		const queries = Array.from(new DOMParser().parseFromString(responseText, "application/xml").querySelectorAll("Results")).map(node => ({
-			name: node.querySelector("Name")?.textContent || 'N/A',
-			type: 'Query',
-			description: node.querySelector("QueryText")?.textContent || '---',
-			action: node.querySelector("TargetUpdateType")?.textContent || 'N/A',
-			objectID: node.querySelector("ObjectID")?.textContent
-		}));
-		logMessage(`Encontradas ${queries.length} queries. Buscando sus automatizaciones...`);
-		return await Promise.all(queries.map(q => findAutomationForQuery(q, apiConfig)));
-	}
-
-	/**
-	 * Busca la automatización a la que pertenece una actividad de query.
-	 * @param {object} query - El objeto de la query.
-	 * @param {object} apiConfig - Configuración de la API.
-	 * @returns {Promise<object>} El objeto de la query enriquecido con `automationName` y `step`.
-	 */
-	async function findAutomationForQuery(query, apiConfig) {
-		if (!query.objectID) return { ...query, automationName: '---', step: '---' };
-		const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>Activity</ObjectType><Properties>Program.ObjectID</Properties><Filter xsi:type="SimpleFilterPart"><Property>Definition.ObjectID</Property><SimpleOperator>equals</SimpleOperator><Value>${query.objectID}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-		const responseText = await (await fetch(apiConfig.soapUri, { method: 'POST', headers: { 'Content-Type': 'text/xml' }, body: soapPayload })).text();
-		const programIdNode = new DOMParser().parseFromString(responseText, "application/xml").querySelector("Program > ObjectID");
-		if (!programIdNode) return { ...query, automationName: '---', step: '---' };
-		const restUrl = `${apiConfig.restUri}automation/v1/automations/${programIdNode.textContent}`;
-		const autoData = await (await fetch(restUrl, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } })).json();
-		const step = autoData.steps?.find(s => s.activities?.some(a => a.activityObjectId === query.objectID))?.step || 'N/A';
-		return { ...query, automationName: autoData.name || 'N/A', step };
-	}
 
 	/**
 	 * Realiza una búsqueda de suscriptor por un campo específico.
@@ -2368,31 +1973,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 
 	// --- 5.2. Parsers (XML, JSON) ---
-	
-
-	/**
-	 * Parsea la respuesta de búsqueda de una DE para extraer su nombre y el ID de su carpeta.
-	 * @param {string} xmlString - La respuesta XML de la API.
-	 * @returns {Promise<object>} Un objeto con `categoryId` y `deName`, o un `error`.
-	 */
-	function parseDESearchResponse(xmlString) {
-		return new Promise(resolve => {
-			const parser = new DOMParser();
-			const xmlDoc = parser.parseFromString(xmlString, "application/xml");
-			if (xmlDoc.querySelector("OverallStatus")?.textContent.includes('Error')) {
-				throw new Error(xmlDoc.querySelector("StatusMessage")?.textContent || 'Error desconocido en la respuesta SOAP.');
-			}
-			
-			const resultNodes = xmlDoc.querySelectorAll("Results");
-			const deList = Array.from(resultNodes).map(node => ({
-				categoryId: node.querySelector("CategoryID")?.textContent,
-				deName: node.querySelector("Name")?.textContent
-			}));
-			
-			resolve(deList);
-		});
-	}
-	
+		
 	/**
 	 * Parsea la respuesta XML de la búsqueda de suscriptores y la convierte en un array de objetos.
 	 * @param {string} xmlString - La respuesta XML de la API.
@@ -3012,14 +2593,26 @@ document.addEventListener('DOMContentLoaded', function () {
 	// --- 6.1. Tabla de Campos ---
 
 	/**
-	 * Crea una nueva fila `<tr>` para la tabla de campos.
+	 * Crea una nueva fila <tr> para la tabla de campos.
 	 * @param {object} [data={}] - Objeto opcional con datos para pre-rellenar la fila.
+	 *                           Espera el formato de nombres de propiedad claro (name, length, etc.).
 	 * @returns {HTMLTableRowElement} El elemento de la fila creado.
 	 */
 	function createTableRow(data = {}) {
 		const row = document.createElement('tr');
-		const fieldData = { mc: data.mc || '', type: data.type || '', len: data.len || '', defaultValue: data.defaultValue || '', pk: data.pk || false, req: data.req || false };
-		row.innerHTML = `<td contenteditable="true">${fieldData.mc}</td><td contenteditable="true">${fieldData.type}</td><td contenteditable="true">${fieldData.len}</td><td contenteditable="true">${fieldData.defaultValue}</td><td><input type="checkbox" ${fieldData.pk ? 'checked' : ''}></td><td><input type="checkbox" ${fieldData.req ? 'checked' : ''}></td>`;
+		
+		// Simplemente usamos los datos como vienen, con valores por defecto si no existen.
+		const fieldData = {
+			name: data.name || '',
+			type: data.type || '',
+			length: data.length || '',
+			defaultValue: data.defaultValue || '',
+			isPrimaryKey: data.isPrimaryKey || false,
+			isRequired: data.isRequired || false
+		};
+
+		row.innerHTML = `<td contenteditable="true">${fieldData.name}</td><td contenteditable="true">${fieldData.type}</td><td contenteditable="true">${fieldData.length}</td><td contenteditable="true">${fieldData.defaultValue}</td><td><input type="checkbox" ${fieldData.isPrimaryKey ? 'checked' : ''}></td><td><input type="checkbox" ${fieldData.isRequired ? 'checked' : ''}></td>`;
+		
 		const deleteButton = document.createElement('button');
 		deleteButton.className = 'delete-row-btn';
 		deleteButton.title = 'Eliminar fila';
@@ -3027,7 +2620,6 @@ document.addEventListener('DOMContentLoaded', function () {
 		row.appendChild(deleteButton);
 		return row;
 	}
-	
 	/**
 	 * Rellena la tabla de campos con un array de objetos de campo.
 	 * @param {Array} [fields=[]] - El array de campos.
@@ -3067,7 +2659,16 @@ document.addEventListener('DOMContentLoaded', function () {
 	
 	/** Rellena la tabla con un conjunto de campos de ejemplo. */
 	function createDummyFields() {
-		populateFieldsTable([{ mc: 'NombreCompleto', type: 'Text', len: '100', pk: true, req: true }, { mc: 'Email', type: 'EmailAddress', len: '254', req: true }, { mc: 'SincronizarMC', type: 'Boolean', defaultValue: 'true' }, { mc: 'FechaNacimiento', type: 'Date' }, { mc: 'Recibo', type: 'Decimal', len: '18,2' }, { mc: 'Telefono', type: 'Phone' }, { mc: 'Locale', type: 'Locale' }, { mc: 'Numero', type: 'Number' }]);
+		populateFieldsTable([
+			{ name: 'NombreCompleto', type: 'Text', length: '100', isPrimaryKey: true, isRequired: true },
+			{ name: 'Email', type: 'EmailAddress', length: '254', isPrimaryKey: false, isRequired: true },
+			{ name: 'SincronizarMC', type: 'Boolean', defaultValue: 'true', isPrimaryKey: false, isRequired: false },
+			{ name: 'FechaNacimiento', type: 'Date', isPrimaryKey: false, isRequired: false },
+			{ name: 'Recibo', type: 'Decimal', length: '18,2', isPrimaryKey: false, isRequired: false },
+			{ name: 'Telefono', type: 'Phone', isPrimaryKey: false, isRequired: false },
+			{ name: 'Locale', type: 'Locale', isPrimaryKey: false, isRequired: false },
+			{ name: 'Numero', type: 'Number', isPrimaryKey: false, isRequired: false }
+		]);
 		populateDeletionPicklist([]);
 	}
 	
@@ -3118,13 +2719,20 @@ document.addEventListener('DOMContentLoaded', function () {
 	/**
 	 * Rellena el desplegable de campos a eliminar con los campos recuperados de una DE.
 	 * @param {Array} fields - Array de campos recuperados de la API.
+	 *                       Espera el formato de nombres de propiedad claro (name, objectId, etc.).
 	 */
 	function populateDeletionPicklist(fields) {
 		targetFieldSelect.innerHTML = '';
-		const validFields = fields.filter(f => f.mc && f.objectId);
+
+		const validFields = fields.filter(f => f.name && f.objectId); // <-- CAMBIO 1: Buscamos 'name'
+
 		if (validFields.length > 0) {
 			targetFieldSelect.innerHTML = '<option value="">-- Seleccione un campo --</option>';
-			validFields.forEach(field => targetFieldSelect.appendChild(new Option(field.mc, field.objectId)));
+			
+			validFields.forEach(field => {
+				targetFieldSelect.appendChild(new Option(field.name, field.objectId)); // <-- CAMBIO 2: Usamos 'name'
+			});
+
 			targetFieldSelect.disabled = false;
 		} else {
 			targetFieldSelect.innerHTML = '<option value="">No hay campos recuperados</option>';
@@ -3275,7 +2883,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			const newFields = text.split('\n').map(line => {
 				if (!line.trim()) return null;
 				const [name, type, length] = line.split(delimiter).map(c => c.trim());
-				return (name && type) ? { mc: name, type, len: length || '' } : null;
+				return (name && type) ? { name: name, type: type, length: length || '' } : null;
 			}).filter(Boolean);
 			if (newFields.length > 0) {
 				observer.disconnect();
@@ -3392,30 +3000,36 @@ document.addEventListener('DOMContentLoaded', function () {
 	async function viewJourneys() {
 		showSection('gestion-journeys-section');
 
-        // Limpiar y resetear el estado de la tabla de Journeys
-        document.querySelectorAll('#journeys-table thead th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
-        document.querySelector(`#journeys-table thead th[data-sort-by="${currentJourneySortColumn}"]`).classList.add(currentJourneySortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+		document.querySelectorAll('#journeys-table thead th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+		document.querySelector(`#journeys-table thead th[data-sort-by="${currentJourneySortColumn}"]`).classList.add(currentJourneySortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
 
 		if (fullJourneyList.length === 0) {
 			blockUI("Recuperando Journeys...");
 			startLogBuffering();
 			try {
 				logMessage("Cargando lista de Journeys y dependencias por primera vez...");
+				const apiConfig = await getAuthenticatedConfig();
+
+				mcApiService.setLogger({ logApiCall, logApiResponse }); 
 				
-                const apiConfig = await getAuthenticatedConfig();
-                
-                // 1. Obtener Event Definitions y mapearlas
-                eventDefinitionsMap = await macroFetchEventDefinitions(apiConfig);
-                
-                // 2. Obtener todos los Journeys
-				const journeys = await macroFetchAllJourneys(apiConfig);
+                // 1. Llamar a los servicios para obtener todos los datos necesarios en paralelo
+				logMessage("Recuperando EventDefinitions y Journeys...");
+				const [events, journeys] = await Promise.all([
+                    mcApiService.fetchAllEventDefinitions(apiConfig),
+                    mcApiService.fetchAllJourneys(apiConfig)
+                ]);
 
-                // 3. Obtener rutas de carpetas
-                journeyFolderMap = await buildJourneyFolderMap(journeys, apiConfig);
+                eventDefinitionsMap = events; // Guardamos el resultado en el estado global
+				
+                // 2. Construir el mapa de carpetas (depende de la lista de journeys)
+				logMessage("Construyendo ruta de carpetas...");
+                journeyFolderMap = await mcApiService.buildJourneyFolderMap(journeys, apiConfig);
+				
+                // 3. Enriquecer y guardar lista completa
+				logMessage("Enriqueciendo journeys...");
+                fullJourneyList = enrichJourneys(journeys); // enrichJourneys se queda en app.js porque manipula el estado global
 
-                // 4. Enriquecer y guardar lista completa
-                fullJourneyList = enrichJourneys(journeys);
-
+				logMessage("Cargando filtros y tabla...");
                 populateJourneyFilters(fullJourneyList);
 				applyJourneyFiltersAndRender();
                 
@@ -3429,172 +3043,10 @@ document.addEventListener('DOMContentLoaded', function () {
 				endLogBuffering();
 			}
 		} else {
-            // Si ya está en caché, simplemente aplicamos filtros y renderizamos
 			applyJourneyFiltersAndRender();
 		}
 	}
 
-	/**
-	 * Macro para obtener la lista COMPLETA de todos los journeys desde la API REST, manejando paginación.
-	 * @param {object} apiConfig - La configuración de la API autenticada.
-	 * @returns {Promise<Array>} Una promesa que resuelve a la lista completa de journeys.
-	 */
-	async function macroFetchAllJourneys(apiConfig) {
-		let allItems = [];
-		let page = 1;
-		let totalPages = 1; // Inicialmente asumimos una página
-
-		logMessage("Recuperando todas las definiciones de Journeys (paginación habilitada)...");
-		
-		do {
-			const url = `${apiConfig.restUri}interaction/v1/interactions?$page=${page}&$pageSize=${API_PAGE_SIZE}`;
-			logApiCall({ endpoint: url, method: 'GET', page: page });
-			
-			const response = await fetch(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
-			
-			if (!response.ok) {
-				const errorText = await response.text();
-				logApiResponse({ status: response.status, body: errorText });
-				throw new Error(`Error ${response.status}: ${errorText}`);
-			}
-			
-			const data = await response.json();
-			
-			const pageItems = data.items || [];
-			allItems = allItems.concat(pageItems);
-			
-			totalPages = data.count ? Math.ceil(data.count / API_PAGE_SIZE) : 1;
-			page++;
-
-			logMessage(`Página ${page - 1} de ${totalPages} recuperada. Items totales: ${allItems.length}`);
-
-		} while (page <= totalPages);
-		
-		logMessage(`Recuperación completa. Se encontraron ${allItems.length} journeys.`);
-		return allItems;
-	}
-
-	/**
-	 * Macro para obtener las definiciones de eventos, manejando paginación.
-	 * @param {object} apiConfig - La configuración de la API autenticada.
-	 * @returns {Promise<object>} Un mapa que relaciona el nombre del EventDefinition con sus datos (para el cruce).
-	 */
-	async function macroFetchEventDefinitions(apiConfig) {
-		let eventDefinitions = {};
-		let page = 1;
-		let totalPages = 1; 
-
-		logMessage("Recuperando todas las Event Definitions (para origen de datos)...");
-		
-		do {
-			const url = `${apiConfig.restUri}interaction/v1/eventDefinitions?$page=${page}&$pageSize=${API_PAGE_SIZE}`;
-			const response = await fetch(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
-			
-			if (!response.ok) {
-				logApiResponse({ step: 'Event Definition Error', status: response.status, body: await response.text() });
-				throw new Error(`Error al recuperar Event Definitions: ${response.status}`);
-			}
-			
-			const data = await response.json();
-			const items = data.items || [];
-			
-			items.forEach(item => {
-				// Solo nos interesa la definición activa que está publicada en una interacción. (item.publishedInteractionCount === 1)
-				// El problema de esto es que si está el journey en draft, no aparece, por lo que buscamos que tenga DE.
-				if (item.dataExtensionId && item.dataExtensionName)  {
-					// Usamos el 'name' para cruzarlo con el Journey
-					eventDefinitions[item.name] = { 
-						type: item.type, 
-						dataExtensionName: item.dataExtensionName 
-					};
-				}
-			});
-
-			totalPages = data.count ? Math.ceil(data.count / API_PAGE_SIZE) : 1;
-
-			page++;
-		} while (page <= totalPages);
-		
-		logMessage(`Recuperación de Event Definitions completa. Mapeados ${Object.keys(eventDefinitions).length} items activos.`);
-		return eventDefinitions;
-	}
-
-	/**
-	 * Recorre recursivamente los IDs de carpeta de los Journeys para construir un mapa de rutas.
-	 * @param {Array} journeys - Lista de objetos Journey.
-	 * @param {object} apiConfig - Configuración de la API.
-	 * @returns {Promise<object>} Mapa de rutas de carpetas { categoryId: 'Ruta > Completa' }
-	 */
-	async function buildJourneyFolderMap(journeys, apiConfig) {
-		const allCategoryIds = [...new Set(journeys.map(j => j.categoryId).filter(Boolean))];
-		const folderDetailsMap = {}; // Almacenará { id: { name, parentId } }
-		let requiredIds = new Set(allCategoryIds);
-		let fetchedIds = new Set();
-
-		logMessage(`Construyendo mapa de rutas para ${allCategoryIds.length} carpetas iniciales...`);
-		const folderUrlBase = `${apiConfig.restUri}email/v1/categories/`;
-
-		// 1. Bucle para obtener todos los ancestros de las carpetas
-		while (requiredIds.size > 0) {
-			const idsToFetch = [...requiredIds].filter(id => !fetchedIds.has(id));
-			if (idsToFetch.length === 0) break;
-
-			logMessage(`Recuperando detalles de ${idsToFetch.length} carpetas...`);
-
-			await Promise.all(idsToFetch.map(async (id) => {
-				fetchedIds.add(id); // Marcar como intentado para no repetir
-				try {
-					const url = `${folderUrlBase}${id}`;
-					const response = await fetch(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
-					if (response.ok) {
-						const cat = await response.json();
-						folderDetailsMap[cat.categoryId] = { name: cat.name, parentId: cat.parentCatId };
-						// Si este padre no ha sido visto antes, lo añadimos a la cola para la siguiente iteración
-						if (cat.parentCatId && !fetchedIds.has(cat.parentCatId)) {
-							requiredIds.add(cat.parentCatId);
-						}
-					}
-				} catch (e) {
-					logMessage(`Error de red obteniendo carpeta ${id}: ${e.message}`);
-				}
-			}));
-            // Actualizar la lista de IDs requeridos para la siguiente vuelta
-            requiredIds = new Set([...requiredIds].filter(id => !fetchedIds.has(id)));
-		}
-		
-		logMessage(`Detalles de ${Object.keys(folderDetailsMap).length} carpetas en total recuperados. Construyendo rutas...`);
-		
-		const pathCache = {}; // Caché para evitar recalcular rutas
-
-		// 2. Función interna para construir la ruta de una carpeta
-		function getFullPath(categoryId) {
-			if (pathCache[categoryId]) return pathCache[categoryId];
-			if (!folderDetailsMap[categoryId]) return 'Carpeta raíz / No encontrado';
-
-			let pathParts = [];
-			let currentId = categoryId;
-			let safetyBreak = 0; // Previene bucles infinitos
-
-			while (currentId && folderDetailsMap[currentId] && safetyBreak < 20) {
-				pathParts.unshift(folderDetailsMap[currentId].name);
-				currentId = folderDetailsMap[currentId].parentId;
-				safetyBreak++;
-			}
-			
-			const fullPath = pathParts.join(" > ");
-			pathCache[categoryId] = fullPath;
-			return fullPath;
-		}
-
-		// 3. Crear el mapa final de rutas completas para las carpetas originales
-		const finalPathMap = {};
-		allCategoryIds.forEach(id => {
-			finalPathMap[id] = getFullPath(id);
-		});
-		
-		logMessage(`Mapa de rutas de carpetas construido.`);
-		return finalPathMap;
-	}
 
 	/**
 	 * Enriquece la lista de Journeys con datos de EventDefinitions y rutas de carpeta.
@@ -3925,9 +3377,23 @@ document.addEventListener('DOMContentLoaded', function () {
 			try {
 				logMessage("Cargando lista de Cloud Pages por primera vez...");
 				const apiConfig = await getAuthenticatedConfig();
-				const rawAssets = await macroFetchAllCloudPages(apiConfig);
-				fullCloudPageList = await enrichCloudPages(rawAssets, apiConfig);
 
+				mcApiService.setLogger({ logApiCall, logApiResponse });
+				
+				// 1. Obtener la lista base de assets
+				const rawAssets = await mcApiService.fetchAllCloudPages(apiConfig);
+				logMessage(`Se encontraron ${rawAssets.length} assets. Obteniendo rutas de carpeta...`);
+
+				// 2. Enriquecer los assets con las rutas
+				const assetsWithFolders = await mcApiService.enrichCloudPagesWithFolders(rawAssets, apiConfig);
+				logMessage("Rutas obtenidas. Procesando URLs...");
+
+				// 3. El enriquecimiento final (extraer URL) se queda aquí porque es lógica de UI
+				fullCloudPageList = assetsWithFolders.map(item => ({
+					...item,
+					url: extractCloudPageUrl(item) 
+				}));
+				
 				populateCloudPageFilters(fullCloudPageList);
 				applyCloudPageFiltersAndRender();
 				
@@ -4235,7 +3701,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		findDataSourcesBtn.addEventListener('click', macroFindDataSources);
 		searchCustomerBtn.addEventListener('click', macroSearchCustomer);
 		searchQueriesByTextBtn.addEventListener('click', macroSearchQueriesByText);
-		getDEsBtn.addEventListener('click', () => { if (selectedSubscriberData) macroGetCustomerSends(); });
+		getDEsBtn.addEventListener('click', () => { if (selectedSubscriberData) macroGetCustomerDEs(); });
 		getCustomerJourneysBtn.addEventListener('click', () => { if (selectedSubscriberData) macroGetCustomerJourneys(); });
 
 		// --- Listeners de la Tabla de Campos ---
