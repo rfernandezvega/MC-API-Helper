@@ -1,56 +1,91 @@
-import * as mcApiService from './api/mc-api-service.js';
-import elements, { init as initDomElements } from './ui/dom-elements.js';
-import * as ui from './ui/ui-helpers.js'; 
-import * as logger from './ui/logger.js';
-
-// --- MÓDULOS DE FUNCIONALIDADES ---
-import * as fieldsTable from './components/fields-table.js';
-import * as orgManager from './components/org-manager.js';
-import * as documentationManager from './components/documentation-manager.js';
-import * as deCreator from './components/de-creator.js';
-import * as fieldManager from './components/field-manager.js';
-import * as automationsManager from './components/automations-manager.js';
-import * as journeysManager from './components/journeys-manager.js';
-import * as cloudPagesManager from './components/cloud-pages-manager.js';
-import * as queryCloner from './components/query-cloner.js';
-import * as deFinder from './components/de-finder.js';
-import * as dataSourceFinder from './components/data-source-finder.js';
-import * as queryTextFinder from './components/query-text-finder.js';
-import * as customerFinder from './components/customer-finder.js';
-import * as emailValidator from './components/email-validator.js';
-import * as calendar from './components/calendar.js';
+// =======================================================================================
+// --- app.js ---
+// Fichero Principal del Proceso de Renderizado (Frontend)
+// Orquesta la inicialización de la aplicación, gestiona el estado global (sesión, navegación),
+// y coordina la comunicación entre los diferentes módulos de funcionalidades.
+// =======================================================================================
 
 
+// --- 1. IMPORTACIÓN DE MÓDULOS ---
+
+// Módulos principales y de UI
+import * as mcApiService from './api/mc-api-service.js';            // Centraliza las llamadas a la API de Marketing Cloud.
+import elements, { init as initDomElements } from './ui/dom-elements.js'; // Objeto que contiene todas las referencias a los elementos del DOM.
+import * as ui from './ui/ui-helpers.js';                           // Funciones de ayuda para la UI (modales, bloqueo de pantalla, etc.).
+import * as logger from './ui/logger.js';                           // Gestor del panel de logs.
+
+// Módulos de Funcionalidades (Componentes)
+// Cada módulo encapsula la lógica de una sección específica de la aplicación.
+import * as fieldsTable from './components/fields-table.js';         // Lógica de la tabla de campos de Data Extension.
+import * as orgManager from './components/org-manager.js';             // Lógica para gestionar las configuraciones de clientes (login, guardado, etc.).
+import * as documentationManager from './components/documentation-manager.js'; // Lógica para la sección de documentación.
+import * as deCreator from './components/de-creator.js';             // Lógica para el formulario de creación de Data Extensions.
+import * as fieldManager from './components/field-manager.js';           // Lógica para la gestión de campos (recuperar, borrar, documentar).
+import * as automationsManager from './components/automations-manager.js'; // Lógica de la vista "Gestión de Automatismos".
+import * as journeysManager from './components/journeys-manager.js';       // Lógica de la vista "Gestión de Journeys".
+import * as cloudPagesManager from './components/cloud-pages-manager.js';    // Lógica de la vista "Gestión de Cloud Pages".
+import * as queryCloner from './components/query-cloner.js';           // Lógica del clonador masivo de queries.
+import * as deFinder from './components/de-finder.js';               // Lógica del buscador de Data Extensions.
+import * as dataSourceFinder from './components/data-source-finder.js';  // Lógica del buscador de orígenes de datos.
+import * as queryTextFinder from './components/query-text-finder.js';      // Lógica del buscador de texto en queries.
+import * as customerFinder from './components/customer-finder.js';         // Lógica del buscador de clientes/suscriptores.
+import * as emailValidator from './components/email-validator.js';       // Lógica del validador de emails.
+import * as calendar from './components/calendar.js';                  // Lógica del calendario de automatismos.
+
+
+// --- 2. PUNTO DE ENTRADA PRINCIPAL ---
+// Espera a que todo el HTML esté cargado antes de ejecutar cualquier código.
 document.addEventListener('DOMContentLoaded', function () {
+	// Inicializa el objeto 'elements' para que contenga todas las referencias al DOM.
 	initDomElements();
 	
 	// ==========================================================
 	// --- VARIABLES DE ESTADO GLOBALES ---
+	// Almacenan el estado de la sesión y la navegación actual.
 	// ==========================================================
-	let currentUserInfo = null;
-	let currentOrgInfo = null;
-	let navigationHistory = ['main-menu'];
+	let currentUserInfo = null;      // Guarda la información del usuario logueado.
+	let currentOrgInfo = null;       // Guarda la información de la organización (stack, etc.).
+	let navigationHistory = ['main-menu']; // Un array que funciona como una pila para el botón "Atrás".
 
 	// ==========================================================
 	// --- NAVEGACIÓN PRINCIPAL ---
+	// Funciones que controlan qué vista se muestra en la pantalla.
 	// ==========================================================
 	
+	/**
+	 * Muestra una sección de la UI y la añade al historial de navegación.
+	 * @param {string} sectionId - El ID de la sección a mostrar.
+	 */
 	function showSection(sectionId) {
+		// Delega en el ui-helper, pasándole el historial para que lo pueda modificar.
 		ui.showSection(sectionId, navigationHistory, true);
 	}
 
+	/**
+	 * Navega a la sección anterior registrada en el historial.
+	 */
 	function goBack() {
+		// Saca el último elemento del historial si hay más de uno.
 		if (navigationHistory.length > 1) {
 			navigationHistory.pop();
 		}
+		// Obtiene la nueva última sección del historial.
 		const previousSectionId = navigationHistory[navigationHistory.length - 1];
+		// Muestra la sección anterior sin volver a añadirla al historial.
 		ui.showSection(previousSectionId, navigationHistory, false);
 	}
 
 	// ==========================================================
-	// --- GESTIÓN DE SESIÓN (ESTADO) ---
+	// --- GESTIÓN DE ESTADO DE LA SESIÓN ---
+	// Actualiza la UI para reflejar si hay una sesión activa.
 	// ==========================================================
 
+	/**
+	 * Actualiza el indicador visual de estado de la sesión en la barra lateral.
+	 * @param {boolean} isLoggedIn - `true` si la sesión está activa.
+	 * @param {string} [clientName=''] - El nombre del cliente para mostrar.
+	 * @param {object} [userInfo=null] - Información del usuario para mostrar el email.
+	 */
 	function updateLoginStatus(isLoggedIn, clientName = '', userInfo = null) {
 		if (isLoggedIn) {
 			let statusHTML = `🟢 Sesión activa: <strong>${clientName}</strong>`;
@@ -66,16 +101,29 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	// ==========================================================
 	// --- FUNCIÓN CENTRAL DE AUTENTICACIÓN ---
+	// Actúa como un "guardián" para todas las llamadas a la API.
 	// ==========================================================
 
+	/**
+	 * Obtiene la configuración de API autenticada desde el proceso principal (main.js).
+	 * Gestiona el refresco de tokens y actualiza la UI con los datos de la sesión.
+	 * @returns {Promise<object>} Un objeto de configuración listo para ser usado en llamadas a la API.
+	 * @throws {Error} Si no hay cliente seleccionado o si la sesión no es válida.
+	 */
 	async function getAuthenticatedConfig() {
 		const clientName = elements.clientNameInput.value.trim();
 		if (!clientName) throw new Error("No hay ningún cliente seleccionado.");
+
+		// Llama al proceso principal para obtener el token de forma segura.
 		const apiConfig = await window.electronAPI.getApiConfig(clientName);
+
+		// Si no hay token, la sesión no es válida.
 		if (!apiConfig || !apiConfig.accessToken) {
 			updateLoginStatus(false);
 			throw new Error("Sesión no activa. Por favor, inicia sesión.");
 		}
+
+		// Si la sesión es válida, actualiza los campos de la UI con la información recibida.
 		elements.tokenField.value = apiConfig.accessToken;
 		elements.soapUriInput.value = apiConfig.soapUri;
 		elements.restUriInput.value = apiConfig.restUri;
@@ -83,19 +131,27 @@ document.addEventListener('DOMContentLoaded', function () {
 		currentOrgInfo = apiConfig.orgInfo;
 		elements.stackKeyInput.value = currentOrgInfo?.stack_key || 'No disponible';
 		
+		// Pasa la información a módulos que la necesitan.
 		queryTextFinder.updateOrgInfo(apiConfig.orgInfo);
 		updateLoginStatus(true, clientName, currentUserInfo);
 
+		// Añade el MID (Business Unit) al objeto de configuración antes de devolverlo.
 		apiConfig.businessUnit = elements.businessUnitInput.value.trim();
 		return apiConfig;
 	}
 	
 	// ==========================================================
 	// --- GESTIÓN DE LICENCIA ---
+	// Controla el acceso inicial a la aplicación.
 	// ==========================================================
 
+	/**
+	 * Gestiona el envío del formulario de licencia.
+	 * Llama al backend para validar las credenciales.
+	 * @param {Event} event - El evento de envío del formulario.
+	 */
 	async function handleLicenseSubmit(event) {
-		event.preventDefault();
+		event.preventDefault(); // Evita que la página se recargue.
 		const email = elements.licenseEmailInput.value.trim();
 		const key = elements.licenseKeyInput.value.trim();
 
@@ -105,11 +161,9 @@ document.addEventListener('DOMContentLoaded', function () {
 			return;
 		}
 
-		elements.submitBtn.disabled = true;
-		elements.submitBtn.textContent = 'Validando...';
+		ui.blockUI('Validando...');
 		const result = await window.electronAPI.validateLicense({ email, key });
-		elements.submitBtn.disabled = false;
-		elements.submitBtn.textContent = 'Validar y Acceder';
+		ui.unblockUI();
 
 		if (result && result.error) {
 			elements.licenseErrorEl.textContent = `Error: ${result.error}`;
@@ -118,6 +172,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 
 		if (result === true) {
+			// Si la validación es exitosa, guarda la licencia y arranca la app.
 			localStorage.setItem('isKeyValid', JSON.stringify({ email, key }));
 			elements.licenseModal.style.display = 'none';
 			startFullApp();
@@ -129,20 +184,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	// ==========================================================
 	// --- EVENT LISTENERS GLOBALES ---
+	// Configura todas las interacciones del usuario en la aplicación.
 	// ==========================================================
 	
 	function setupEventListeners() {
+		// Listeners para el modal de licencia y alertas personalizadas.
 		elements.licenseForm.addEventListener('submit', handleLicenseSubmit);
 		elements.customAlertCloseBtn.addEventListener('click', ui.closeCustomAlert);
 		elements.customAlertModal.addEventListener('click', (e) => {
 			if (e.target === elements.customAlertModal) ui.closeCustomAlert();
 		});
 
-		// Eventos desde Proceso Principal (main.js)
+		// Listeners para eventos que vienen DESDE el proceso principal (main.js).
+		// La aplicación reacciona a eventos como "login completado" o "logout exitoso".
 		window.electronAPI.onTokenReceived(result => {
 			ui.unblockUI();
 			if (result.success) {
 				ui.showCustomAlert("Login completado con éxito.");
+				// Carga la configuración del cliente recién logueado.
 				orgManager.loadAndSyncClientConfig(elements.clientNameInput.value);
 			} else {
 				ui.showCustomAlert(`Error en el login: ${result.error}`);
@@ -161,19 +220,24 @@ document.addEventListener('DOMContentLoaded', function () {
 			updateLoginStatus(false);
 		});
 
-		// Navegación
+		// Listener principal de navegación (menú lateral izquierdo).
 		document.querySelectorAll('.back-button').forEach(b => b.addEventListener('click', goBack));
 		document.querySelectorAll('.macro-item').forEach(item => {
 			item.addEventListener('click', async (e) => {
 				e.preventDefault();
 				const macro = e.target.getAttribute('data-macro');
+				// Mapeo de vistas simples que solo necesitan mostrarse.
 				const sectionMap = { 
                     'docu': 'documentacion-section', 'configuracionAPIs': 'configuracion-apis-section', 
                     'configuracionDE': 'configuracion-de-section', 'campos': 'campos-section', 
                     'gestionCampos': 'configuracion-campos-section', 'validadorEmail': 'email-validator-section', 
                     'buscadores': 'buscadores-section', 'clonadorQueries': 'clonador-queries-section'
                 };
-				if (sectionMap[macro]) showSection(sectionMap[macro]);
+				
+				if (sectionMap[macro]) {
+					showSection(sectionMap[macro]);
+				} 
+				// Vistas complejas que necesitan cargar datos antes de mostrarse.
 				else if (macro === 'calendario'){
                     showSection('calendario-section');
                     calendar.view();
@@ -191,11 +255,12 @@ document.addEventListener('DOMContentLoaded', function () {
 			});
 		});
 
-		// --- Listeners de Componentes de UI Generales ---
+		// Listeners para componentes de UI genéricos (log, pestañas, menús desplegables).
 		elements.toggleLogBtn.addEventListener('click', () => { 
 			localStorage.setItem('logCollapsedState', elements.appContainer.classList.toggle('log-collapsed')); 
 		});
 		
+		// Este listener gestiona TODOS los sistemas de pestañas de la aplicación.
 		elements.tabButtons.forEach(button => button.addEventListener('click', () => {
 			const tabId = button.getAttribute('data-tab');
 			const parent = button.closest('.tabs-container');
@@ -205,22 +270,32 @@ document.addEventListener('DOMContentLoaded', function () {
 			parent.querySelector(`#${tabId}`).classList.add('active');
 		}));
 
+		// Este listener gestiona TODOS los menús colapsables.
 		elements.collapsibleHeaders.forEach(header => header.addEventListener('click', () => {
 			const content = header.nextElementSibling;
 			const isExpanded = header.classList.toggle('active');
 			content.style.maxHeight = isExpanded ? content.scrollHeight + "px" : "0px";
+			// Guarda el estado (abierto/cerrado) para recordarlo al reiniciar la app.
 			const states = JSON.parse(localStorage.getItem('collapsibleStates')) || {};
 			states[header.textContent.trim()] = isExpanded;
 			localStorage.setItem('collapsibleStates', JSON.stringify(states));
 		}));
 	}
 
+	/**
+	 * Función "puente" que permite a otros módulos (como el calendario)
+	 * navegar a la vista de automatismos y pasarle una lista de nombres para filtrar.
+	 * @param {Array<string>} automationNames - Nombres de los automatismos a mostrar.
+	 */
 	async function showFilteredAutomations(automationNames) {
 		showSection('gestion-automatismos-section');
 		await automationsManager.view(automationNames);
 	}
 	
-	/** Restaura el estado (abierto/cerrado) de los menús colapsables al iniciar la app. */
+	/** 
+	 * Restaura el estado (abierto/cerrado) de los menús colapsables al iniciar la app,
+	 * leyendo los datos guardados en localStorage.
+	 */
 	function initializeCollapsibleMenus() {
 		const collapsibleStates = JSON.parse(localStorage.getItem('collapsibleStates')) || {};
 		elements.collapsibleHeaders.forEach(header => {
@@ -234,31 +309,41 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	// ==========================================================
 	// --- INICIALIZACIÓN DE LA APLICACIÓN ---
+	// Lógica de arranque que se ejecuta una sola vez.
 	// ==========================================================
 	
+	/**
+	 * Función "guardián" que se ejecuta al cargar la página.
+	 * Comprueba si la licencia es válida antes de iniciar el resto de la aplicación.
+	 */
 	async function initializeApp() {
 		initDomElements();
 		setupEventListeners();
 
+		// Comprueba si hay una licencia guardada.
 		const licenseInfoRaw = localStorage.getItem('isKeyValid');
 		if (!licenseInfoRaw) {
+			// Si no hay, muestra el modal de login y detiene la carga.
 			elements.licenseModal.style.display = 'flex';
 			return; 
 		}
 
+		// Si hay una licencia, la valida contra el backend.
 		ui.blockUI("Validando licencia...");
 		let isValid = false;
 		try {
 			const licenseInfo = JSON.parse(licenseInfoRaw);
 			isValid = await window.electronAPI.validateLicense({ email: licenseInfo.email, key: licenseInfo.key });
 		} catch (e) {
-			console.error("Error validando licencia:", e);
+			console.error("Error validando la licencia:", e);
 		}
 		ui.unblockUI();
 
 		if (isValid === true) {
+			// Si la licencia es válida, arranca la aplicación completa.
 			startFullApp();
 		} else {
+			// Si no es válida, la borra y pide credenciales de nuevo.
 			localStorage.removeItem('isKeyValid');
 			elements.licenseErrorEl.textContent = 'Acceso revocado o validación fallida.';
 			elements.licenseErrorEl.style.display = 'block';
@@ -266,15 +351,23 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 	}
 
+	/**
+	 * Contiene la lógica de arranque de la aplicación una vez validada la licencia.
+	 * Inicializa todos los módulos de funcionalidades.
+	 */
 	function startFullApp() {
+		// Restaura el estado colapsado del log si estaba guardado.
 		if (localStorage.getItem('logCollapsedState') === 'true') {
 			elements.appContainer.classList.add('log-collapsed');
 		}
 
-        // Inicialización de todos los módulos
+        // --- INICIALIZACIÓN DE MÓDULOS ---
+		// Se llama al método `init()` de cada módulo, pasándole como dependencias
+		// las funciones o módulos que pueda necesitar desde `app.js`.
 		fieldsTable.init();
         documentationManager.init();
 		
+		// El gestor de organizaciones necesita referencias a otros módulos para poder limpiar sus cachés.
 		orgManager.init({
 			getAuthenticatedConfig,
 			updateLoginStatus,
@@ -296,17 +389,21 @@ document.addEventListener('DOMContentLoaded', function () {
 		queryTextFinder.init({ getAuthenticatedConfig });
 		customerFinder.init({ getAuthenticatedConfig });
 		emailValidator.init({ getAuthenticatedConfig });
+		// El calendario necesita una función "puente" para poder navegar a otra vista.
 		calendar.init({ getAuthenticatedConfig, showAutomationsView: showFilteredAutomations });
 		
+		// Carga las configuraciones de cliente guardadas y arranca sin ninguna seleccionada.
 		orgManager.loadConfigsIntoSelect();
 		orgManager.loadAndSyncClientConfig('');
 
-		initializeCollapsibleMenus(); // La llamada ya existía, ahora la función también existe.
+		// Restaura el estado de los menús desplegables.
+		initializeCollapsibleMenus();
 
 		logger.startLogBuffering();
 		logger.logMessage("Aplicación lista.");
 		logger.endLogBuffering();
 	}
 
+	// Inicia todo el proceso.
 	initializeApp();
 });
