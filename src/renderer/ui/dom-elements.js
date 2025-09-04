@@ -137,7 +137,7 @@ export function init() {
     elements.activateAutomationBtn = document.getElementById('activateAutomationBtn');
     elements.runAutomationBtn = document.getElementById('runAutomationBtn');
     elements.stopAutomationBtn = document.getElementById('stopAutomationBtn');
-    // **AÑADIDO EL ELEMENTO QUE FALTABA**
+    elements.cloneAutomationBtn = document.getElementById('cloneAutomationBtn');
     elements.paginationAutomations = document.getElementById('pagination-automations'); 
     elements.prevPageBtnAutomations = document.getElementById('prevPageBtnAutomations');
     elements.nextPageBtnAutomations = document.getElementById('nextPageBtnAutomations');
@@ -188,6 +188,14 @@ export function init() {
     elements.nextPageBtnCloudPages = document.getElementById('nextPageBtnCloudPages');
     elements.pageInputCloudPages = document.getElementById('pageInputCloudPages');
     elements.totalPagesCloudPages = document.getElementById('totalPagesCloudPages');
+
+    // --- 15. Sección: Clonador de Automatismos ---
+    elements.automationClonerSection = document.getElementById('automation-cloner-section');
+    elements.automationClonerBackBtn = document.getElementById('automationClonerBackBtn');
+    elements.automationClonerContinueBtn = document.getElementById('automationClonerContinueBtn');
+    elements.automationClonerSourceName = document.getElementById('automationClonerSourceName');
+    elements.automationClonerDestName = document.getElementById('automationClonerDestName');
+    elements.automationClonerStepsContainer = document.getElementById('automationClonerStepsContainer');
 }
 
 export default elements;

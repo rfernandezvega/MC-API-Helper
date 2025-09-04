@@ -31,6 +31,7 @@ import * as queryTextFinder from './components/query-text-finder.js';      // L�
 import * as customerFinder from './components/customer-finder.js';         // Lógica del buscador de clientes/suscriptores.
 import * as emailValidator from './components/email-validator.js';       // Lógica del validador de emails.
 import * as calendar from './components/calendar.js';                  // Lógica del calendario de automatismos.
+import * as automationCloner from './components/automation-cloner.js'; // Lógica del clonador de automatismos.
 
 
 // --- 2. PUNTO DE ENTRADA PRINCIPAL ---
@@ -339,6 +340,16 @@ document.addEventListener('DOMContentLoaded', function () {
 		showSection('gestion-automatismos-section');
 		await automationsManager.view(automationNames);
 	}
+
+	/**
+	 * Función "puente" que permite a otros módulos (como automations-manager)
+	 * navegar a la vista del clonador y pasarle los detalles de un automatismo.
+	 * @param {object} automationDetails - Objeto con los detalles del automatismo.
+	 */
+	async function showAutomationCloner(automationDetails) {
+		showSection('automation-cloner-section');
+		automationCloner.view(automationDetails);
+	}
 	
 	/** 
 	 * Restaura el estado (abierto/cerrado) de los menús colapsables al iniciar la app,
@@ -423,12 +434,14 @@ document.addEventListener('DOMContentLoaded', function () {
 			calendar,
 			automationsManager,
 			journeysManager,
-			cloudPagesManager
+			cloudPagesManager,
+			automationCloner 
 		});
 
         deCreator.init({ getAuthenticatedConfig });
         fieldManager.init({ getAuthenticatedConfig });
-		automationsManager.init({ getAuthenticatedConfig });
+		// El gestor de automatismos necesita una función "puente" para poder navegar a otra vista (la de clonado)
+		automationsManager.init({ getAuthenticatedConfig, showAutomationClonerView: showAutomationCloner });
 		journeysManager.init({ getAuthenticatedConfig });
 		cloudPagesManager.init({ getAuthenticatedConfig });
 		queryCloner.init({ getAuthenticatedConfig });
@@ -437,8 +450,9 @@ document.addEventListener('DOMContentLoaded', function () {
 		queryTextFinder.init({ getAuthenticatedConfig });
 		customerFinder.init({ getAuthenticatedConfig });
 		emailValidator.init({ getAuthenticatedConfig });
-		// El calendario necesita una función "puente" para poder navegar a otra vista.
+		// El calendario necesita una función "puente" para poder navegar a otra vista (la de gestión de automatismos)
 		calendar.init({ getAuthenticatedConfig, showAutomationsView: showFilteredAutomations });
+		automationCloner.init({ getAuthenticatedConfig, goBack });
 		
 		// Carga las configuraciones de cliente guardadas y arranca sin ninguna seleccionada.
 		orgManager.loadConfigsIntoSelect();

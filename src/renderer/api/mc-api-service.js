@@ -109,6 +109,49 @@ export async function pauseAutomation(automationId, apiConfig) {
     return executeRestRequest(url, options);
 }
 
+/**
+ * Busca un automatismo por su nombre exacto (API REST v1).
+ * @param {string} automationName - El nombre del automatismo a buscar.
+ * @param {object} apiConfig - El objeto de configuración de API autenticado.
+ * @returns {Promise<object|null>} Una promesa que resuelve con el primer automatismo encontrado o null.
+ */
+export async function findAutomationByName(automationName, apiConfig) {
+    const encodedName = encodeURIComponent(automationName);
+    const url = `${apiConfig.restUri}automation/v1/automations?$filter=name%20eq%20'${encodedName}'`;
+    const options = { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } };
+    const data = await executeRestRequest(url, options);
+    // Devuelve el primer item del array, o null si no se encuentra nada.
+    return data.items && data.items.length > 0 ? data.items[0] : null;
+}
+
+/**
+ * Recupera los detalles completos de un automatismo, incluyendo sus pasos y actividades (API REST v1).
+ * @param {string} automationId - El ID del automatismo.
+ * @param {object} apiConfig - El objeto de configuración de API autenticado.
+ * @returns {Promise<object>} Una promesa que resuelve con el objeto de detalle del automatismo.
+ */
+export async function fetchAutomationDetailsById(automationId, apiConfig) {
+    const url = `${apiConfig.restUri}automation/v1/automations/${automationId}`;
+    const options = { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } };
+    return await executeRestRequest(url, options);
+}
+
+
+/**
+ * Crea un nuevo automatismo a partir de un payload definido (API REST v1).
+ * @param {object} automationPayload - El cuerpo (body) de la petición para crear el automatismo.
+ * @param {object} apiConfig - El objeto de configuración de API autenticado.
+ * @returns {Promise<object>} Una promesa que resuelve con el objeto del nuevo automatismo creado.
+ */
+export async function createAutomation(automationPayload, apiConfig) {
+    const url = `${apiConfig.restUri}automation/v1/automations`;
+    const options = {
+        method: 'POST',
+        headers: { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify(automationPayload)
+    };
+    return executeRestRequest(url, options);
+}
 
 // ==========================================================
 // --- 2. DATA EXTENSIONS & FIELDS API (SOAP & REST) ---

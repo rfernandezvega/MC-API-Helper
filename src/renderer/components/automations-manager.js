@@ -13,7 +13,9 @@ let currentSortColumn = 'name';
 let currentSortDirection = 'asc';
 const ITEMS_PER_PAGE = 15;
 
+
 let getAuthenticatedConfig;
+let showAutomationClonerView;
 
 // --- 2. LÓGICA DE RENDERIZADO Y FILTRADO ---
 
@@ -82,10 +84,12 @@ function renderTable(automations) {
  */
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
+    showAutomationClonerView = dependencies.showAutomationClonerView;
 
     elements.activateAutomationBtn.addEventListener('click', () => performAction('activate'));
     elements.runAutomationBtn.addEventListener('click', () => performAction('run'));
     elements.stopAutomationBtn.addEventListener('click', () => performAction('pause'));
+    elements.cloneAutomationBtn.addEventListener('click', () => inspectAndShowCloner());
     elements.refreshAutomationsTableBtn.addEventListener('click', refreshData);
 
     elements.automationNameFilter.addEventListener('input', applyFiltersAndRender);
@@ -239,6 +243,44 @@ async function performAction(actionName) {
     }
 }
 
+/**
+ * Recupera los detalles de los automatismos seleccionados y los muestra en el log.
+ * Sigue el flujo: 1. Obtiene nombre -> 2. Busca por nombre en API v1 -> 3. Obtiene ID -> 4. Busca detalles por ID.
+ */
+async function inspectAndShowCloner() {
+    const selectedRows = document.querySelectorAll('#automations-table tbody tr.selected');
+    
+    if (selectedRows.length !== 1) {
+        ui.showCustomAlert("Por favor, selecciona exactamente un automatismo para clonar.");
+        return;
+    }
+
+    const row = selectedRows[0];
+    const automationFromList = fullAutomationList.find(auto => auto.id === row.dataset.automationId);
+    if (!automationFromList) return;
+
+    if (!await ui.showCustomConfirm(`¿Quieres iniciar la clonación selectiva para "${automationFromList.name}"?`)) {
+        return;
+    }
+
+    ui.blockUI(`Cargando detalles de "${automationFromList.name}"...`);
+
+    try {
+        const apiConfig = await getAuthenticatedConfig();
+        
+        // Usamos el ID de la lista legacy, que es válido para la API v1 de detalles
+        const details = await mcApiService.fetchAutomationDetailsById(automationFromList.id, apiConfig);
+
+        // Llamamos a la función puente de app.js para mostrar la nueva vista
+        showAutomationClonerView(details);
+
+    } catch (error) {
+        ui.showCustomAlert(`Ocurrió un error al cargar los detalles: ${error.message}.`);
+    } finally {
+        ui.unblockUI();
+    }
+}
+
 // --- 5. GESTIÓN DE LA TABLA ---
 
 /**
@@ -303,7 +345,13 @@ function updateButtonsState() {
         elements.activateAutomationBtn.disabled = true;
         elements.runAutomationBtn.disabled = true;
         elements.stopAutomationBtn.disabled = true;
+        elements.cloneAutomationBtn.disabled = true;
         return;
+    }
+
+    elements.cloneAutomationBtn.disabled = true;
+    if (selectedRows.length === 1) {
+        elements.cloneAutomationBtn.disabled = false;
     }
 
     const selectedAutomations = Array.from(selectedRows).map(row => fullAutomationList.find(auto => auto.id === row.dataset.automationId)).filter(Boolean);
@@ -320,6 +368,7 @@ function updateButtonsState() {
     elements.activateAutomationBtn.disabled = !['pausedschedule', 'stopped'].includes(singleStatus);
     elements.runAutomationBtn.disabled = !['pausedschedule', 'stopped'].includes(singleStatus);
     elements.stopAutomationBtn.disabled = !['scheduled', 'ready'].includes(singleStatus);
+    
 }
 
 /**

@@ -150,6 +150,76 @@
     </div>
 </div>
 
+<!-- 15. SECCIÓN: CLONADOR DE AUTOMATISMOS -->
+<div id="automation-cloner-section" class="section">
+    <div class="section-header">
+        <!-- El botón "Atrás" será gestionado por la lógica para volver a la tabla de automatismos -->
+        <button id="automationClonerBackBtn" class="back-button">← Volver a la lista</button>            
+        <div class="header-actions">
+            <!-- Este botón estará deshabilitado hasta que implementemos el siguiente paso -->
+            <button id="automationClonerContinueBtn" class="action-button activate-btn" disabled>Continuar con la Clonación</button>
+        </div>
+    </div>
+    <h2>Clonador Selectivo de Automatismo</h2>
+
+    <!-- Contenedor principal que se rellenará dinámicamente -->
+    <div class="config-section-container">
+        <div class="config-block">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Automatismo Origen</th>
+                            <th>Automatismo Destino (Editable)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td id="automationClonerSourceName">Cargando...</td>
+                            <td id="automationClonerDestName" contenteditable="true"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="config-block">
+            <h3>Selecciona las actividades a clonar:</h3>
+            <!-- Aquí se insertarán dinámicamente los pasos y sus tablas -->
+            <div id="automationClonerStepsContainer">
+                <!-- Ejemplo de cómo se verá un paso (se genera con JS) -->
+                <!-- 
+                <div class="step-block">
+                    <h4>Paso 1</h4>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 5%;"><input type="checkbox" class="select-all-step-activities"></th>
+                                    <th>Tipo</th>
+                                    <th>Nombre Origen</th>
+                                    <th>Nombre Destino (Editable)</th>
+                                    <th>Nombre DE Destino (Editable)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><input type="checkbox"></td>
+                                    <td>Query Activit</td>
+                                    <td>Test</td>
+                                    <td>Test_Copy</td>
+                                    <td>Test_Copy</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div> 
+                -->
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- 10. SECCIÓN: GESTIÓN DE AUTOMATISMOS -->
 <div id="gestion-automatismos-section" class="section">
     <div class="section-header">
@@ -159,6 +229,7 @@
             <button id="activateAutomationBtn" class="action-button activate-btn" disabled>Activar</button>
             <button id="runAutomationBtn" class="action-button" disabled>Ejecutar</button>
             <button id="stopAutomationBtn" class="action-button delete-btn" disabled>Parar</button>
+            <button id="cloneAutomationBtn" class="action-button" disabled>Clonar</button>
         </div>
     </div>
     <h2>Gestión de Automatismos</h2>
