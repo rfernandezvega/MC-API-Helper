@@ -1,6 +1,6 @@
 {
   "name": "mc-api-helper",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "description": "Herramienta para interactuar con la API de Marketing Cloud",
   "main": "src/main/main.js",
   "scripts": {
@@ -26,9 +26,9 @@
     "appId": "com.seidor.mc-api-helper",
     "productName": "MC API Helper",
     "artifactName": "MC-API-Helper-Setup-${version}.${ext}",
-    "icon": "icon.ico",
     "forceCodeSigning": false,
     "win": {
+      "icon": "icon.png",
       "target": [
         {
           "target": "nsis",
@@ -55,7 +55,7 @@
       "provider": "github",
       "owner": "rfernandezvega",
       "repo": "MC-API-Helper",
-      "private": true
+      "private": false
     }
   }
 }
