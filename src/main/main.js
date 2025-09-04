@@ -192,18 +192,16 @@ async function refreshAccessToken(clientName) {
             console.error("No se pudo obtener la información del usuario/organización.", e.message);
         }
 
-        // --- CORRECCIÓN CLAVE 1 ---
-        // En lugar de sobreescribir toda la sesión, lo que borraría soapUri y restUri,
-        // solo actualizamos las propiedades que cambian, preservando las existentes.
         activeSession = {
-            ...activeSession, // Mantiene las propiedades antiguas (como soapUri y restUri)
             clientName: clientName,
             accessToken: tokenData.access_token,
+            soapUri: tokenData.soap_instance_url,
+            restUri: tokenData.rest_instance_url,
             expiryTimestamp: Date.now() + (tokenData.expires_in - TOKEN_EXPIRY_BUFFER) * 1000,
             userInfo: userInfo,
             orgInfo: orgInfo
         };
-
+        console.log(activeSession);
     } catch (error) {
         console.error("Error crítico al refrescar el token.", error.response ? error.response.data : error.message);
         await keytar.deletePassword(KEYTAR_SERVICE_NAME, `${clientName}-refreshToken`);
