@@ -13,7 +13,8 @@ function addRow(selectIt = true) {
     newRow.innerHTML = `
         <td contenteditable="true"></td>
         <td><select class="type-select">
-            <option value="Text"></option>
+            <option value="" selected disabled></option>
+            <option value="Text">Text</option>
             <option value="Number">Number</option>
             <option value="Date">Date</option>
             <option value="Boolean">Boolean</option>
@@ -160,17 +161,20 @@ function moveRow(direction) {
  * Rellena la tabla con un array de datos de campos.
  * @param {Array<object>} fieldsData - Array de objetos de campo.
  */
-export function populate(fieldsData) {
-    clear(true);
+export function populate(fieldsData) {    
     fieldsData.forEach(field => {
         const newRow = elements.fieldsTableBody.insertRow();
         newRow.innerHTML = `
             <td contenteditable="true">${field.mc || ''}</td>
             <td><select class="type-select">
-                <option value="Text">Text</option><option value="Number">Number</option>
-                <option value="Date">Date</option><option value="Boolean">Boolean</option>
-                <option value="EmailAddress">EmailAddress</option><option value="Phone">Phone</option>
-                <option value="Decimal">Decimal</option><option value="Locale">Locale</option>
+                <option value="Text">Text</option>
+                <option value="Number">Number</option>
+                <option value="Date">Date</option>
+                <option value="Boolean">Boolean</option>
+                <option value="EmailAddress">EmailAddress</option>
+                <option value="Phone">Phone</option>
+                <option value="Decimal">Decimal</option>
+                <option value="Locale">Locale</option>
             </select></td>
             <td contenteditable="true">${field.len || ''}</td>
             <td contenteditable="true">${field.defaultValue || ''}</td>
@@ -291,7 +295,8 @@ export function processPastedData() {
             len: parts[2]?.trim() || ''
         };
     }).filter(f => f.mc);
-
+    
+    clear(false);
     populate(getFieldsData().concat(newFields));
     closeImportModal();
 }
