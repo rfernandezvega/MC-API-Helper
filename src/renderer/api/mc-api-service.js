@@ -893,17 +893,126 @@ export async function getQueriesFromFolder(folderId, apiConfig) {
 }
 
 /**
- * Crea una nueva Query Activity clonada.
+ * Crea una nueva Query Activity clonada y devuelve su ObjectID.
+ * Este método es más eficiente ya que extrae el ObjectID directamente de la
+ * respuesta de la creación, evitando una segunda llamada a la API.
  * @param {object} originalQuery - El objeto de la query original.
  * @param {object} clonedDE - El objeto de la DE clonada (con nueva key y nombre).
  * @param {string} newQueryName - El nombre de la Query.
  * @param {string} targetCategoryId - El ID de la carpeta donde se guardará la query.
  * @param {object} apiConfig - La configuración de la API.
+ * @returns {Promise<{objectID: string, name: string}>} - Promesa con el ObjectID y el nombre de la nueva query.
  */
 export async function createClonedQuery(originalQuery, clonedDE, newQueryName, targetCategoryId, apiConfig) {
-    const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Create</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><CreateRequest xmlns="http://exacttarget.com/wsdl/partnerAPI"><Objects xsi:type="QueryDefinition"><CategoryID>${targetCategoryId}</CategoryID><CustomerKey></CustomerKey><Name>${newQueryName}</Name><QueryText>${originalQuery.queryText}</QueryText><TargetType>DE</TargetType><DataExtensionTarget><CustomerKey>${clonedDE.customerKey}</CustomerKey><Name>${clonedDE.name}</Name></DataExtensionTarget><TargetUpdateType>${originalQuery.updateType}</TargetUpdateType></Objects></CreateRequest></s:Body></s:Envelope>`;
+    // --- PASO ÚNICO: Crear la Query y extraer el NewObjectID de la respuesta ---
+    const createPayload = `
+    <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+        <s:Header>
+            <a:Action s:mustUnderstand="1">Create</a:Action>
+            <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+            <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+        </s:Header>
+        <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+            <CreateRequest xmlns="http://exacttarget.com/wsdl/partnerAPI">
+                <Objects xsi:type="QueryDefinition">
+                    <CategoryID>${targetCategoryId}</CategoryID>
+                    <CustomerKey></CustomerKey>
+                    <Name>${newQueryName}</Name>
+                    <QueryText>${originalQuery.queryText}</QueryText>
+                    <TargetType>DE</TargetType>
+                    <DataExtensionTarget>
+                        <CustomerKey>${clonedDE.customerKey}</CustomerKey>
+                        <Name>${clonedDE.name}</Name>
+                    </DataExtensionTarget>
+                    <TargetUpdateType>${originalQuery.updateType}</TargetUpdateType>
+                </Objects>
+            </CreateRequest>
+        </s:Body>
+    </s:Envelope>`;
 
-    await executeSoapRequest(apiConfig.soapUri, soapPayload);
+    const createResponseText = await executeSoapRequest(apiConfig.soapUri, createPayload);
+    const createDoc = new DOMParser().parseFromString(createResponseText, "application/xml");
+    
+    // Extraemos el NewObjectID, que es lo que la API nos devuelve.
+    const newObjectID = createDoc.querySelector("Results > NewObjectID")?.textContent;
+
+    if (!newObjectID) {
+        // Esta comprobación de seguridad es por si la API cambia en el futuro.
+        throw new Error("La creación de la Query fue exitosa, pero no se pudo extraer el NewObjectID de la respuesta SOAP.");
+    }
+
+    // Devolvemos el objeto que necesita el clonador de automatismos.
+    return { objectID: newObjectID, name: newQueryName };
+}
+
+
+/**
+ * Recupera los detalles de una Query Definition por su CustomerKey.
+ * @param {string} customerKey - La CustomerKey de la Query Definition.
+ * @param {object} apiConfig - La configuración de la API.
+ * @returns {Promise<{objectID: string, customerKey: string, name: string}>} Un objeto con los detalles clave de la query.
+ */
+export async function fetchQueryDefinitionByCustomerKey(customerKey, apiConfig) {
+    const soapPayload = `
+    <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+        <s:Header>
+            <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+            <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+            <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+        </s:Header>
+        <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+            <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+                <RetrieveRequest>
+                    <ObjectType>QueryDefinition</ObjectType>
+                    <Properties>ObjectID</Properties>
+                    <Properties>Name</Properties>
+                    <Properties>CustomerKey</Properties>
+                    <Properties>CategoryID</Properties>
+                    <Filter xsi:type="SimpleFilterPart">
+                        <Property>CustomerKey</Property>
+                        <SimpleOperator>equals</SimpleOperator>
+                        <Value>${customerKey}</Value>
+                    </Filter>
+                </RetrieveRequest>
+            </RetrieveRequestMsg>
+        </s:Body>
+    </s:Envelope>`;
+    
+    const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+    const resultNode = new DOMParser().parseFromString(responseText, "application/xml").querySelector("Results");
+    
+    if (!resultNode) {
+        throw new Error(`No se pudo recuperar la Query Definition con CustomerKey: ${customerKey}`);
+    }
+
+    return {
+        objectID: resultNode.querySelector("ObjectID")?.textContent,
+        customerKey: resultNode.querySelector("CustomerKey")?.textContent,
+        name: resultNode.querySelector("Name")?.textContent,
+        categoryId: resultNode.querySelector("CategoryID")?.textContent
+    };
+}
+
+/**
+ * Recupera los detalles completos de una Query Definition por su ObjectID.
+ * @param {string} queryObjectId - El ObjectID de la Query Definition.
+ * @param {object} apiConfig - La configuración de la API.
+ * @returns {Promise<object>} Un objeto con los detalles de la query.
+ */
+export async function fetchQueryDefinitionDetails(queryObjectId, apiConfig) {
+    const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>QueryDefinition</ObjectType><Properties>Name</Properties><Properties>CustomerKey</Properties><Properties>QueryText</Properties><Properties>TargetUpdateType</Properties><Properties>CategoryID</Properties><Filter xsi:type="SimpleFilterPart"><Property>ObjectID</Property><SimpleOperator>equals</SimpleOperator><Value>${queryObjectId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+
+    const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+    const resultNode = new DOMParser().parseFromString(responseText, "application/xml").querySelector("Results");
+    if (!resultNode) throw new Error(`No se encontró Query Definition con ObjectID: ${queryObjectId}`);
+
+    return {
+        name: resultNode.querySelector("Name")?.textContent,
+        customerKey: resultNode.querySelector("CustomerKey")?.textContent,
+        queryText: resultNode.querySelector("QueryText")?.textContent,
+        updateType: resultNode.querySelector("TargetUpdateType")?.textContent,
+        categoryId: resultNode.querySelector("CategoryID")?.textContent
+    };
 }
 
 // ==========================================================
