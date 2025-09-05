@@ -7,6 +7,11 @@ const os = require('os');
 const { google } = require('googleapis'); 
 const fs = require('fs'); 
 const { autoUpdater } = require('electron-updater');
+const log = require('electron-log');
+
+log.transports.file.level = 'info';
+autoUpdater.logger = log; 
+
 const path = require('path');
 const axios = require('axios');
 const keytar = require('keytar'); // Librería para el llavero seguro
@@ -40,11 +45,28 @@ const SPREADSHEET_ID = '17vqeFeKK5Ht-WCYrhNxyRjwWTAUSscNVBCGO5quz7VY';
 const SHEET_NAME = 'Accesos';
 
 // --- 2. FUNCIÓN DE CREACIÓN DE LA VENTANA ---
+const getIconPath = () => {
+  const iconName = 'icon.ico';
+  
+  if (app.isPackaged) {
+    // Intenta primero en resources
+    const resourcePath = path.join(process.resourcesPath, iconName);
+    if (require('fs').existsSync(resourcePath)) {
+      return resourcePath;
+    }
+    // Fallback a la carpeta de la app
+    return path.join(__dirname, iconName);
+  } else {
+    // En desarrollo
+    return path.resolve(__dirname, '../../' + iconName);
+  }
+};
+
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1300,
         height: 850,
-        icon: path.join(__dirname, '..', '..', 'icon.png'),
+        icon: getIconPath(),
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -87,6 +109,11 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
+});
+
+app.on('before-quit', () => {
+  // Flag para asegurar que el cierre no se cancele
+  app.isQuiting = true; 
 });
 
 // --- FUNCIÓN DE INICIALIZACIÓN Y VALIDACIÓN (Google Sheets) ---

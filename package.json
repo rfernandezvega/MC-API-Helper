@@ -1,6 +1,6 @@
 {
   "name": "mc-api-helper",
-  "version": "1.10.1",
+  "version": "1.10.2",
   "description": "Herramienta para interactuar con la API de Marketing Cloud",
   "main": "src/main/main.js",
   "scripts": {
@@ -19,7 +19,7 @@
     "keytar": "^7.9.0"
   },
   "devDependencies": {
-    "electron": "^37.2.6",
+    "electron": "^38.0.0",
     "electron-builder": "^26.0.12"
   },
   "build": {
@@ -28,7 +28,7 @@
     "artifactName": "MC-API-Helper-Setup-${version}.${ext}",
     "forceCodeSigning": false,
     "win": {
-      "icon": "icon.png",
+      "icon": "icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -42,7 +42,7 @@
     "nsis": {
       "oneClick": false,
       "perMachine": false,
-      "allowElevation": true,
+      "allowElevation": false,
       "createStartMenuShortcut": true,
       "createDesktopShortcut": true,
       "shortcutName": "MC API Helper",
