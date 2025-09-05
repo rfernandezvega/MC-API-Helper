@@ -185,47 +185,6 @@ document.addEventListener('DOMContentLoaded', function () {
 		return apiConfig;
 	}
 	
-	// ==========================================================
-	// --- GESTIÓN DE LICENCIA ---
-	// Controla el acceso inicial a la aplicación.
-	// ==========================================================
-
-	/**
-	 * Gestiona el envío del formulario de licencia.
-	 * Llama al backend para validar las credenciales.
-	 * @param {Event} event - El evento de envío del formulario.
-	 */
-	async function handleLicenseSubmit(event) {
-		event.preventDefault(); // Evita que la página se recargue.
-		const email = elements.licenseEmailInput.value.trim();
-		const key = elements.licenseKeyInput.value.trim();
-
-    	elements.licenseErrorEl.style.display = 'none';
-		if (!email || !key) {
-			ui.showCustomAlert('Por favor, completa ambos campos.');
-			return;
-		}
-
-		ui.blockUI('Validando...');
-		const result = await window.electronAPI.validateLicense({ email, key });
-		ui.unblockUI();
-
-		if (result && result.error) {
-			elements.licenseErrorEl.textContent = `Error: ${result.error}`;
-			elements.licenseErrorEl.style.display = 'block';
-			return;
-		}
-
-		if (result === true) {
-			// Si la validación es exitosa, guarda la licencia y arranca la app.
-			localStorage.setItem('isKeyValid', JSON.stringify({ email, key }));
-			elements.licenseModal.style.display = 'none';
-			startFullApp();
-		} else {
-			elements.licenseErrorEl.textContent = 'Email o clave de acceso no válidos.';
-			elements.licenseErrorEl.style.display = 'block';
-		}
-	}
 
 	// ==========================================================
 	// --- EVENT LISTENERS GLOBALES ---
@@ -234,7 +193,6 @@ document.addEventListener('DOMContentLoaded', function () {
 	
 	function setupEventListeners() {
 		// Listeners para el modal de licencia y alertas personalizadas.
-		elements.licenseForm.addEventListener('submit', handleLicenseSubmit);
 		elements.customAlertCloseBtn.addEventListener('click', ui.closeCustomAlert);
 		elements.customAlertModal.addEventListener('click', (e) => {
 			if (e.target === elements.customAlertModal) ui.closeCustomAlert();
@@ -379,34 +337,28 @@ document.addEventListener('DOMContentLoaded', function () {
 		initDomElements();
 		setupEventListeners();
 
-		// Comprueba si hay una licencia guardada.
-		const licenseInfoRaw = localStorage.getItem('isKeyValid');
-		if (!licenseInfoRaw) {
-			// Si no hay, muestra el modal de login y detiene la carga.
-			elements.licenseModal.style.display = 'flex';
-			return; 
-		}
+		// Muestra el modal de licencia con un mensaje de espera
+		elements.licenseModal.style.display = 'flex';
+		elements.licenseStatusMessage.textContent = 'Verificando licencia de usuario...';
 
-		// Si hay una licencia, la valida contra el backend.
-		ui.blockUI("Validando licencia...");
-		let isValid = false;
 		try {
-			const licenseInfo = JSON.parse(licenseInfoRaw);
-			isValid = await window.electronAPI.validateLicense({ email: licenseInfo.email, key: licenseInfo.key });
-		} catch (e) {
-			console.error("Error validando la licencia:", e);
-		}
-		ui.unblockUI();
+			// Llama a la función del backend
+			const isValid = await window.electronAPI.checkSystemUserLicense();
 
-		if (isValid === true) {
-			// Si la licencia es válida, arranca la aplicación completa.
-			startFullApp();
-		} else {
-			// Si no es válida, la borra y pide credenciales de nuevo.
-			localStorage.removeItem('isKeyValid');
-			elements.licenseErrorEl.textContent = 'Acceso revocado o validación fallida.';
-			elements.licenseErrorEl.style.display = 'block';
-			elements.licenseModal.style.display = 'flex'; 
+			if (isValid === true) {
+				// Si la licencia es válida, oculta el modal y arranca la aplicación
+				elements.licenseModal.style.display = 'none';
+				startFullApp();
+			} else {
+				// Si el usuario no es válido, muestra un mensaje de error permanente y bloquea la app
+				elements.licenseStatusMessage.textContent = 'No tienes permiso para utilizar esta aplicación. Por favor, contacta con el administrador.';
+				// (Opcional) Puedes añadir una clase para estilizar el error, si la tienes en tu CSS
+				// elements.licenseStatusMessage.classList.add('error-text'); 
+			}
+		} catch (error) {
+			// Si ocurre un error de comunicación (ej: sin internet), lo muestra
+			elements.licenseStatusMessage.textContent = `Error de validación: ${error.message || 'No se pudo conectar para validar la licencia.'}.`;
+			// elements.licenseStatusMessage.classList.add('error-text');
 		}
 	}
 

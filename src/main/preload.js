@@ -79,9 +79,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onRequireLogin: (callback) => ipcRenderer.on('require-login', (_event, data) => callback(data)),
 
    /**
-   * Envía las credenciales al proceso principal para ser validadas contra Google Sheets.
-   * @param {object} credentials - Un objeto con { email, key }.
+   * Verifica automáticamente la licencia del usuario del sistema contra Google Sheets.
+   * No requiere parámetros.
    * @returns {Promise<boolean|object>} - Devuelve `true` si es válido, `false` si no, o un objeto de error.
    */
-  validateLicense: (credentials) => ipcRenderer.invoke('validate-license', credentials),
+  checkSystemUserLicense: () => ipcRenderer.invoke('check-system-user-license'),
 });

@@ -3,6 +3,7 @@
 
 // --- 1. MÓDulos REQUERIDOS ---
 const { app, BrowserWindow, ipcMain, shell, Notification } = require('electron'); 
+const os = require('os'); 
 const { google } = require('googleapis'); 
 const fs = require('fs'); 
 const { autoUpdater } = require('electron-updater');
@@ -72,7 +73,7 @@ app.whenReady().then(() => {
         const notification = new Notification({
             title: 'Actualización Lista para Instalar',
             body: `La versión ${info.version} de MC API Helper está lista. Haz clic para reiniciar e instalar.`,
-            icon: path.join(__dirname, 'icon.ico')
+            icon: path.join(__dirname, '..', '..', 'icon.ico')
         });
         notification.show();
         notification.on('click', () => autoUpdater.quitAndInstall());
@@ -104,14 +105,14 @@ function initializeGoogleClient() {
     });
 }
 
-async function validateUserInSheet(email, accessKey, version) {
+async function validateUserInSheet(email, version) { 
     try {
         const sheets = await sheetsClientPromise;
         if (!sheets) throw new Error("El cliente de Google Sheets no está disponible.");
 
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${SHEET_NAME}!A:G`,
+            range: `${SHEET_NAME}!A:F`,
         });
 
         const rows = response.data.values;
@@ -119,20 +120,21 @@ async function validateUserInSheet(email, accessKey, version) {
 
         const dataRows = rows.slice(1);
         const userRowIndex = dataRows.findIndex(row => row[1] && row[1].toLowerCase() === email.toLowerCase());
-        if (userRowIndex === -1) return false;
+        if (userRowIndex === -1) return false; // Usuario no encontrado
         
         const userRow = dataRows[userRowIndex];
-        const storedKey = userRow[2];
-        const isActive = userRow[3];
-        const isValid = storedKey === accessKey && (isActive?.toLowerCase() === 'true' || isActive?.toLowerCase() === 'sí');
+        const isActive = userRow[2];
+        
+        
+        const isValid = (isActive?.toLowerCase() === 'true' || isActive?.toLowerCase() === 'sí');
 
-        if (!isValid) return false;
+        if (!isValid) return false; // El usuario no está activo
 
         const sheetRowNumber = userRowIndex + 2;
-        const currentCount = parseInt(userRow[4], 10) || 0;
+        const currentCount = parseInt(userRow[3], 10) || 0;
         await sheets.spreadsheets.values.update({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${SHEET_NAME}!E${sheetRowNumber}:G${sheetRowNumber}`,
+            range: `${SHEET_NAME}!D${sheetRowNumber}:F${sheetRowNumber}`,
             valueInputOption: 'USER_ENTERED',
             resource: {
                 values: [[currentCount + 1, new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' }), version]],
@@ -148,10 +150,19 @@ async function validateUserInSheet(email, accessKey, version) {
 }
 
 // --- 4. COMUNICACIÓN IPC ---
-ipcMain.handle('validate-license', async (event, { email, key }) => {
+ipcMain.handle('check-system-user-license', async () => {
     try {
-        return await validateUserInSheet(email, key, appVersion);
+        const systemUsername = os.userInfo().username;
+        
+        const userEmail = `${systemUsername.toLowerCase()}@seidor.es`; 
+
+        console.log(`Verificando licencia para el usuario del sistema: ${userEmail}`);
+        
+        // Llama a la nueva función sin la clave de acceso
+        return await validateUserInSheet(userEmail, appVersion);
+
     } catch (error) {
+        console.error("Error crítico durante la validación automática de licencia:", error);
         return { error: error.message };
     }
 });

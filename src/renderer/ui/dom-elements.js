@@ -10,11 +10,7 @@ export function init() {
     elements.loaderOverlay = document.getElementById('loader-overlay');
     elements.loaderText = document.getElementById('loader-text');
     elements.licenseModal = document.getElementById('license-modal-overlay');
-    elements.licenseForm = document.getElementById('license-form');
-    elements.licenseEmailInput = document.getElementById('license-email');
-    elements.licenseKeyInput = document.getElementById('license-key');
-    elements.licenseErrorEl = document.getElementById('license-error-message');
-    elements.submitBtn = document.getElementById('license-submit-btn');
+    elements.licenseStatusMessage = document.getElementById('license-status-message');
     elements.customAlertModal = document.getElementById('custom-alert-modal');
     elements.customAlertMessage = document.getElementById('custom-alert-message');
     elements.customAlertCloseBtn = document.getElementById('custom-alert-close-btn');
