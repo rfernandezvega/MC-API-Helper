@@ -561,9 +561,31 @@
                       <li><b>Refrescar:</b> Refresca el listado completo de automatismos. Esto se hace automáticamente al realizar cualquier acción.</li>	
                       <li><b>Activar:</b> Pone en marcha la programación de los automatismos seleccionados. Solo se habilita para automatismos en estado <i>"PausedSchedule"</i> o <i>"Stopped"</i>.</li>							
                       <li><b>Ejecutar:</b> Lanza una ejecución única e inmediata de los automatismos seleccionados. Solo se habilita para automatismos en estado <i>"PausedSchedule"</i> o <i>"Stopped"</i>.</li>							
-                      <li><b>Parar:</b> Detiene la programación de los automatismos seleccionados. Solo se habilita para automatismos en estado <i>"Scheduled"</i> o <i>"Ready"</i>.</li>							
+                      <li><b>Parar:</b> Detiene la programación de los automatismos seleccionados. Solo se habilita para automatismos en estado <i>"Scheduled"</i> o <i>"Ready"</i>.</li>			
                     </ul>
                   </li>
+                </ul>
+              </div>
+            </div>
+          </li>
+
+          <li class="docu-accordion-item">
+            <div class="docu-accordion-header">
+              <span>Clonador de Automatismo</span>
+            </div>
+            <div class="docu-accordion-content">
+              <div class="docu-list">
+                <p>Una herramienta para clonar un automatismo y sus actividades.</p>
+                <ul>
+                  <li>Ve a <b>Gestión de Automatismos</b>.</li>
+                  <li>Selecciona el automatismo que quieres clonar.</li>
+                  <li>Se mostrará una nueva vista donde se puede:</li>
+                    <ul style="margin-top: 10px;">	
+                        <li>Indicar el nombre del automatismo clonado. Por defecto se clona con <em>_Copy</em></li>	
+                        <li>Seleccionar qué actividades se quieren clonar. Por ahora solo se clonan las Queries para las que se puede indicar el nombre de la Query copiada y la de la Data Extension</li>	
+                    </ul>
+                  <li>Todos los elementos se guardan en la misma carpeta donde estaban los originales.</li>
+                  <li>Despues de seleccionar qué elementos clonar, pulsa en el botón de <em>Clonar</em> para ejecutar la clonación.</li>
                 </ul>
               </div>
             </div>
@@ -587,7 +609,7 @@
                       <li><b>Dibujar:</b> Permite crear una versión de texto del Journey de cara a la documentación. Es necesario haber recuperado las comunicaciones previamente, lo cual marca el Journey como Descargado</li>		
                       <li><b>Copiar:</b> Permite clonar un Journey, con toda su estructura y clona la Data Extension de entrada en la misma carpeta donde se encontrará la anterior. Por ahora solo para los de tipo <b>"EmailAudience"</b>.</li>			
                       <li><b>Parar:</b> Permite parar varios Journeys a la vez</li>		
-                      <li><b>Parar:</b> Permite borrar varios Journeys a la vez, si son de Subtipo Quicksend</li>							
+                      <li><b>Borrar:</b> Permite borrar varios Journeys a la vez, si son de Subtipo Quicksend</li>							
                     </ul>
                   </li>
                 </ul>

@@ -63,7 +63,6 @@ async function getFields() {
         const fields = await mcApiService.fetchFieldsForDE(externalKey, apiConfig);
 
         if (fields.length > 0) {
-            // --- CORRECCIÓN 3: Añadida la llamada que faltaba ---
             // Rellena la tabla principal en la sección "Campos".
             fieldsTable.populate(fields); 
             

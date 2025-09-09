@@ -165,7 +165,7 @@ export function populate(fieldsData) {
     fieldsData.forEach(field => {
         const newRow = elements.fieldsTableBody.insertRow();
         newRow.innerHTML = `
-            <td contenteditable="true">${field.mc || ''}</td>
+            <td contenteditable="true">${field.name || ''}</td>
             <td><select class="type-select">
                 <option value="Text">Text</option>
                 <option value="Number">Number</option>
@@ -176,10 +176,10 @@ export function populate(fieldsData) {
                 <option value="Decimal">Decimal</option>
                 <option value="Locale">Locale</option>
             </select></td>
-            <td contenteditable="true">${field.len || ''}</td>
+            <td contenteditable="true">${field.length || ''}</td>
             <td contenteditable="true">${field.defaultValue || ''}</td>
-            <td><input type="checkbox" class="pk-checkbox" ${field.pk ? 'checked' : ''}></td>
-            <td><input type="checkbox" class="req-checkbox" ${field.req ? 'checked' : ''}></td>
+            <td><input type="checkbox" class="pk-checkbox" ${field.isPrimaryKey ? 'checked' : ''}></td>
+            <td><input type="checkbox" class="req-checkbox" ${field.isRequired ? 'checked' : ''}></td>
             <button class="delete-row-btn" title="Eliminar fila">×</button>
         `;
         const typeSelect = newRow.querySelector('.type-select');
@@ -196,7 +196,7 @@ export function populate(fieldsData) {
 export function populateDeletionPicklist(fields) {
     elements.targetFieldSelect.innerHTML = '<option value="">-- Seleccione un campo --</option>';
     if (fields.length > 0) {
-        fields.forEach(f => elements.targetFieldSelect.appendChild(new Option(f.mc, f.id)));
+        fields.forEach(f => elements.targetFieldSelect.appendChild(new Option(f.name, f.id)));
         elements.targetFieldSelect.disabled = false;
     } else {
         elements.targetFieldSelect.disabled = true;
