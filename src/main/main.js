@@ -98,7 +98,12 @@ app.whenReady().then(() => {
             icon: path.join(__dirname, '..', '..', 'icon.ico')
         });
         notification.show();
-        notification.on('click', () => autoUpdater.quitAndInstall());
+        notification.on('click', () => {
+            // Asegurarse de cerrar todas las ventanas antes
+            setImmediate(() => {
+                autoUpdater.quitAndInstall(false, true);
+            });
+        });
     });
     autoUpdater.checkForUpdates();
 });
