@@ -77,14 +77,14 @@ export function init() {
     elements.createDummyFieldsBtn.addEventListener('click', () => {
         clear(false);
         populate([
-            { mc: 'NombreCompleto', type: 'Text', len: '100', pk: true, req: true },
-            { mc: 'SincronizarMC', type: 'Boolean', defaultValue: 'false' },
-            { mc: 'FechaNacimiento', type: 'Date', defaultValue: 'getdate()' },
-            { mc: 'Recibo', type: 'Decimal', len: '18,2' },
-            { mc: 'Telefono', type: 'Phone' },
-            { mc: 'Email', type: 'EmailAddress', len: '254' },
-            { mc: 'Locale', type: 'Locale' },
-            { mc: 'Numero', type: 'Number' }
+            { name: 'NombreCompleto', type: 'Text', len: '100', pk: true, req: true },
+            { name: 'SincronizarMC', type: 'Boolean', defaultValue: 'false' },
+            { name: 'FechaNacimiento', type: 'Date', defaultValue: 'getdate()' },
+            { name: 'Recibo', type: 'Decimal', len: '18,2' },
+            { name: 'Telefono', type: 'Phone' },
+            { name: 'Email', type: 'EmailAddress', len: '254' },
+            { name: 'Locale', type: 'Locale' },
+            { name: 'Numero', type: 'Number' }
         ]);
     });
     elements.clearFieldsBtn.addEventListener('click', clear);
