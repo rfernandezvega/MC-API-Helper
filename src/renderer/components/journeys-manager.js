@@ -457,7 +457,7 @@ function updateButtonsState() {
     const count = selected.length;
     elements.getCommunicationsBtn.disabled = count === 0;
     elements.drawJourneyBtn.disabled = !(count === 1 && selected[0].hasCommunications);
-    elements.copyJourneyBtn.disabled = !(count === 1 && ['EmailAudience', 'AutomationAudience'].includes(selected[0].eventType));
+    elements.copyJourneyBtn.disabled = !(count === 1 && ['EmailAudience'].includes(selected[0].eventType));
     elements.stopJourneyBtn.disabled = !(count > 0 && selected.every(j => j.status === 'Published'));
     elements.deleteJourneyBtn.disabled = !(count > 0 && selected.every(j => j.definitionType === 'Quicksend'));
 }

@@ -77,12 +77,12 @@ export function init() {
     elements.createDummyFieldsBtn.addEventListener('click', () => {
         clear(false);
         populate([
-            { name: 'NombreCompleto', type: 'Text', len: '100', pk: true, req: true },
+            { name: 'NombreCompleto', type: 'Text', length: '100', isPrimaryKey: true, isRequired: true },
             { name: 'SincronizarMC', type: 'Boolean', defaultValue: 'false' },
             { name: 'FechaNacimiento', type: 'Date', defaultValue: 'getdate()' },
-            { name: 'Recibo', type: 'Decimal', len: '18,2' },
+            { name: 'Recibo', type: 'Decimal', length: '18,2' },
             { name: 'Telefono', type: 'Phone' },
-            { name: 'Email', type: 'EmailAddress', len: '254' },
+            { name: 'Email', type: 'EmailAddress', length: '254' },
             { name: 'Locale', type: 'Locale' },
             { name: 'Numero', type: 'Number' }
         ]);
@@ -211,14 +211,14 @@ export function getFieldsData() {
     const data = [];
     elements.fieldsTableBody.querySelectorAll('tr').forEach(row => {
         const field = {
-            mc: row.cells[0].textContent.trim(),
+            name: row.cells[0].textContent.trim(),
             type: row.querySelector('.type-select').value,
-            len: row.cells[2].textContent.trim(),
+            length: row.cells[2].textContent.trim(),
             defaultValue: row.cells[3].textContent.trim(),
-            pk: row.querySelector('.pk-checkbox').checked,
-            req: row.querySelector('.req-checkbox').checked,
+            isPrimaryKey: row.querySelector('.pk-checkbox').checked,
+            isRequired: row.querySelector('.req-checkbox').checked,
         };
-        if (field.mc && field.type) data.push(field);
+        if (field.name && field.type) data.push(field);
     });
     return data;
 }
@@ -235,7 +235,7 @@ export function handleSendableChange() {
         const currentVal = elements.subscriberKeyFieldSelect.value;
         elements.subscriberKeyFieldSelect.innerHTML = '<option value="">-- Seleccione un campo --</option>';
         fields.forEach(f => {
-            const option = new Option(f.mc, f.mc);
+            const option = new Option(f.name, f.name);
             option.dataset.type = f.type;
             elements.subscriberKeyFieldSelect.appendChild(option);
         });
