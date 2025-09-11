@@ -71,23 +71,28 @@ body {
    ========================================================== */
 
 /* --- 2.1. Barra Izquierda (Navegación) --- */
+/* Convierte la barra lateral en un contenedor flex de altura completa. */
+/* Esto es el paso más importante para controlar los elementos internos. */
 #macros-sidebar { 
   display: flex; 
-  flex-direction: column; 
+  flex-direction: column; /* Apila los hijos (cliente, título, menús) verticalmente. */
+  height: calc(100vh - 40px); /* Asegura que tenga la misma altura que los otros paneles. */
 }
 
-#macros-sidebar h2 {
-  color: #69a3db;
-  margin-top: 0;
-  text-align: center;
-  border-bottom: 2px solid #f0f6fc;
-  padding-bottom: 10px;
-}
-
+/* Estilos para la sección FIJA del cliente. */
+/* Se queda en la parte superior y no se mueve. */
 .sidebar-client-selector {
+  flex-shrink: 0; /* Evita que esta sección se encoja si el contenido no cabe. */
   padding-bottom: 15px;
   border-bottom: 2px solid #f0f6fc;
   margin-bottom: 10px;
+}
+.sidebar-client-selector h2, #sidebar-views-title {
+  color: #69a3db;
+  margin-top: 0;
+  text-align: center;
+  padding-bottom: 10px; /* Espacio entre el texto y la línea inferior */
+  border-bottom: 2px solid #f0f6fc; 
 }
 
 #sidebarClientSelect {
@@ -97,7 +102,6 @@ body {
   border-radius: 4px;
   margin-top: 5px;
 }
-
 .login-status {
     font-size: 0.85em; font-weight: bold; text-align: center; margin: 10px 0 0 0;
     padding: 5px; border-radius: 4px; line-height: 1.4;
@@ -105,7 +109,22 @@ body {
 .login-status.active { color: #1c7430; background-color: #d4edda; }
 .login-status.inactive { color: #721c24; background-color: #f8d7da; }
 
-/* Menús colapsables del menú lateral */
+/* Estilo para el título FIJO "Vistas". */
+
+
+/* Contenedor de SCROLL para los menús. */
+/* Este es el 'div' que envuelve TODOS los '.collapsible-group'. */
+#sidebar-menu-scroll-container {
+  flex-grow: 1; /* Le dice que ocupe todo el espacio vertical sobrante. */
+  overflow-y: auto; /* Muestra la barra de scroll vertical SÓLO si es necesario. */
+  min-height: 0; /* Truco de Flexbox para que el scroll funcione correctamente. */
+  
+  /* Un pequeño truco para que la barra de scroll no se pegue al texto. */
+  padding-right: 10px;
+  margin-right: -10px;
+}
+
+/* Estilos para los menús colapsables (sin cambios, ya estaban bien). */
 .collapsible-header {
   color: #558ac7; margin: 20px 0 10px 0; font-size: 1.1em; cursor: pointer;
   display: flex; justify-content: space-between; align-items: center;
@@ -113,24 +132,20 @@ body {
 }
 .collapsible-header::after { content: '▶'; font-size: 0.7em; transition: transform 0.3s ease; }
 .collapsible-header.active::after { transform: rotate(90deg); }
-
 .collapsible-content {
   list-style: none; padding: 0; margin: 0; max-height: 0;
   overflow: hidden; transition: max-height 0.3s ease-in-out;
 }
-
 #macros-sidebar .macro-item {
   display: block; padding: 10px 12px; margin-bottom: 5px; background-color: #f8f9fa;
   border-radius: 5px; color: #333; text-decoration: none; transition: background-color 0.2s, color 0.2s;
   cursor: pointer; 
 }
-/* Ahora, el estilo azul se aplica tanto al pasar el ratón como cuando el elemento tiene la clase .active */
 #macros-sidebar .macro-item:hover,
 #macros-sidebar .macro-item.active { 
   background-color: #69a3db; 
   color: #fff; 
 }
-
 
 /* --- 2.2. Barra Derecha (Log) --- */
 #log-sidebar { 
