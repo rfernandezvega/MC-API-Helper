@@ -917,7 +917,7 @@ export async function createClonedQuery(originalQuery, clonedDE, newQueryName, t
                     <CategoryID>${targetCategoryId}</CategoryID>
                     <CustomerKey></CustomerKey>
                     <Name>${newQueryName}</Name>
-                    <QueryText>${originalQuery.queryText}</QueryText>
+                    <QueryText><![CDATA[${originalQuery.queryText}]]></QueryText>
                     <TargetType>DE</TargetType>
                     <DataExtensionTarget>
                         <CustomerKey>${clonedDE.customerKey}</CustomerKey>

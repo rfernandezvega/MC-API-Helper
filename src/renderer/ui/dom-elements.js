@@ -40,6 +40,7 @@ export function init() {
 
     // --- 3. Panel de Logs (Lateral Derecho) ---
     elements.toggleLogBtn = document.getElementById('toggleLogBtn');
+    elements.logHeaderTitle = document.getElementById('log-header-title');
     elements.logMessagesEl = document.getElementById('log-messages');
     elements.logRequestEl = document.getElementById('log-request');
     elements.logResponseEl = document.getElementById('log-response');

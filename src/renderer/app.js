@@ -185,6 +185,45 @@ document.addEventListener('DOMContentLoaded', function () {
 		return apiConfig;
 	}
 	
+	/**
+	 * Recopila el contenido de todos los paneles de log, lo formatea en un
+	 * único string y lo descarga como un fichero .txt.
+	 */
+	function generateAndDownloadLog() {
+		const messagesContent = elements.logMessagesEl.textContent;
+		const requestContent = elements.logRequestEl.textContent;
+		const responseContent = elements.logResponseEl.textContent;
+
+		const separator = "\n\n========================================\n\n";
+
+		const fullLogContent = [
+			"--- MENSAJES ---",
+			messagesContent,
+			separator,
+			"--- LLAMADAS API ---",
+			requestContent,
+			separator,
+			"--- RESPUESTAS API ---",
+			responseContent
+		].join('\n\n');
+
+		// Crear un nombre de fichero con la fecha y hora actual
+		const now = new Date();
+		const pad = (num) => num.toString().padStart(2, '0');
+		const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+		const fileName = `mc-api-helper_log_${timestamp}.txt`;
+
+		// Lógica para crear y descargar el fichero
+		const blob = new Blob([fullLogContent], { type: 'text/plain;charset=utf-8' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = fileName;
+		document.body.appendChild(a); // Necesario para que funcione en todos los entornos
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url); // Liberar memoria
+	}
 
 	// ==========================================================
 	// --- EVENT LISTENERS GLOBALES ---
@@ -192,6 +231,9 @@ document.addEventListener('DOMContentLoaded', function () {
 	// ==========================================================
 	
 	function setupEventListeners() {
+		// Listener para el título del log
+    	elements.logHeaderTitle.addEventListener('click', generateAndDownloadLog);
+
 		// Listeners para el modal de licencia y alertas personalizadas.
 		elements.customAlertCloseBtn.addEventListener('click', ui.closeCustomAlert);
 		elements.customAlertModal.addEventListener('click', (e) => {

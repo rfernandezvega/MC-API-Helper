@@ -89,7 +89,7 @@
   <!-- ========================================================== -->
   <aside id="log-sidebar">
     <div class="log-header">
-      <h2>Log de Eventos</h2>
+      <h2 id="log-header-title">Log de Eventos</h2>
       <button id="toggleLogBtn" title="Colapsar/Expandir Log"></button>
     </div>
     <div id="log-message-block" class="log-block">

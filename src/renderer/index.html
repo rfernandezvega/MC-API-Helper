@@ -371,6 +371,7 @@
               <div class="docu-accordion-content">
                 <div class="docu-list">
                   <ul>
+                    <li>Se deberá crear siempre la app en la <b>BU PADRE</b> y dar permisos a las BUs hijas y usuarios que vayan a poder tener acceso.</li>
                     <li>Ve a <b>Setup → Apps → Installed Packages</b>.</li>
                     <li>Crea un nuevo paquete de tipo <b>Web App</b> llamado <b>MC API Helper</b>.</li>
                     <li>El **Redirect URI** debe ser exactamente: <code>https://127.0.0.1:8443/callback</code>.</li>
@@ -1246,7 +1247,7 @@
   <!-- ========================================================== -->
   <aside id="log-sidebar">
     <div class="log-header">
-      <h2>Log de Eventos</h2>
+      <h2 id="log-header-title">Log de Eventos</h2>
       <button id="toggleLogBtn" title="Colapsar/Expandir Log"></button>
     </div>
     <div id="log-message-block" class="log-block">

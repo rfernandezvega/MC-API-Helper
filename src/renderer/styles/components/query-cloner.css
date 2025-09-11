@@ -46,3 +46,6 @@
   outline: 2px solid #69a3db;
   box-shadow: 0 0 5px rgba(105, 163, 219, 0.5);
 }
+#query-selection-table td.name-mismatch {
+  background-color: #f8bcc5; /* Un rojo muy sutil */
+}

@@ -230,10 +230,6 @@ function handleQuerySelection(e) {
     if (!row) return;
 
     const checkbox = row.querySelector('input[type="checkbox"]');
-    if (e.target.type !== 'checkbox') {
-        checkbox.checked = !checkbox.checked;
-    }
-    
     const queryIndex = parseInt(row.dataset.queryIndex, 10);
     state.queriesInSourceFolder[queryIndex].selected = checkbox.checked;
 
@@ -259,6 +255,8 @@ function handleNameEdits(e) {
     } else if (dataType === 'de-name') {
         state.queriesInSourceFolder[index].newDeName = newValue;
     }
+
+    checkAndApplyMismatchStyle(row);
 }
 
 // --- 5. RENDERIZADO Y HELPERS ---
@@ -303,6 +301,8 @@ function renderQuerySelectionTable(queries) {
             <td contenteditable="true" data-type="query-name">${query.newQueryName}</td>
             <td contenteditable="true" data-type="de-name">${query.newDeName}</td>
         `;
+
+        checkAndApplyMismatchStyle(row);
     });
 }
 
@@ -318,4 +318,26 @@ function resetFolderSelection() {
     });
     elements.queryClonerContinueBtn.disabled = true;
     elements.queryClonerFolderResultsBlock.classList.add('hidden');
+}
+
+/**
+ * Compara los nombres de la Query y DE de destino en una fila y aplica un estilo si no coinciden.
+ * @param {HTMLTableRowElement} row - La fila de la tabla a comprobar.
+ */
+function checkAndApplyMismatchStyle(row) {
+    const queryNameCell = row.querySelector('td[data-type="query-name"]');
+    const deNameCell = row.querySelector('td[data-type="de-name"]');
+
+    if (!queryNameCell || !deNameCell) return; // Salida de seguridad
+
+    const queryName = queryNameCell.textContent.trim();
+    const deName = deNameCell.textContent.trim();
+
+    if (queryName !== deName) {
+        queryNameCell.classList.add('name-mismatch');
+        deNameCell.classList.add('name-mismatch');
+    } else {
+        queryNameCell.classList.remove('name-mismatch');
+        deNameCell.classList.remove('name-mismatch');
+    }
 }
