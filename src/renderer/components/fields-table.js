@@ -191,7 +191,7 @@ export function populate(fieldsData) {
 
 /**
  * Rellena el desplegable de campos a eliminar.
- * @param {Array<object>} fields - Array de campos con 'id' y 'mc'.
+ * @param {Array<object>} fields - Array de campos con 'id' y 'name'.
  */
 export function populateDeletionPicklist(fields) {
     elements.targetFieldSelect.innerHTML = '<option value="">-- Seleccione un campo --</option>';
@@ -290,11 +290,11 @@ export function processPastedData() {
     const newFields = lines.map(line => {
         const parts = line.split(delimiter);
         return {
-            mc: parts[0]?.trim() || '',
+            name: parts[0]?.trim() || '',
             type: parts[1]?.trim() || 'Text',
-            len: parts[2]?.trim() || ''
+            length: parts[2]?.trim() || ''
         };
-    }).filter(f => f.mc);
+    }).filter(f => f.name);
     
     clear(false);
     populate(getFieldsData().concat(newFields));

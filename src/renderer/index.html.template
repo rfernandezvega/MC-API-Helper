@@ -65,9 +65,10 @@
           <li><a class="macro-item" data-macro="calendario">Calendario</a></li>         
           <li><a class="macro-item" data-macro="gestionAutomatismos">Gestión de automatismos</a></li> 
           <li><a class="macro-item" data-macro="clonadorQueries">Clonador de Queries</a></li>
-          <li><a class="macro-item" data-macro="gestionJourneys">Gestión de Journeys</a></li>          
+          <li><a class="macro-item" data-macro="gestionJourneys">Gestión de Journeys</a></li>      
+          <li><a class="macro-item" data-macro="carpetas">Creación de Carpetas</a></li>    
           <li><a class="macro-item" data-macro="gestionCloudPages">Gestión de Cloud Pages</a></li>  
-          <li><a class="macro-item" data-macro="validadorEmail">Validador de Email</a></li>
+          <li><a class="macro-item" data-macro="validadorEmail">Validador de Email</a></li>          
         </ul>
     </div>
   </aside>

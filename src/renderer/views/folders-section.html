@@ -1,0 +1,54 @@
+<!-- 16. SECCIÓN: CREADOR DE CARPETAS -->
+<div id="carpetas-section" class="section config-section-container">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>
+        <div class="header-actions">
+            <button id="createFoldersBtn" class="action-button activate-btn" disabled>Crear Estructura</button>
+        </div>
+    </div>
+    <h2>Creador de Estructura de Carpetas</h2>
+
+    <!-- PASO 1: Dónde crear las carpetas -->
+    <div class="config-block">
+        <h3>Paso 1: Selecciona la ubicación raíz</h3>
+        <div class="form-group">
+            <label for="folderContentTypeSelect">Tipo de Contenido (dónde crearás las carpetas)</label>
+            <select id="folderContentTypeSelect">
+                <option value="">-- Selecciona un tipo --</option>
+                <option value="dataextension">Data Extensions</option>
+                <option value="queryactivity">Query Activities</option>
+                <option value="journey">Journeys</option>
+                <option value="automations">Automations</option>
+                <option value="asset">Content Builder</option>
+                <option value="ssjsactivity">Scripts</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="parentFolderNameInput">Nombre de la carpeta raíz (o parte del nombre)</label>
+            <input type="text" id="parentFolderNameInput" placeholder="Busca la carpeta donde crear la nueva estructura" disabled>
+        </div>
+        <div class="header-actions" style="justify-content: center; margin-top: 10px;">
+            <button id="searchParentFolderBtn" class="action-button" disabled>Buscar Carpeta Raíz</button>
+        </div>
+    </div>
+
+    <!-- Resultados de la búsqueda de carpeta raíz -->
+    <div id="parent-folder-results-block" class="config-block hidden">
+        <h4>Selecciona la carpeta raíz de la lista:</h4>
+        <div class="table-container" style="max-height: 200px;">
+            <table id="parent-folder-results-table" class="folder-results-table">
+                <thead><tr><th>Ruta de Carpeta Encontrada</th></tr></thead>
+                <tbody id="parent-folder-results-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- PASO 2: Estructura a crear -->
+    <div id="folder-structure-block" class="config-block hidden">
+        <h3>Paso 2: Pega o escribe la estructura a crear</h3>
+        <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+            Usa la sangría (dos espacios o un tabulador) para indicar las subcarpetas.
+        </p>
+        <textarea id="folderStructureInput" rows="15" placeholder="Carpeta_A&#10;  Carpeta_AA&#10;  Carpeta_AB&#10;Carpeta_B&#10;  Carpeta_BA&#10;    Carpeta_BAA&#10;    Carpeta_BAB&#10;  Carpeta_BB&#10;Carpeta_C"></textarea>
+    </div>
+</div>

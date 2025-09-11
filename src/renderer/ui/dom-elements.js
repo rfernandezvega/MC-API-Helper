@@ -193,6 +193,17 @@ export function init() {
     elements.automationClonerSourceName = document.getElementById('automationClonerSourceName');
     elements.automationClonerDestName = document.getElementById('automationClonerDestName');
     elements.automationClonerStepsContainer = document.getElementById('automationClonerStepsContainer');
+
+    // --- 16. Sección: Creador de Carpetas ---
+    elements.carpetasSection = document.getElementById('carpetas-section');
+    elements.folderContentTypeSelect = document.getElementById('folderContentTypeSelect');
+    elements.parentFolderNameInput = document.getElementById('parentFolderNameInput');
+    elements.searchParentFolderBtn = document.getElementById('searchParentFolderBtn');
+    elements.parentFolderResultsBlock = document.getElementById('parent-folder-results-block');
+    elements.parentFolderResultsTbody = document.getElementById('parent-folder-results-tbody');
+    elements.folderStructureBlock = document.getElementById('folder-structure-block');
+    elements.folderStructureInput = document.getElementById('folderStructureInput');
+    elements.createFoldersBtn = document.getElementById('createFoldersBtn');
 }
 
 export default elements;

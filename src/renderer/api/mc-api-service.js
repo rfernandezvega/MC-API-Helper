@@ -1014,6 +1014,58 @@ export async function fetchQueryDefinitionDetails(queryObjectId, apiConfig) {
     };
 }
 
+/**
+ * Crea una única carpeta en Marketing Cloud.
+ * @param {string} folderName - El nombre de la nueva carpeta.
+ * @param {number} parentId - El ID de la carpeta padre.
+ * @param {string} contentType - El tipo de contenido de la carpeta (ej. 'dataextension').
+ * @param {object} apiConfig - La configuración de la API.
+ * @returns {Promise<string>} - Una promesa que resuelve con el NewID de la carpeta creada.
+ */
+export async function createFolder(folderName, parentId, contentType, apiConfig) {
+    // La API espera un CustomerKey único, un GUID es una buena opción.
+    const customerKey = crypto.randomUUID(); 
+    const clientXml = apiConfig.businessUnit ? `<Client><ClientID>${apiConfig.businessUnit}</ClientID></Client>` : '';
+
+    const soapPayload = `
+    <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+        <s:Header>
+            <a:Action s:mustUnderstand="1">Create</a:Action>
+            <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+            <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+        </s:Header>
+        <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+            <CreateRequest xmlns="http://exacttarget.com/wsdl/partnerAPI">
+                <Objects xsi:type="DataFolder">
+                    ${clientXml}
+                    <CustomerKey>${customerKey}</CustomerKey>
+                    <Name>${folderName}</Name>
+                    <Description></Description>
+                    <ContentType>${contentType}</ContentType>
+                    <IsActive>true</IsActive>
+                    <IsEditable>true</IsEditable>
+                    <AllowChildren>true</AllowChildren>
+                    <ParentFolder>
+                        <ID>${parentId}</ID>
+                    </ParentFolder>
+                </Objects>
+            </CreateRequest>
+        </s:Body>
+    </s:Envelope>`;
+
+    const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+    const doc = new DOMParser().parseFromString(responseText, "application/xml");
+    const newIdNode = doc.querySelector("Results > NewID");
+    const status = doc.querySelector("Results > StatusCode")?.textContent;
+    
+    if (status !== 'OK' || !newIdNode) {
+        const errorMessage = doc.querySelector("Results > StatusMessage")?.textContent || "Error desconocido al crear la carpeta.";
+        throw new Error(`No se pudo crear la carpeta "${folderName}": ${errorMessage}`);
+    }
+
+    return newIdNode.textContent;
+}
+
 // ==========================================================
 // --- 7. CONTENT BUILDER API ---
 // ==========================================================

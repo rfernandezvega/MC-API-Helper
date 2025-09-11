@@ -32,6 +32,8 @@ import * as customerFinder from './components/customer-finder.js';         // L�
 import * as emailValidator from './components/email-validator.js';       // L처gica del validador de emails.
 import * as calendar from './components/calendar.js';                  // L처gica del calendario de automatismos.
 import * as automationCloner from './components/automation-cloner.js'; // L처gica del clonador de automatismos.
+import * as folderCreator from './components/folder-creator.js'; // L처gica del creador de carpetas
+
 
 
 // --- 2. PUNTO DE ENTRADA PRINCIPAL ---
@@ -276,8 +278,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     'docu': 'documentacion-section', 'configuracionAPIs': 'configuracion-apis-section', 
                     'configuracionDE': 'configuracion-de-section', 'gestionCampos': 'configuracion-campos-section', 
 					'validadorEmail': 'email-validator-section', 'buscadores': 'buscadores-section', 
-					'clonadorQueries': 'clonador-queries-section'
+					'clonadorQueries': 'clonador-queries-section','clonadorQueries': 'clonador-queries-section'
                 };
+				const macroToActionMap = { //Un mapa para vistas simples
+					'carpetas': 'carpetas-section'
+				};
 				
 				if (sectionMap[macro]) {
 					showSection(sectionMap[macro]);
@@ -300,6 +305,8 @@ document.addEventListener('DOMContentLoaded', function () {
 				} else if (macro === 'gestionCloudPages') {
 					showSection('gestion-cloudpages-section');
 					await cloudPagesManager.view();
+				}else if (macroToActionMap[macro]) { 
+					showSection(macroToActionMap[macro]);
 				}
 			});
 		});
@@ -447,6 +454,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		// El calendario necesita una funci처n "puente" para poder navegar a otra vista (la de gesti처n de automatismos)
 		calendar.init({ getAuthenticatedConfig, showAutomationsView: showFilteredAutomations });
 		automationCloner.init({ getAuthenticatedConfig, goBack });
+		folderCreator.init({ getAuthenticatedConfig });
 		
 		// Carga las configuraciones de cliente guardadas y arranca sin ninguna seleccionada.
 		orgManager.loadConfigsIntoSelect();
