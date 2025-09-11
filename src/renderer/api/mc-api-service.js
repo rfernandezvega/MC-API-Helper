@@ -1096,9 +1096,13 @@ function parseFullSoapFieldsAsync(xmlString) {
         xmlDoc.querySelectorAll("Results").forEach(node => {
             const fieldType = getText(node, 'FieldType');
             let length = getText(node, 'MaxLength');
-            if (fieldType.toLowerCase() === 'decimal' && getText(node, 'Scale') !== '0') {
-                length = `${length},${getText(node, 'Scale')}`;
+
+            if (fieldType.toLowerCase() === 'decimal') {
+                // Obtenemos la escala de la respuesta SOAP. Si no viene, asumimos '0'.
+                const scale = getText(node, 'Scale') || '0';
+                length = `${length},${scale}`;
             }
+          
             fields.push({
                 name: getText(node, 'Name'),
                 type: fieldType,

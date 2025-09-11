@@ -97,11 +97,11 @@
       <pre><code id="log-messages">Esperando acciones...</code></pre>
     </div>
     <div id="log-request-block" class="log-block">
-      <h4>Llamada API</h4>
+      <h4>Llamadas API</h4>
       <pre><code id="log-request"></code></pre>
     </div>
     <div id="log-response-block" class="log-block">
-      <h4>Respuesta API</h4>
+      <h4>Respuestas API</h4>
       <pre><code id="log-response"></code></pre>
     </div>
   </aside>
