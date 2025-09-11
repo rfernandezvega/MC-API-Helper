@@ -69,9 +69,9 @@ function renderTable(journeys) {
         row.innerHTML = `
             <td>${j.name || '---'}</td> <td>${j.version || '---'}</td> <td>${formatDate(j.createdDate)}</td>
             <td>${formatDate(j.modifiedDate)}</td> <td>${j.eventType || '---'}</td> <td>${j.definitionType || '---'}</td>
-            <td>${j.status || '---'}</td> <td>${j.location || '---'}</td> <td>${j.dataExtensionName || '---'}</td>
+            <td>${j.status || '---'}</td> <td>${j.dataExtensionName || '---'}</td>
             <td>${j.hasCommunications ? 'Sí' : 'No'}</td> <td>${j.emails.join(', ')}</td>
-            <td>${j.sms.join(', ')}</td> <td>${j.pushes.join(', ')}</td>
+            <td>${j.sms.join(', ')}</td> <td>${j.pushes.join(', ')}</td> <td>${j.whatsapps.join(', ')}</td>
         `;
         elements.journeysTbody.appendChild(row);
     });
@@ -189,7 +189,8 @@ async function fetchData() {
         ]);
 
         eventDefinitionsMap = events;
-        journeyFolderMap = await mcApiService.buildJourneyFolderMap(journeys, apiConfig);
+        //Se comenta para reducir tiempo de carga
+        //journeyFolderMap = await mcApiService.buildJourneyFolderMap(journeys, apiConfig);
         fullJourneyList = enrichJourneys(journeys);
 
         populateJourneyFilters(fullJourneyList);
@@ -212,8 +213,8 @@ function enrichJourneys(journeys) {
         ...journey,
         eventType: eventDefinitionsMap[journey.name]?.type || 'No asociado',
         dataExtensionName: eventDefinitionsMap[journey.name]?.dataExtensionName || 'No asociado',
-        location: journeyFolderMap[journey.categoryId] || 'Carpeta raíz',
-        emails: [], sms: [], pushes: [], activities: null, hasCommunications: false
+        /*location: journeyFolderMap[journey.categoryId] || 'Carpeta raíz',*/
+        emails: [], sms: [], pushes: [], whatsapps: [],activities: null, hasCommunications: false
     }));
 }
 
@@ -538,15 +539,16 @@ function copyFlowToClipboard() {
 /**
  * Parsea las actividades de un journey para extraer las comunicaciones.
  * @param {Array} activities - El array de actividades de la API.
- * @returns {object} Un objeto con arrays de emails, sms y pushes.
+ * @returns {object} Un objeto con arrays de emails, sms, pushes y whatsapps.
  */
 function parseJourneyActivities(activities = []) {
-    const communications = { emails: [], sms: [], pushes: [] };
+    const communications = { emails: [], sms: [], pushes: [], whatsapps: []  };
     if (!activities) return communications;
     for (const activity of activities) {
         if (activity.type === 'EMAILV2') communications.emails.push(activity.name);
         else if (activity.type === 'SMS') communications.sms.push(activity.name);
         else if (['INAPP', 'INBOX', 'MOBILEPUSH'].includes(activity.type)) communications.pushes.push(activity.name);
+        else if (activity.type === 'WHATSAPPACTIVITY') communications.whatsapps.push(activity.name);
     }
     return communications;
 }
@@ -623,17 +625,17 @@ function generateJourneyFlowText(journey) {
         'EMAILV2': '[EMAIL]', 'SMS': '[SMS]', 'MOBILEPUSH': '[PUSH]', 'PUSHNOTIFICATIONACTIVITY': '[PUSH]',
         'WHATSAPPACTIVITY': '[WHATSAPP]', 'INBOX': '[INBOX MSG]', 'INAPP': '[IN-APP MSG]', 'WAIT': '[ESPERA]',
         'WAITBYDURATION': '[ESPERA]', 'WAITBYATTRIBUTE': '[ESPERA POR ATRIBUTO]', 'WAITBYEVENT': '[ESPERA HASTA EVENTO]',
-        'WAITUNTILDATE': '[ESPERA HASTA FECHA]', 'STOWAIT': '[ESPERA EINSTEIN STO]', 'MULTICRITERIARDECISION': '[DIVISIÓN]',
-        'MULTICRITERIADECISIONV2': '[DIVISIÓN]', 'RANDOMSPLIT': '[DIVISIÓN A/B]', 'RANDOMSPLITV2': '[DIVISIÓN A/B]',
-        'ENGAGEMENTDECISION': '[DIVISIÓN POR ENGAGEMENT]', 'ENGAGEMENTSPLITV2': '[DIVISIÓN POR ENGAGEMENT]',
-        'PATHOPTIMIZER': '[OPTIMIZADOR DE RUTA]', 'UPDATECONTACTDATA': '[ACTUALIZAR CONTACTO]',
-        'UPDATECONTACTDATAV2': '[ACTUALIZAR CONTACTO]', 'ADDAUDIENCE': '[AÑADIR A AUDIENCIA]',
-        'CONTACTUPDATE': '[ACTUALIZAR CONTACTO]', 'EINSTEINSPLIT': '[DIVISIÓN EINSTEIN SCORE]',
-        'EINSTEINMESSAGINGSPLIT': '[DIVISIÓN EINSTEIN INSIGHTS]', 'EINSTEIN_EMAIL_OPEN': '[DIVISIÓN EINSTEIN OPEN]',
-        'EINSTEIN_MC_EMAIL_CLICK': '[DIVISIÓN EINSTEIN CLICK]', 'SALESFORCESALESCLOUDACTIVITY': '[ACCIÓN SALESFORCE]',
+        'WAITUNTILDATE': '[ESPERA HASTA FECHA]', 'STOWAIT': '[ESPERA EINSTEIN STO]', 'MULTICRITERIARDECISION': '[SPLIT]',
+        'MULTICRITERIADECISIONV2': '[SPLIT]', 'RANDOMSPLIT': '[RANDOM SPLIT]', 'RANDOMSPLITV2': '[RANDOM SPLIT]',
+        'ENGAGEMENTDECISION': '[ENGAGEMENT SPLIT]', 'ENGAGEMENTSPLITV2': '[ENGAGEMENT SPLIT]',
+        'PATHOPTIMIZER': '[OPTIMIZADOR DE RUTA]', 'UPDATECONTACTDATA': '[UPDATE CONTACT]',
+        'UPDATECONTACTDATAV2': '[UPDATE CONTACT]', 'ADDAUDIENCE': '[AUDIENCIA]',
+        'CONTACTUPDATE': '[UPDATE CONTACT]', 'EINSTEINSPLIT': '[DIVISIÓN EINSTEIN SCORE]',
+        'EINSTEINMESSAGINGSPLIT': '[EINSTEIN INSIGHTS SPLIT]', 'EINSTEIN_EMAIL_OPEN': '[EINSTEIN SPLIT OPEN]',
+        'EINSTEIN_MC_EMAIL_CLICK': '[EINSTEIN SPLIT CLICK]', 'SALESFORCESALESCLOUDACTIVITY': '[ACCIÓN SALESFORCE]',
         'OBJECTACTIVITY': '[ACCIÓN OBJETO SALESFORCE]', 'LEAD': '[ACCIÓN LEAD SALESFORCE]',
         'CAMPAIGNMEMBER': '[ACCIÓN MIEMBRO DE CAMPAÑA]', 'REST': '[API REST (CUSTOM)]', 'SETCONTACTKEY': '[ESTABLECER CONTACT KEY]',
-        'EVENT': '[EVENTO]', 'SMSSYNC': '[SMS]'
+        'EVENT': '[EVENTO]', 'SMSSYNC': '[SMS]', 'WAITUNTILCHATRESPONSE': '[WAIT UNTIL CHAT RESPONSE]'
     };
 
     const activitiesMap = new Map(journey.activities.map(act => [act.key, act]));
