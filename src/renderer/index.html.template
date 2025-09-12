@@ -168,6 +168,38 @@
         </div>
     </div>
 </div>
+
+<!-- ========================================================== -->
+<!-- MODAL REUTILIZABLE PARA SELECCIÓN DE CARPETAS -->
+<!-- ========================================================== -->
+<div id="folder-selector-modal" class="modal-overlay">
+    <div class="modal-content modal-lg">
+        <h3 id="folder-selector-title">Seleccionar Carpeta</h3>
+        <div class="config-block" style="margin-bottom: 15px; padding: 15px;">
+            <div class="form-group">
+                <label for="folderSearchInput">Buscar por nombre de carpeta</label>
+                <div class="folder-input-group">
+                    <input type="text" id="folderSearchInput" placeholder="Introduce un nombre o parte de él">
+                    <button id="folderSearchBtn" class="action-button">Buscar</button>
+                </div>
+            </div>
+        </div>
+        <div class="config-block" style="flex-grow: 1;">
+            <h4>Resultados de Búsqueda</h4>
+            <div id="folder-selector-results-container" class="table-container" style="max-height: 400px;">
+                <p>Realiza una búsqueda para ver los resultados.</p>
+                <table id="folder-selector-table" class="folder-results-table hidden">
+                    <thead><tr><th>Ruta de Carpeta</th></tr></thead>
+                    <tbody id="folder-selector-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button id="folder-selector-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="folder-selector-ok-btn" class="action-button activate-btn" disabled>Seleccionar</button>
+        </div>
+    </div>
+</div>
  
 <script type="module" src="app.js"></script>
 </body>

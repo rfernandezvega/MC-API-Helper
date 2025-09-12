@@ -1,383 +1,386 @@
-// Fichero: src/renderer/components/automation-cloner.js
-// Descripción: Módulo para la vista de clonación selectiva de un automatismo.
+// =======================================================================================
+// --- Fichero: src/renderer/components/automation-cloner.js ---
+// --- Descripción: Módulo para la vista de clonación selectiva de un automatismo,
+// ---              con selección granular de carpetas de destino.
+// =======================================================================================
+
+// --- 1. IMPORTACIÓN DE MÓDULOS ---
 import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 
-// --- 1. ESTADO DEL MÓDULO ---
+// --- 2. ESTADO DEL MÓDULO Y DEPENDENCIAS ---
+
+// Dependencias inyectadas desde app.js para funciones globales.
 let getAuthenticatedConfig;
-let currentAutomationDetails = null;
-
-// Mapa de configuración para tipos de actividad clonables.
-const CLONABLE_ACTIVITY_TYPES = new Set([
-    300 // Query Activity
-    // Futuro: Añadir más IDs aquí, como 423 para Script, etc.
-]);
-
-const activityTypeMap = {
-    771: 'Salesforce Send', 300: 'Query Activity', 73: 'Data Extract', 53: 'File Transfer',
-    303: 'Filter Activity', 749: 'Fire Event', 43: 'Import File', 423: 'Script Activity',
-    42: 'Guided Send', 467: 'Wait Activity', 1000: 'Verification Activity', 45: 'Refresh Group',
-    425: 'Data Factory Utility', 725: 'Send SMS', 726: 'Import Mobile Contacts', 
-    724: 'Refresh Mobile Filtered List', 783: 'Send GroupConnect', 84: 'Report Definition', 736: 'Send Push',
-    952: 'Journey Event'
-};
-
 let goBackFunction;
 
-// --- 2. FUNCIONES PÚBLICAS (API del Módulo) ---
+// Objeto de estado principal que almacena los detalles del automatismo y las selecciones del usuario.
+let currentAutomationDetails = null;
+
+// Mapa de IDs de tipos de actividad que son clonables. Ampliable en el futuro.
+const CLONABLE_ACTIVITY_TYPES = new Set([300]); // 300 = Query Activity
+
+// Mapa para traducir IDs de actividad a nombres legibles para la UI.
+const activityTypeMap = {
+    300: 'Query Activity', 423: 'Script Activity', 73: 'Data Extract', 53: 'File Transfer', 303: 'Filter Activity'
+    // ...se pueden añadir más si se implementa su clonación...
+};
+
+// --- 3. FUNCIONES PÚBLICAS (API del Módulo) ---
 
 /**
- * Punto de entrada principal para mostrar la vista.
+ * Punto de entrada principal para mostrar y configurar la vista de clonación.
+ * Muestra un spinner mientras prepara los datos necesarios.
  * @param {object} automationDetails - Los detalles completos del automatismo a clonar.
  */
-export function view(automationDetails) {
+export async function view(automationDetails) {
     clearView();
-
-    if (automationDetails && automationDetails.steps) {
-        automationDetails.steps.forEach(step => {
-            if (step.activities) {
-                step.activities.forEach(activity => {
-                    const isClonable = CLONABLE_ACTIVITY_TYPES.has(activity.objectTypeId);
-                    
-                    activity.isClonable = isClonable;
-                    activity.selected = isClonable; // Seleccionado por defecto SÓLO si es clonable
-                    activity.newActivityName = `${activity.name}_Copy`;
-
-                    const isQueryActivity = activity.objectTypeId === 300;
-                    if (isQueryActivity && activity.targetDataExtensions && activity.targetDataExtensions.length > 0) {
-                        activity.newDeName = `${activity.targetDataExtensions[0].name}_Copy`;
-                    } else {
-                        activity.newDeName = 'No aplica';
-                    }
-                });
-            }
-        });
+    
+    try {
+        // Enriquece el objeto base con toda la información de carpetas necesaria.
+        currentAutomationDetails = await enrichAutomationDetails(automationDetails);
+        // Pinta la interfaz con los datos enriquecidos.
+        render();
+    } catch (error) {
+        ui.showCustomAlert(`Error al preparar el clonador: ${error.message}`);
+        goBackFunction(); // Vuelve a la vista anterior si falla la preparación.
+    } finally {
+        // La responsabilidad de ocultar el spinner se mantiene aquí,
+        // ya que es el clonador quien sabe cuándo ha terminado su trabajo.
+        ui.unblockUI();
     }
-
-    currentAutomationDetails = automationDetails;
-    render();
 }
 
 /**
- * Inicializa el módulo, configurando listeners y dependencias.
- * @param {object} dependencies - Objeto con dependencias externas.
+ * Inicializa el módulo, configurando todos los listeners de eventos.
+ * @param {object} dependencies - Objeto con dependencias externas (ej. goBack).
  */
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
     goBackFunction = dependencies.goBack;
 
-    elements.automationClonerContinueBtn.addEventListener('click', () => {
-        cloneAutomation();
-    });
+    // Listeners para la configuración general y los destinos por defecto
+    elements.automationClonerContinueBtn.addEventListener('click', cloneAutomation);
+    elements.changeAutomationFolderBtn.addEventListener('click', () => selectFolderFor('automation'));
+    elements.changeDefaultQueryFolderBtn.addEventListener('click', () => selectFolderFor('defaultQuery'));
+    elements.changeDefaultDEFolderBtn.addEventListener('click', () => selectFolderFor('defaultDE'));
 
-    // Nuevos listeners para la tabla de actividades
+    // Listeners delegados en el contenedor de pasos para manejar eventos de la tabla
     const stepsContainer = elements.automationClonerStepsContainer;
     stepsContainer.addEventListener('input', handleActivityNameEdit);
-    stepsContainer.addEventListener('click', handleActivitySelection);
+    stepsContainer.addEventListener('click', handleActivityTableClick);
 }
 
-// --- 2. FUNCIONES AUXILIARES ---
+// --- 4. LÓGICA DE PREPARACIÓN DE DATOS ---
 
 /**
- * Orquesta el proceso de clonación del esqueleto del automatismo.
+ * Toma el objeto base del automatismo y le añade las rutas de las carpetas originales
+ * y establece los destinos iniciales para la clonación.
+ * @param {object} baseDetails - Los detalles básicos del automatismo.
+ * @returns {Promise<object>} El objeto de detalles enriquecido y listo para renderizar.
  */
-async function cloneAutomation() {
-    const newAutomationName = elements.automationClonerDestName.textContent.trim();
-    if (!newAutomationName) {
-        ui.showCustomAlert("El nombre del automatismo de destino no puede estar vacío.");
-        return;
-    }
+async function enrichAutomationDetails(baseDetails) {
+    const apiConfig = await getAuthenticatedConfig();
+    mcApiService.setLogger(logger);
 
-    const activitiesToClone = currentAutomationDetails.steps.flatMap(step => 
-        step.activities ? step.activities.map(activity => ({ ...activity, originalStep: step.step })) : []
-    ).filter(activity => activity.isClonable && activity.selected);
+    baseDetails.categoryPath = baseDetails.categoryId ? await mcApiService.getFolderPath(baseDetails.categoryId, apiConfig) : 'Raíz';
+    baseDetails.newCategoryId = baseDetails.categoryId;
+    baseDetails.newCategoryPath = baseDetails.categoryPath;
+    
+    baseDetails.defaultNewQueryCategoryId = null;
+    baseDetails.defaultNewQueryCategoryPath = null;
+    baseDetails.defaultNewDECategoryId = null;
+    baseDetails.defaultNewDECategoryPath = null;
 
-    if (activitiesToClone.length === 0) {
-        ui.showCustomAlert("No has seleccionado ninguna actividad clonable.");
-        return;
-    }
+    for (const step of baseDetails.steps || []) {
+        for (const activity of step.activities || []) {
+            const isClonable = CLONABLE_ACTIVITY_TYPES.has(activity.objectTypeId);
+            activity.isClonable = isClonable;
+            activity.selected = isClonable;
+            activity.newActivityName = `${activity.name}_Copy`;
+            activity.newDeName = 'No aplica';
 
-    if (!await ui.showCustomConfirm(`Se creará el automatismo "${newAutomationName}" y se clonarán ${activitiesToClone.length} actividades. ¿Continuar?`)) {
-        return;
-    }
+            if (activity.objectTypeId === 300) {
+                const queryDetails = await mcApiService.fetchQueryDefinitionDetails(activity.activityObjectId, apiConfig);
+                activity.originalQueryCategoryId = queryDetails.categoryId;
+                activity.originalQueryCategoryPath = queryDetails.categoryId ? await mcApiService.getFolderPath(queryDetails.categoryId, apiConfig) : 'Raíz';
+                activity.newQueryCategoryId = activity.originalQueryCategoryId;
+                activity.newQueryCategoryPath = activity.originalQueryCategoryPath;
 
-    ui.blockUI("Iniciando proceso de clonación masiva...");
-    logger.startLogBuffering();
-    const newActivityIdMap = new Map();
-
-    try {
-        const apiConfig = await getAuthenticatedConfig();
-        mcApiService.setLogger(logger);
-
-        // --- FASE 1: Clonar todas las actividades y sus dependencias ---
-        logger.logMessage(`--- FASE 1: Clonando ${activitiesToClone.length} actividades ---`);
-        for (const activity of activitiesToClone) {
-            ui.blockUI(`Clonando actividad "${activity.name}"...`);
-            if (activity.objectTypeId === 300) { // Es una Query
-                try {
-                    logger.logMessage(`Procesando Query: "${activity.name}"`);
-                    if (!activity.targetDataExtensions || activity.targetDataExtensions.length === 0) throw new Error("La Query de origen no tiene DE de destino.");
-                    
-                    const originalDEKey = activity.targetDataExtensions[0].key;
-                    const originalDEName = activity.targetDataExtensions[0].name;
-
-                    // Obtener detalles de la DE original para conseguir su CategoryID ----
-                    logger.logMessage(`  - Obteniendo detalles de la DE original: "${originalDEName}"`);
-                    const originalDeDetails = await mcApiService.getDataExtensionDetailsByName(originalDEName, apiConfig);
-                    if (!originalDeDetails || !originalDeDetails.categoryId) throw new Error(`No se pudo encontrar la carpeta de la DE original "${originalDEName}".`);
-
-                    // 1. Clonar la Data Extension, pasando el CategoryID correcto
-                    const clonedDE = await mcApiService.cloneDataExtension(originalDEKey, activity.newDeName, "", originalDeDetails.categoryId, apiConfig);
-                    logger.logMessage(`  - DE clonada: "${clonedDE.name}" en la carpeta ID: ${originalDeDetails.categoryId}`);
-
-                    // 2. Obtener detalles de la Query original
-                    const originalQueryDetails  = await mcApiService.fetchQueryDefinitionDetails(activity.activityObjectId, apiConfig);
-
-                    // Pasar el CategoryID de la actividad original a la nueva query ----
-                    // El objeto 'activity' ya tiene el categoryId de la carpeta donde vive la query.
-                    if (!originalQueryDetails.categoryId) throw new Error("La actividad de Query original no tiene un ID de carpeta asociado.");
-                    console.log(originalQueryDetails);
-                    // 3. Crear la nueva Query
-                    const newQuery = await mcApiService.createClonedQuery(originalQueryDetails , clonedDE, activity.newActivityName, originalQueryDetails.categoryId, apiConfig);
-                    logger.logMessage(`  - Query clonada: "${newQuery.name}" en la carpeta ID: ${activity.categoryId}`);
-
-                    // 4. Guardar el mapeo de IDs
-                    newActivityIdMap.set(activity.id, newQuery.objectID);
-
-                } catch (error) {
-                    throw new Error(`Fallo al clonar la Query "${activity.name}": ${error.message}`);
+                if (activity.targetDataExtensions && activity.targetDataExtensions.length > 0) {
+                    const deName = activity.targetDataExtensions[0].name;
+                    activity.newDeName = `${deName}_Copy`;
+                    const deDetails = await mcApiService.getDataExtensionDetailsByName(deName, apiConfig);
+                    activity.originalDeCategoryId = deDetails.categoryId;
+                    activity.originalDeCategoryPath = deDetails.categoryId ? await mcApiService.getFolderPath(deDetails.categoryId, apiConfig) : 'Raíz';
+                    activity.newDeCategoryId = activity.originalDeCategoryId;
+                    activity.newDeCategoryPath = activity.originalDeCategoryPath;
                 }
             }
         }
+    }
+    return baseDetails;
+}
 
-        // --- FASE 2: Construir y crear el nuevo automatismo ---
-        logger.logMessage("--- FASE 2: Construyendo el nuevo automatismo ---");
-        ui.blockUI("Construyendo el automatismo final...");
+// --- 5. LÓGICA DE LA INTERFAZ Y MANEJO DE EVENTOS ---
 
-        const groupedByStep = activitiesToClone.reduce((acc, activity) => {
-            if (newActivityIdMap.has(activity.id)) {
-                if (!acc[activity.originalStep]) acc[activity.originalStep] = [];
-                acc[activity.originalStep].push(activity);
-            }
-            return acc;
-        }, {});
+/**
+ * Limpia la vista y resetea el estado para una nueva clonación.
+ */
+function clearView() {
+    currentAutomationDetails = null;
+    elements.automationClonerSourceName.value = 'Cargando...';
+    elements.automationClonerDestName.value = '';
+    elements.automationClonerDestFolder.value = '';
+    elements.defaultQueryFolder.value = '';
+    elements.defaultDEFolder.value = '';
+    elements.automationClonerStepsContainer.innerHTML = '';
+    elements.automationClonerContinueBtn.disabled = true;
+}
 
-        let newStepNumber = 0;
-        const newStepsPayload = Object.keys(groupedByStep).sort((a, b) => a - b).map(originalStep => {
-            const activitiesInStep = groupedByStep[originalStep].map(activity => ({
-                name: activity.newActivityName,
-                objectTypeId: activity.objectTypeId,
-                displayOrder: activity.displayOrder,
-                activityObjectId: newActivityIdMap.get(activity.id)
-            }));
-            return { stepNumber: newStepNumber++, activities: activitiesInStep };
-        });
-        
-        const payload = {
-            name: newAutomationName,
-            description: currentAutomationDetails.description || "",
-            categoryId: currentAutomationDetails.categoryId,
-            key: "",
-            steps: newStepsPayload,
-            startSource: null
-        };
+/**
+ * Maneja la selección de carpetas para los destinos principales y por defecto.
+ * @param {'automation'|'defaultQuery'|'defaultDE'} target
+ */
+async function selectFolderFor(target) {
+    const contentTypeMap = { automation: 'automations', defaultQuery: 'queryactivity', defaultDE: 'dataextension' };
+    const selectedFolder = await ui.showFolderSelectorModal(contentTypeMap[target], { getAuthenticatedConfig, mcApiService, logger });
 
-        // Comprobamos si el automatismo original es de tipo "Scheduled" (typeId: 1)
-        if (currentAutomationDetails.typeId === 1) {
-            
-            // CASO 1: La programación existe y es válida. La copiamos.
-            if (currentAutomationDetails.schedule && currentAutomationDetails.schedule.icalRecur) {
-                logger.logMessage("El automatismo de origen tiene una programación válida. Se copiará.");
-                payload.startSource = {
-                    typeId: 1,
-                    schedule: {
-                        icalRecur: currentAutomationDetails.schedule.icalRecur,
-                        startDate: currentAutomationDetails.schedule.startDate,
-                        timezoneId: currentAutomationDetails.schedule.timezoneId
+    if (selectedFolder) {
+        if (target === 'automation') {
+            currentAutomationDetails.newCategoryId = selectedFolder.id;
+            currentAutomationDetails.newCategoryPath = selectedFolder.fullPath;
+        } else if (target === 'defaultQuery') {
+            currentAutomationDetails.defaultNewQueryCategoryId = selectedFolder.id;
+            currentAutomationDetails.defaultNewQueryCategoryPath = selectedFolder.fullPath;
+            currentAutomationDetails.steps.forEach(step => {
+                step.activities.forEach(activity => {
+                    if (activity.objectTypeId === 300) {
+                        activity.newQueryCategoryId = selectedFolder.id;
+                        activity.newQueryCategoryPath = selectedFolder.fullPath;
                     }
-                };
-            } else {
-                // CASO 2: Es de tipo "Scheduled" pero no tiene programación (está en borrador o inactivo).
-                // Creamos una programación por defecto para evitar el error de la API.
-                logger.logMessage("ADVERTENCIA: El automatismo de origen no tiene programación. Se creará una programación diaria por defecto (hasta 2075).");
-
-                const today = new Date();
-                const startDateISO = today.toISOString(); // Formato: YYYY-MM-DDTHH:mm:ss.sssZ
-                
-                payload.startSource = {
-                    typeId: 1,
-                    schedule: {
-                        // Programación diaria que termina en 2075.
-                        icalRecur: "FREQ=DAILY;UNTIL=20750101T000000", 
-                        startDate: startDateISO,
-                        // Usamos un timezone por defecto. 7 = Romance Standard Time 
-                        // Es una suposición razonable si no tenemos otra información.
-                        timezoneId: 7 
+                });
+            });
+        } else if (target === 'defaultDE') {
+            currentAutomationDetails.defaultNewDECategoryId = selectedFolder.id;
+            currentAutomationDetails.defaultNewDECategoryPath = selectedFolder.fullPath;
+            currentAutomationDetails.steps.forEach(step => {
+                step.activities.forEach(activity => {
+                    if (activity.objectTypeId === 300) {
+                        activity.newDeCategoryId = selectedFolder.id;
+                        activity.newDeCategoryPath = selectedFolder.fullPath;
                     }
-                };
-            }
-        } else {
-            // CASO 3: El automatismo original NO es de tipo "Scheduled" (ej. File Drop).
-            // Por ahora, lo creamos sin fuente de inicio. Quedará en estado "Borrador".
-            logger.logMessage(`El automatismo de origen es de tipo '${currentAutomationDetails.type}'. El clon se creará sin una fuente de inicio.`);
-            // payload.startSource ya es null, así que no hacemos nada.
+                });
+            });
         }
-
-        logger.logMessage("Payload final del automatismo:");
-        logger.logApiCall(payload);
-
-        const newAutomation = await mcApiService.createAutomation(payload, apiConfig);
-        logger.logApiResponse(newAutomation);
-
-        ui.showCustomAlert(`¡Éxito! El automatismo "${newAutomation.name}" y sus ${activitiesToClone.length} actividades han sido clonados.`);
-        goBackFunction();
-
-    } catch (error) {
-        logger.logMessage(`ERROR FATAL en el proceso de clonación: ${error.message}`);
-        ui.showCustomAlert(`Error: ${error.message}`);
-    } finally {
-        ui.unblockUI();
-        logger.endLogBuffering();
+        render();
     }
 }
 
 /**
- * Gestiona la edición de los nombres de las actividades de destino.
+ * Gestiona los clics en la tabla de actividades (checkboxes y celdas de carpeta).
+ * @param {Event} e - El evento de clic.
+ */
+async function handleActivityTableClick(e) {
+    const target = e.target;
+    const cell = target.closest('td');
+    const row = target.closest('tr');
+    if (!row) return;
+
+    const stepIndex = parseInt(row.dataset.stepIndex, 10);
+    const activityIndex = parseInt(row.dataset.activityIndex, 10);
+    const activity = currentAutomationDetails.steps[stepIndex].activities[activityIndex];
+
+    if (cell && cell.classList.contains('folder-cell')) {
+        const folderType = cell.dataset.folderType;
+        const contentType = (folderType === 'query') ? 'queryactivity' : 'dataextension';
+        const selectedFolder = await ui.showFolderSelectorModal(contentType, { getAuthenticatedConfig, mcApiService, logger });
+
+        if (selectedFolder) {
+            if (folderType === 'query') {
+                activity.newQueryCategoryId = selectedFolder.id;
+                activity.newQueryCategoryPath = selectedFolder.fullPath;
+            } else {
+                activity.newDeCategoryId = selectedFolder.id;
+                activity.newDeCategoryPath = selectedFolder.fullPath;
+            }
+            render();
+        }
+    } else if (target.matches('.activity-checkbox, .select-all-step')) {
+        if (target.matches('.select-all-step')) {
+            const isChecked = target.checked;
+            currentAutomationDetails.steps[stepIndex].activities.forEach(act => {
+                if (act.isClonable) act.selected = isChecked;
+            });
+        } else {
+            activity.selected = target.checked;
+        }
+        render();
+    }
+}
+
+/**
+ * Gestiona la edición de los nombres de destino.
  * @param {Event} e - El evento 'input'.
  */
 function handleActivityNameEdit(e) {
     const cell = e.target.closest('td[contenteditable="true"]');
     if (!cell) return;
-
     const row = cell.closest('tr');
     const stepIndex = parseInt(row.dataset.stepIndex, 10);
     const activityIndex = parseInt(row.dataset.activityIndex, 10);
-    const dataType = cell.dataset.type;
-    const newValue = cell.textContent.trim();
-
     const activity = currentAutomationDetails.steps[stepIndex].activities[activityIndex];
-
-    if (dataType === 'activity-name') {
+    const newValue = cell.textContent.trim();
+    
+    if (cell.dataset.type === 'activity-name') {
         activity.newActivityName = newValue;
-    } else if (dataType === 'de-name') {
+    } else if (cell.dataset.type === 'de-name') {
         activity.newDeName = newValue;
     }
 }
 
-/**
- * Gestiona la selección/deselección de actividades.
- * @param {Event} e - El evento 'click'.
- */
-function handleActivitySelection(e) {
-    const target = e.target;
-    if (target.type !== 'checkbox') return;
-
-    const row = target.closest('tr');
-    const stepIndex = parseInt(target.dataset.stepIndex || row?.dataset.stepIndex, 10);
-
-    // Caso 1: Se hizo clic en el checkbox "Seleccionar todo" del paso
-    if (target.classList.contains('select-all-step')) {
-        const isChecked = target.checked;
-        const activities = currentAutomationDetails.steps[stepIndex].activities;
-        activities.forEach(activity => activity.selected = isChecked);
-        
-        // Sincronizar los checkboxes de las filas
-        const stepBlock = target.closest('.step-block');
-        stepBlock.querySelectorAll('.activity-checkbox').forEach(cb => cb.checked = isChecked);
-    }
-    // Caso 2: Se hizo clic en el checkbox de una actividad individual
-    else if (target.classList.contains('activity-checkbox')) {
-        const activityIndex = parseInt(row.dataset.activityIndex, 10);
-        currentAutomationDetails.steps[stepIndex].activities[activityIndex].selected = target.checked;
-
-        // Sincronizar el checkbox "Seleccionar todo" del paso
-        const stepBlock = target.closest('.step-block');
-        const allActivities = currentAutomationDetails.steps[stepIndex].activities;
-        const areAllSelected = allActivities.every(activity => activity.selected);
-        stepBlock.querySelector('.select-all-step').checked = areAllSelected;
-    }
-}
+// --- 6. LÓGICA DE RENDERIZADO ---
 
 /**
- * Limpia la vista y resetea el estado.
- */
-function clearView() {
-    currentAutomationDetails = null;
-    elements.automationClonerSourceName.textContent = 'Cargando...';
-    elements.automationClonerDestName.textContent = ''; // Limpiamos la celda editable
-    elements.automationClonerStepsContainer.innerHTML = '';
-    elements.automationClonerContinueBtn.disabled = true; // Deshabilitamos por defecto
-}
-
-// --- 4. LÓGICA DE RENDERIZADO ---
-
-
-/**
- * Pinta la información del automatismo en el DOM.
+ * Pinta toda la interfaz del clonador basándose en el estado actual.
  */
 function render() {
     if (!currentAutomationDetails) return;
 
-    elements.automationClonerSourceName.textContent = currentAutomationDetails.name;
-    elements.automationClonerDestName.textContent = `${currentAutomationDetails.name}_Copy`;
+    elements.automationClonerSourceName.value = currentAutomationDetails.name;
+    elements.automationClonerDestName.value = `${currentAutomationDetails.name}_Copy`;
+    elements.automationClonerDestFolder.value = currentAutomationDetails.newCategoryPath;
     elements.automationClonerContinueBtn.disabled = false;
+    elements.defaultQueryFolder.value = currentAutomationDetails.defaultNewQueryCategoryPath || '';
+    elements.defaultDEFolder.value = currentAutomationDetails.defaultNewDECategoryPath || '';
 
     const stepsContainer = elements.automationClonerStepsContainer;
     stepsContainer.innerHTML = ''; 
 
-    if (!currentAutomationDetails.steps || currentAutomationDetails.steps.length === 0) {
-        stepsContainer.innerHTML = '<p>Este automatismo no tiene pasos configurados.</p>';
-        return;
-    }
-
     currentAutomationDetails.steps.forEach((step, stepIndex) => {
         const stepBlock = document.createElement('div');
         stepBlock.className = 'step-block';
-        stepBlock.style.marginBottom = '20px';
 
-        let activitiesTableHtml = '<p>Este paso no tiene actividades.</p>';
-
-        if (step.activities && step.activities.length > 0) {
-            const activityRows = step.activities.map((activity, activityIndex) => {
+        const activityRows = step.activities.map((activity, activityIndex) => {
             const isQuery = activity.objectTypeId === 300;
-            
-            const deNameCellHtml = isQuery
-                ? `<td contenteditable="true" data-type="de-name">${activity.newDeName}</td>`
-                : `<td style="color: #6c757d; font-style: italic;">${activity.newDeName}</td>`;
-
-            // Añadimos el atributo 'disabled' al checkbox si la actividad no es clonable
             const checkboxHtml = `<input type="checkbox" class="activity-checkbox" ${activity.selected ? 'checked' : ''} ${!activity.isClonable ? 'disabled' : ''}>`;
+            
+            const queryFolderCell = isQuery ? `<td class="folder-cell" data-folder-type="query" title="Clic para cambiar carpeta">${activity.newQueryCategoryPath || 'Raíz'}</td>` : '<td>-</td>';
+            const deFolderCell = isQuery ? `<td class="folder-cell" data-folder-type="de" title="Clic para cambiar carpeta">${activity.newDeCategoryPath || 'Raíz'}</td>` : '<td>-</td>';
 
             return `
                 <tr data-step-index="${stepIndex}" data-activity-index="${activityIndex}">
                     <td>${checkboxHtml}</td>
-                    <td>${activityTypeMap[activity.objectTypeId] || `Desconocido (${activity.objectTypeId})`}</td>
-                    <td>${activity.name}</td>
-                    <td contenteditable="true" data-type="activity-name">${activity.newActivityName}</td>
-                    ${deNameCellHtml} 
+                    <td>${activityTypeMap[activity.objectTypeId] || `Desconocido`}</td>
+                    <td title="${activity.name}">${activity.name}</td>
+                    <td contenteditable="true" data-type="activity-name" title="${activity.newActivityName}">${activity.newActivityName}</td>
+                    ${queryFolderCell}
+                    <td contenteditable="${isQuery}" data-type="de-name" title="${activity.newDeName}">${activity.newDeName}</td>
+                    ${deFolderCell}
                 </tr>`;
         }).join('');
 
-            activitiesTableHtml = `
-                <div class="table-container" style="max-height: 300px;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;"><input type="checkbox" class="select-all-step" data-step-index="${stepIndex}" title="Seleccionar/Deseleccionar todo" checked></th>
-                                <th>Tipo</th>
-                                <th>Nombre Origen</th>
-                                <th>Nombre Destino (Editable)</th>
-                                <th>Nombre DE Destino (Editable)</th>
-                            </tr>
-                        </thead>
-                        <tbody>${activityRows}</tbody>
-                    </table>
-                </div>`;
-        }
+        const clonableActivities = step.activities.filter(a => a.isClonable);
+        const allClonableSelected = clonableActivities.length > 0 && clonableActivities.every(a => a.selected);
+        
+        const activitiesTableHtml = `
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" class="select-all-step" title="Seleccionar todo" ${allClonableSelected ? 'checked' : ''} ${clonableActivities.length === 0 ? 'disabled' : ''}></th>
+                            <th>Tipo</th><th>Nombre Origen</th><th>Nombre Destino (Editable)</th><th>Carpeta Query</th><th>Nombre DE (Editable)</th><th>Carpeta DE</th>
+                        </tr>
+                    </thead>
+                    <tbody>${activityRows}</tbody>
+                </table>
+            </div>`;
         
         stepBlock.innerHTML = `<h4>Paso ${step.step}</h4> ${activitiesTableHtml}`;
         stepsContainer.appendChild(stepBlock);
     });
+}
+
+// --- 7. LÓGICA DE EJECUCIÓN (CLONACIÓN) ---
+
+/**
+ * Orquesta el proceso final de clonación.
+ */
+async function cloneAutomation() {
+    const newAutomationName = elements.automationClonerDestName.value.trim();
+    if (!newAutomationName) return ui.showCustomAlert("El nombre del automatismo de destino no puede estar vacío.");
+    
+    const activitiesToClone = currentAutomationDetails.steps.flatMap(s => s.activities).filter(a => a.isClonable && a.selected);
+    if (activitiesToClone.length === 0) return ui.showCustomAlert("No has seleccionado ninguna actividad para clonar.");
+    
+    if (!await ui.showCustomConfirm(`Se clonará el automatismo "${newAutomationName}" y ${activitiesToClone.length} actividades. ¿Continuar?`)) return;
+
+    ui.blockUI("Iniciando clonación...");
+    logger.startLogBuffering();
+
+    try {
+        const apiConfig = await getAuthenticatedConfig();
+        mcApiService.setLogger(logger);
+        const newActivityIdMap = new Map();
+
+        logger.logMessage("--- FASE 1: Clonando actividades dependientes ---");
+        for (const activity of activitiesToClone) {
+            ui.blockUI(`Clonando: ${activity.name}`);
+            if (activity.objectTypeId === 300) { // Lógica para Query
+                const originalDEKey = activity.targetDataExtensions[0].key;
+                const originalQueryDetails = await mcApiService.fetchQueryDefinitionDetails(activity.activityObjectId, apiConfig);
+                const clonedDE = await mcApiService.cloneDataExtension(originalDEKey, activity.newDeName, "", activity.newDeCategoryId, apiConfig);
+                logger.logMessage(`  - DE clonada: "${clonedDE.name}" en carpeta ID ${activity.newDeCategoryId}`);
+                const newQuery = await mcApiService.createClonedQuery(originalQueryDetails, clonedDE, activity.newActivityName, activity.newQueryCategoryId, apiConfig);
+                logger.logMessage(`  - Query clonada: "${newQuery.name}" en carpeta ID ${activity.newQueryCategoryId}`);
+                newActivityIdMap.set(activity.id, newQuery.objectID);
+            }
+        }
+
+        logger.logMessage("--- FASE 2: Construyendo y creando el nuevo automatismo ---");
+        ui.blockUI("Construyendo automatismo...");
+
+        // 1. Primero, creamos un array temporal con los pasos que SÍ tendrán actividades clonadas.
+        const potentialSteps = currentAutomationDetails.steps
+            .map(step => ({
+                // Mapeamos solo las actividades que han sido clonadas con éxito
+                activities: step.activities
+                    .filter(act => newActivityIdMap.has(act.id))
+                    .map(act => ({
+                        name: act.newActivityName,
+                        objectTypeId: act.objectTypeId,
+                        displayOrder: act.displayOrder,
+                        activityObjectId: newActivityIdMap.get(act.id)
+                    }))
+            }))
+            // 2. Filtramos para quedarnos solo con los pasos que no están vacíos.
+            .filter(step => step.activities.length > 0);
+
+        // 3. Ahora, y solo ahora, mapeamos sobre el array filtrado para asignar números de paso
+        //    secuenciales y sin huecos. El 'index' aquí será 0, 1, 2...
+        const newStepsPayload = potentialSteps.map((step, index) => ({
+            stepNumber: index, // Esto garantiza la secuencia: 1, 2, 3...
+            activities: step.activities
+        }));
+        
+        const payload = {
+            name: newAutomationName,
+            description: currentAutomationDetails.description || "",
+            categoryId: currentAutomationDetails.newCategoryId,
+            key: crypto.randomUUID(),
+            steps: newStepsPayload,
+        };
+        
+        await mcApiService.createAutomation(payload, apiConfig);
+        ui.showCustomAlert("¡Éxito! El automatismo y sus actividades han sido clonados.");
+        goBackFunction();
+    } catch (error) {
+        logger.logMessage(`ERROR FATAL: ${error.message}`);
+        ui.showCustomAlert(`Error durante la clonación: ${error.message}`);
+    } finally {
+        ui.unblockUI();
+        logger.endLogBuffering();
+    }
 }

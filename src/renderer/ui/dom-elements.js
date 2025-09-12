@@ -193,6 +193,12 @@ export function init() {
     elements.automationClonerSourceName = document.getElementById('automationClonerSourceName');
     elements.automationClonerDestName = document.getElementById('automationClonerDestName');
     elements.automationClonerStepsContainer = document.getElementById('automationClonerStepsContainer');
+    elements.automationClonerDestFolder = document.getElementById('automationClonerDestFolder');
+    elements.changeAutomationFolderBtn = document.getElementById('changeAutomationFolderBtn');
+    elements.defaultQueryFolder = document.getElementById('defaultQueryFolder');
+    elements.changeDefaultQueryFolderBtn = document.getElementById('changeDefaultQueryFolderBtn');
+    elements.defaultDEFolder = document.getElementById('defaultDEFolder');
+    elements.changeDefaultDEFolderBtn = document.getElementById('changeDefaultDEFolderBtn');
 
     // --- 16. Sección: Creador de Carpetas ---
     elements.carpetasSection = document.getElementById('carpetas-section');
@@ -204,6 +210,17 @@ export function init() {
     elements.folderStructureBlock = document.getElementById('folder-structure-block');
     elements.folderStructureInput = document.getElementById('folderStructureInput');
     elements.createFoldersBtn = document.getElementById('createFoldersBtn');
+
+    // --- 17. MODAL DE SELECCIÓN DE CARPETAS ---
+    elements.folderSelectorModal = document.getElementById('folder-selector-modal');
+    elements.folderSelectorTitle = document.getElementById('folder-selector-title');
+    elements.folderSearchInput = document.getElementById('folderSearchInput');
+    elements.folderSearchBtn = document.getElementById('folderSearchBtn');
+    elements.folderSelectorResultsContainer = document.getElementById('folder-selector-results-container');
+    elements.folderSelectorTable = document.getElementById('folder-selector-table');
+    elements.folderSelectorTbody = document.getElementById('folder-selector-tbody');
+    elements.folderSelectorCancelBtn = document.getElementById('folder-selector-cancel-btn');
+    elements.folderSelectorOkBtn = document.getElementById('folder-selector-ok-btn');
 }
 
 export default elements;

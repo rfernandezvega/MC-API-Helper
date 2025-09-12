@@ -353,8 +353,12 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * navegar a la vista del clonador y pasarle los detalles de un automatismo.
 	 * @param {object} automationDetails - Objeto con los detalles del automatismo.
 	 */
-	async function showAutomationCloner(automationDetails) {
-		showSection('automation-cloner-section');
+	function showAutomationCloner(automationDetails) {
+		// 1. Muestra la sección del clonador (aún vacía).
+		showSection('automation-cloner-section');		
+
+		// 2. Llama a la función view del clonador para que empiece a cargar los datos.
+		// Nota: Ya no necesitamos `await` aquí, porque la función `view` ahora maneja su propio ciclo de vida.
 		automationCloner.view(automationDetails);
 	}
 	

@@ -276,9 +276,7 @@ async function inspectAndShowCloner() {
 
     } catch (error) {
         ui.showCustomAlert(`Ocurrió un error al cargar los detalles: ${error.message}.`);
-    } finally {
-        ui.unblockUI();
-    }
+    } 
 }
 
 // --- 5. GESTIÓN DE LA TABLA ---

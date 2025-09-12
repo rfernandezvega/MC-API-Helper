@@ -271,6 +271,7 @@ body {
 .config-block-header h3 { margin: 0; }
 .config-section-container .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
 .config-section-container label { font-weight: bold; margin-bottom: 5px; color: #333; }
+#folder-selector-modal input[type="text"],
 .config-section-container input[type="text"],
 .config-section-container input[type="email"],
 .config-section-container input[type="password"],

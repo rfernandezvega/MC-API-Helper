@@ -156,57 +156,55 @@
 
     <!-- Contenedor principal que se rellenará dinámicamente -->
     <div class="config-section-container">
+        <!-- BLOQUE 1: CONFIGURACIÓN GENERAL DEL AUTOMATISMO -->
         <div class="config-block">
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Automatismo Origen</th>
-                            <th>Automatismo Destino (Editable)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td id="automationClonerSourceName">Cargando...</td>
-                            <td id="automationClonerDestName" contenteditable="true"></td>
-                        </tr>
-                    </tbody>
-                </table>
+            <h3>Configuración del Automatismo Destino</h3>
+            <div class="automation-config-grid">
+                <!-- Nombre del Automatismo -->
+                <div class="form-group">
+                    <label>Nombre Origen</label>
+                    <input type="text" id="automationClonerSourceName" disabled>
+                </div>
+                <div class="form-group">
+                    <label>Nombre Destino (Editable)</label>
+                    <input type="text" id="automationClonerDestName">
+                </div>
+                <!-- NUEVO: Selección de Carpeta para el Automatismo -->
+                <div class="form-group">
+                    <label>Carpeta Destino</label>
+                    <div class="folder-input-group">
+                        <input type="text" id="automationClonerDestFolder" placeholder="Misma carpeta que el original" disabled>
+                        <button id="changeAutomationFolderBtn" class="action-button">Cambiar</button>
+                    </div>
+                </div>
             </div>
         </div>
 
+        <!-- BLOQUE 2: CONFIGURACIÓN DE ACTIVIDADES -->
         <div class="config-block">
-            <h3>Selecciona las actividades a clonar:</h3>
-            <!-- Aquí se insertarán dinámicamente los pasos y sus tablas -->
-            <div id="automationClonerStepsContainer">
-                <!-- Ejemplo de cómo se verá un paso (se genera con JS) -->
-                <!-- 
-                <div class="step-block">
-                    <h4>Paso 1</h4>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th style="width: 5%;"><input type="checkbox" class="select-all-step-activities"></th>
-                                    <th>Tipo</th>
-                                    <th>Nombre Origen</th>
-                                    <th>Nombre Destino (Editable)</th>
-                                    <th>Nombre DE Destino (Editable)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><input type="checkbox"></td>
-                                    <td>Query Activit</td>
-                                    <td>Test</td>
-                                    <td>Test_Copy</td>
-                                    <td>Test_Copy</td>
-                                </tr>
-                            </tbody>
-                        </table>
+            <h3>Selecciona y configura las actividades a clonar</h3>
+            
+            <!-- NUEVO: Controles para Destinos por Defecto -->
+            <div class="default-destination-controls">
+                <div class="form-group">
+                    <label>Destino por defecto para Queries</label>
+                    <div class="folder-input-group">
+                        <input type="text" id="defaultQueryFolder" placeholder="Misma carpeta que la original" disabled>
+                        <button id="changeDefaultQueryFolderBtn" class="action-button">Seleccionar</button>
                     </div>
-                </div> 
-                -->
+                </div>
+                <div class="form-group">
+                    <label>Destino por defecto para Data Extensions</label>
+                    <div class="folder-input-group">
+                        <input type="text" id="defaultDEFolder" placeholder="Misma carpeta que la original" disabled>
+                        <button id="changeDefaultDEFolderBtn" class="action-button">Seleccionar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenedor de Pasos (sin cambios en su estructura) -->
+            <div id="automationClonerStepsContainer">
+                <!-- Las tablas de actividades se renderizarán aquí, pero con nuevas columnas -->
             </div>
         </div>
     </div>
@@ -1378,6 +1376,38 @@
         <div class="modal-actions" style="margin-top: 20px;">
             <button id="custom-confirm-cancel-btn" class="action-button delete-btn">Cancelar</button>
             <button id="custom-confirm-ok-btn" class="action-button activate-btn">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================== -->
+<!-- MODAL REUTILIZABLE PARA SELECCIÓN DE CARPETAS -->
+<!-- ========================================================== -->
+<div id="folder-selector-modal" class="modal-overlay">
+    <div class="modal-content modal-lg">
+        <h3 id="folder-selector-title">Seleccionar Carpeta</h3>
+        <div class="config-block" style="margin-bottom: 15px; padding: 15px;">
+            <div class="form-group">
+                <label for="folderSearchInput">Buscar por nombre de carpeta</label>
+                <div class="folder-input-group">
+                    <input type="text" id="folderSearchInput" placeholder="Introduce un nombre o parte de él">
+                    <button id="folderSearchBtn" class="action-button">Buscar</button>
+                </div>
+            </div>
+        </div>
+        <div class="config-block" style="flex-grow: 1;">
+            <h4>Resultados de Búsqueda</h4>
+            <div id="folder-selector-results-container" class="table-container" style="max-height: 400px;">
+                <p>Realiza una búsqueda para ver los resultados.</p>
+                <table id="folder-selector-table" class="folder-results-table hidden">
+                    <thead><tr><th>Ruta de Carpeta</th></tr></thead>
+                    <tbody id="folder-selector-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button id="folder-selector-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="folder-selector-ok-btn" class="action-button activate-btn" disabled>Seleccionar</button>
         </div>
     </div>
 </div>
