@@ -17,8 +17,8 @@
 #journeys-table th:nth-child(n+10),
 #journeys-table td:nth-child(n+10) {
     /* Establecemos un ancho mínimo y máximo para estas columnas. */
-    min-width: 150px;
-    max-width: 250px;
+    min-width: 250px;
+    max-width: 300px;
 
     /* Permite que el texto salte a la siguiente línea de forma natural. */
     white-space: normal;
