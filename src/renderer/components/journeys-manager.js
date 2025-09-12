@@ -229,7 +229,7 @@ async function refreshData() {
 // --- 5. ACCIONES DE BOTONES ---
 
 /**
- * Obtiene los detalles de las comunicaciones (emails, sms) para los journeys seleccionados.
+ * Obtiene los detalles de las comunicaciones (emails, sms, pushes y whatsapps) para los journeys seleccionados.
  */
 async function getCommunications() {
     const journeysToProcess = getSelectedJourneys();
@@ -536,7 +536,7 @@ function copyFlowToClipboard() {
     });
 }
 
-/**
+/**SMSSYNC
  * Parsea las actividades de un journey para extraer las comunicaciones.
  * @param {Array} activities - El array de actividades de la API.
  * @returns {object} Un objeto con arrays de emails, sms, pushes y whatsapps.
@@ -546,8 +546,8 @@ function parseJourneyActivities(activities = []) {
     if (!activities) return communications;
     for (const activity of activities) {
         if (activity.type === 'EMAILV2') communications.emails.push(activity.name);
-        else if (activity.type === 'SMS') communications.sms.push(activity.name);
-        else if (['INAPP', 'INBOX', 'MOBILEPUSH'].includes(activity.type)) communications.pushes.push(activity.name);
+        else if (['SMS', 'SMSSYNC'].includes(activity.type)) communications.sms.push(activity.name);
+        else if (['INAPP', 'INBOX', 'MOBILEPUSH','PUSHINBOXACTIVITY'].includes(activity.type)) communications.pushes.push(activity.name);
         else if (activity.type === 'WHATSAPPACTIVITY') communications.whatsapps.push(activity.name);
     }
     return communications;

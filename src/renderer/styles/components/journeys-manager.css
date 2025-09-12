@@ -1,7 +1,34 @@
 /* ===================================================================
    styles/components/journeys-manager.css
-   Estilos específicos para el modal de flujo de Journey.
+   Estilos para la tabla de Gestión de Journeys y el modal de flujo.
    =================================================================== */
+
+/* --- Estilos para Controlar Ancho y Salto de Línea en Columnas de Comunicación --- */
+
+/* 1. Aplicamos alineación vertical a todas las celdas.
+      Esto asegura que si una fila se hace alta, el contenido de las celdas cortas
+      se mantenga centrado verticalmente, lo que se ve mucho mejor. */
+#journeys-table td {
+    vertical-align: middle;
+}
+
+/* 2. Regla específica para las columnas de comunicaciones (Emails, SMSs, Pushes, Whatsapps).
+      Estas son las columnas 10, 11, 12 y 13 de la tabla. */
+#journeys-table th:nth-child(n+10),
+#journeys-table td:nth-child(n+10) {
+    /* Establecemos un ancho mínimo y máximo para estas columnas. */
+    min-width: 150px;
+    max-width: 250px;
+
+    /* Permite que el texto salte a la siguiente línea de forma natural. */
+    white-space: normal;
+    
+    /* Fuerza el salto de línea para palabras muy largas sin espacios. */
+    word-break: break-word;
+}
+
+
+/* --- Estilos del Modal de Flujo (sin cambios) --- */
 
 .modal-content.modal-lg {
   max-width: 800px;
@@ -34,6 +61,8 @@
     background-color: #28a745;
     cursor: default;
 }
+
+/* --- Estilos de Botones Específicos (sin cambios) --- */
 
 /* Botón específico de "Ejecutar" */
 #runAutomationBtn:not([disabled]) {
