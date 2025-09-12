@@ -86,6 +86,7 @@ export function init() {
     // --- 7. Sección: Gestión de Campos (Recuperar/Borrar) ---
     elements.recExternalKeyInput = document.getElementById('recExternalKey');
     elements.recCategoryIdInput = document.getElementById('recCategoryId');
+    elements.selectDEFolderForDocBtn = document.getElementById('selectDEFolderForDocBtn');
     elements.targetFieldSelect = document.getElementById('targetFieldSelect');
     elements.getFieldsBtn = document.getElementById('getFields');
     elements.documentDEsBtn = document.getElementById('documentDEsBtn');

@@ -295,6 +295,26 @@ body {
 .client-management { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; }
 .client-management input, .client-management select { flex-grow: 1; }
 
+/* Contenedor del grupo */
+.folder-input-group {
+    display: flex;
+    align-items: center; /* Alinea verticalmente el input y el botón */
+    gap: 8px;
+}
+
+/* Ajusta el padding vertical del input dentro de este grupo */
+.folder-input-group input[type="text"] {
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+/* Ajusta el padding del botón para que coincida con la nueva altura del input */
+.folder-input-group .action-button {
+    padding-top: 8px;
+    padding-bottom: 8px;
+    flex-shrink: 0; /* Evita que el botón se encoja */
+}
+
 /* --- 3.4. Tablas Genéricas --- */
 .table-container { width: 100%; overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; }

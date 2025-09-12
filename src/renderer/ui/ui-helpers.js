@@ -174,3 +174,91 @@ export function showFolderSelectorModal(contentType, dependencies) {
         elements.folderSelectorOkBtn.addEventListener('click', handleConfirm);
     });
 }
+
+/**
+ * Muestra un modal para buscar y seleccionar una única DATA EXTENSION.
+ * @param {object} dependencies - Dependencias necesarias.
+ * @returns {Promise<{name: string, customerKey: string}|null>} El objeto de la DE seleccionada.
+ */
+export function showDESelectorModal(dependencies) {
+    const { getAuthenticatedConfig, mcApiService, logger } = dependencies;
+    
+    return new Promise(resolve => {
+        let selectedDEData = null;
+
+        // --- Configuración Inicial del Modal ---
+        elements.folderSelectorTitle.textContent = 'Seleccionar Data Extension';
+        // Cambiamos las cabeceras de la tabla para que sean correctas para DEs
+        elements.folderSelectorTable.querySelector('thead tr').innerHTML = '<th>Nombre DE</th><th>Ruta de Carpeta</th>';
+        elements.folderSearchInput.value = '';
+        elements.folderSelectorTable.classList.add('hidden');
+        elements.folderSelectorResultsContainer.firstElementChild.textContent = 'Busca por nombre o parte del nombre.';
+        elements.folderSelectorTbody.innerHTML = '';
+        elements.folderSelectorOkBtn.disabled = true;
+        elements.folderSelectorModal.style.display = 'flex';
+        elements.folderSearchInput.focus();
+
+        // --- Definición de Handlers ---
+        const handleSearch = async () => {
+            const searchTerm = elements.folderSearchInput.value.trim();
+            if (!searchTerm) return;
+            blockUI("Buscando Data Extensions...");
+            try {
+                const apiConfig = await getAuthenticatedConfig();
+                mcApiService.setLogger(logger);
+                // Usamos la función de búsqueda de DEs, no de carpetas
+                const deList = await mcApiService.searchDataExtensions('Name', searchTerm, apiConfig);
+                
+                elements.folderSelectorTbody.innerHTML = '';
+                if (deList.length === 0) {
+                    elements.folderSelectorTable.classList.add('hidden');
+                    elements.folderSelectorResultsContainer.firstElementChild.textContent = 'No se encontraron Data Extensions.';
+                } else {
+                    // El `for...of` permite usar `await` dentro del bucle para obtener las rutas
+                    for (const de of deList) {
+                        const row = elements.folderSelectorTbody.insertRow();
+                        const folderPath = de.categoryId ? await mcApiService.getFolderPath(de.categoryId, apiConfig) : 'Raíz';
+                        // Guardamos los datos necesarios en el dataset de la fila
+                        row.dataset.deName = de.deName;
+                        row.dataset.deKey = de.customerKey;
+                        row.innerHTML = `<td>${de.deName}</td><td>${folderPath}</td>`;
+                        row.style.cursor = 'pointer';
+                    }
+                    elements.folderSelectorTable.classList.remove('hidden');
+                    elements.folderSelectorResultsContainer.firstElementChild.textContent = '';
+                }
+            } catch (error) { showCustomAlert(error.message); } finally { unblockUI(); }
+        };
+
+        const handleSelect = (e) => {
+            const row = e.target.closest('tr');
+            if (!row || !row.dataset.deKey) return;
+            const previouslySelected = elements.folderSelectorTbody.querySelector('tr.selected');
+            if (previouslySelected) previouslySelected.classList.remove('selected');
+            row.classList.add('selected');
+            selectedDEData = { name: row.dataset.deName, customerKey: row.dataset.deKey };
+            elements.folderSelectorOkBtn.disabled = false;
+        };
+
+        const cleanupAndClose = (resolutionValue) => {
+            elements.folderSearchBtn.removeEventListener('click', handleSearch);
+            elements.folderSearchInput.removeEventListener('keydown', handleEnterKey);
+            elements.folderSelectorTbody.removeEventListener('click', handleSelect);
+            elements.folderSelectorCancelBtn.removeEventListener('click', handleCancel);
+            elements.folderSelectorOkBtn.removeEventListener('click', handleConfirm);
+            elements.folderSelectorModal.style.display = 'none';
+            resolve(resolutionValue);
+        };
+        
+        const handleEnterKey = (e) => { if (e.key === 'Enter') { e.preventDefault(); handleSearch(); } };
+        const handleCancel = () => cleanupAndClose(null);
+        const handleConfirm = () => { if (selectedDEData) cleanupAndClose(selectedDEData); };
+
+        // --- Asignación de Listeners ---
+        elements.folderSearchBtn.addEventListener('click', handleSearch);
+        elements.folderSearchInput.addEventListener('keydown', handleEnterKey);
+        elements.folderSelectorTbody.addEventListener('click', handleSelect);
+        elements.folderSelectorCancelBtn.addEventListener('click', handleCancel);
+        elements.folderSelectorOkBtn.addEventListener('click', handleConfirm);
+    });
+}

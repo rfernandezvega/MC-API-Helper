@@ -1,13 +1,43 @@
-// Fichero: src/renderer/components/field-manager.js
-// Descripción: Gestiona la recuperación, creación, borrado y documentación de campos de DEs.
+// =======================================================================================
+// --- Fichero: src/renderer/components/field-manager.js ---
+// --- VERSIÓN CORREGIDA: Input manual para External Key, modal para carpeta de Docs.
+// =======================================================================================
 
+// --- 1. IMPORTACIÓN DE MÓDULOS ---
 import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import * as fieldsTable from './fields-table.js';
 
+// --- 2. ESTADO Y DEPENDENCIAS ---
 let getAuthenticatedConfig;
+
+// Guardamos solo el ID de la carpeta seleccionada para documentar.
+const state = {
+    selectedFolderIdForDoc: null
+};
+
+// --- 3. FUNCIONES DE INTERACCIÓN CON EL USUARIO ---
+
+/**
+ * Abre el modal para seleccionar una CARPETA de Data Extensions para la documentación.
+ */
+async function selectDEFolderForDoc() {
+    // Llama al modal de selección de carpetas que ya es global.
+    const selectedFolder = await ui.showFolderSelectorModal('dataextension', { getAuthenticatedConfig, mcApiService, logger });
+
+    if (selectedFolder) {
+        // Guarda el ID de la carpeta en el estado interno del módulo.
+        state.selectedFolderIdForDoc = selectedFolder.id;
+        // Muestra la ruta completa en el input deshabilitado para informar al usuario.
+        elements.recCategoryIdInput.value = selectedFolder.fullPath;
+        // Habilita el botón de acción correspondiente.
+        elements.documentDEsBtn.disabled = false;
+    }
+}
+
+// --- 4. LÓGICA DE MACROS PRINCIPALES ---
 
 /**
  * Macro para crear o actualizar (upsert) campos en una Data Extension existente.
@@ -16,10 +46,10 @@ async function createOrUpdateFields() {
     ui.blockUI("Creando/Actualizando campos...");
     logger.startLogBuffering();
     try {
-        logger.logMessage(`Iniciando creación/actualización de campos...`);
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
         
+        // Lee la External Key directamente del input de texto, como antes.
         const externalKey = elements.recExternalKeyInput.value.trim();
         const fieldsData = fieldsTable.getFieldsData();
 
@@ -55,6 +85,7 @@ async function getFields() {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
         
+        // Lee la External Key directamente del input de texto, como antes.
         const externalKey = elements.recExternalKeyInput.value.trim();
         if (!externalKey) throw new Error('Introduzca la "External Key de la DE".');
         
@@ -63,12 +94,8 @@ async function getFields() {
         const fields = await mcApiService.fetchFieldsForDE(externalKey, apiConfig);
 
         if (fields.length > 0) {
-            // Rellena la tabla principal en la sección "Campos".
             fieldsTable.populate(fields); 
-            
-            // Rellena el dropdown en la sección "Gestión de Campos".
             fieldsTable.populateDeletionPicklist(fields);
-            
             logger.logMessage(`${fields.length} campos recuperados y cargados en la tabla.`);
         } else {
             fieldsTable.clear();
@@ -93,6 +120,7 @@ async function deleteField() {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
         
+        // Lee la External Key directamente del input de texto, como antes.
         const externalKey = elements.recExternalKeyInput.value.trim();
         const fieldObjectId = elements.targetFieldSelect.value;
         const selectedFieldName = elements.targetFieldSelect.selectedOptions[0]?.text;
@@ -102,7 +130,6 @@ async function deleteField() {
         }
         
         const userConfirmed = await ui.showCustomConfirm(`¿Seguro que quieres eliminar el campo "${selectedFieldName}"? Esta acción no se puede deshacer.`);
-
         if (!userConfirmed) {
             logger.logMessage("Borrado cancelado por el usuario.");
             return;
@@ -117,51 +144,56 @@ async function deleteField() {
         logger.logMessage(successMessage);
         ui.showCustomAlert(successMessage);
         
-        // Refresca la lista de campos después de borrar
         await getFields();
 
     } catch (error) {
         logger.logMessage(`Error al eliminar el campo: ${error.message}`);
         ui.showCustomAlert(`Error: ${error.message}`);
-        ui.unblockUI(); // Asegurarse de desbloquear en caso de error
+        ui.unblockUI();
     } finally {
         logger.endLogBuffering();
     }
 }
 
 /**
- * Macro para documentar todas las Data Extensions de una carpeta en un CSV.
+ * Macro para documentar todas las Data Extensions de la carpeta seleccionada en un CSV.
  */
 async function documentDataExtensions() {
+    if (!state.selectedFolderIdForDoc) {
+        return ui.showCustomAlert('Primero debes seleccionar una carpeta para documentar.');
+    }
     ui.blockUI("Documentando Data Extensions...");
     logger.startLogBuffering();
     try {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
-
-        const categoryId = elements.recCategoryIdInput.value.trim();
-        if (!categoryId) throw new Error('Introduzca el "Identificador de carpeta".');
+        const categoryId = state.selectedFolderIdForDoc;
 
         logger.logMessage(`Paso 1: Recuperando Data Extensions de la carpeta ID: ${categoryId}`);
         const deList = await mcApiService.getDEsFromFolder(categoryId, apiConfig);
 
         if (deList.length === 0) {
-            ui.showCustomAlert(`No se encontraron Data Extensions en la carpeta con ID ${categoryId}.`);
+            ui.showCustomAlert(`No se encontraron Data Extensions en la carpeta seleccionada.`);
             return;
         }
-        logger.logMessage(`Se encontraron ${deList.length} Data Extensions. Recuperando campos para cada una...`);
+        logger.logMessage(`Se encontraron ${deList.length} Data Extensions.`);
         
         const allFieldsData = [];
         for (const [index, de] of deList.entries()) {
             ui.blockUI(`Procesando ${index + 1}/${deList.length}: ${de.name}`);
-            logger.logMessage(` - Procesando: ${de.name} (Key: ${de.customerKey})`);
             try {
                 const fields = await mcApiService.fetchFieldsForDE(de.customerKey, apiConfig);
                 fields.forEach(field => {
                     allFieldsData.push({
-                        'Name': de.name, 'ExternalKey': de.customerKey, 'Field': field.mc,
-                        'FieldType': field.type, 'Length': field.len || '', 'Default': field.defaultValue || '',
-                        'PK': field.pk ? 'Yes' : 'No', 'Required': field.req ? 'Yes' : 'No'
+                        'FolderName': elements.recCategoryIdInput.value,
+                        'DataExtensionName': de.name,
+                        'DataExtensionKey': de.customerKey,
+                        'FieldName': field.name,
+                        'FieldType': field.type,
+                        'MaxLength': field.length || '',
+                        'DefaultValue': field.defaultValue || '',
+                        'IsPrimaryKey': field.isPrimaryKey ? 'TRUE' : 'FALSE',
+                        'IsRequired': field.isRequired ? 'TRUE' : 'FALSE'
                     });
                 });
             } catch (fieldError) {
@@ -169,17 +201,12 @@ async function documentDataExtensions() {
             }
         }
 
-        if (allFieldsData.length === 0) {
-            ui.showCustomAlert('No se pudieron recuperar campos para ninguna de las Data Extensions encontradas.');
-            return;
-        }
+        if (allFieldsData.length === 0) throw new Error('No se pudieron recuperar campos.');
         
-        logger.logMessage(`Paso 3: Generando CSV con ${allFieldsData.length} filas.`);
         generateAndDownloadCsv(allFieldsData, `DEs_Carpeta_${categoryId}.csv`);
-        ui.showCustomAlert('Documentación generada con éxito. Revisa tus descargas.');
-
+        ui.showCustomAlert('Documentación generada con éxito.');
     } catch (error) {
-        logger.logMessage(`Error al documentar las Data Extensions: ${error.message}`);
+        logger.logMessage(`Error al documentar: ${error.message}`);
         ui.showCustomAlert(`Error: ${error.message}`);
     } finally {
         ui.unblockUI();
@@ -188,9 +215,9 @@ async function documentDataExtensions() {
 }
 
 /**
- * Genera un archivo CSV a partir de un array de objetos y lo descarga.
- * @param {Array<object>} data - El array de datos.
- * @param {string} filename - El nombre del archivo a descargar.
+ * Genera un archivo CSV y lo descarga.
+ * @param {Array<object>} data
+ * @param {string} filename
  */
 function generateAndDownloadCsv(data, filename) {
     if (!data || data.length === 0) return;
@@ -212,7 +239,6 @@ function generateAndDownloadCsv(data, filename) {
     document.body.removeChild(link);
 }
 
-
 /**
  * Inicializa el módulo, configurando listeners y dependencias.
  * @param {object} dependencies - Objeto con dependencias externas.
@@ -220,6 +246,10 @@ function generateAndDownloadCsv(data, filename) {
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
 
+    // Listener para el botón de seleccionar carpeta de documentación
+    elements.selectDEFolderForDocBtn.addEventListener('click', selectDEFolderForDoc);
+
+    // Listeners para los botones de acción (comportamiento original)
     elements.createFieldsBtn.addEventListener('click', createOrUpdateFields);
     elements.getFieldsBtn.addEventListener('click', getFields);
     elements.deleteFieldBtn.addEventListener('click', deleteField);

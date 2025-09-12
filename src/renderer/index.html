@@ -868,33 +868,41 @@
         <button class="back-button">← Atrás</button>
         <div class="header-actions">
             <button id="getFields" class="action-button">Recuperar Campos</button>
-            <button id="documentDEsBtn" class="action-button">Documentar Data Extensions</button>
+            <button id="documentDEsBtn" class="action-button" disabled>Documentar DEs</button>
             <button id="deleteField" class="action-button delete-btn">Borrar Campo</button>
         </div>
     </div>
     <h2>Gestión de Campos de Data Extension</h2>
+    
+    <!-- Bloque para Recuperar/Actualizar/Borrar campos de UNA DE -->
     <div class="config-block">
-        <h3>Parámetros para recuperación de 1 DE, Actualización de tabla de campos y Borrado</h3>
+        <h3>Campos de una Data Extension Específica</h3>
         <p class="info-text" style="text-align: left; margin: 0 0 15px;">
-            Introduce la External Key de la DE sobre la que quieres operar y pulsa en <em>Recuperar Campos</em>.  Estos se rellenarán en la picklist y en la sección <em>Campos</em>.
+            Introduce la External Key de la DE sobre la que quieres operar y pulsa en <em>Recuperar Campos</em>. Su estructura se cargará en la sección "Campos" y en la lista desplegable de abajo.
         </p>
         <div class="form-group">
             <label for="recExternalKey">External Key de la DE</label>
-            <input type="text" id="recExternalKey">
+            <input type="text" id="recExternalKey" placeholder="Pega aquí la External Key de la Data Extension">
         </div>
         <div class="form-group">
             <label for="targetFieldSelect">Campo a eliminar</label>
-            <select id="targetFieldSelect" disabled><option value="">-- Pulsa "Recuperar Campos" --</option></select>
+            <select id="targetFieldSelect" disabled><option value="">-- Primero recupera los campos --</option></select>
         </div>
     </div>
+    
+    <!-- Bloque para Documentar TODAS las DEs de una carpeta -->
     <div class="config-block">
-        <h3>Parámetros para generación de CSV con las DEs y sus campos </h3>
+        <h3>Documentación de Carpetas</h3>
         <p class="info-text" style="text-align: left; margin: 0 0 15px;">
-            Introduce un identificador de carpeta y pulsa en <em>Documentar Data Extensions</em>
+            Selecciona una carpeta para generar y descargar un CSV con la estructura de todas las Data Extensions que contiene.
         </p>
+        <!-- Mantenemos la mejora del modal aquí -->
         <div class="form-group">
-            <label for="recCategoryId">Identificador de carpeta</label>
-            <input type="text" id="recCategoryId">
+            <label for="recCategoryId">Carpeta de Data Extensions a documentar</label>
+            <div class="folder-input-group">
+                <input type="text" id="recCategoryId" placeholder="Usa el botón para buscar y seleccionar una carpeta" disabled>
+                <button id="selectDEFolderForDocBtn" class="action-button">Seleccionar Carpeta</button>
+            </div>
         </div>
     </div>
 </div>
