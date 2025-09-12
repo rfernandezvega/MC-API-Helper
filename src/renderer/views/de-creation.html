@@ -11,7 +11,14 @@
         <div class="form-group"><label for="deName">Nombre Data Extension</label><input type="text" id="deName"></div>
         <div class="form-group"><label for="deDescription">Descripción</label><input type="text" id="deDescription"></div>
         <div class="form-group"><label for="deExternalKey">External Key</label><input type="text" id="deExternalKey" disabled></div>
-        <div class="form-group"><label for="deFolder">ID de Carpeta (Opcional)</label><input type="text" id="deFolder" placeholder="Ej: 12345"></div>
+        <div class="form-group">
+            <label for="deFolder">Carpeta de Destino (Opcional)</label>
+            <div class="folder-input-group">
+                <input type="text" id="deFolder" placeholder="Se creará en la raíz por defecto" disabled>
+                <!-- Este botón abrirá el modal de selección de carpetas -->
+                <button id="selectDEFolderBtn" class="action-button">Seleccionar</button>
+            </div>
+        </div>
     </div>
     <!-- Configuración Sendable -->
     <div class="config-block">

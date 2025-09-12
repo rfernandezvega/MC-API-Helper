@@ -67,6 +67,7 @@ export function init() {
     elements.deDescriptionInput = document.getElementById('deDescription');
     elements.deExternalKeyInput = document.getElementById('deExternalKey');
     elements.deFolderInput = document.getElementById('deFolder');
+    elements.selectDEFolderBtn = document.getElementById('selectDEFolderBtn');
     elements.isSendableCheckbox = document.getElementById('isSendable');
     elements.subscriberKeyFieldSelect = document.getElementById('subscriberKeyField');
     elements.subscriberKeyTypeInput = document.getElementById('subscriberKeyType');
