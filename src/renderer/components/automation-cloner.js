@@ -238,6 +238,26 @@ function handleActivityNameEdit(e) {
         activity.newActivityName = newValue;
     } else if (cell.dataset.type === 'de-name') {
         activity.newDeName = newValue;
+
+        const originalDeKey = cell.dataset.originalDeKey;
+        if (originalDeKey) {
+            // 1. Actualiza el estado de todas las actividades relacionadas en la memoria
+            currentAutomationDetails.steps.forEach(step => {
+                step.activities.forEach(act => {
+                    if (act.targetDataExtensions?.[0]?.key === originalDeKey) {
+                        act.newDeName = newValue;
+                    }
+                });
+            });
+
+            // 2. Actualiza la pantalla (DOM) para reflejar el cambio en todas las filas
+            const allRelatedCells = elements.automationClonerStepsContainer.querySelectorAll(`td[data-original-de-key="${originalDeKey}"]`);
+            allRelatedCells.forEach(relatedCell => {
+                if (relatedCell !== cell) { // No actualices la que se está editando
+                    relatedCell.textContent = newValue;
+                }
+            });
+        }
     }
 }
 
@@ -246,6 +266,7 @@ function handleActivityNameEdit(e) {
 /**
  * Pinta toda la interfaz del clonador basándose en el estado actual.
  */
+// En: src/renderer/components/automation-cloner.js
 function render() {
     if (!currentAutomationDetails) return;
 
@@ -267,7 +288,18 @@ function render() {
             const isQuery = activity.objectTypeId === 300;
             const checkboxHtml = `<input type="checkbox" class="activity-checkbox" ${activity.selected ? 'checked' : ''} ${!activity.isClonable ? 'disabled' : ''}>`;
             
+            // NUEVO: Obtenemos la clave original de la DE si existe para usarla como identificador
+            const originalDeKey = (isQuery && activity.targetDataExtensions?.length > 0) 
+                ? activity.targetDataExtensions[0].key 
+                : null;
+            
             const queryFolderCell = isQuery ? `<td class="folder-cell" data-folder-type="query" title="Clic para cambiar carpeta">${activity.newQueryCategoryPath || 'Raíz'}</td>` : '<td>-</td>';
+            
+            // MODIFICADO: Añadimos el nuevo data-attribute a la celda del nombre de la DE
+            const deNameCell = isQuery 
+                ? `<td contenteditable="true" data-type="de-name" data-original-de-key="${originalDeKey}" title="${activity.newDeName}">${activity.newDeName}</td>`
+                : `<td>${activity.newDeName}</td>`;
+            
             const deFolderCell = isQuery ? `<td class="folder-cell" data-folder-type="de" title="Clic para cambiar carpeta">${activity.newDeCategoryPath || 'Raíz'}</td>` : '<td>-</td>';
 
             return `
@@ -277,7 +309,7 @@ function render() {
                     <td title="${activity.name}">${activity.name}</td>
                     <td contenteditable="true" data-type="activity-name" title="${activity.newActivityName}">${activity.newActivityName}</td>
                     ${queryFolderCell}
-                    <td contenteditable="${isQuery}" data-type="de-name" title="${activity.newDeName}">${activity.newDeName}</td>
+                    ${deNameCell}
                     ${deFolderCell}
                 </tr>`;
         }).join('');
@@ -325,14 +357,33 @@ async function cloneAutomation() {
         mcApiService.setLogger(logger);
         const newActivityIdMap = new Map();
 
+        // Mapa para rastrear las DEs ya clonadas.
+        // La clave será la CustomerKey de la DE original y el valor será el objeto de la DE clonada.
+        const clonedDeMap = new Map();
+
         logger.logMessage("--- FASE 1: Clonando actividades dependientes ---");
         for (const activity of activitiesToClone) {
             ui.blockUI(`Clonando: ${activity.name}`);
             if (activity.objectTypeId === 300) { // Lógica para Query
+                
+                // Declaramos la variable 'clonedDE' aquí para que sea accesible en todo el bloque.
+                let clonedDE;
                 const originalDEKey = activity.targetDataExtensions[0].key;
                 const originalQueryDetails = await mcApiService.fetchQueryDefinitionDetails(activity.activityObjectId, apiConfig);
-                const clonedDE = await mcApiService.cloneDataExtension(originalDEKey, activity.newDeName, "", activity.newDeCategoryId, apiConfig);
-                logger.logMessage(`  - DE clonada: "${clonedDE.name}" en carpeta ID ${activity.newDeCategoryId}`);
+
+                // Comprobamos si la DE ya ha sido clonada.
+                if (clonedDeMap.has(originalDEKey)) {
+                    // Si ya existe, la recuperamos del mapa.
+                    clonedDE = clonedDeMap.get(originalDEKey);
+                    logger.logMessage(`  - DE "${originalDEKey}" ya clonada. Reutilizando: "${clonedDE.name}"`);
+                } else {
+                    // Si no existe, la clonamos y la guardamos en el mapa.
+                    clonedDE = await mcApiService.cloneDataExtension(originalDEKey, activity.newDeName, "", activity.newDeCategoryId, apiConfig);
+                    clonedDeMap.set(originalDEKey, clonedDE); // Guardamos el resultado para la próxima vez.
+                    logger.logMessage(`  - DE clonada: "${clonedDE.name}" en carpeta ID ${activity.newDeCategoryId}`);
+                }
+                
+                // El resto de la lógica no cambia, simplemente usa la variable 'clonedDE' que hemos preparado.
                 const newQuery = await mcApiService.createClonedQuery(originalQueryDetails, clonedDE, activity.newActivityName, activity.newQueryCategoryId, apiConfig);
                 logger.logMessage(`  - Query clonada: "${newQuery.name}" en carpeta ID ${activity.newQueryCategoryId}`);
                 newActivityIdMap.set(activity.id, newQuery.objectID);

@@ -177,11 +177,6 @@ document.addEventListener('DOMContentLoaded', function () {
 		currentUserInfo = apiConfig.userInfo;
 		currentOrgInfo = apiConfig.orgInfo;
 		elements.stackKeyInput.value = currentOrgInfo?.stack_key || 'No disponible';
-
-		logger.startLogBuffering();
-		logger.logMessage("Token: "+apiConfig.accessToken);
-		logger.logMessage("Scope: "+apiConfig.scope);
-		logger.endLogBuffering();
 		
 		// Pasa la información a módulos que la necesitan.
 		queryTextFinder.updateOrgInfo(apiConfig.orgInfo);

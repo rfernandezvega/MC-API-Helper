@@ -144,6 +144,9 @@ async function cloneSelectedQueries() {
         mcApiService.setLogger(logger);
         logger.logMessage(`Iniciando clonación masiva de ${selectedQueries.length} queries...`);
 
+        // Mapa para rastrear las DEs ya clonadas.
+        const clonedDeMap = new Map();
+
         for (let i = 0; i < selectedQueries.length; i++) {
             const query = selectedQueries[i];
             const progress = `(${i + 1}/${selectedQueries.length})`;
@@ -151,13 +154,25 @@ async function cloneSelectedQueries() {
 
             try {
                 logger.logMessage(`\n--- ${progress} Procesando Query: "${query.name}" ---`);
-                if (!query.targetDE.customerKey) throw new Error("La query no tiene una DE de destino válida.");
+                const originalDEKey = query.targetDE.customerKey;
+                if (!originalDEKey) throw new Error("La query no tiene una DE de destino válida.");
                 
-                logger.logMessage(`  - Paso 1: Clonando DE de destino (Key: ${query.targetDE.customerKey})`);
-                const clonedDE = await mcApiService.cloneDataExtension(query.targetDE.customerKey, query.newDeName, "", state.targetDEFolder.id, apiConfig);
-                logger.logMessage(`  - Éxito: Nueva DE "${clonedDE.name}" creada con Key: ${clonedDE.customerKey}`);
+                // Declaramos la variable 'clonedDE' aquí.
+                let clonedDE;
+
+                // Comprobamos si la DE ya ha sido clonada.
+                if (clonedDeMap.has(originalDEKey)) {
+                    clonedDE = clonedDeMap.get(originalDEKey);
+                    logger.logMessage(`  - Paso 1: DE de destino (Key: ${originalDEKey}) ya clonada. Reutilizando: "${clonedDE.name}"`);
+                } else {
+                    logger.logMessage(`  - Paso 1: Clonando DE de destino (Key: ${originalDEKey})`);
+                    clonedDE = await mcApiService.cloneDataExtension(originalDEKey, query.newDeName, "", state.targetDEFolder.id, apiConfig);
+                    clonedDeMap.set(originalDEKey, clonedDE); // Guardamos el resultado.
+                    logger.logMessage(`  - Éxito: Nueva DE "${clonedDE.name}" creada con Key: ${clonedDE.customerKey}`);
+                }
 
                 logger.logMessage(`  - Paso 2: Creando la nueva Query Activity...`);
+                // Usamos la 'clonedDE' (nueva o reutilizada) para crear la query.
                 await mcApiService.createClonedQuery(query, clonedDE, query.newQueryName, state.targetQueryFolder.id, apiConfig);
                 logger.logMessage(`  - Éxito: Query "${query.newQueryName}" creada.`);
                 
@@ -167,6 +182,7 @@ async function cloneSelectedQueries() {
                 failCount++;
             }
         }
+
 
         ui.showCustomAlert(`Proceso finalizado.\nÉxitos: ${successCount}\nFallos: ${failCount}`);
         goBackToStep1();
@@ -254,6 +270,24 @@ function handleNameEdits(e) {
         state.queriesInSourceFolder[index].newQueryName = newValue;
     } else if (dataType === 'de-name') {
         state.queriesInSourceFolder[index].newDeName = newValue;
+
+        const originalDeKey = cell.dataset.originalDeKey;
+        if (originalDeKey) {
+            // 1. Actualiza el estado en memoria
+            state.queriesInSourceFolder.forEach(q => {
+                if (q.targetDE.customerKey === originalDeKey) {
+                    q.newDeName = newValue;
+                }
+            });
+
+            // 2. Actualiza la pantalla (DOM)
+            const allRelatedCells = elements.querySelectionTbody.querySelectorAll(`td[data-original-de-key="${originalDeKey}"]`);
+            allRelatedCells.forEach(relatedCell => {
+                if (relatedCell !== cell) {
+                    relatedCell.textContent = newValue;
+                }
+            });
+        }
     }
 
     checkAndApplyMismatchStyle(row);
@@ -294,12 +328,15 @@ function renderQuerySelectionTable(queries) {
     queries.forEach((query, index) => {
         const row = elements.querySelectionTbody.insertRow();
         row.dataset.queryIndex = index;
+        
+        // Añadimos el data-attribute a la celda del nombre de la DE
+        // usando la CustomerKey de la DE de origen como identificador.
         row.innerHTML = `
             <td><input type="checkbox"></td>
             <td>${query.name}</td>
             <td>${query.targetDE.name}</td>
             <td contenteditable="true" data-type="query-name">${query.newQueryName}</td>
-            <td contenteditable="true" data-type="de-name">${query.newDeName}</td>
+            <td contenteditable="true" data-type="de-name" data-original-de-key="${query.targetDE.customerKey}">${query.newDeName}</td>
         `;
 
         checkAndApplyMismatchStyle(row);
