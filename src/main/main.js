@@ -242,7 +242,8 @@ async function refreshAccessToken(clientName) {
             restUri: tokenData.rest_instance_url,
             expiryTimestamp: Date.now() + (tokenData.expires_in - TOKEN_EXPIRY_BUFFER) * 1000,
             userInfo: userInfo,
-            orgInfo: orgInfo
+            orgInfo: orgInfo,
+            scope: tokenData.scope
         };
         console.log(activeSession);
     } catch (error) {
@@ -258,8 +259,6 @@ ipcMain.handle('get-api-config', async (event, clientName) => {
 
     let needsRefresh = false;
 
-    // --- CORRECCIÓN CLAVE 2 ---
-    // Se elimina la condición `!activeSession.orgInfo` que forzaba el refresco.
     // Una sesión es válida si tiene un token y no ha expirado.
     if (activeSession.clientName !== clientName || !activeSession.accessToken || Date.now() >= activeSession.expiryTimestamp) {
         needsRefresh = true;
@@ -279,7 +278,8 @@ ipcMain.handle('get-api-config', async (event, clientName) => {
         soapUri: activeSession.soapUri ? activeSession.soapUri + 'Service.asmx' : null,
         restUri: activeSession.restUri,
         userInfo: activeSession.userInfo,
-        orgInfo: activeSession.orgInfo 
+        orgInfo: activeSession.orgInfo,
+        scope:  activeSession.scope
     };
 });
 
@@ -288,6 +288,10 @@ ipcMain.on('start-login', async (event, config) => {
     authUrl.searchParams.append('client_id', config.clientId);
     authUrl.searchParams.append('response_type', 'code');
     authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
+
+    if (config.businessUnit) {
+        authUrl.searchParams.append('account_id', config.businessUnit);
+    }
 
     const loginWindow = new BrowserWindow({
         width: 800, height: 600, parent: mainWindow, modal: true, show: true,
@@ -318,7 +322,9 @@ ipcMain.on('start-login', async (event, config) => {
                         client_secret: config.clientSecret,
                         code: authCode,
                         redirect_uri: REDIRECT_URI,
+                        account_id: config.businessUnit
                     };
+                    console.log("OnNavigate Payload: "+payload);
                     const response = await axios.post(config.authUri, payload, { headers: { 'Content-Type': 'application/json' } });
                     const tokenData = response.data;
                     
