@@ -259,6 +259,11 @@ async function inspectAndShowCloner() {
     const automationFromList = fullAutomationList.find(auto => auto.id === row.dataset.automationId);
     if (!automationFromList) return;
 
+    if (automationFromList.status === 'Building') {
+        ui.showCustomAlert("No se puede clonar un automatismo que está en estado 'Building'.");
+        return;
+    }
+
     if (!await ui.showCustomConfirm(`¿Quieres iniciar la clonación selectiva para "${automationFromList.name}"?`)) {
         return;
     }
@@ -349,7 +354,12 @@ function updateButtonsState() {
 
     elements.cloneAutomationBtn.disabled = true;
     if (selectedRows.length === 1) {
-        elements.cloneAutomationBtn.disabled = false;
+        // Buscamos el automatismo completo en nuestra lista de datos
+        const selectedAutomation = fullAutomationList.find(auto => auto.id === selectedRows[0].dataset.automationId);
+        // Habilitamos el botón SOLO si el automatismo existe y su estado NO es 'Building'
+        if (selectedAutomation && selectedAutomation.status !== 'Building') {
+            elements.cloneAutomationBtn.disabled = false;
+        }
     }
 
     const selectedAutomations = Array.from(selectedRows).map(row => fullAutomationList.find(auto => auto.id === row.dataset.automationId)).filter(Boolean);

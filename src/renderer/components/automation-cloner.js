@@ -61,6 +61,13 @@ export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
     goBackFunction = dependencies.goBack;
 
+     // Listener para actualizar el nombre del automatismo de destino en el estado.
+    elements.automationClonerDestName.addEventListener('input', () => {
+        if (currentAutomationDetails) {
+            currentAutomationDetails.newAutomationName = elements.automationClonerDestName.value;
+        }
+    });
+
     // Listeners para la configuración general y los destinos por defecto
     elements.automationClonerContinueBtn.addEventListener('click', cloneAutomation);
     elements.changeAutomationFolderBtn.addEventListener('click', () => selectFolderFor('automation'));
@@ -88,6 +95,9 @@ async function enrichAutomationDetails(baseDetails) {
     baseDetails.categoryPath = baseDetails.categoryId ? await mcApiService.getFolderPath(baseDetails.categoryId, apiConfig) : 'Raíz';
     baseDetails.newCategoryId = baseDetails.categoryId;
     baseDetails.newCategoryPath = baseDetails.categoryPath;
+
+    // Guardamos el nombre del nuevo automatismo en el estado.
+    baseDetails.newAutomationName = `${baseDetails.name}_Copy`;
     
     baseDetails.defaultNewQueryCategoryId = null;
     baseDetails.defaultNewQueryCategoryPath = null;
@@ -271,7 +281,7 @@ function render() {
     if (!currentAutomationDetails) return;
 
     elements.automationClonerSourceName.value = currentAutomationDetails.name;
-    elements.automationClonerDestName.value = `${currentAutomationDetails.name}_Copy`;
+    elements.automationClonerDestName.value = currentAutomationDetails.newAutomationName;
     elements.automationClonerDestFolder.value = currentAutomationDetails.newCategoryPath;
     elements.automationClonerContinueBtn.disabled = false;
     elements.defaultQueryFolder.value = currentAutomationDetails.defaultNewQueryCategoryPath || '';
@@ -341,7 +351,7 @@ function render() {
  * Orquesta el proceso final de clonación.
  */
 async function cloneAutomation() {
-    const newAutomationName = elements.automationClonerDestName.value.trim();
+    const newAutomationName = currentAutomationDetails.newAutomationName.trim();
     if (!newAutomationName) return ui.showCustomAlert("El nombre del automatismo de destino no puede estar vacío.");
     
     const activitiesToClone = currentAutomationDetails.steps.flatMap(s => s.activities).filter(a => a.isClonable && a.selected);

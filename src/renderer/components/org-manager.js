@@ -47,6 +47,8 @@ function saveClientConfig() {
         configs[clientName] = getConfigToSave();
         localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
         loadConfigsIntoSelect();
+        const configToLoad = configs[clientName] || {};
+        customerFinder.updateClientConfig(configToLoad);
         logger.logMessage(`Configuración para "${clientName}" guardada localmente.`);
         ui.showCustomAlert(`Configuración para "${clientName}" guardada.`);
     } finally {
