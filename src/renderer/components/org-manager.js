@@ -186,6 +186,102 @@ export function loadAndSyncClientConfig(clientName) {
     }
 }
 
+/**
+ * Exporta la configuración de búsqueda en DEs a un fichero CSV.
+ */
+async function exportDvConfig() {
+    logger.startLogBuffering();
+    try {
+        const configs = getDvConfigsFromTable();
+        // Filtrar filas vacías que el usuario pueda haber añadido sin rellenar
+        const validConfigs = configs.filter(c => c.title || c.deKey || c.field);
+
+        if (validConfigs.length === 0) {
+            ui.showCustomAlert('No hay datos en la tabla para exportar.');
+            return;
+        }
+
+        const headers = '"Nombre","External Key","Campo de Búsqueda"';
+        const rows = validConfigs.map(c => `"${c.title}","${c.deKey}","${c.field}"`);
+        const csvContent = [headers, ...rows].join('\n');
+
+        const clientName = elements.clientNameInput.value.trim().replace(/\s+/g, '_') || 'config';
+        const fileName = `config_busqueda_DEs_${clientName}.csv`;
+
+        const result = await window.electronAPI.saveCsvFile({ content: csvContent, defaultName: fileName });
+        if (result.success) {
+            logger.logMessage(`Configuración exportada correctamente a: ${result.filePath}`);
+            ui.showCustomAlert('Configuración exportada con éxito.');
+        } else if (!result.canceled) {
+            logger.logError(`Error al exportar la configuración: ${result.error}`);
+            ui.showCustomAlert(`Error al exportar: ${result.error}`);
+        }
+    } catch (error) {
+        logger.logError(`Error inesperado durante la exportación: ${error.message}`);
+    } finally {
+        logger.endLogBuffering();
+    }
+}
+
+/**
+ * Importa una configuración de búsqueda en DEs desde un fichero CSV,
+ * fusionando los datos sin crear duplicados.
+ */
+async function importDvConfig() {
+    logger.startLogBuffering();
+    try {
+        const result = await window.electronAPI.openCsvFile();
+        if (result.canceled || !result.content) {
+            logger.logMessage('Importación de CSV cancelada por el usuario.');
+            return;
+        }
+
+        const existingConfigs = getDvConfigsFromTable().filter(c => c.deKey); // Usamos deKey como identificador
+        const existingKeys = new Set(existingConfigs.map(c => c.deKey));
+
+        const newConfigs = [];
+        const lines = result.content.trim().split('\n');
+        // Empezamos en 1 para saltar la cabecera
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+
+            // Simple parseo de CSV que asume comillas
+            const parts = line.split('","').map(p => p.replace(/"/g, ''));
+            if (parts.length < 3) continue;
+
+            const newConfig = {
+                title: parts[0] || '',
+                deKey: parts[1] || '',
+                field: parts[2] || ''
+            };
+
+            // Si la clave externa no está vacía y no existe ya, la añadimos
+            if (newConfig.deKey && !existingKeys.has(newConfig.deKey)) {
+                newConfigs.push(newConfig);
+                existingKeys.add(newConfig.deKey); // Prevenir duplicados dentro del mismo fichero
+            }
+        }
+
+        if (newConfigs.length > 0) {
+            const mergedConfigs = [...existingConfigs, ...newConfigs];
+            populateDvConfigsTable(mergedConfigs);
+            logger.logMessage(`${newConfigs.length} nueva(s) configuracion(es) importada(s) y añadidas a la tabla.`);
+            ui.showCustomAlert(`Se han importado ${newConfigs.length} nuevas filas.`);
+        } else {
+            logger.logMessage('No se encontraron nuevas configuraciones para importar en el fichero seleccionado.');
+            ui.showCustomAlert('El fichero no contenía ninguna configuración nueva que no estuviera ya en la tabla.');
+        }
+
+    } catch (error) {
+        logger.logError(`Error al importar el fichero CSV: ${error.message}`);
+        ui.showCustomAlert(`Error al procesar el fichero: ${error.message}`);
+    } finally {
+        logger.endLogBuffering();
+    }
+}
+
+
 // --- HELPERS PARA LA TABLA DE CONFIGURACIÓN DE BÚSQUEDA ---
 
 function getDvConfigsFromTable() {
@@ -229,6 +325,9 @@ export function init(dependencies) {
     elements.saveConfigBtn.addEventListener('click', saveClientConfig);
     elements.loginBtn.addEventListener('click', startLogin);
     elements.logoutBtn.addEventListener('click', logout);
+
+    elements.exportDvConfigBtn.addEventListener('click', exportDvConfig);
+    elements.importDvConfigBtn.addEventListener('click', importDvConfig);
 
     elements.savedConfigsSelect.addEventListener('change', (e) => loadAndSyncClientConfig(e.target.value));
     elements.sidebarClientSelect.addEventListener('change', (e) => loadAndSyncClientConfig(e.target.value));

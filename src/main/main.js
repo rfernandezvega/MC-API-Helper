@@ -2,7 +2,7 @@
 // Descripción: Gestiona el ciclo de vida de la aplicación, el flujo de autenticación seguro y las llamadas a la API.
 
 // --- 1. MÓDulos REQUERIDOS ---
-const { app, BrowserWindow, ipcMain, shell, Notification } = require('electron'); 
+const { app, BrowserWindow, ipcMain, shell, Notification, dialog } = require('electron'); 
 const os = require('os'); 
 const { google } = require('googleapis'); 
 const fs = require('fs'); 
@@ -202,6 +202,57 @@ ipcMain.handle('check-system-user-license', async () => {
 ipcMain.on('open-external-link', (event, url) => {
     if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
         shell.openExternal(url);
+    }
+});
+
+ipcMain.handle('save-csv-file', async (event, data) => {
+    const { content, defaultName } = data;
+    // Obtenemos la ventana actual para que el diálogo de guardado sea modal a ella
+    const browserWindow = BrowserWindow.fromWebContents(event.sender);
+    
+    const { canceled, filePath } = await dialog.showSaveDialog(browserWindow, {
+        title: 'Guardar configuración CSV',
+        defaultPath: defaultName || 'export.csv',
+        filters: [{ name: 'CSV Files', extensions: ['csv'] }]
+    });
+
+    // Si el usuario canceló el diálogo, informamos al renderer
+    if (canceled || !filePath) {
+        return { success: false, canceled: true };
+    }
+
+    // Si el usuario seleccionó una ruta, escribimos el fichero
+    try {
+        fs.writeFileSync(filePath, content, 'utf-8');
+        return { success: true, filePath };
+    } catch (error) {
+        console.error('Error al guardar el fichero CSV:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+// Handler para abrir el fichero CSV
+ipcMain.handle('open-csv-file', async (event) => {
+    const browserWindow = BrowserWindow.fromWebContents(event.sender);
+    
+    const { canceled, filePaths } = await dialog.showOpenDialog(browserWindow, {
+        title: 'Importar configuración CSV',
+        properties: ['openFile'],
+        filters: [{ name: 'CSV Files', extensions: ['csv'] }]
+    });
+
+    // Si el usuario canceló o no seleccionó ningún archivo
+    if (canceled || !filePaths || filePaths.length === 0) {
+        return { canceled: true };
+    }
+
+    const filePath = filePaths[0];
+    try {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        return { success: true, content };
+    } catch (error) {
+        console.error('Error al leer el fichero CSV:', error);
+        return { success: false, error: error.message };
     }
 });
 

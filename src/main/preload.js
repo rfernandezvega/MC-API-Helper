@@ -48,6 +48,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
    */
   openExternalLink: (url) => ipcRenderer.send('open-external-link', url),
 
+  /**
+   * Envía contenido CSV al proceso principal para guardarlo en un fichero.
+   * @param {object} data - Un objeto con { content: '...', defaultName: '...' }.
+   * @returns {Promise<object>} Una promesa que resuelve con el resultado de la operación.
+   */
+  saveCsvFile: (data) => ipcRenderer.invoke('save-csv-file', data),
+
+  /**
+   * Pide al proceso principal que abra un diálogo para seleccionar un fichero CSV y leer su contenido.
+   * @returns {Promise<object>} Una promesa que resuelve con el contenido del fichero o un estado de cancelación.
+   */
+  openCsvFile: () => ipcRenderer.invoke('open-csv-file'),
 
   // ==========================================================
   // --- MÉTODOS: PRINCIPAL -> RENDERIZADOR (LISTENERS) ---

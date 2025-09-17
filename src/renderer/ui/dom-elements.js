@@ -61,6 +61,8 @@ export function init() {
     elements.logoutBtn = document.getElementById('logoutBtn');
     elements.sendsConfigTbody = document.getElementById('sends-config-tbody');
     elements.addSendConfigRowBtn = document.getElementById('add-send-config-row-btn');
+    elements.importDvConfigBtn = document.getElementById('importDvConfigBtn');
+    elements.exportDvConfigBtn = document.getElementById('exportDvConfigBtn');
 
     // --- 5. Sección: Creación de Data Extension ---
     elements.deNameInput = document.getElementById('deName');
