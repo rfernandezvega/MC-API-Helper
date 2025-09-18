@@ -4,6 +4,7 @@
         <button class="back-button">← Atrás</button>  
         <div class="header-actions">
             <button id="refreshJourneysTableBtn" class="action-button">Refrescar</button>
+            <button id="downloadJourneysCsvBtn" class="action-button">Exportar</button>
             <button id="getCommunicationsBtn" class="action-button activate-btn" disabled>Comunicaciones</button>
             <button id="drawJourneyBtn" class="action-button" disabled>Dibujar</button>
             <button id="copyJourneyBtn" class="action-button" disabled>Copiar</button>
@@ -11,7 +12,7 @@
             <button id="deleteJourneyBtn" class="action-button delete-btn-darker" disabled>Borrar</button>
         </div>          
     </div>
-    <h2>Gestión de Journeys</h2>
+    <h2>Gestión de Journeys<span id="journeyCount" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
     <!-- Filtros para la tabla de journeys -->
     <div class="header-filters">
         <input type="text" id="journeyNameFilter" class="filter-input" placeholder="Buscar por nombre...">

@@ -17,6 +17,8 @@ let currentSortColumn = 'name';
 let currentSortDirection = 'asc';
 const ITEMS_PER_PAGE = 15;
 
+let currentFilteredList = []; 
+
 let getAuthenticatedConfig; // Dependencia que será inyectada por app.js
 
 // --- 2. FUNCIONES DE RENDERIZADO Y LÓGICA DE TABLA ---
@@ -26,15 +28,8 @@ let getAuthenticatedConfig; // Dependencia que será inyectada por app.js
  */
 function applyFiltersAndRender() {
     currentPage = 1;
-    renderFilteredTable();
-}
 
-/**
- * Aplica los filtros actuales y llama al renderizado final.
- * No resetea la paginación, ideal para paginar o reordenar.
- */
-function renderFilteredTable() {
-    let filtered = fullJourneyList;
+    let filtered = fullJourneyList; // Movemos la declaración aquí
     
     const nameFilter = elements.journeyNameFilter.value.toLowerCase().trim();
     if (nameFilter) filtered = filtered.filter(j => j.name.toLowerCase().includes(nameFilter));
@@ -51,7 +46,18 @@ function renderFilteredTable() {
     const deFilter = elements.journeyDEFilter.value.toLowerCase().trim();
     if (deFilter) filtered = filtered.filter(j => j.dataExtensionName && j.dataExtensionName.toLowerCase().includes(deFilter));
 
-    renderTable(filtered);
+    currentFilteredList = filtered; // Guardamos la lista filtrada
+    updateJourneyCount(); // Actualizamos el contador
+
+    renderFilteredTable();
+}
+
+/**
+ * Aplica los filtros actuales y llama al renderizado final.
+ * No resetea la paginación, ideal para paginar o reordenar.
+ */
+function renderFilteredTable() {
+    renderTable(currentFilteredList);
 }
 
 /**
@@ -98,6 +104,7 @@ export function init(dependencies) {
     elements.journeyDEFilter.addEventListener('input', applyFiltersAndRender);
 
     // Listeners de botones de acción
+    elements.downloadJourneysCsvBtn.addEventListener('click', downloadJourneysCsv);
     elements.refreshJourneysTableBtn.addEventListener('click', refreshData);
     elements.getCommunicationsBtn.addEventListener('click', getCommunications);
     elements.drawJourneyBtn.addEventListener('click', drawJourney);
@@ -724,4 +731,56 @@ function generateJourneyFlowText(journey) {
     }
     
     return output.join('\n');
+}
+
+/**
+ * Actualiza el contador de journeys.
+ */
+function updateJourneyCount() {
+    const total = fullJourneyList.length;
+    const filtered = currentFilteredList.length;
+    elements.journeyCountSpan.textContent = `(${filtered} de ${total})`;
+}
+
+/**
+ * Genera y descarga un fichero CSV con los journeys filtrados.
+ */
+function downloadJourneysCsv() {
+    if (currentFilteredList.length === 0) {
+        ui.showCustomAlert("No hay datos para descargar.");
+        return;
+    }
+
+    const headers = ['Nombre Journey', 'Versión', 'Fecha modificación', 'Tipo', 'Subtipo', 'Estado', 'Data Extension', 'Descargado', 'Emails', 'SMSs', 'Pushes', 'Whatsapps'];
+    
+    const sortedData = [...currentFilteredList]; // Copiamos para no modificar la original
+    sortData(sortedData); // Usamos la función de ordenación existente
+    
+    const rows = sortedData.map(j => [
+        `"${j.name || ''}"`,
+        `"${j.version || ''}"`,
+        `"${formatDate(j.modifiedDate)}"`,
+        `"${j.eventType || ''}"`,
+        `"${j.definitionType || ''}"`,
+        `"${j.status || ''}"`,
+        `"${j.dataExtensionName || ''}"`,
+        `"${j.hasCommunications ? 'Sí' : 'No'}"`,
+        `"${j.emails.join('; ')}"`, // Usamos ; para listas dentro de una celda
+        `"${j.sms.join('; ')}"`,
+        `"${j.pushes.join('; ')}"`,
+        `"${j.whatsapps.join('; ')}"`
+    ].join(','));
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+
+    // Lógica para crear y descargar el fichero
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "journeys.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }

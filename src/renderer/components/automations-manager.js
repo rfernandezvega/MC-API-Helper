@@ -13,6 +13,7 @@ let currentSortColumn = 'name';
 let currentSortDirection = 'asc';
 const ITEMS_PER_PAGE = 15;
 
+let currentFilteredList = [];
 
 let getAuthenticatedConfig;
 let showAutomationClonerView;
@@ -45,6 +46,9 @@ function renderFilteredTable() {
     if (statusFilter) {
         filtered = filtered.filter(auto => auto.status === statusFilter);
     }
+
+    currentFilteredList = filtered; // Guardamos la lista filtrada
+    updateAutomationCount(); // Actualizamos el contador
     
     renderTable(filtered);
 }
@@ -86,6 +90,7 @@ export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
     showAutomationClonerView = dependencies.showAutomationClonerView;
 
+    elements.downloadAutomationsCsvBtn.addEventListener('click', downloadAutomationsCsv);
     elements.activateAutomationBtn.addEventListener('click', () => performAction('activate'));
     elements.runAutomationBtn.addEventListener('click', () => performAction('run'));
     elements.stopAutomationBtn.addEventListener('click', () => performAction('pause'));
@@ -413,4 +418,49 @@ function formatDate(dateString) {
     } catch (error) {
         return 'Fecha inválida';
     }
+}
+
+/**
+ * Actualiza el contador de automatismos.
+ */
+function updateAutomationCount() {
+    const total = fullAutomationList.length;
+    const filtered = currentFilteredList.length;
+    elements.automationCountSpan.textContent = `(${filtered} de ${total})`;
+}
+
+/**
+ * Genera y descarga un fichero CSV con los automatismos filtrados.
+ */
+function downloadAutomationsCsv() {
+    if (currentFilteredList.length === 0) {
+        ui.showCustomAlert("No hay datos para descargar.");
+        return;
+    }
+
+    const headers = ['Nombre', 'Última Ejecución', 'Próxima Ejecución', 'Estado'];
+    
+    // Mapeamos los datos filtrados y ordenados a formato CSV
+    const sortedData = [...currentFilteredList]; // Copiamos para no modificar la original
+    sortData(sortedData); // Usamos la función de ordenación existente
+    
+    const rows = sortedData.map(auto => [
+        `"${auto.name || ''}"`,
+        `"${formatDate(auto.lastRunTime)}"`,
+        `"${formatDate(auto.scheduledTime)}"`,
+        `"${auto.status || ''}"`
+    ].join(','));
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    
+    // Lógica para crear y descargar el fichero
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "automatismos.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }

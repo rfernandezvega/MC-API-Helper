@@ -86,9 +86,9 @@
       El script 'build-html.js' leerá todos los ficheros de la carpeta /views
       y pegará su contenido aquí para construir el 'index.html' final.
     -->
-    <!-- 3. SECCIÓN: CONFIGURACIÓN DE APIS -->
+    <!-- 3. SECCIÓN: CONFIGURACIÓN DE APIS (MODIFICADA CON PESTAÑAS) -->
 <div id="configuracion-apis-section" class="section config-section-container">
-        <div class="section-header">
+    <div class="section-header">
         <button class="back-button">← Atrás</button>
         <div class="header-actions">
             <button id="saveConfigBtn" class="action-button">Guardar</button>
@@ -97,53 +97,71 @@
         </div>            
     </div>
     <h2>Configuración de APIs</h2>
-    <!-- Gestión de Clientes (Crear, Seleccionar) -->
+    <!-- Gestión de Clientes (Crear, Seleccionar) - Se mantiene fuera de las pestañas -->
     <div class="client-management">
         <input type="text" id="clientName" placeholder="Nombre del Cliente">
         <select id="savedConfigs">
             <option value="">Seleccionar configuración...</option>
         </select>
     </div>
-    <!-- Datos de la Aplicación API -->
-    <div class="config-block">
-        <h3>Datos Aplicación</h3>
-        <div class="form-group"><label for="businessUnit">Business Unit (MID)</label><input type="text" id="businessUnit"></div>
-        <div class="form-group"><label for="authUri">Auth URI</label><input type="text" id="authUri" placeholder="Ej: https://...mc.auth.marketingcloudapis.com/v2/token"></div>
-        <div class="form-group"><label for="clientId">Client ID</label><input type="text" id="clientId"></div>
-        <div class="form-group"><label for="clientSecret">Client Secret</label><input type="password" id="clientSecret" placeholder="Necesario para el primer login"></div>
-        <div class="form-group"><label for="token">Access Token</label><input type="text" id="token" disabled></div>
-        <div class="form-group"><label for="soapUri">SOAP URI</label><input type="text" id="soapUri" disabled></div>
-        <div class="form-group"><label for="restUri">REST URI</label><input type="text" id="restUri" disabled></div>
-        <div class="form-group"><label for="stackKey">Stack</label><input type="text" id="stackKey" disabled></div>
-    </div>
-    <!-- Configuración de Data Views para el buscador de envíos -->
-    <div class="config-block">
-        <div class="config-block-header">
-            <h3>Búsqueda Dinámica en Data Extensions</h3>
-            <div class="header-actions">
-                <button id="importDvConfigBtn" class="action-button">Importar</button>
-                <button id="exportDvConfigBtn" class="action-button activate-btn">Exportar</button>
+
+    <!-- ========================================================== -->
+    <!-- ESTRUCTURA DE PESTAÑAS  -->
+    <!-- ========================================================== -->
+    <div class="tabs-container">
+        <div class="tab-buttons">
+            <button class="tab-button active" data-tab="api-settings-tab">Configuración de API</button>
+            <button class="tab-button" data-tab="de-search-tab">DEs Búsqueda de Clientes</button>
+        </div>
+
+        <!-- PESTAÑA 1: Configuración de API -->
+        <div id="api-settings-tab" class="tab-content active">
+            <!-- Datos de la Aplicación API (Bloque movido aquí) -->
+            <div class="config-block">
+                <h3>Datos Aplicación</h3>
+                <div class="form-group"><label for="businessUnit">Business Unit (MID)</label><input type="text" id="businessUnit"></div>
+                <div class="form-group"><label for="authUri">Auth URI</label><input type="text" id="authUri" placeholder="Ej: https://...mc.auth.marketingcloudapis.com/v2/token"></div>
+                <div class="form-group"><label for="clientId">Client ID</label><input type="text" id="clientId"></div>
+                <div class="form-group"><label for="clientSecret">Client Secret</label><input type="password" id="clientSecret" placeholder="Necesario para el primer login"></div>
+                <div class="form-group"><label for="token">Access Token</label><input type="text" id="token" disabled></div>
+                <div class="form-group"><label for="soapUri">SOAP URI</label><input type="text" id="soapUri" disabled></div>
+                <div class="form-group"><label for="restUri">REST URI</label><input type="text" id="restUri" disabled></div>
+                <div class="form-group"><label for="stackKey">Stack</label><input type="text" id="stackKey" disabled></div>
             </div>
         </div>
-        <p class="info-text" style="text-align: left; margin: 0 0 15px;">
-            Configura las tablas donde se buscará al cliente al pulsar el botón "DEs". Los cambios se guardan junto con el resto de la configuración.
-        </p>
-        <div class="table-container">
-            <table id="sends-config-table" class="editable-row-table">
-                <thead>
-                    <tr>
-                        <th>Nombre</th>
-                        <th>External Key</th>
-                        <th>Campo de Búsqueda</th>
-                    </tr>
-                </thead>
-                <tbody id="sends-config-tbody">
-                    <!-- Las filas se añadirán/cargarán dinámicamente aquí -->
-                </tbody>
-            </table>
-        </div>
-        <div class="header-actions" style="justify-content: flex-start; margin-top: 15px;">
-            <button id="add-send-config-row-btn" class="action-button">Añadir Fila</button>
+
+        <!-- PESTAÑA 2: DEs Búsqueda de Clientes -->
+        <div id="de-search-tab" class="tab-content">
+            <!-- Configuración de Data Views para el buscador de envíos (Bloque movido aquí) -->
+            <div class="config-block">
+                <div class="config-block-header">
+                    <h3>Búsqueda Dinámica en Data Extensions</h3>
+                    <div class="header-actions">
+                        <button id="importDvConfigBtn" class="action-button">Importar</button>
+                        <button id="exportDvConfigBtn" class="action-button activate-btn">Exportar</button>
+                    </div>
+                </div>
+                <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+                    Configura las tablas donde se buscará al cliente al pulsar el botón "DEs". Los cambios se guardan junto con el resto de la configuración.
+                </p>
+                <div class="table-container">
+                    <table id="sends-config-table" class="editable-row-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>External Key</th>
+                                <th>Campo de Búsqueda</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sends-config-tbody">
+                            <!-- Las filas se añadirán/cargarán dinámicamente aquí -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="header-actions" style="justify-content: flex-start; margin-top: 15px;">
+                    <button id="add-send-config-row-btn" class="action-button">Añadir Fila</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -222,13 +240,14 @@
         <button class="back-button">← Atrás</button>            
         <div class="header-actions">
             <button id="refreshAutomationsTableBtn" class="action-button">Refrescar</button>
+            <button id="downloadAutomationsCsvBtn" class="action-button">Exportar</button>
             <button id="activateAutomationBtn" class="action-button activate-btn" disabled>Activar</button>
             <button id="runAutomationBtn" class="action-button" disabled>Ejecutar</button>
             <button id="stopAutomationBtn" class="action-button delete-btn" disabled>Parar</button>
             <button id="cloneAutomationBtn" class="action-button" disabled>Clonar</button>
         </div>
     </div>
-    <h2>Gestión de Automatismos</h2>
+    <h2>Gestión de Automatismos<span id="automationCount" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
     <!-- Filtros para la tabla de automatismos -->
     <div class="header-filters">
         <input type="text" id="automationNameFilter" class="filter-input" placeholder="Buscar por nombre...">
@@ -1141,6 +1160,7 @@
         <button class="back-button">← Atrás</button>  
         <div class="header-actions">
             <button id="refreshJourneysTableBtn" class="action-button">Refrescar</button>
+            <button id="downloadJourneysCsvBtn" class="action-button">Exportar</button>
             <button id="getCommunicationsBtn" class="action-button activate-btn" disabled>Comunicaciones</button>
             <button id="drawJourneyBtn" class="action-button" disabled>Dibujar</button>
             <button id="copyJourneyBtn" class="action-button" disabled>Copiar</button>
@@ -1148,7 +1168,7 @@
             <button id="deleteJourneyBtn" class="action-button delete-btn-darker" disabled>Borrar</button>
         </div>          
     </div>
-    <h2>Gestión de Journeys</h2>
+    <h2>Gestión de Journeys<span id="journeyCount" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
     <!-- Filtros para la tabla de journeys -->
     <div class="header-filters">
         <input type="text" id="journeyNameFilter" class="filter-input" placeholder="Buscar por nombre...">

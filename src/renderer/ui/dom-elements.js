@@ -139,6 +139,8 @@ export function init() {
     elements.runAutomationBtn = document.getElementById('runAutomationBtn');
     elements.stopAutomationBtn = document.getElementById('stopAutomationBtn');
     elements.cloneAutomationBtn = document.getElementById('cloneAutomationBtn');
+    elements.automationCountSpan = document.getElementById('automationCount');
+    elements.downloadAutomationsCsvBtn = document.getElementById('downloadAutomationsCsvBtn');
     elements.paginationAutomations = document.getElementById('pagination-automations'); 
     elements.prevPageBtnAutomations = document.getElementById('prevPageBtnAutomations');
     elements.nextPageBtnAutomations = document.getElementById('nextPageBtnAutomations');
@@ -158,6 +160,8 @@ export function init() {
     elements.copyJourneyBtn = document.getElementById('copyJourneyBtn');
     elements.stopJourneyBtn = document.getElementById('stopJourneyBtn');
     elements.deleteJourneyBtn = document.getElementById('deleteJourneyBtn');
+    elements.journeyCountSpan = document.getElementById('journeyCount');
+    elements.downloadJourneysCsvBtn = document.getElementById('downloadJourneysCsvBtn');
     elements.prevPageBtnJourneys = document.getElementById('prevPageBtnJourneys');
     elements.nextPageBtnJourneys = document.getElementById('nextPageBtnJourneys');
     elements.pageInputJourneys = document.getElementById('pageInputJourneys');
