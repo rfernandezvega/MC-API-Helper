@@ -773,8 +773,10 @@ function downloadJourneysCsv() {
 
     const csvContent = [headers.join(','), ...rows].join('\n');
 
+    const BOM = "\uFEFF"; // Byte Order Mark para UTF-8
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+
     // Lógica para crear y descargar el fichero
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
