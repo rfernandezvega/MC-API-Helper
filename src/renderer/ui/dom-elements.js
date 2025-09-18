@@ -107,6 +107,7 @@ export function init() {
     elements.customerSearchTbody = document.getElementById('customer-search-tbody');
     elements.getDEsBtn = document.getElementById('getDEsBtn');
     elements.getCustomerJourneysBtn = document.getElementById('getCustomerJourneysBtn');
+    elements.ejectCustomerFromJourneysBtn = document.getElementById('ejectCustomerFromJourneysBtn');
     elements.customerJourneysResultsBlock = document.getElementById('customer-journeys-results-block');
     elements.customerJourneysTbody = document.getElementById('customer-journeys-tbody');
     elements.customerSendsResultsBlock = document.getElementById('customer-sends-results-block');

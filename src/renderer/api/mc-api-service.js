@@ -595,6 +595,35 @@ export async function createClonedEventDefinition(originalEventDef, clonedDeInfo
     return executeRestRequest(url, options);
 }
 
+/**
+ * Solicita la expulsión de un contacto de una o más interacciones (Journeys).
+ * @param {string} contactKey - La ContactKey del cliente a expulsar.
+ * @param {Array<string>} definitionKeys - Un array con las Definition Keys de los Journeys.
+ * @param {object} apiConfig - El objeto de configuración de la API.
+ * @returns {Promise<object>} La respuesta de la API, que incluye un array de errores si los hubo.
+ */
+export async function ejectContactFromJourneys(contactKey, definitionKeys, apiConfig) {
+    if (!contactKey || !definitionKeys || definitionKeys.length === 0) {
+        throw new Error("Se requieren ContactKey y al menos una DefinitionKey para la expulsión.");
+    }
+    
+    const url = `${apiConfig.restUri}interaction/v1/interactions/contactexit`;
+    
+    // El payload es un array de objetos, uno por cada journey del que se va a expulsar.
+    const payload = definitionKeys.map(key => ({
+        "ContactKey": contactKey,
+        "DefinitionKey": key
+    }));
+
+    const options = {
+        method: 'POST',
+        headers: { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    };
+    
+    return executeRestRequest(url, options);
+}
+
 // ==========================================================
 // --- 4. SUBSCRIBERS & CONTACTS API ---
 // ==========================================================

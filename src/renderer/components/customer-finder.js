@@ -27,6 +27,8 @@ export function init(dependencies) {
     elements.getDEsBtn.addEventListener('click', getCustomerDEs);
     elements.getCustomerJourneysBtn.addEventListener('click', getCustomerJourneys);
     elements.customerSearchTbody.addEventListener('click', handleRowSelection);
+    elements.customerJourneysTbody.addEventListener('click', handleJourneyRowSelection);
+    elements.ejectCustomerFromJourneysBtn.addEventListener('click', ejectCustomer);
 }
 
 /**
@@ -210,6 +212,72 @@ function handleRowSelection(e) {
     // Ocultar resultados anteriores al seleccionar un nuevo cliente
     elements.customerJourneysResultsBlock.classList.add('hidden');
     elements.customerSendsResultsBlock.classList.add('hidden');
+    elements.ejectCustomerFromJourneysBtn.disabled = true;
+}
+
+/**
+ * Gestiona la selección y deselección de filas en la tabla de journeys.
+ * @param {Event} e - El evento de clic.
+ */
+function handleJourneyRowSelection(e) {
+    const clickedRow = e.target.closest('tr');
+    if (!clickedRow?.dataset.definitionKey) return;
+    
+    clickedRow.classList.toggle('selected');
+    updateEjectButtonState();
+}
+
+/**
+ * Orquesta el proceso de expulsión del cliente de los journeys seleccionados.
+ */
+async function ejectCustomer() {
+    const selectedRows = document.querySelectorAll('#customer-journeys-table tbody tr.selected');
+    if (selectedRows.length === 0 || !selectedSubscriberData?.subscriberKey) return;
+
+    const definitionKeys = Array.from(selectedRows).map(row => row.dataset.definitionKey);
+    const contactKey = selectedSubscriberData.subscriberKey;
+
+    const confirmation = await ui.showCustomConfirm(
+        `¿Estás seguro de que quieres expulsar al cliente con ContactKey "${contactKey}" de ${selectedRows.length} journey(s) seleccionados?`
+    );
+
+    if (!confirmation) return;
+
+    ui.blockUI("Expulsando cliente de los Journeys...");
+    logger.startLogBuffering();
+
+    try {
+        const apiConfig = await getAuthenticatedConfig();
+        mcApiService.setLogger(logger);
+
+        logger.logMessage(`Iniciando expulsión de ${contactKey} de ${definitionKeys.length} journey(s).`);
+        const result = await mcApiService.ejectContactFromJourneys(contactKey, definitionKeys, apiConfig);
+        
+        const errors = result.errors || [];
+        const successCount = definitionKeys.length - errors.length;
+
+        let summary = `Proceso de expulsión completado.\nÉxitos: ${successCount}`;
+        if (errors.length > 0) {
+            summary += `\nFallos: ${errors.length}\n\nDetalles:\n`;
+            errors.forEach(err => {
+                summary += `- Contacto ${err.contactKey}: ${err.message || 'Error desconocido'}\n`;
+            });
+            logger.logMessage(`Fallos en la expulsión: ${JSON.stringify(errors)}`);
+        }
+        
+        ui.showCustomAlert(summary);
+        logger.logMessage(summary);
+        
+        // Refrescar la tabla para mostrar que el cliente ya no está en esos journeys
+        await getCustomerJourneys();
+
+    } catch (error) {
+        logger.logMessage(`Error fatal durante la expulsión: ${error.message}`);
+        ui.showCustomAlert(`Error al expulsar: ${error.message}`);
+    } finally {
+        ui.unblockUI();
+        logger.endLogBuffering();
+    }
 }
 
 // --- 5. RENDERIZADO Y HELPERS ---
@@ -239,12 +307,19 @@ function renderCustomerSearchResults(results) {
 
 function renderCustomerJourneysTable(journeys) {
     elements.customerJourneysTbody.innerHTML = '';
+
+    // Deshabilitamos el botón cada vez que se renderiza la tabla, hasta que se seleccione algo
+    updateEjectButtonState();
+
     if (!journeys || journeys.length === 0) {
         elements.customerJourneysTbody.innerHTML = '<tr><td colspan="6">Este contacto no se encuentra en ningún Journey activo.</td></tr>';
         return;
     }
     journeys.forEach(journey => {
         const row = document.createElement('tr');
+
+        row.dataset.definitionKey = journey.key;
+        
         row.innerHTML = `
             <td>${journey.name || '---'}</td><td>${journey.id || '---'}</td>
             <td>${journey.key || '---'}</td><td>${journey.version || '---'}</td>
@@ -275,4 +350,12 @@ function renderDETable(container, items) {
     table.innerHTML = `${thead}<tbody>${tbodyRows}</tbody>`;
     container.innerHTML = '';
     container.appendChild(table);
+}
+
+/**
+ * Actualiza el estado (habilitado/deshabilitado) del botón de expulsión.
+ */
+function updateEjectButtonState() {
+    const selectedCount = document.querySelectorAll('#customer-journeys-table tbody tr.selected').length;
+    elements.ejectCustomerFromJourneysBtn.disabled = selectedCount === 0;
 }

@@ -1043,7 +1043,12 @@
         </div>
         <!-- Bloque de Resultados de Journeys (oculto por defecto) -->
         <div id="customer-journeys-results-block" class="config-block hidden">
-            <h3>Journeys del Cliente Seleccionado</h3>
+            <div class="config-block-header">
+                <h3>Journeys del Cliente Seleccionado</h3>
+                <div class="header-actions">
+                    <button id="ejectCustomerFromJourneysBtn" class="action-button delete-btn" disabled>Expulsar</button>
+                </div>
+            </div>
             <div class="table-container">
                 <table id="customer-journeys-table">
                     <thead>
