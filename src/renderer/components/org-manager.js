@@ -266,6 +266,7 @@ async function importDvConfig() {
         if (newConfigs.length > 0) {
             const mergedConfigs = [...existingConfigs, ...newConfigs];
             populateDvConfigsTable(mergedConfigs);
+            saveClientConfig();
             logger.logMessage(`${newConfigs.length} nueva(s) configuracion(es) importada(s) y añadidas a la tabla.`);
             ui.showCustomAlert(`Se han importado ${newConfigs.length} nuevas filas.`);
         } else {

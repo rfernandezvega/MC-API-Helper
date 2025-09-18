@@ -343,8 +343,21 @@ td a:hover { color: #003366; text-decoration: underline; }
 .delete-row-btn:hover { background-color: #dc3545; color: #fff; }
 
 /* --- 3.5. Pestañas (Tabs) --- */
-.tabs-container { width: 100%; }
-.tab-buttons { display: flex; border-bottom: 2px solid #e0e7ef; margin-bottom: 20px; }
+.tabs-container { 
+    width: 100%; 
+    /* Convierte el contenedor en una columna flexible */
+    display: flex;
+    flex-direction: column;
+    /* Quitamos el scroll de aquí para dárselo al contenido */
+    overflow-y: hidden;
+}
+.tab-buttons { 
+    display: flex; 
+    border-bottom: 2px solid #e0e7ef; 
+    margin-bottom: 20px; 
+    /* Evita que los botones se encojan si el espacio es reducido */
+    flex-shrink: 0;
+}
 .tab-button {
   padding: 10px 20px; cursor: pointer; background-color: transparent; border: none;
   border-bottom: 3px solid transparent; font-size: 1em; color: #558ac7; transition: all 0.2s;
@@ -352,7 +365,15 @@ td a:hover { color: #003366; text-decoration: underline; }
 .tab-button.active { border-bottom-color: #69a3db; font-weight: bold; }
 .tab-button:hover { background-color: #f8f9fa; }
 .tab-content { display: none; }
-.tab-content.active { display: block; }
+.tab-content.active { 
+    display: block;
+    /* Le dice al contenido que ocupe todo el espacio vertical sobrante */
+    flex-grow: 1; 
+    /* Añadimos el scroll aquí */
+    overflow-y: auto;
+    /* Truco de Flexbox para que el scroll funcione correctamente */
+    min-height: 0;
+}
 
 /* --- 3.6. Modales y Overlays --- */
 .loader-overlay, .modal-overlay {

@@ -290,7 +290,16 @@ async function inspectAndShowCloner() {
 }
 
 // --- 5. GESTIÓN DE LA TABLA ---
-
+/**
+ * Obtiene el valor de una propiedad anidada de un objeto a partir de una ruta de texto.
+ * Ejemplo: getPropertyByPath(obj, 'a.b.c') es equivalente a obj.a.b.c
+ * @param {object} obj - El objeto del que se extraerá el valor.
+ * @param {string} path - La ruta de la propiedad (ej: 'schedule.scheduledTime').
+ * @returns {*} El valor encontrado o null si no existe.
+ */
+function getPropertyByPath(obj, path) {
+    return path.split('.').reduce((o, p) => (o ? o[p] : null), obj);
+}
 /**
  * Gestiona el evento de clic en las cabeceras para cambiar el orden.
  */
@@ -315,15 +324,29 @@ function sortData(dataToSort) {
     const direction = currentSortDirection === 'asc' ? 1 : -1;
     
     dataToSort.sort((a, b) => {
-        let valA = a[currentSortColumn];
-        let valB = b[currentSortColumn];
+        let valA = getPropertyByPath(a, currentSortColumn);
+        let valB = getPropertyByPath(b, currentSortColumn);
 
-        if (valA == null) return 1;
-        if (valB == null) return -1;
+        const aIsNull = valA == null || (typeof valA === 'string' && valA.startsWith('0001-01-01'));
+        const bIsNull = valB == null || (typeof valB === 'string' && valB.startsWith('0001-01-01'));
+
+        if (aIsNull && bIsNull) return 0; // Ambos son nulos, son iguales.
         
-        // Comprueba si la columna es una fecha para ordenarla correctamente
+        // Si 'a' es nulo, lo movemos al final (asc) o al principio (desc).
+        if (aIsNull) return 1 * direction; 
+        
+        // Si 'b' es nulo, lo movemos al final (asc) o al principio (desc).
+        if (bIsNull) return -1 * direction;
+
+        // Si llegamos aquí, ninguno es nulo y podemos comparar.
         if (currentSortColumn.includes('Time')) {
-            return (new Date(valA) - new Date(valB)) * direction;
+            const dateA = new Date(valA);
+            const dateB = new Date(valB);
+
+            if (isNaN(dateA.getTime())) return 1 * direction;
+            if (isNaN(dateB.getTime())) return -1 * direction;
+
+            return (dateA - dateB) * direction;
         }
         
         // Ordenación alfanumérica para el resto de columnas
