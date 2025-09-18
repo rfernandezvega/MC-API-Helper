@@ -291,6 +291,81 @@ async function copyJourney() {
     if (selected.length !== 1) return;
     const journey = selected[0];
 
+    if (journey.eventType === 'EmailAudience') {
+        await copyEmailAudienceJourney(journey);
+    } else if (journey.eventType === 'AutomationAudience') {
+        await copyAutomationAudienceJourney(journey);
+    } else {
+        ui.showCustomAlert(`La clonación para journeys de tipo "${journey.eventType}" aún no está implementada.`);
+    }
+}
+
+async function copyAutomationAudienceJourney(journey) {
+    // PASO 1: Mostrar la modal y obtener la selección del usuario.
+    // 'selection' contendrá { automationId: '...', selectedDE: { id: '...', name: '...', key: '...' } }
+    const selection = await ui.showAutomationDESelectorModal({ getAuthenticatedConfig, mcApiService, logger });
+
+    if (!selection) {
+        logger.logMessage("Proceso de clonación de AutomationAudience cancelado por el usuario.");
+        return;
+    }
+
+    const { automationId, selectedDE } = selection;
+
+    // Pedir confirmación final al usuario.
+    if (!await ui.showCustomConfirm(`Se creará una copia de "${journey.name}" usando el automatismo seleccionado y la DE "${selectedDE.name}". ¿Continuar?`)) {
+        return;
+    }
+
+    ui.blockUI("Clonando Journey de Automatismo...");
+    logger.startLogBuffering();
+
+    try {
+        const apiConfig = await getAuthenticatedConfig();
+        mcApiService.setLogger(logger);
+
+        logger.logMessage(`--- INICIO CLONACIÓN DE JOURNEY TIPO AUTOMATIONAUDIENCE ---`);
+        logger.logMessage(`Journey Original: "${journey.name}" (ID: ${journey.id})`);
+        logger.logMessage(`Automatismo Fuente Seleccionado: ${automationId}`);
+        logger.logMessage(`DE de Entrada Seleccionada: "${selectedDE.name}" (ID de DE: ${selectedDE.id})`);
+        
+        // PASO 2: Obtener los detalles completos del Journey y Event Definition originales.
+        logger.logMessage(`PASO 2/4: Obteniendo definición original del Journey...`);
+        const originalJourney = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
+        const eventDefId = originalJourney.triggers?.[0]?.metaData?.eventDefinitionId;
+        if (!eventDefId) throw new Error("No se pudo encontrar el Event Definition ID del Journey original.");
+
+        logger.logMessage(`PASO 3/4: Obteniendo Event Definition original (ID: ${eventDefId})...`);
+        const originalEventDef = await mcApiService.getEventDefinitionById(eventDefId, apiConfig);
+        
+        // PASO 4: Crear el nuevo Event Definition de tipo AutomationAudience.
+        // Usamos directamente los IDs de la selección de la modal.
+        logger.logMessage(`PASO 4/4: Creando nuevo Event Definition de tipo AutomationAudience...`);
+        
+        // Creamos un objeto 'deDetails' simple con el ObjectID que necesita la API.
+        const deDetailsForEventDef = { objectID: selectedDE.id };
+        const newEventDef = await mcApiService.createAutomationAudienceEventDefinition(originalEventDef, automationId, deDetailsForEventDef, apiConfig);
+        logger.logMessage(`-> Nuevo Event Definition creado con Key: ${newEventDef.eventDefinitionKey}`);
+
+        // PASO 5: Preparar y crear la copia final del Journey (esta parte es reutilizable).
+        logger.logMessage(`PASO 5/5: Creando la copia final del Journey...`);
+        const copyPayload = prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef);
+        const newJourney = await mcApiService.createJourney(copyPayload, apiConfig);
+        logger.logMessage(`-> ¡Journey "${newJourney.name}" creado con éxito!`);
+
+        ui.showCustomAlert(`¡Éxito! Se ha creado la copia "${newJourney.name}".`);
+        //await refreshData();
+
+    } catch (error) {
+        logger.logMessage(`ERROR en la copia del AutomationAudience Journey: ${error.message}`);
+        ui.showCustomAlert(`Error en la copia: ${error.message}`);
+    } finally {
+        ui.unblockUI();
+        logger.endLogBuffering();
+    }
+}
+
+async function copyEmailAudienceJourney(journey) {
     if (!await ui.showCustomConfirm(`Se creará una copia completa de "${journey.name}", incluyendo su Data Extension de entrada. ¿Continuar?`)) return;
 
     ui.blockUI("Copiando Journey...");
@@ -299,6 +374,7 @@ async function copyJourney() {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
 
+        // La lógica que ya tenías para EmailAudience se mantiene aquí
         logger.logMessage(`PASO 1/6: Obteniendo definición de "${journey.name}"...`);
         const originalJourney = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
         const eventDefId = originalJourney.triggers?.[0]?.metaData?.eventDefinitionId;
@@ -316,7 +392,7 @@ async function copyJourney() {
         logger.logMessage(`-> Nueva DE creada con Key: ${clonedDeInfo.customerKey}`);
 
         logger.logMessage(`PASO 5/6: Creando nuevo Event Definition...`);
-        const newEventDef = await mcApiService.createClonedEventDefinition(originalEventDef, clonedDeInfo, apiConfig);
+        const newEventDef = await mcApiService.createEmailAudienceEventDefinition(originalEventDef, clonedDeInfo, apiConfig);
         logger.logMessage(`-> Nuevo Event Definition creado con Key: ${newEventDef.eventDefinitionKey}`);
 
         logger.logMessage(`PASO 6/6: Creando la copia final del Journey...`);
@@ -465,7 +541,10 @@ function updateButtonsState() {
     const count = selected.length;
     elements.getCommunicationsBtn.disabled = count === 0;
     elements.drawJourneyBtn.disabled = !(count === 1 && selected[0].hasCommunications);
-    elements.copyJourneyBtn.disabled = !(count === 1 && ['EmailAudience'].includes(selected[0].eventType));
+
+    const clonableTypes = ['EmailAudience', 'AutomationAudience'];
+    elements.copyJourneyBtn.disabled = !(count === 1 && clonableTypes.includes(selected[0].eventType));
+
     elements.stopJourneyBtn.disabled = !(count > 0 && selected.every(j => j.status === 'Published'));
     elements.deleteJourneyBtn.disabled = !(count > 0 && selected.every(j => j.definitionType === 'Quicksend'));
 }

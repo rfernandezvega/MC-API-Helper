@@ -331,7 +331,7 @@ tr.selected { background-color: #c5dce6 !important; }
 .sortable-header.sort-desc::after { border-top-color: #fff; opacity: 1; }
 td a { color: #005A9C; text-decoration: none; font-weight: bold; }
 td a:hover { color: #003366; text-decoration: underline; }
-.editable-row-table tbody tr, #automations-table tbody tr, #journeys-table tbody tr { cursor: pointer; }
+.editable-row-table tbody tr, #automations-table tbody tr, #journeys-table tbody tr, .folder-results-table tbody tr { cursor: pointer; }
 .editable-row-table tbody tr { position: relative; }
 .delete-row-btn {
   position: absolute; right: -35px; top: 50%; transform: translateY(-50%);
@@ -392,10 +392,39 @@ td a:hover { color: #003366; text-decoration: underline; }
 .modal-content {
   background-color: #fefefe; padding: 20px; border-radius: 10px;
   width: 80%; max-width: 500px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  position: relative;
+}
+
+.modal-content.modal-lg {
+    max-width: 800px;
 }
 .modal-content h3 { margin-top: 0; color: #558ac7; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; }
+/* El overlay del loader que vivirá dentro de la modal */
+.modal-loader-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  border-radius: 10px;
+}
 
+.modal-loader-overlay .loader-spinner {
+    width: 50px;
+    height: 50px;
+    border-width: 6px;
+}
+
+.modal-loader-overlay .loader-text {
+    font-size: 1.1em;
+}
 /* --- 3.7. Filtros y Paginación --- */
 .header-filters {
     display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;

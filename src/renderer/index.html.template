@@ -200,6 +200,56 @@
         </div>
     </div>
 </div>
+
+<!-- ========================================================== -->
+<!-- MODAL PARA SELECCIÓN DE AUTOMATISMO Y DATA EXTENSION     -->
+<!-- ========================================================== -->
+<div id="automation-de-selector-modal" class="modal-overlay">
+    <div class="modal-content modal-lg">
+        <!-- Contenido dinámico del modal -->
+        <div id="automation-selection-step">
+            <h3>Paso 1: Seleccionar Automatismo de Origen</h3>
+            <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+                Busca por el <strong>nombre exacto o parcial</strong> del automatismo que quieres usar como base para la entrada del Journey.
+            </p>
+            <div class="config-block" style="margin-bottom: 15px; padding: 15px;">
+                <div class="form-group">
+                    <label for="automationSearchInput">Buscar por nombre de automatismo</label>
+                    <div class="folder-input-group">
+                        <input type="text" id="automationSearchInput" placeholder="Introduce el nombre exacto">
+                        <button id="automationSearchBtn" class="action-button">Buscar</button>
+                    </div>
+                </div>
+            </div>
+            <div class="config-block" style="flex-grow: 1;">
+                <h4>Resultados de Búsqueda</h4>
+                <div id="automation-selector-results-container" class="table-container" style="max-height: 300px;">
+                    <p>Realiza una búsqueda para ver los resultados.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="de-selection-step" class="hidden">
+            <h3>Paso 2: Seleccionar Data Extension de Entrada</h3>
+            <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+                El automatismo seleccionado usa las siguientes Data Extensions como destino en sus queries. Selecciona cuál de ellas actuará como la <strong>fuente de datos principal</strong> para el nuevo Journey.
+            </p>
+            <div class="config-block" style="flex-grow: 1;">
+                <h4>Data Extensions de Destino Encontradas</h4>
+                <div id="de-selector-results-container" class="table-container" style="max-height: 300px;">
+                    <p>Cargando...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Botones de acción del modal -->
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button id="automation-de-selector-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="automation-de-selector-continue-btn" class="action-button" disabled>Continuar →</button>
+            <button id="automation-de-selector-clone-btn" class="action-button activate-btn hidden" disabled>Clonar</button>
+        </div>
+    </div>
+</div>
  
 <script type="module" src="app.js"></script>
 </body>

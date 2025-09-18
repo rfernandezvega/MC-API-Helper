@@ -230,6 +230,21 @@ export function init() {
     elements.folderSelectorTbody = document.getElementById('folder-selector-tbody');
     elements.folderSelectorCancelBtn = document.getElementById('folder-selector-cancel-btn');
     elements.folderSelectorOkBtn = document.getElementById('folder-selector-ok-btn');
+
+    // --- AÑADIDO: 18. MODAL DE SELECCIÓN DE AUTOMATISMO Y DE ---
+    elements.automationDeSelectorModal = document.getElementById('automation-de-selector-modal');
+    // Step 1
+    elements.automationSelectionStep = document.getElementById('automation-selection-step');
+    elements.automationSearchInput = document.getElementById('automationSearchInput');
+    elements.automationSearchBtn = document.getElementById('automationSearchBtn');
+    elements.automationSelectorResultsContainer = document.getElementById('automation-selector-results-container');
+    // Step 2
+    elements.deSelectionStep = document.getElementById('de-selection-step');
+    elements.deSelectorResultsContainer = document.getElementById('de-selector-results-container');
+    // Actions
+    elements.automationDeSelectorCancelBtn = document.getElementById('automation-de-selector-cancel-btn');
+    elements.automationDeSelectorContinueBtn = document.getElementById('automation-de-selector-continue-btn');
+    elements.automationDeSelectorCloneBtn = document.getElementById('automation-de-selector-clone-btn');
 }
 
 export default elements;

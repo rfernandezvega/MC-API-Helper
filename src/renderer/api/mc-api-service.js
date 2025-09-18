@@ -109,20 +109,6 @@ export async function pauseAutomation(automationId, apiConfig) {
     return executeRestRequest(url, options);
 }
 
-/**
- * Busca un automatismo por su nombre exacto (API REST v1).
- * @param {string} automationName - El nombre del automatismo a buscar.
- * @param {object} apiConfig - El objeto de configuración de API autenticado.
- * @returns {Promise<object|null>} Una promesa que resuelve con el primer automatismo encontrado o null.
- */
-export async function findAutomationByName(automationName, apiConfig) {
-    const encodedName = encodeURIComponent(automationName);
-    const url = `${apiConfig.restUri}automation/v1/automations?$filter=name%20eq%20'${encodedName}'`;
-    const options = { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } };
-    const data = await executeRestRequest(url, options);
-    // Devuelve el primer item del array, o null si no se encuentra nada.
-    return data.items && data.items.length > 0 ? data.items[0] : null;
-}
 
 /**
  * Recupera los detalles completos de un automatismo, incluyendo sus pasos y actividades (API REST v1).
@@ -151,6 +137,20 @@ export async function createAutomation(automationPayload, apiConfig) {
         body: JSON.stringify(automationPayload)
     };
     return executeRestRequest(url, options);
+}
+
+/**
+ * Busca un automatismo por su nombre exacto (API REST v1).
+ * @param {string} automationName - El nombre del automatismo a buscar.
+ * @param {object} apiConfig - El objeto de configuración de API autenticado.
+ * @returns {Promise<Array>} Una promesa que resuelve con la lista de automatismos encontrados (puede estar vacía).
+ */
+export async function findAutomationByName(automationName, apiConfig) {
+    const encodedName = encodeURIComponent(automationName);
+    const url = `${apiConfig.restUri}automation/v1/automations?$filter=name%20eq%20'${encodedName}'`;
+    const options = { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } };
+    const data = await executeRestRequest(url, options);
+    return data.items || [];
 }
 
 // ==========================================================
@@ -573,7 +573,7 @@ export async function createJourney(journeyPayload, apiConfig) {
  * @param {object} apiConfig - El objeto de configuración de la API.
  * @returns {Promise<object>} - Una promesa que resuelve con el nuevo Event Definition creado.
  */
-export async function createClonedEventDefinition(originalEventDef, clonedDeInfo, apiConfig) {
+export async function createEmailAudienceEventDefinition(originalEventDef, clonedDeInfo, apiConfig) {
     const payload = {
         type: 'EmailAudience',
         name: `${originalEventDef.name}_Copy`,
@@ -586,6 +586,50 @@ export async function createClonedEventDefinition(originalEventDef, clonedDeInfo
         category: originalEventDef.category,
         schema: originalEventDef.schema 
     };
+    const url = `${apiConfig.restUri}interaction/v1/eventDefinitions/`;
+    const options = {
+        method: 'POST',
+        headers: { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    };
+    return executeRestRequest(url, options);
+}
+
+/**
+ * Crea un nuevo Event Definition de tipo AutomationAudience.
+ * @param {object} originalEventDef - El objeto del Event Definition original para copiar metadatos.
+ * @param {string} automationId - El ID del automatismo de origen seleccionado.
+ * @param {object} deDetails - Objeto con los detalles de la DE de entrada ({ objectID, customerKey, name }).
+ * @param {object} apiConfig - El objeto de configuración de la API.
+ * @returns {Promise<object>} - Una promesa que resuelve con el nuevo Event Definition creado.
+ */
+export async function createAutomationAudienceEventDefinition(originalEventDef, automationId, deDetails, apiConfig) {
+    const newEventDefKey = crypto.randomUUID();
+
+    const payload = {
+        type: "AutomationAudience",
+        name: `${originalEventDef.name}_Copy`,
+        description: originalEventDef.description || "",
+        mode: originalEventDef.mode || "Production",
+        eventDefinitionKey: newEventDefKey,
+        dataExtensionId: deDetails.objectID, // El ObjectID de la DE seleccionada
+        iconUrl: originalEventDef.iconUrl || "/images/icon-data-extension.svg",
+        isVisibleInPicker: originalEventDef.isVisibleInPicker,
+        category: originalEventDef.category || "Audience",
+        // Copiamos la programación del Event Definition original
+        schedule: originalEventDef.schedule,
+        // Construimos los argumentos con los nuevos IDs
+        arguments: {
+            serializedObjectType: 9,
+            useHighWatermark: originalEventDef.arguments?.useHighWatermark || false,
+            resetHighWatermark: originalEventDef.arguments?.resetHighWatermark || false,
+            automationId: automationId,
+            eventDefinitionKey: newEventDefKey,
+            dataExtensionId: deDetails.objectID,
+            criteria: ""
+        }
+    };
+
     const url = `${apiConfig.restUri}interaction/v1/eventDefinitions/`;
     const options = {
         method: 'POST',

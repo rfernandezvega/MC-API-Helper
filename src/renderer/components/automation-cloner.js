@@ -298,14 +298,14 @@ function render() {
             const isQuery = activity.objectTypeId === 300;
             const checkboxHtml = `<input type="checkbox" class="activity-checkbox" ${activity.selected ? 'checked' : ''} ${!activity.isClonable ? 'disabled' : ''}>`;
             
-            // NUEVO: Obtenemos la clave original de la DE si existe para usarla como identificador
+            // Obtenemos la clave original de la DE si existe para usarla como identificador
             const originalDeKey = (isQuery && activity.targetDataExtensions?.length > 0) 
                 ? activity.targetDataExtensions[0].key 
                 : null;
             
             const queryFolderCell = isQuery ? `<td class="folder-cell" data-folder-type="query" title="Clic para cambiar carpeta">${activity.newQueryCategoryPath || 'Raíz'}</td>` : '<td>-</td>';
             
-            // MODIFICADO: Añadimos el nuevo data-attribute a la celda del nombre de la DE
+            // Añadimos el nuevo data-attribute a la celda del nombre de la DE
             const deNameCell = isQuery 
                 ? `<td contenteditable="true" data-type="de-name" data-original-de-key="${originalDeKey}" title="${activity.newDeName}">${activity.newDeName}</td>`
                 : `<td>${activity.newDeName}</td>`;
