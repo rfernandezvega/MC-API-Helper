@@ -98,80 +98,93 @@ export function showSection(sectionId, navigationHistory, addToHistory = true) {
  */
 export function showFolderSelectorModal(contentType, dependencies) {
     const { getAuthenticatedConfig, mcApiService, logger } = dependencies;
+    const modal = elements.folderSelectorModal;
+    
+    // Estado interno de la modal
+    let selectedFolder = null;
+
+    // Resetear UI
+    elements.folderSelectorTitle.textContent = `Seleccionar Carpeta para: ${contentType}`;
+    elements.folderSearchInput.value = '';
+    elements.folderSelectorTable.classList.add('hidden');
+    elements.folderSelectorTbody.innerHTML = '';
+    elements.folderSelectorResultsContainer.querySelector('p').style.display = 'block';
+    elements.folderSelectorOkBtn.disabled = true;
+
+    modal.style.display = 'flex';
 
     return new Promise(resolve => {
-        let selectedFolderData = null; // Variable para guardar la selección temporal
-
-        // --- Configuración Inicial del Modal ---
-        elements.folderSelectorTitle.textContent = `Seleccionar Carpeta para: ${contentType}`;
-        elements.folderSearchInput.value = '';
-        elements.folderSelectorTable.classList.add('hidden');
-        elements.folderSelectorResultsContainer.firstElementChild.textContent = 'Realiza una búsqueda para ver los resultados.';
-        elements.folderSelectorTbody.innerHTML = '';
-        elements.folderSelectorOkBtn.disabled = true;
-        elements.folderSelectorModal.style.display = 'flex';
-        elements.folderSearchInput.focus();
-
-        // --- Definición de Handlers ---
-        const handleSearch = async () => {
+        // --- Lógica de la Búsqueda ---
+        const searchFolders = async () => {
             const searchTerm = elements.folderSearchInput.value.trim();
             if (!searchTerm) return;
-            blockUI("Buscando carpetas...");
+            
+            // --- Mostrar el spinner ---
+            blockModalContent(true, 'Buscando carpetas...');
+
             try {
                 const apiConfig = await getAuthenticatedConfig();
-                mcApiService.setLogger(logger);
                 const folders = await mcApiService.findDataFolders(searchTerm, contentType, apiConfig);
-                
-                elements.folderSelectorTbody.innerHTML = '';
-                if (folders.length === 0) {
-                    elements.folderSelectorTable.classList.add('hidden');
-                    elements.folderSelectorResultsContainer.firstElementChild.textContent = 'No se encontraron carpetas.';
-                } else {
-                    folders.forEach(folder => {
-                        const row = elements.folderSelectorTbody.insertRow();
-                        row.dataset.folderId = folder.id;
-                        row.dataset.folderPath = folder.fullPath;
-                        row.innerHTML = `<td>${folder.fullPath}</td>`;
-                        row.style.cursor = 'pointer';
-                    });
-                    elements.folderSelectorTable.classList.remove('hidden');
-                    elements.folderSelectorResultsContainer.firstElementChild.textContent = '';
-                }
-            } catch (error) { showCustomAlert(error.message); } finally { unblockUI(); }
+                renderResults(folders);
+            } catch (error) {
+                logger.logError(`Error buscando carpetas: ${error.message}`);
+                elements.folderSelectorResultsContainer.innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
+            } finally {
+                // --- Ocultar el spinner ---
+                blockModalContent(false);
+            }
         };
 
-        const handleSelect = (e) => {
+        const renderResults = (folders) => {
+            const container = elements.folderSelectorResultsContainer;
+            const table = elements.folderSelectorTable;
+            const tbody = elements.folderSelectorTbody;
+            
+            tbody.innerHTML = '';
+            container.querySelector('p').style.display = 'none';
+
+            if (folders.length === 0) {
+                tbody.innerHTML = '<tr><td>No se encontraron carpetas con ese nombre.</td></tr>';
+            } else {
+                folders.forEach(folder => {
+                    const row = document.createElement('tr');
+                    row.dataset.folderInfo = JSON.stringify({ id: folder.id, fullPath: folder.fullPath });
+                    row.innerHTML = `<td>${folder.fullPath}</td>`;
+                    tbody.appendChild(row);
+                });
+            }
+            table.classList.remove('hidden');
+        };
+
+        const onRowClick = (e) => {
             const row = e.target.closest('tr');
-            if (!row || !row.dataset.folderId) return;
-
-            const previouslySelected = elements.folderSelectorTbody.querySelector('tr.selected');
-            if (previouslySelected) previouslySelected.classList.remove('selected');
-
+            if (!row || !row.dataset.folderInfo) return;
+            
+            elements.folderSelectorTbody.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
             row.classList.add('selected');
-            selectedFolderData = { id: row.dataset.folderId, fullPath: row.dataset.folderPath };
+            selectedFolder = JSON.parse(row.dataset.folderInfo);
             elements.folderSelectorOkBtn.disabled = false;
         };
 
-        const cleanupAndClose = (resolutionValue) => {
-            elements.folderSearchBtn.removeEventListener('click', handleSearch);
-            elements.folderSearchInput.removeEventListener('keydown', handleEnterKey);
-            elements.folderSelectorTbody.removeEventListener('click', handleSelect);
-            elements.folderSelectorCancelBtn.removeEventListener('click', handleCancel);
-            elements.folderSelectorOkBtn.removeEventListener('click', handleConfirm);
-            elements.folderSelectorModal.style.display = 'none';
-            resolve(resolutionValue);
+        // --- Gestión de Cierre ---
+        const closeModal = (result) => {
+            modal.style.display = 'none';
+            // Limpiar listeners para evitar duplicados en futuras aperturas
+            elements.folderSearchBtn.removeEventListener('click', searchFolders);
+            elements.folderSelectorTbody.removeEventListener('click', onRowClick);
+            elements.folderSelectorOkBtn.removeEventListener('click', onOkClick);
+            elements.folderSelectorCancelBtn.removeEventListener('click', onCancelClick);
+            resolve(result);
         };
         
-        const handleEnterKey = (e) => { if (e.key === 'Enter') { e.preventDefault(); handleSearch(); } };
-        const handleCancel = () => cleanupAndClose(null);
-        const handleConfirm = () => { if (selectedFolderData) cleanupAndClose(selectedFolderData); };
-
-        // --- Asignación de Listeners ---
-        elements.folderSearchBtn.addEventListener('click', handleSearch);
-        elements.folderSearchInput.addEventListener('keydown', handleEnterKey);
-        elements.folderSelectorTbody.addEventListener('click', handleSelect);
-        elements.folderSelectorCancelBtn.addEventListener('click', handleCancel);
-        elements.folderSelectorOkBtn.addEventListener('click', handleConfirm);
+        const onOkClick = () => closeModal(selectedFolder);
+        const onCancelClick = () => closeModal(null);
+        
+        // Asignar listeners
+        elements.folderSearchBtn.addEventListener('click', searchFolders);
+        elements.folderSelectorTbody.addEventListener('click', onRowClick);
+        elements.folderSelectorOkBtn.addEventListener('click', onOkClick);
+        elements.folderSelectorCancelBtn.addEventListener('click', onCancelClick);
     });
 }
 

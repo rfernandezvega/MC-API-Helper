@@ -195,14 +195,35 @@ async function selectFolderFor(target) {
  */
 async function handleActivityTableClick(e) {
     const target = e.target;
-    const cell = target.closest('td');
+
+    // --- Lógica para el checkbox "Seleccionar Todo" de la cabecera ---
+    if (target.matches('.select-all-step')) {
+        const table = target.closest('table');
+        // Usamos el data-attribute que añadimos a la tabla en render()
+        const stepIndex = parseInt(table.dataset.stepIndex, 10);
+        const isChecked = target.checked;
+
+        if (!isNaN(stepIndex) && currentAutomationDetails.steps[stepIndex]) {
+            currentAutomationDetails.steps[stepIndex].activities.forEach(act => {
+                if (act.isClonable) {
+                    act.selected = isChecked;
+                }
+            });
+            render(); // Re-renderizar para mostrar los cambios
+        }
+        return; // Salimos de la función, ya hemos gestionado el evento
+    }
+
+    // --- Lógica para clics en el cuerpo de la tabla (filas individuales) ---
     const row = target.closest('tr');
-    if (!row) return;
+    if (!row || row.dataset.activityIndex === undefined) return; // Si no es una fila de actividad, salimos
 
     const stepIndex = parseInt(row.dataset.stepIndex, 10);
     const activityIndex = parseInt(row.dataset.activityIndex, 10);
     const activity = currentAutomationDetails.steps[stepIndex].activities[activityIndex];
+    const cell = target.closest('td');
 
+    // Clic en una celda de carpeta
     if (cell && cell.classList.contains('folder-cell')) {
         const folderType = cell.dataset.folderType;
         const contentType = (folderType === 'query') ? 'queryactivity' : 'dataextension';
@@ -218,15 +239,10 @@ async function handleActivityTableClick(e) {
             }
             render();
         }
-    } else if (target.matches('.activity-checkbox, .select-all-step')) {
-        if (target.matches('.select-all-step')) {
-            const isChecked = target.checked;
-            currentAutomationDetails.steps[stepIndex].activities.forEach(act => {
-                if (act.isClonable) act.selected = isChecked;
-            });
-        } else {
-            activity.selected = target.checked;
-        }
+    } 
+    // Clic en un checkbox de una fila individual
+    else if (target.matches('.activity-checkbox')) {
+        activity.selected = target.checked;
         render();
     }
 }
@@ -329,7 +345,7 @@ function render() {
         
         const activitiesTableHtml = `
             <div class="table-container">
-                <table>
+                <table data-step-index="${stepIndex}"> 
                     <thead>
                         <tr>
                             <th><input type="checkbox" class="select-all-step" title="Seleccionar todo" ${allClonableSelected ? 'checked' : ''} ${clonableActivities.length === 0 ? 'disabled' : ''}></th>
