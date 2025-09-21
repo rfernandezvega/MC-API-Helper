@@ -354,7 +354,7 @@ async function copyAutomationAudienceJourney(journey) {
         logger.logMessage(`-> ¡Journey "${newJourney.name}" creado con éxito!`);
 
         ui.showCustomAlert(`¡Éxito! Se ha creado la copia "${newJourney.name}".`);
-        //await refreshData();
+        await refreshData();
 
     } catch (error) {
         logger.logMessage(`ERROR en la copia del AutomationAudience Journey: ${error.message}`);

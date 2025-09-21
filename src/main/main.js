@@ -99,10 +99,7 @@ app.whenReady().then(() => {
         });
         notification.show();
         notification.on('click', () => {
-            // Asegurarse de cerrar todas las ventanas antes
-            setImmediate(() => {
-                autoUpdater.quitAndInstall(false, true);
-            });
+            autoUpdater.quitAndInstall(false, true);
         });
     });
     autoUpdater.checkForUpdates();
