@@ -195,10 +195,21 @@ async function fetchData() {
             mcApiService.fetchAllJourneys(apiConfig)
         ]);
 
-        eventDefinitionsMap = events;
-        //Se comenta para reducir tiempo de carga
-        //journeyFolderMap = await mcApiService.buildJourneyFolderMap(journeys, apiConfig);
-        fullJourneyList = enrichJourneys(journeys);
+        // Construimos el mapa para la búsqueda principal por nombre
+        eventDefinitionsMap = {};
+        if (Array.isArray(events)) {
+            for (const item of events) {
+                if (item.dataExtensionId && item.name) {
+                    eventDefinitionsMap[item.name] = { type: item.type, dataExtensionName: item.dataExtensionName };
+                }
+            }
+        }
+        
+        // Se comenta para reducir tiempo de carga
+        // journeyFolderMap = await mcApiService.buildJourneyFolderMap(journeys, apiConfig);
+        
+        // Pasamos la lista completa de journeys y la lista completa de eventos para el enriquecimiento
+        fullJourneyList = enrichJourneys(journeys, events);
 
         populateJourneyFilters(fullJourneyList);
     } catch (error) {
@@ -213,16 +224,56 @@ async function fetchData() {
 /**
  * Combina la lista de journeys con datos de carpetas y definiciones de eventos.
  * @param {Array} journeys - La lista de journeys cruda de la API.
+ * @param {Array} allEventDefs - La lista completa de Event Definitions para la búsqueda de fallback.
  * @returns {Array} La lista de journeys enriquecida.
  */
-function enrichJourneys(journeys) {
-    return journeys.map(journey => ({
-        ...journey,
-        eventType: eventDefinitionsMap[journey.name]?.type || 'No asociado',
-        dataExtensionName: eventDefinitionsMap[journey.name]?.dataExtensionName || 'No asociado',
-        /*location: journeyFolderMap[journey.categoryId] || 'Carpeta raíz',*/
-        emails: [], sms: [], pushes: [], whatsapps: [],activities: null, hasCommunications: false
-    }));
+function enrichJourneys(journeys, allEventDefs = []) {
+    return journeys.map(journey => {
+        // --- 1. Intento de Coincidencia Primaria por Nombre ---
+        let eventDef = eventDefinitionsMap[journey.name];
+
+        // --- 2. Lógica de Fallback por eventDefinitionKey ---
+        if (!eventDef) {
+            let journeyGuid = null;
+
+            // Extraer el GUID desde la configuración 'defaults.email' del journey
+            if (journey.defaults && journey.defaults.email && journey.defaults.email.length > 0) {
+                const emailString = journey.defaults.email[0];
+                const guidRegex = /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i;
+                const matchResult = emailString.match(guidRegex);
+                if (matchResult) {
+                    journeyGuid = matchResult[0];
+                }
+            }
+
+            // Si encontramos un GUID, lo buscamos en todas las Event Definitions
+            if (journeyGuid) {
+                for (const currentEventDef of allEventDefs) {
+                    if (currentEventDef.eventDefinitionKey) {
+                        const firstHyphenIndex = currentEventDef.eventDefinitionKey.indexOf('-');
+                        if (firstHyphenIndex > -1) {
+                            const eventDefGuid = currentEventDef.eventDefinitionKey.substring(firstHyphenIndex + 1);
+                            
+                            // Comparamos los GUIDs ignorando mayúsculas/minúsculas
+                            if (eventDefGuid.toLowerCase() === journeyGuid.toLowerCase()) {
+                                eventDef = currentEventDef; // ¡Coincidencia encontrada!
+                                break; // Salimos del bucle, ya no es necesario seguir buscando
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // --- 3. Enriquecimiento Final del Objeto Journey ---
+        return {
+            ...journey,
+            eventType: eventDef?.type || 'No asociado',
+            dataExtensionName: eventDef?.dataExtensionName || 'No asociado',
+            /*location: journeyFolderMap[journey.categoryId] || 'Carpeta raíz',*/
+            emails: [], sms: [], pushes: [], whatsapps: [], activities: null, hasCommunications: false
+        };
+    });
 }
 
 /**
