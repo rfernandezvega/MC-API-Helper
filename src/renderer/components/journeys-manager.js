@@ -190,26 +190,36 @@ async function fetchData() {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
 
-        const [events, journeys] = await Promise.all([
+        // fetchAllEventDefinitions ahora devuelve un array completo, como debe ser.
+        const [allEventDefs, journeysResponse] = await Promise.all([
             mcApiService.fetchAllEventDefinitions(apiConfig),
             mcApiService.fetchAllJourneys(apiConfig)
         ]);
 
-        // Construimos el mapa para la búsqueda principal por nombre
+        // Validamos que el servicio nos dio un array.
+        if (!Array.isArray(allEventDefs)) {
+            throw new Error("La respuesta de Event Definitions no es un array. Revisa la función fetchAllEventDefinitions.");
+        }
+        
+        // Extraemos los journeys del objeto de respuesta si es necesario
+        const allJourneys = (journeysResponse && Array.isArray(journeysResponse.items)) ? journeysResponse.items : journeysResponse;
+        if (!Array.isArray(allJourneys)) {
+             throw new Error("El formato de la respuesta de la API de Journeys no es un array.");
+        }
+
+        // Creamos el mapa para la búsqueda rápida por nombre (búsqueda primaria)
         eventDefinitionsMap = {};
-        if (Array.isArray(events)) {
-            for (const item of events) {
-                if (item.dataExtensionId && item.name) {
-                    eventDefinitionsMap[item.name] = { type: item.type, dataExtensionName: item.dataExtensionName };
-                }
+        for (const item of allEventDefs) {
+            if (item.name) {
+                eventDefinitionsMap[item.name] = item;
             }
         }
         
         // Se comenta para reducir tiempo de carga
         // journeyFolderMap = await mcApiService.buildJourneyFolderMap(journeys, apiConfig);
         
-        // Pasamos la lista completa de journeys y la lista completa de eventos para el enriquecimiento
-        fullJourneyList = enrichJourneys(journeys, events);
+        // Pasamos la lista de journeys y el array completo de eventos para el enriquecimiento.
+        fullJourneyList = enrichJourneys(allJourneys, allEventDefs);
 
         populateJourneyFilters(fullJourneyList);
     } catch (error) {
@@ -229,10 +239,10 @@ async function fetchData() {
  */
 function enrichJourneys(journeys, allEventDefs = []) {
     return journeys.map(journey => {
-        // --- 1. Intento de Coincidencia Primaria por Nombre ---
+        // --- 1. Intento de Coincidencia Primaria por Nombre (rápida) ---
         let eventDef = eventDefinitionsMap[journey.name];
 
-        // --- 2. Lógica de Fallback por eventDefinitionKey ---
+        // --- 2. Lógica de Fallback por GUID (más fiable) ---
         if (!eventDef) {
             let journeyGuid = null;
 

@@ -448,7 +448,7 @@ export async function fetchAllJourneys(apiConfig) {
  * @returns {Promise<object>} Un mapa que relaciona el nombre del EventDefinition con sus datos.
  */
 export async function fetchAllEventDefinitions(apiConfig) {
-    let eventDefinitions = {};
+    let allItems = []; 
     let page = 1;
     let totalPages = 1; 
 
@@ -458,22 +458,19 @@ export async function fetchAllEventDefinitions(apiConfig) {
         
         const data = await executeRestRequest(url, options);
         
-        const items = data.items || [];
-        
-        items.forEach(item => {
-            if (item.dataExtensionId && item.dataExtensionName) {
-                eventDefinitions[item.name] = { 
-                    type: item.type, 
-                    dataExtensionName: item.dataExtensionName 
-                };
-            }
-        });
+        // Si la página actual tiene items, los añadimos al array general
+        if (data && Array.isArray(data.items)) {
+            allItems = allItems.concat(data.items); 
+        }
 
-        totalPages = data.count ? Math.ceil(data.count / 500) : 1;
+        // Calculamos el total de páginas solo en la primera llamada para ser eficientes
+        if (page === 1 && data && data.count) {
+           totalPages = Math.ceil(data.count / 500);
+        }
         page++;
     } while (page <= totalPages);
     
-    return eventDefinitions;
+    return allItems; 
 }
 
 /**
