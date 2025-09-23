@@ -245,6 +245,33 @@ export function init() {
     elements.automationDeSelectorCancelBtn = document.getElementById('automation-de-selector-cancel-btn');
     elements.automationDeSelectorContinueBtn = document.getElementById('automation-de-selector-continue-btn');
     elements.automationDeSelectorCloneBtn = document.getElementById('automation-de-selector-clone-btn');
+
+    // --- 19. MODAL CLONADOR DE JOURNEYS ---
+    elements.journeyClonerModal = document.getElementById('journey-cloner-modal');
+    elements.journeyClonerTitle = document.getElementById('journey-cloner-title');
+    // Pasos
+    elements.journeyClonerConfirmReuseDE = document.getElementById('journey-cloner-confirm-reuse-de');
+    elements.journeyClonerSearchDE = document.getElementById('journey-cloner-search-de');
+    elements.journeyClonerConfigureNewDE = document.getElementById('journey-cloner-configure-new-de');
+    elements.journeyClonerFinalConfig = document.getElementById('journey-cloner-final-config');
+    // Botones de pasos
+    elements.journeyClonerReuseDEBtn = document.getElementById('journey-cloner-reuse-de-btn');
+    elements.journeyClonerCloneNewDEBtn = document.getElementById('journey-cloner-clone-new-de-btn');
+    // Controles
+    elements.journeyClonerDESearchInput = document.getElementById('journeyClonerDESearchInput');
+    elements.journeyClonerDESearchBtn = document.getElementById('journeyClonerDESearchBtn');
+    elements.journeyClonerDEResultsContainer = document.getElementById('journey-cloner-de-results-container');
+    elements.journeyClonerNewDEName = document.getElementById('journeyClonerNewDEName');
+    elements.journeyClonerNewDEFolder = document.getElementById('journeyClonerNewDEFolder');
+    elements.journeyClonerSelectDEFolderBtn = document.getElementById('journeyClonerSelectDEFolderBtn');
+    elements.journeyClonerFinalStepTitle = document.getElementById('journey-cloner-final-step-title');
+    elements.journeyClonerNewJourneyName = document.getElementById('journeyClonerNewJourneyName');
+    elements.journeyClonerNewJourneyFolder = document.getElementById('journeyClonerNewJourneyFolder');
+    elements.journeyClonerSelectJourneyFolderBtn = document.getElementById('journeyClonerSelectJourneyFolderBtn');
+    // Acciones
+    elements.journeyClonerCancelBtn = document.getElementById('journey-cloner-cancel-btn');
+    elements.journeyClonerContinueBtn = document.getElementById('journey-cloner-continue-btn');
+    elements.journeyClonerCloneBtn = document.getElementById('journey-cloner-clone-btn');
 }
 
 export default elements;

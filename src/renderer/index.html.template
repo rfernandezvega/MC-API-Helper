@@ -216,7 +216,7 @@
                 <div class="form-group">
                     <label for="automationSearchInput">Buscar por nombre de automatismo</label>
                     <div class="folder-input-group">
-                        <input type="text" id="automationSearchInput" placeholder="Introduce el nombre exacto">
+                        <input type="text" id="automationSearchInput" placeholder="Introduce el nombre exacto o parcial">
                         <button id="automationSearchBtn" class="action-button">Buscar</button>
                     </div>
                 </div>
@@ -247,6 +247,89 @@
             <button id="automation-de-selector-cancel-btn" class="action-button delete-btn">Cancelar</button>
             <button id="automation-de-selector-continue-btn" class="action-button" disabled>Continuar →</button>
             <button id="automation-de-selector-clone-btn" class="action-button activate-btn hidden" disabled>Clonar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================== -->
+<!-- MODAL PARA LA CLONACIÓN DE JOURNEYS (MULTI-PASO)          -->
+<!-- ========================================================== -->
+<div id="journey-cloner-modal" class="modal-overlay">
+    <div class="modal-content modal-lg">
+        <!-- Envolvemos todo el contenido en esta clase para que herede los estilos -->
+        <div class="config-section-container"> 
+            <h3 id="journey-cloner-title">Clonar Journey</h3>
+
+            <!-- PASO E-1: Pregunta para EmailAudience -->
+            <div id="journey-cloner-confirm-reuse-de" class="cloner-step hidden">
+                <p class="info-text" style="text-align: left; margin: 20px 0;">¿Quieres clonar la Data Extension de entrada o reutilizar una que ya existe?</p>
+                <div class="modal-actions" style="justify-content: center;">
+                    <button id="journey-cloner-reuse-de-btn" class="action-button">Reutilizar Existente</button>
+                    <button id="journey-cloner-clone-new-de-btn" class="action-button activate-btn">Clonar Nueva</button>
+                </div>
+            </div>
+
+            <!-- PASO E-2a: Buscador de DE para EmailAudience -->
+            <div id="journey-cloner-search-de" class="cloner-step hidden">
+                <h4>Paso 1: Selecciona la Data Extension a reutilizar</h4>
+                 <div class="config-block" style="padding: 15px;">
+                    <div class="form-group">
+                        <label for="journeyClonerDESearchInput">Buscar por nombre de Data Extension</label>
+                        <div class="folder-input-group">
+                            <input type="text" id="journeyClonerDESearchInput" placeholder="Introduce un nombre o parte de él">
+                            <button id="journeyClonerDESearchBtn" class="action-button">Buscar</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="config-block" style="flex-grow: 1;">
+                    <div id="journey-cloner-de-results-container" class="table-container" style="max-height: 250px;">
+                        <p>Realiza una búsqueda para ver los resultados.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PASO E-2b: Configurar nueva DE para EmailAudience -->
+            <div id="journey-cloner-configure-new-de" class="cloner-step hidden">
+                <h4>Paso 1: Configura la nueva Data Extension</h4>
+                 <div class="config-block" style="padding: 15px;">
+                    <div class="form-group">
+                        <label for="journeyClonerNewDEName">Nombre de la nueva Data Extension (Editable)</label>
+                        <input type="text" id="journeyClonerNewDEName">
+                    </div>
+                    <div class="form-group">
+                        <label>Carpeta de Destino para la DE</label>
+                        <div class="folder-input-group">
+                            <input type="text" id="journeyClonerNewDEFolder" disabled>
+                            <button id="journeyClonerSelectDEFolderBtn" class="action-button">Cambiar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PASO FINAL (Común para ambos flujos) -->
+            <div id="journey-cloner-final-config" class="cloner-step hidden">
+                <h4 id="journey-cloner-final-step-title">Paso 2: Configuración Final del Journey</h4>
+                 <div class="config-block" style="padding: 15px;">
+                    <div class="form-group">
+                        <label for="journeyClonerNewJourneyName">Nombre del nuevo Journey (Editable)</label>
+                        <input type="text" id="journeyClonerNewJourneyName">
+                    </div>
+                    <div class="form-group">
+                        <label>Carpeta de Destino para el Journey</label>
+                        <div class="folder-input-group">
+                            <input type="text" id="journeyClonerNewJourneyFolder" disabled>
+                            <button id="journeyClonerSelectJourneyFolderBtn" class="action-button">Cambiar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Los botones de acción van fuera del contenedor de estilos -->
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button id="journey-cloner-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="journey-cloner-continue-btn" class="action-button" disabled>Continuar →</button>
+            <button id="journey-cloner-clone-btn" class="action-button activate-btn hidden" disabled>Clonar</button>
         </div>
     </div>
 </div>
