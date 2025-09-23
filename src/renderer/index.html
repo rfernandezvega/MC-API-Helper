@@ -668,7 +668,7 @@
                       <li><b>Exportar:</b> Genera un csv con la tabla de Journeys en base a los filtros indicados.</li>
                       <li><b>Comunicaciones:</b> Recupera todas las comunicaciones de los Journeys seleccionados. Lo que se muestra es el nombre de la actividad en el Journey por lo que si se ha cambiado, no coincidirá con el contenido.</li>							
                       <li><b>Dibujar:</b> Permite crear una versión de texto del Journey de cara a la documentación. Es necesario haber recuperado las comunicaciones previamente, lo cual marca el Journey como Descargado</li>		
-                      <li><b>Copiar:</b> Permite clonar un Journey, con toda su estructura y clona la Data Extension de entrada en la misma carpeta donde se encontrará la anterior. Por ahora solo para los de tipo <b>"EmailAudience" y AutomationAudience</b>.</li>			
+                      <li><b>Copiar:</b> Permite clonar un Journey, con toda su estructura. Si es AutomationAudience, será necesario haber clonado el automatismo previamente para seleccionarlo</li>			
                       <li><b>Parar:</b> Permite parar varios Journeys a la vez</li>		
                       <li><b>Borrar:</b> Permite borrar varios Journeys a la vez, si son de Subtipo Quicksend</li>							
                     </ul>
@@ -1168,9 +1168,9 @@
                 <option value="">-- Selecciona un tipo --</option>
                 <option value="dataextension">Data Extensions</option>
                 <option value="queryactivity">Query Activities</option>
-                <option value="journey" disabled>Journeys</option>
+                <option value="journey">Journeys</option>
                 <option value="automations">Automations</option>
-                <option value="asset" disabled>Content Builder</option>
+                <option value="asset">Content Builder</option>
                 <option value="ssjsactivity">Scripts</option>
             </select>
         </div>
@@ -1516,7 +1516,7 @@
                 <div class="form-group">
                     <label for="automationSearchInput">Buscar por nombre de automatismo</label>
                     <div class="folder-input-group">
-                        <input type="text" id="automationSearchInput" placeholder="Introduce el nombre exacto">
+                        <input type="text" id="automationSearchInput" placeholder="Introduce el nombre exacto o parcial">
                         <button id="automationSearchBtn" class="action-button">Buscar</button>
                     </div>
                 </div>
@@ -1562,7 +1562,7 @@
 
             <!-- PASO E-1: Pregunta para EmailAudience -->
             <div id="journey-cloner-confirm-reuse-de" class="cloner-step hidden">
-                <p class="info-text" style="text-align: left; margin: 20px 0;">¿Deseas clonar la Data Extension de entrada o reutilizar una que ya existe?</p>
+                <p class="info-text" style="text-align: left; margin: 20px 0;">¿Quieres clonar la Data Extension de entrada o reutilizar una que ya existe?</p>
                 <div class="modal-actions" style="justify-content: center;">
                     <button id="journey-cloner-reuse-de-btn" class="action-button">Reutilizar Existente</button>
                     <button id="journey-cloner-clone-new-de-btn" class="action-button activate-btn">Clonar Nueva</button>

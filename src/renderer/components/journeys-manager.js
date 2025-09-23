@@ -410,12 +410,12 @@ async function copyAutomationAudienceJourney(journey) {
 
         // PASO 5: Usamos los datos del modal para crear el Journey final.
         logger.logMessage(`PASO 5/5: Creando la copia final del Journey...`);
-        const copyPayload = prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef, finalConfig.newJourneyName, finalConfig.newJourneyCategoryId);
+        const copyPayload = prepareJourneyForCopy("AutomationAudience",originalJourney, originalEventDef, newEventDef, finalConfig.newJourneyName, finalConfig.newJourneyCategoryId);
         const newJourney = await mcApiService.createJourney(copyPayload, apiConfig);
         logger.logMessage(`-> ¡Journey "${newJourney.name}" creado con éxito!`);
 
         ui.showCustomAlert(`¡Éxito! Se ha creado la copia "${newJourney.name}".`);
-        await refreshData();
+        //await refreshData();
     } catch (error) {
         logger.logMessage(`ERROR en la copia del AutomationAudience Journey: ${error.message}`);
         ui.showCustomAlert(`Error en la copia: ${error.message}`);
@@ -474,12 +474,12 @@ async function copyEmailAudienceJourney(journey) {
         logger.logMessage(`-> Nuevo Event Definition creado con Key: ${newEventDef.eventDefinitionKey}`);
 
         logger.logMessage(`PASO 5/5: Creando la copia final del Journey...`);
-        const copyPayload = prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef, config.newJourneyName, config.newJourneyCategoryId);
+        const copyPayload = prepareJourneyForCopy("EmailAudience",originalJourney, originalEventDef, newEventDef, config.newJourneyName, config.newJourneyCategoryId);
         const newJourney = await mcApiService.createJourney(copyPayload, apiConfig);
         logger.logMessage(`-> ¡Journey "${newJourney.name}" creado con éxito!`);
 
         ui.showCustomAlert(`¡Éxito! Se ha creado la copia "${newJourney.name}".`);
-        await refreshData();
+        //await refreshData();
     } catch (error) {
         logger.logMessage(`ERROR en la copia: ${error.message}`);
         ui.showCustomAlert(`Error en la copia: ${error.message}`);
@@ -726,7 +726,7 @@ function parseJourneyActivities(activities = []) {
  * @param {string} newJourneyCategoryId - El ID de la carpeta para el nuevo Journey.
  * @returns {object} Un objeto JSON listo para ser enviado en la petición de creación.
  */
-function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef, newJourneyName, newJourneyCategoryId) {
+function prepareJourneyForCopy(journeyType, originalJourney, originalEventDef, newEventDef, newJourneyName, newJourneyCategoryId) {
     const oldEventDefKey = originalEventDef.eventDefinitionKey;
     const newEventDefKey = newEventDef.eventDefinitionKey;
     
@@ -740,7 +740,7 @@ function prepareJourneyForCopy(originalJourney, originalEventDef, newEventDef, n
 
     finalPayload.triggers = finalPayload.triggers.map(trigger => {
         const { id, ...rest } = trigger;
-        rest.type = 'EmailAudience'; 
+        rest.type = journeyType; 
         if (rest.metaData) {
             rest.metaData.eventDefinitionKey = newEventDef.eventDefinitionKey; 
             rest.metaData.eventDefinitionId = newEventDef.id;

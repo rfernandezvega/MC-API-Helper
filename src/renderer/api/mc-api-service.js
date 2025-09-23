@@ -1088,54 +1088,105 @@ export async function fetchQueryDefinitionDetails(queryObjectId, apiConfig) {
 
 /**
  * Crea una única carpeta en Marketing Cloud.
+ * Esta función actúa como un router, eligiendo la API correcta (REST o SOAP)
+ * basándose en el tipo de contenido proporcionado.
  * @param {string} folderName - El nombre de la nueva carpeta.
  * @param {number} parentId - El ID de la carpeta padre.
- * @param {string} contentType - El tipo de contenido de la carpeta (ej. 'dataextension').
+ * @param {string} contentType - El tipo de contenido ('journey', 'asset', 'dataextension', etc.).
  * @param {object} apiConfig - La configuración de la API.
- * @returns {Promise<string>} - Una promesa que resuelve con el NewID de la carpeta creada.
+ * @returns {Promise<string>} - Una promesa que resuelve con el ID de la carpeta creada.
  */
 export async function createFolder(folderName, parentId, contentType, apiConfig) {
-    // La API espera un CustomerKey único, un GUID es una buena opción.
-    const customerKey = crypto.randomUUID(); 
-    const clientXml = apiConfig.businessUnit ? `<Client><ClientID>${apiConfig.businessUnit}</ClientID></Client>` : '';
-
-    const soapPayload = `
-    <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
-        <s:Header>
-            <a:Action s:mustUnderstand="1">Create</a:Action>
-            <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
-            <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
-        </s:Header>
-        <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-            <CreateRequest xmlns="http://exacttarget.com/wsdl/partnerAPI">
-                <Objects xsi:type="DataFolder">
-                    ${clientXml}
-                    <CustomerKey>${customerKey}</CustomerKey>
-                    <Name>${folderName}</Name>
-                    <Description></Description>
-                    <ContentType>${contentType}</ContentType>
-                    <IsActive>true</IsActive>
-                    <IsEditable>true</IsEditable>
-                    <AllowChildren>true</AllowChildren>
-                    <ParentFolder>
-                        <ID>${parentId}</ID>
-                    </ParentFolder>
-                </Objects>
-            </CreateRequest>
-        </s:Body>
-    </s:Envelope>`;
-
-    const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
-    const doc = new DOMParser().parseFromString(responseText, "application/xml");
-    const newIdNode = doc.querySelector("Results > NewID");
-    const status = doc.querySelector("Results > StatusCode")?.textContent;
     
-    if (status !== 'OK' || !newIdNode) {
-        const errorMessage = doc.querySelector("Results > StatusMessage")?.textContent || "Error desconocido al crear la carpeta.";
-        throw new Error(`No se pudo crear la carpeta "${folderName}": ${errorMessage}`);
-    }
+    // Usamos un switch para manejar los diferentes tipos de contenido
+    switch (contentType.toLowerCase()) {
+        
+        // --- CASO 1: Carpetas de Journey (API REST específica) ---
+        case 'journey': {
+            const url = `${apiConfig.restUri}email/v1/Category`;
+            const payload = {
+                "Name": folderName,
+                "ParentCatId": parentId,
+                "CatType": "journey"
+            };
+            const options = {
+                method: 'POST',
+                headers: { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            };
+            const responseData = await executeRestRequest(url, options);
 
-    return newIdNode.textContent;
+            if (!responseData || !responseData.categoryId) {
+                throw new Error("La respuesta de la API de Journeys no incluyó un 'id'.");
+            }
+            return responseData.categoryId;
+        }
+
+        // --- CASO 2: Carpetas de Content Builder / Asset (API REST) ---
+        case 'asset':
+        case 'contentbuilder': { // Añadimos ambos por si acaso
+            const url = `${apiConfig.restUri}asset/v1/content/categories`;
+            const payload = {
+                "Name": folderName,
+                "ParentId": parentId
+            };
+            const options = {
+                method: 'POST',
+                headers: { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            };
+            const responseData = await executeRestRequest(url, options);
+
+            if (!responseData || !responseData.id) {
+                throw new Error("La respuesta de la API de Assets no incluyó un 'id'.");
+            }
+            return responseData.id;
+        }
+
+        // --- CASO 3: Resto de tipos (Data Extension, Query, etc. - API SOAP) ---
+        default: {
+            const customerKey = crypto.randomUUID();
+            const clientXml = apiConfig.businessUnit ? `<Client><ClientID>${apiConfig.businessUnit}</ClientID></Client>` : '';
+
+            const soapPayload = `
+            <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+                <s:Header>
+                    <a:Action s:mustUnderstand="1">Create</a:Action>
+                    <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+                    <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+                </s:Header>
+                <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+                    <CreateRequest xmlns="http://exacttarget.com/wsdl/partnerAPI">
+                        <Objects xsi:type="DataFolder">
+                            ${clientXml}
+                            <CustomerKey>${customerKey}</CustomerKey>
+                            <Name>${folderName}</Name>
+                            <Description></Description>
+                            <ContentType>${contentType}</ContentType>
+                            <IsActive>true</IsActive>
+                            <IsEditable>true</IsEditable>
+                            <AllowChildren>true</AllowChildren>
+                            <ParentFolder>
+                                <ID>${parentId}</ID>
+                            </ParentFolder>
+                        </Objects>
+                    </CreateRequest>
+                </s:Body>
+            </s:Envelope>`;
+
+            const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+            const doc = new DOMParser().parseFromString(responseText, "application/xml");
+            const newIdNode = doc.querySelector("Results > NewID");
+            const status = doc.querySelector("Results > StatusCode")?.textContent;
+            
+            if (status !== 'OK' || !newIdNode) {
+                const errorMessage = doc.querySelector("Results > StatusMessage")?.textContent || "Error desconocido al crear la carpeta con SOAP.";
+                throw new Error(`No se pudo crear la carpeta "${folderName}": ${errorMessage}`);
+            }
+
+            return newIdNode.textContent;
+        }
+    }
 }
 
 // ==========================================================
@@ -1200,6 +1251,8 @@ export async function enrichCloudPagesWithFolders(items, apiConfig) {
     });
     return Promise.all(pathPromises);
 }
+
+
 
 // ==========================================================
 // --- HELPERS INTERNOS DEL SERVICIO ---
