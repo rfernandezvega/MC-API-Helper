@@ -571,12 +571,14 @@ export async function createJourney(journeyPayload, apiConfig) {
  * @returns {Promise<object>} - Una promesa que resuelve con el nuevo Event Definition creado.
  */
 export async function createEmailAudienceEventDefinition(originalEventDef, clonedDeInfo, apiConfig, newJourneyName) {
+    const newEventDefKey = `EmailAudience-${crypto.randomUUID()}`;
+
     const payload = {
         type: 'EmailAudience',
         name: newJourneyName,
         description: originalEventDef.description || "",
         mode: originalEventDef.mode || "Production",
-        eventDefinitionKey: crypto.randomUUID(),
+        eventDefinitionKey: newEventDefKey,
         dataExtensionId: clonedDeInfo.objectID,
         iconUrl: originalEventDef.iconUrl,
         isVisibleInPicker: originalEventDef.isVisibleInPicker,
@@ -601,7 +603,7 @@ export async function createEmailAudienceEventDefinition(originalEventDef, clone
  * @returns {Promise<object>} - Una promesa que resuelve con el nuevo Event Definition creado.
  */
 export async function createAutomationAudienceEventDefinition(originalEventDef, automationId, deDetails, apiConfig, newJourneyName) {
-    const newEventDefKey = crypto.randomUUID();
+    const newEventDefKey = `DEAudience-${crypto.randomUUID()}`
 
     const payload = {
         type: "AutomationAudience",
@@ -613,8 +615,8 @@ export async function createAutomationAudienceEventDefinition(originalEventDef, 
         iconUrl: originalEventDef.iconUrl || "/images/icon-data-extension.svg",
         isVisibleInPicker: originalEventDef.isVisibleInPicker,
         category: originalEventDef.category || "Audience",
-        // Copiamos la programación del Event Definition original
-        schedule: originalEventDef.schedule,
+        sourceApplicationExtensionId: originalEventDef.sourceApplicationExtensionId,
+        metaData: originalEventDef.metaData,
         // Construimos los argumentos con los nuevos IDs
         arguments: {
             serializedObjectType: 9,
@@ -624,6 +626,9 @@ export async function createAutomationAudienceEventDefinition(originalEventDef, 
             eventDefinitionKey: newEventDefKey,
             dataExtensionId: deDetails.objectID,
             criteria: ""
+        },
+        configurationArguments: {
+            unconfigured: false
         }
     };
 

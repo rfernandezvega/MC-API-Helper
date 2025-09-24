@@ -100,6 +100,11 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * @param {string} sectionId - El ID de la sección a mostrar.
 	 */
 	function showSection(sectionId) {
+		// Cierra el cuadro de búsqueda si está abierto para evitar estado inconsistente.
+		if (window.closeFindBox && document.getElementById('find-in-page-box').style.display !== 'none') {
+			window.closeFindBox();
+		}
+
 		// Delega en el ui-helper, pasándole el historial para que lo pueda modificar.
 		ui.showSection(sectionId, navigationHistory, true);
 		// Se asegura de que el menú lateral se actualice cada vez que se muestra una sección.
@@ -225,6 +230,90 @@ document.addEventListener('DOMContentLoaded', function () {
 		a.click();
 		document.body.removeChild(a);
 		URL.revokeObjectURL(url); // Liberar memoria
+	}
+
+	/**
+	 * Configura toda la lógica para la funcionalidad de "Buscar en la página" (Ctrl+F).
+	 */
+	function setupFindInPage() {
+		const findBox = document.getElementById('find-in-page-box');
+		const findInput = document.getElementById('find-input');
+		const findResults = document.getElementById('find-results');
+		const findPrevBtn = document.getElementById('find-prev');
+		const findNextBtn = document.getElementById('find-next');
+		const findCloseBtn = document.getElementById('find-close');
+
+		// --- FUNCIÓN DE BÚSQUEDA DIRECTA Y SIMPLE ---
+		const performSearch = (text, options = {}) => {
+			if (text) {
+				window.electronAPI.findInPage(text, options);
+			}
+		};
+
+		const closeFindBox = () => {
+			findBox.style.display = 'none';
+			window.electronAPI.stopFindInPage();
+			findInput.value = '';
+			findResults.textContent = '';
+		};
+		
+		// --- EVENT LISTENERS ---
+
+		// Abrir la caja de búsqueda con Ctrl+F
+		document.addEventListener('keydown', (e) => {
+			if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+				e.preventDefault();
+				findBox.style.display = 'flex';
+				findInput.select();
+				findInput.focus();
+			}
+			// Cerrar con Escape
+			if (e.key === 'Escape' && findBox.style.display === 'flex') {
+				e.preventDefault();
+				closeFindBox();
+			}
+		});
+
+		// El listener principal: se activa al pulsar Enter en el input
+		findInput.addEventListener('keydown', (e) => {
+			if (e.key !== 'Enter') return;
+			e.preventDefault();
+			const searchText = findInput.value.trim();
+			if (searchText) {
+				// Inicia una nueva búsqueda o navega si el texto es el mismo
+				performSearch(searchText, { findNext: true, forward: !e.shiftKey });
+			}
+		});
+
+		// Botones de navegación: siempre usan el texto actual del input
+		findPrevBtn.addEventListener('click', () => {
+			performSearch(findInput.value.trim(), { findNext: true, forward: false });
+		});
+
+		findNextBtn.addEventListener('click', () => {
+			performSearch(findInput.value.trim(), { findNext: true, forward: true });
+		});
+
+		findCloseBtn.addEventListener('click', closeFindBox);
+
+		// LISTENER DE RESPUESTA: Directo y sin condiciones complicadas.
+		// Simplemente muestra lo que Electron le dice.
+		window.electronAPI.onFindReply((result) => {
+			if (result.finalUpdate) {
+				const searchText = findInput.value.trim();
+				if (searchText) {
+					if (result.matches > 0) {
+						findResults.textContent = `${result.activeMatchOrdinal} de ${result.matches}`;
+					} else {
+						findResults.textContent = 'Sin resultados';
+					}
+				} else {
+					findResults.textContent = ''; // Limpia si el cuadro está vacío
+				}
+			}
+		});
+		
+		window.closeFindBox = closeFindBox;
 	}
 
 	// ==========================================================
@@ -470,6 +559,9 @@ document.addEventListener('DOMContentLoaded', function () {
 		logger.startLogBuffering();
 		logger.logMessage("Aplicación lista.");
 		logger.endLogBuffering();
+
+		// Activa la funcionalidad de búsqueda en la página.
+		setupFindInPage();
 	}
 
 	// Inicia todo el proceso.

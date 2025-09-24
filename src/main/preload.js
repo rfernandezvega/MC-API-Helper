@@ -61,6 +61,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
    */
   openCsvFile: () => ipcRenderer.invoke('open-csv-file'),
 
+    /**
+   * Pide al proceso principal que busque texto en la página.
+   * @param {string} text - El texto a buscar.
+   * @param {object} options - Opciones como { findNext: boolean, forward: boolean }.
+   */
+  findInPage: (text, options) => ipcRenderer.send('find-in-page', { text, options }),
+
+  /**
+   * Pide al proceso principal que detenga la búsqueda y limpie los resaltados.
+   */
+  stopFindInPage: () => ipcRenderer.send('stop-find-in-page'),
+
+  /**
+   * Registra un callback para recibir los resultados de la búsqueda desde el proceso principal.
+   * @param {function(object)} callback - La función que manejará el objeto de resultados.
+   */
+  onFindReply: (callback) => ipcRenderer.on('find-reply', (_event, result) => callback(result)),
+
   // ==========================================================
   // --- MÉTODOS: PRINCIPAL -> RENDERIZADOR (LISTENERS) ---
   // ==========================================================

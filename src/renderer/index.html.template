@@ -24,6 +24,17 @@
     <p id="loader-text" class="loader-text">Cargando...</p>
 </div>
 
+<!-- ========================================================== -->
+<!-- BUSCADOR EN LA PÁGINA (CTRL+F) -->
+<!-- ========================================================== -->
+<div id="find-in-page-box" style="display: none;">
+    <input type="text" id="find-input" placeholder="Buscar en la página...">
+    <span id="find-results"></span>
+    <button id="find-prev" title="Anterior">▲</button>
+    <button id="find-next" title="Siguiente">▼</button>
+    <button id="find-close" title="Cerrar">&times;</button>
+</div>
+
 <!-- ===================================================================
      CONTENEDOR PRINCIPAL DE LA APLICACIÓN
      =================================================================== -->
@@ -333,6 +344,8 @@
         </div>
     </div>
 </div>
+
+
  
 <script type="module" src="app.js"></script>
 </body>

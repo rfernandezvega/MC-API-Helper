@@ -394,7 +394,15 @@ td a:hover { color: #003366; text-decoration: underline; }
   width: 80%; max-width: 500px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
   position: relative;
 }
+#custom-confirm-message,
+#custom-alert-message {
+  /* Permite que el navegador rompa palabras largas para prevenir el desbordamiento */
+  overflow-wrap: break-word;
+  word-wrap: break-word; /* Propiedad antigua para mayor compatibilidad */
 
+  /* Asegura que el párrafo no intente ser más ancho que su contenedor */
+  max-width: 100%;
+}
 .modal-content.modal-lg {
     max-width: 800px;
 }
@@ -457,4 +465,78 @@ td a:hover { color: #003366; text-decoration: underline; }
 }
 .hidden { 
   display: none !important; 
+}
+
+/* ==========================================================
+   5. BUSCADOR EN PÁGINA (CTRL+F)
+   ========================================================== */
+#find-in-page-box {
+    position: fixed;
+    bottom: 25px;
+    left: 25px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    gap: 8px;
+    border: 1px solid #e0e7ef;
+    transition: top 0.3s ease;
+}
+
+#find-input {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 8px; /* Más padding vertical */
+    outline: none;
+    width: 220px;
+    font-size: 0.9em;
+}
+#find-input:focus {
+    border-color: #69a3db;
+    box-shadow: 0 0 0 2px rgba(105, 163, 219, 0.3);
+}
+
+#find-results {
+    font-size: 0.9em;
+    color: #555;
+    background-color: #f0f6fc;
+    padding: 6px 10px;
+    border-radius: 4px;
+    user-select: none;
+    min-width: 60px; /* Evita que el tamaño salte */
+    text-align: center;
+}
+
+#find-in-page-box button {
+    background-color: transparent;
+    border: none;
+    color: #5a6268;
+    border-radius: 5px;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, color 0.2s;
+    flex-shrink: 0;
+}
+
+#find-in-page-box button:hover {
+    background-color: #e9ecef;
+    color: #333;
+}
+
+#find-close {
+    font-size: 24px;
+    font-weight: normal;
+}
+
+#find-input::selection {
+    background-color: #69a3db; /* Un color de selección normal */
+    color: white;
 }

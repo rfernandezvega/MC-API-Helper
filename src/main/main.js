@@ -91,6 +91,9 @@ app.whenReady().then(() => {
     initializeGoogleClient();
     createWindow();
 
+    // Registra los listeners de búsqueda después de crear la ventana.
+    handleFindInPage(mainWindow); 
+
     autoUpdater.on('update-downloaded', (info) => {
         const notification = new Notification({
             title: 'Actualización Lista para Instalar',
@@ -177,6 +180,39 @@ async function validateUserInSheet(email, version) {
         return false;
     }
 }
+
+// --- FUNCIONALIDAD DE BÚSQUEDA EN PÁGINA (CTRL+F) ---
+
+/**
+ * Registra el listener que recibe los resultados de la búsqueda y los reenvía al renderizador.
+ * @param {BrowserWindow} win - La ventana principal de la aplicación.
+ */
+function handleFindInPage(win) {
+  if (!win) return;
+  win.webContents.on('found-in-page', (event, result) => {
+    // Envía los resultados de vuelta a la ventana para que la UI se actualice.
+    win.webContents.send('find-reply', result);
+  });
+}
+
+// Escucha la petición de búsqueda desde el renderizador.
+ipcMain.on('find-in-page', (event, { text, options }) => {
+  const webContents = event.sender;
+  if (webContents && text) {
+    webContents.findInPage(text, options);
+  } else {
+    // Si el texto está vacío, detenemos la búsqueda para limpiar resaltados.
+    webContents.stopFindInPage('clearSelection');
+  }
+});
+
+// Escucha la petición para detener la búsqueda (cuando se cierra el cuadro).
+ipcMain.on('stop-find-in-page', (event) => {
+  const webContents = event.sender;
+  if (webContents) {
+    webContents.stopFindInPage('clearSelection');
+  }
+});
 
 // --- 4. COMUNICACIÓN IPC ---
 ipcMain.handle('check-system-user-license', async () => {
