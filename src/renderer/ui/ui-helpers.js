@@ -474,6 +474,16 @@ export function showJourneyClonerModal(journey, dependencies, initialData = {}) 
     const { getAuthenticatedConfig, mcApiService, logger } = dependencies;
     const modal = elements.journeyClonerModal;
 
+    // Se añade este bloque para resetear el estado de la modal cada vez que se abre.
+    // Esto evita que los datos de una clonación anterior (como el texto de búsqueda)
+    // aparezcan en una nueva clonación.
+    elements.journeyClonerDESearchInput.value = '';
+    elements.journeyClonerDEResultsContainer.innerHTML = '<p>Realiza una búsqueda para ver los resultados.</p>';
+    elements.journeyClonerNewDEName.value = '';
+    elements.journeyClonerNewJourneyName.value = '';
+    elements.journeyClonerContinueBtn.disabled = true;
+    elements.journeyClonerCloneBtn.disabled = true;
+
     let state = {
         useExistingDe: false,
         selectedDE: initialData.selectedDE || null,
