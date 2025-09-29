@@ -571,7 +571,11 @@ export async function createJourney(journeyPayload, apiConfig) {
  * @returns {Promise<object>} - Una promesa que resuelve con el nuevo Event Definition creado.
  */
 export async function createEmailAudienceEventDefinition(originalEventDef, clonedDeInfo, apiConfig, newJourneyName) {
-    const newEventDefKey = `EmailAudience-${crypto.randomUUID()}`;
+     // Extraemos el prefijo del eventDefinitionKey original (ej: "EmailAudience", "DEAudience", etc.)
+    const keyPrefix = originalEventDef.eventDefinitionKey.split('-')[0];
+    
+    // Creamos la nueva clave usando el prefijo original y un nuevo UUID
+    const newEventDefKey = `${keyPrefix}-${crypto.randomUUID()}`;
 
     const payload = {
         type: 'EmailAudience',
@@ -583,7 +587,20 @@ export async function createEmailAudienceEventDefinition(originalEventDef, clone
         iconUrl: originalEventDef.iconUrl,
         isVisibleInPicker: originalEventDef.isVisibleInPicker,
         category: originalEventDef.category,
-        schema: originalEventDef.schema 
+        sourceApplicationExtensionId: originalEventDef.sourceApplicationExtensionId,
+        metaData: originalEventDef.metaData,
+        schema: originalEventDef.schema,
+        arguments: {
+            serializedObjectType: 3,
+            useHighWatermark: originalEventDef.arguments?.useHighWatermark || false,
+            resetHighWatermark: originalEventDef.arguments?.resetHighWatermark || false,
+            eventDefinitionKey: newEventDefKey,
+            dataExtensionId: clonedDeInfo.objectID,
+            criteria: ""
+        },
+        configurationArguments: {
+            unconfigured: false
+        }
     };
     const url = `${apiConfig.restUri}interaction/v1/eventDefinitions/`;
     const options = {
@@ -603,7 +620,11 @@ export async function createEmailAudienceEventDefinition(originalEventDef, clone
  * @returns {Promise<object>} - Una promesa que resuelve con el nuevo Event Definition creado.
  */
 export async function createAutomationAudienceEventDefinition(originalEventDef, automationId, deDetails, apiConfig, newJourneyName) {
-    const newEventDefKey = `DEAudience-${crypto.randomUUID()}`
+     // Extraemos el prefijo del eventDefinitionKey original (ej: "EmailAudience", "DEAudience", etc.)
+    const keyPrefix = originalEventDef.eventDefinitionKey.split('-')[0];
+    
+    // Creamos la nueva clave usando el prefijo original y un nuevo UUID
+    const newEventDefKey = `${keyPrefix}-${crypto.randomUUID()}`;
 
     const payload = {
         type: "AutomationAudience",
