@@ -60,7 +60,7 @@ export function init() {
     elements.loginBtn = document.getElementById('loginBtn');
     elements.logoutBtn = document.getElementById('logoutBtn');
     elements.sendsConfigTbody = document.getElementById('sends-config-tbody');
-    elements.addSendConfigRowBtn = document.getElementById('add-send-config-row-btn');
+    elements.addSendConfigRowBtn = document.getElementById('addSendConfigRowBtn');
     elements.importDvConfigBtn = document.getElementById('importDvConfigBtn');
     elements.exportDvConfigBtn = document.getElementById('exportDvConfigBtn');
 

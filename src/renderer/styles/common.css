@@ -315,8 +315,39 @@ body {
     flex-shrink: 0; /* Evita que el botón se encoja */
 }
 
+/* Bloque de configuración con layout flexible (cabecera fija, contenido con scroll) */
+.config-block.flex-layout-block {
+    display: flex;
+    flex-direction: column;
+    /* Ocupa toda la altura disponible de su contenedor padre (la pestaña) */
+    height: 100%;
+}
+
+/* La cabecera y el párrafo de información no deben encogerse, serán fijos. */
+.config-block.flex-layout-block > .config-block-header,
+.config-block.flex-layout-block > p {
+    flex-shrink: 0;
+}
+
+/* Hacemos que el contenedor de la tabla crezca y ocupe el espacio sobrante. */
+.config-block.flex-layout-block > .table-container {
+    flex-grow: 1;
+    /* Truco de Flexbox para que el scroll interno del hijo funcione correctamente. */
+    min-height: 0;
+    /* Este contenedor debe ser flexible para que .table-scroll-wrapper se estire. */
+    display: flex;
+    /* El scroll no va aquí, sino en el hijo, por eso lo ocultamos. */
+    overflow: hidden; 
+}
+
 /* --- 3.4. Tablas Genéricas --- */
 .table-container { width: 100%; overflow-x: auto; }
+.table-scroll-wrapper {
+    flex-grow: 1; /* Hace que la tabla ocupe todo el ancho posible */
+    overflow-y: auto; /* Habilita el scroll vertical SOLO para la tabla */
+    height: 100%; /* Ocupa toda la altura del padre para que el scroll funcione */
+    padding-right: 40px; 
+}
 table { border-collapse: collapse; width: 100%; }
 th, td { border: 1px solid #b9d4e7; padding: 10px; text-align: center; vertical-align: middle; }
 th { background-color: #69a3db; color: #fff; position: sticky; top: 0; z-index: 2; }

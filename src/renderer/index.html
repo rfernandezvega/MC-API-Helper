@@ -144,10 +144,11 @@
         <!-- PESTAÑA 2: DEs Búsqueda de Clientes -->
         <div id="de-search-tab" class="tab-content">
             <!-- Configuración de Data Views para el buscador de envíos (Bloque movido aquí) -->
-            <div class="config-block">
+            <div class="config-block flex-layout-block">
                 <div class="config-block-header">
                     <h3>Búsqueda Dinámica en Data Extensions</h3>
                     <div class="header-actions">
+                        <button id="add-send-config-row-btn" class="action-button">Añadir Fila</button>
                         <button id="importDvConfigBtn" class="action-button">Importar</button>
                         <button id="exportDvConfigBtn" class="action-button activate-btn">Exportar</button>
                     </div>
@@ -156,21 +157,20 @@
                     Configura las tablas donde se buscará al cliente al pulsar el botón "DEs". Los cambios se guardan junto con el resto de la configuración.
                 </p>
                 <div class="table-container">
-                    <table id="sends-config-table" class="editable-row-table">
-                        <thead>
-                            <tr>
-                                <th>Nombre</th>
-                                <th>External Key</th>
-                                <th>Campo de Búsqueda</th>
-                            </tr>
-                        </thead>
-                        <tbody id="sends-config-tbody">
-                            <!-- Las filas se añadirán/cargarán dinámicamente aquí -->
-                        </tbody>
-                    </table>
-                </div>
-                <div class="header-actions" style="justify-content: flex-start; margin-top: 15px;">
-                    <button id="add-send-config-row-btn" class="action-button">Añadir Fila</button>
+                    <div class="table-scroll-wrapper">
+                        <table id="sends-config-table" class="editable-row-table">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>External Key</th>
+                                    <th>Campo de Búsqueda</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sends-config-tbody">
+                                <!-- Las filas se añadirán/cargarán dinámicamente aquí -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -928,17 +928,19 @@
     </div>
     <h2>Campos de la Data Extension</h2>
     <div class="table-container">
-        <table id="myTable" class="editable-row-table">
-        <thead>
-            <tr><th>Campo MC</th><th>Tipo Campo</th><th>Longitud</th><th>Default</th><th>PK</th><th>Requerido</th></tr>
-        </thead>
-        <tbody></tbody>
-        </table>
+        <div class="table-scroll-wrapper">
+            <table id="myTable" class="editable-row-table">
+                <thead>
+                    <tr><th>Campo MC</th><th>Tipo Campo</th><th>Longitud</th><th>Default</th><th>PK</th><th>Requerido</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
         <!-- Botones para mover filas seleccionadas -->
         <div class="control-buttons">
-        <button id="addFieldBtn" class="action-button">Añadir Fila</button>
-        <button id="moveUp" title="Mover fila seleccionada hacia arriba">▲</button>
-        <button id="moveDown" title="Mover fila seleccionada hacia abajo">▼</button>
+            <button id="addFieldBtn" class="action-button">Añadir Fila</button>
+            <button id="moveUp" title="Mover fila seleccionada hacia arriba">▲</button>
+            <button id="moveDown" title="Mover fila seleccionada hacia abajo">▼</button>
         </div>
     </div>
 </div>

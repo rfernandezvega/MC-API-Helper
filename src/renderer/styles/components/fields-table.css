@@ -8,7 +8,16 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    padding-right: 40px; /* Deja espacio a la derecha para el botón de borrar fila */
+    overflow: hidden;
+}
+
+
+
+.control-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-left: 15px; /* Espacio entre la tabla y los botones */
 }
 
 /* Contenedor para los botones de "Añadir Fila", subir y bajar */
