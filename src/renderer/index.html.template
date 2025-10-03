@@ -43,50 +43,53 @@
   <!-- ========================================================== -->
   <!-- BARRA LATERAL IZQUIERDA (NAVEGACIÓN) -->
   <!-- ========================================================== -->
-  <aside id="macros-sidebar">
-    <!-- Selector de Cliente y Estado de Sesión -->
-    <div class="sidebar-client-selector">
-      <h2>Cliente</h2>
-      <select id="sidebarClientSelect">
-        <option value="">Ninguno seleccionado</option>
-      </select>
-      <p id="login-status" class="login-status inactive">🔴 Sesión no iniciada</p>
-    </div>
+<aside id="macros-sidebar">
+	<div class="sidebar-content-wrapper">
+		<div class="sidebar-header">
+			<!-- Selector de Cliente y Estado de Sesión -->
+			<div class="sidebar-client-selector">
+				<h2>Cliente</h2>
+				<select id="sidebarClientSelect">
+					<option value="">Ninguno seleccionado</option>
+				</select>
+				<p id="login-status" class="login-status inactive">🔴 Sesión no iniciada</p>
+			</div>
 
-    <h2 id="sidebar-views-title">Vistas</h2>
-
-    <div id="sidebar-menu-scroll-container">
-      <!-- Menús colapsables -->
-      <div class="collapsible-group">
-          <h3 class="collapsible-header">General</h3>
-          <ul class="collapsible-content">
-            <li><a class="macro-item" data-macro="docu">Documentación</a></li>
-            <li><a class="macro-item" data-macro="configuracionAPIs">Configuración de APIs</a></li>
-          </ul>
-      </div>
-      <div class="collapsible-group">
-          <h3 class="collapsible-header">Data Extensions</h3>
-          <ul class="collapsible-content">
-            <li><a class="macro-item" data-macro="configuracionDE">Creación de Data Extension</a></li>
-            <li><a class="macro-item" data-macro="campos">Configuración de Campos</a></li>
-            <li><a class="macro-item" data-macro="gestionCampos">Recuperación y Borrado de Campos</a></li>
-          </ul>
-      </div>
-      <div class="collapsible-group">
-          <h3 class="collapsible-header">Funcionalidades</h3>
-          <ul class="collapsible-content">
-            <li><a class="macro-item" data-macro="buscadores">Buscadores</a></li>
-            <li><a class="macro-item" data-macro="calendario">Calendario</a></li>         
-            <li><a class="macro-item" data-macro="gestionAutomatismos">Gestión de automatismos</a></li> 
-            <li><a class="macro-item" data-macro="clonadorQueries">Clonador de Queries</a></li>
-            <li><a class="macro-item" data-macro="gestionJourneys">Gestión de Journeys</a></li>      
-            <li><a class="macro-item" data-macro="carpetas">Creación de Carpetas</a></li>    
-            <li><a class="macro-item" data-macro="gestionCloudPages">Gestión de Cloud Pages</a></li>  
-            <li><a class="macro-item" data-macro="validadorEmail">Validador de Email</a></li>          
-          </ul>
-      </div>
-    </div>
-  </aside>
+			<h2 id="sidebar-views-title">Vistas</h2>
+		</div>
+		<div id="sidebar-menu-scroll-container">
+			<!-- Menús colapsables -->
+			<div class="collapsible-group">
+				<h3 class="collapsible-header">General</h3>
+				<ul class="collapsible-content">
+					<li><a class="macro-item" data-macro="docu">Documentación</a></li>
+					<li><a class="macro-item" data-macro="configuracionAPIs">Configuración de APIs</a></li>
+				</ul>
+			</div>
+			<div class="collapsible-group">
+				<h3 class="collapsible-header">Data Extensions</h3>
+				<ul class="collapsible-content">
+					<li><a class="macro-item" data-macro="configuracionDE">Creación de Data Extension</a></li>
+					<li><a class="macro-item" data-macro="campos">Configuración de Campos</a></li>
+					<li><a class="macro-item" data-macro="gestionCampos">Recuperación y Borrado de Campos</a></li>
+				</ul>
+			</div>
+			<div class="collapsible-group">
+				<h3 class="collapsible-header">Funcionalidades</h3>
+				<ul class="collapsible-content">
+					<li><a class="macro-item" data-macro="buscadores">Buscadores</a></li>
+					<li><a class="macro-item" data-macro="calendario">Calendario</a></li>         
+					<li><a class="macro-item" data-macro="gestionAutomatismos">Gestión de automatismos</a></li> 
+					<li><a class="macro-item" data-macro="clonadorQueries">Clonador de Queries</a></li>
+					<li><a class="macro-item" data-macro="gestionJourneys">Gestión de Journeys</a></li>      
+					<li><a class="macro-item" data-macro="carpetas">Creación de Carpetas</a></li>    
+					<li><a class="macro-item" data-macro="gestionCloudPages">Gestión de Cloud Pages</a></li>  
+					<li><a class="macro-item" data-macro="validadorEmail">Validador de Email</a></li>          
+				</ul>
+			</div>
+		</div>
+	</div>
+</aside>
 
   <!-- ========================================================== -->
   <!-- CONTENIDO PRINCIPAL (VACÍO) -->

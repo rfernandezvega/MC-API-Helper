@@ -45,28 +45,14 @@ const SPREADSHEET_ID = '17vqeFeKK5Ht-WCYrhNxyRjwWTAUSscNVBCGO5quz7VY';
 const SHEET_NAME = 'Accesos';
 
 // --- 2. FUNCIÓN DE CREACIÓN DE LA VENTANA ---
-const getIconPath = () => {
-  const iconName = 'icon.ico';
-  
-  if (app.isPackaged) {
-    // Intenta primero en resources
-    const resourcePath = path.join(process.resourcesPath, iconName);
-    if (require('fs').existsSync(resourcePath)) {
-      return resourcePath;
-    }
-    // Fallback a la carpeta de la app
-    return path.join(__dirname, iconName);
-  } else {
-    // En desarrollo
-    return path.resolve(__dirname, '../../' + iconName);
-  }
-};
 
 function createWindow() {
+    const iconPath = path.join(__dirname, '..', '..', 'icon.ico');
+
     mainWindow = new BrowserWindow({
         width: 1300,
         height: 850,
-        icon: getIconPath(),
+        icon: iconPath,
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
