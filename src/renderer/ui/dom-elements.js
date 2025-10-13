@@ -117,6 +117,9 @@ export function init() {
     elements.querySearchResultsTable = document.getElementById('query-search-results-table');
     elements.querySearchResultsTbody = document.querySelector('#query-search-results-tbody');
     elements.showQueryTextCheckbox = document.getElementById('showQueryTextCheckbox');
+    elements.contentSearchValue = document.getElementById('contentSearchValue');
+    elements.searchContentBtn = document.getElementById('searchContentBtn');
+    elements.contentSearchResultsTbody = document.getElementById('content-search-results-tbody');
 
     // --- 9. Sección: Validador de Email ---
     elements.emailToValidateInput = document.getElementById('emailToValidate');

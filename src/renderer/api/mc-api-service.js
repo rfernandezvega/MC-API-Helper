@@ -1278,7 +1278,87 @@ export async function enrichCloudPagesWithFolders(items, apiConfig) {
     return Promise.all(pathPromises);
 }
 
+/**
+ * Busca assets en Content Builder en dos pasos: primero por nombre y, si no hay resultados, por ID.
+ * @param {string} searchValue - El término de búsqueda introducido por el usuario.
+ * @param {object} apiConfig - La configuración de la API autenticada.
+ * @returns {Promise<Array>} Una promesa que resuelve a la lista de assets encontrados.
+ */
+export async function searchContentAssets(searchValue, apiConfig) {
 
+    // --- Helper interno para ejecutar una consulta paginada y devolver todos los resultados ---
+    const executePaginatedQuery = async (queryPayload) => {
+        let allItems = [];
+        let page = 1;
+        let totalCount = 0;
+        const pageSize = 500;
+
+        const queryBody = {
+            "query": queryPayload,
+            "sort": [{ "property": "id", "direction": "ASC" }],
+            "fields": ["id", "name", "assetType", "category"]
+        };
+
+        do {
+            const url = `${apiConfig.restUri}asset/v1/content/assets/query`;
+            const body = { ...queryBody, page: { page: page, pageSize: pageSize } };
+            const options = {
+                method: 'POST',
+                headers: { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" },
+                body: JSON.stringify(body)
+            };
+            
+            const data = await executeRestRequest(url, options);
+
+            const pageItems = data.items || [];
+            allItems = allItems.concat(pageItems);
+            totalCount = data.count;
+            page++;
+
+        } while (allItems.length < totalCount && totalCount > 0);
+        
+        return allItems;
+    };
+
+    // --- INICIO: Lógica principal de búsqueda en dos pasos ---
+
+    // 1. Buscar por Nombre
+    logger.logMessage(`Paso 1/2: Buscando contenidos por nombre que contenga "${searchValue}"...`);
+    const nameQuery = {
+        "property": "name",
+        "simpleOperator": "like",
+        "value": searchValue
+    };
+    let results = await executePaginatedQuery(nameQuery);
+
+    // 2. Si se encuentran resultados por nombre, los devolvemos y terminamos.
+    if (results.length > 0) {
+        logger.logMessage(`Búsqueda por nombre exitosa. Se encontraron ${results.length} resultado(s).`);
+        return results;
+    }
+
+    // 3. Si no hay resultados, intentamos buscar por ID.
+    logger.logMessage(`Paso 2/2: No se encontraron resultados por nombre. Buscando por ID exacto "${searchValue}"...`);
+    try {
+        const idQuery = {
+            "property": "id",
+            "simpleOperator": "equal",
+            "value": searchValue
+        };
+        results = await executePaginatedQuery(idQuery);
+        logger.logMessage(`Búsqueda por ID completada. Se encontraron ${results.length} resultado(s).`);
+        return results;
+    } catch (error) {
+        // 4. Capturamos el error específico de conversión y lo tratamos como "cero resultados".
+        if (error.message && error.message.toLowerCase().includes("error converting value")) {
+            logger.logMessage("La búsqueda por ID falló (valor de entrada no numérico). Se considera que no hay resultados.");
+            return []; // Devolvemos un array vacío, como si no hubiera encontrado nada.
+        } else {
+            // Si es cualquier otro error (autenticación, red, etc.), lo lanzamos para que se muestre al usuario.
+            throw error;
+        }
+    }
+}
 
 // ==========================================================
 // --- HELPERS INTERNOS DEL SERVICIO ---

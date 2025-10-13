@@ -407,13 +407,30 @@ td a:hover { color: #003366; text-decoration: underline; }
 .tab-button:hover { background-color: #f8f9fa; }
 .tab-content { display: none; }
 .tab-content.active { 
-    display: block;
-    /* Le dice al contenido que ocupe todo el espacio vertical sobrante */
+    display: flex; /* Cambiado a flex */
+    flex-direction: column; /* Añadido para apilar los bloques verticalmente */
     flex-grow: 1; 
-    /* Añadimos el scroll aquí */
-    overflow-y: auto;
-    /* Truco de Flexbox para que el scroll funcione correctamente */
+    overflow-y: hidden; /* Cambiado a hidden para quitar el scroll de aquí */
     min-height: 0;
+}
+/*
+  Convierte el bloque de resultados en un contenedor flexible
+  para que su hijo (el .table-container) pueda crecer.
+*/
+.config-block[style*="flex-grow"] {
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* Truco de Flexbox para que el scroll interno funcione */
+}
+
+/*
+  Hace que el contenedor de la tabla crezca y ocupe el espacio vertical.
+  Y lo más importante: AÑADE EL SCROLL VERTICAL a este elemento.
+*/
+.config-block[style*="flex-grow"] > .table-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding-right: 15px; 
 }
 
 /* --- 3.6. Modales y Overlays --- */

@@ -1004,6 +1004,7 @@
         <button class="tab-button" data-tab="origenes-tab">Origen de datos</button>
         <button class="tab-button" data-tab="clientes-tab">Clientes</button>
         <button class="tab-button" data-tab="queries-tab">Texto en Queries</button>
+        <button class="tab-button" data-tab="contenido-tab">Contenidos</button>
     </div>
 
     <!-- Pestaña: Búsqueda de Data Extension -->
@@ -1162,6 +1163,36 @@
             </div>
         </div>
     </div>
+
+    <!-- Pestaña: Contenidos -->
+    <div id="contenido-tab" class="tab-content config-section-container">
+        <div class="config-block">
+            <h3>Parámetros de Búsqueda de Contenido</h3>
+            <div class="form-group">
+                <label for="contentSearchValue">Buscar por Nombre o ID:</label>
+                <input type="text" id="contentSearchValue" placeholder="Ingresa el nombre (parcial) o el ID (exacto)">
+            </div>
+            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                <button id="searchContentBtn" class="action-button">Buscar Contenido</button>
+            </div>
+        </div>
+        <div class="config-block" style="flex-grow: 1;">
+            <h3>Resultados</h3>
+            <div class="table-container">
+                <table id="content-search-results-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre del Contenido</th>
+                            <th>Tipo</th>
+                            <th>Ruta de Carpeta</th>
+                        </tr>
+                    </thead>
+                    <tbody id="content-search-results-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     </div>
 </div>
 

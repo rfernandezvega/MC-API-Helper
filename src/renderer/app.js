@@ -28,6 +28,7 @@ import * as queryCloner from './components/query-cloner.js';           // Lógic
 import * as deFinder from './components/de-finder.js';               // Lógica del buscador de Data Extensions.
 import * as dataSourceFinder from './components/data-source-finder.js';  // Lógica del buscador de orígenes de datos.
 import * as queryTextFinder from './components/query-text-finder.js';      // Lógica del buscador de texto en queries.
+import * as contentFinder from './components/content-finder.js';  			// Lógica del buscador de contenidos
 import * as customerFinder from './components/customer-finder.js';         // Lógica del buscador de clientes/suscriptores.
 import * as emailValidator from './components/email-validator.js';       // Lógica del validador de emails.
 import * as calendar from './components/calendar.js';                  // Lógica del calendario de automatismos.
@@ -543,6 +544,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		dataSourceFinder.init({ getAuthenticatedConfig });
 		queryTextFinder.init({ getAuthenticatedConfig });
 		customerFinder.init({ getAuthenticatedConfig });
+		contentFinder.init({ getAuthenticatedConfig });
 		emailValidator.init({ getAuthenticatedConfig });
 		// El calendario necesita una función "puente" para poder navegar a otra vista (la de gestión de automatismos)
 		calendar.init({ getAuthenticatedConfig, showAutomationsView: showFilteredAutomations });
