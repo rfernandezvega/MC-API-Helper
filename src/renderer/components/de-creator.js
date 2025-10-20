@@ -87,13 +87,13 @@ async function createDataExtension() {
         ui.showCustomAlert(successMessage);
 
         // Limpiar el formulario después de la creación exitosa.
-        elements.deNameInput.value = '';
+       /* elements.deNameInput.value = '';
         elements.deDescriptionInput.value = '';
         elements.deExternalKeyInput.value = '';
-        elements.deFolderInput.value = ''; // Limpia el campo de texto de la carpeta
-        state.selectedFolderId = null;   // Resetea el ID guardado en el estado
+        elements.deFolderInput.value = ''; 
+        state.selectedFolderId = null;   
         elements.isSendableCheckbox.checked = false;
-        fieldsTable.handleSendableChange({ target: elements.isSendableCheckbox }); // Actualiza la tabla de campos
+        fieldsTable.handleSendableChange({ target: elements.isSendableCheckbox }); */
 
     } catch (error) {
         logger.logMessage(`Error al crear la Data Extension: ${error.message}`);

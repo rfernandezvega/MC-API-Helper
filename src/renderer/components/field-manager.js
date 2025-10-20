@@ -54,7 +54,7 @@ async function createOrUpdateFields() {
         const fieldsData = fieldsTable.getFieldsData();
 
         if (!externalKey) {
-            throw new Error('Defina una "External Key de la DE" en "Gestión de Campos".');
+            throw new Error('Defina una "External Key de la DE" en "Recuperación y Borrado de Campos".');
         }
         if (fieldsData.length === 0) {
             throw new Error('No hay campos válidos en la tabla para crear/actualizar.');
