@@ -692,3 +692,23 @@ function manageModalZIndex(modalElement) {
     zIndexCounter++;
     modalElement.style.zIndex = zIndexCounter;
 }
+
+/**
+ * Muestra un modal genérico.
+ * @param {HTMLElement} modalElement - El elemento del overlay del modal a mostrar.
+ */
+export function showModal(modalElement) {
+    if (modalElement) {
+        modalElement.style.display = 'flex';
+    }
+}
+
+/**
+ * Oculta un modal genérico.
+ * @param {HTMLElement} modalElement - El elemento del overlay del modal a ocultar.
+ */
+export function hideModal(modalElement) {
+    if (modalElement) {
+        modalElement.style.display = 'none';
+    }
+}

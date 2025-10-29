@@ -190,9 +190,11 @@ export function init() {
 
     // --- 14. Sección: Gestión de Cloud Pages ---
     elements.cloudPagesTbody = document.getElementById('cloudpages-tbody');
+    elements.cloudPageIdFilter = document.getElementById('cloudPageIdFilter');
     elements.cloudPageNameFilter = document.getElementById('cloudPageNameFilter');
     elements.cloudPageTypeFilter = document.getElementById('cloudPageTypeFilter');
     elements.refreshCloudPagesTableBtn = document.getElementById('refreshCloudPagesTableBtn');
+    elements.getCloudPageIdsBtn = document.getElementById('getCloudPageIdsBtn');
     elements.prevPageBtnCloudPages = document.getElementById('prevPageBtnCloudPages');
     elements.nextPageBtnCloudPages = document.getElementById('nextPageBtnCloudPages');
     elements.pageInputCloudPages = document.getElementById('pageInputCloudPages');
@@ -275,6 +277,13 @@ export function init() {
     elements.journeyClonerCancelBtn = document.getElementById('journey-cloner-cancel-btn');
     elements.journeyClonerContinueBtn = document.getElementById('journey-cloner-continue-btn');
     elements.journeyClonerCloneBtn = document.getElementById('journey-cloner-clone-btn');
+
+    // --- 20. MODAL DE IDS DE CLOUD PAGES ---
+    elements.cloudPageIdsModal = document.getElementById('cloudpage-ids-modal-overlay');
+    elements.cloudPageInternalApiLink = document.getElementById('cloudpage-internal-api-link');
+    elements.cloudPageIdsPasteArea = document.getElementById('cloudpage-ids-paste-area');
+    elements.cloudPageIdsCancelBtn = document.getElementById('cloudpage-ids-cancel-btn');
+    elements.cloudPageIdsImportBtn = document.getElementById('cloudpage-ids-import-btn');
 }
 
 export default elements;

@@ -26,22 +26,23 @@ export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
 
     elements.refreshCloudPagesTableBtn.addEventListener('click', refreshData);
+
+    // Listeners para el nuevo botón y modal de IDs
+    elements.getCloudPageIdsBtn.addEventListener('click', showGetIdsModal);
+    elements.cloudPageIdsCancelBtn.addEventListener('click', () => ui.hideModal(elements.cloudPageIdsModal));
+    elements.cloudPageIdsImportBtn.addEventListener('click', processPastedIds);
     
     // Los filtros llaman a la función que resetea la paginación a la página 1.
+    elements.cloudPageIdFilter.addEventListener('input', applyFiltersAndRender);
     elements.cloudPageNameFilter.addEventListener('input', applyFiltersAndRender);
     elements.cloudPageTypeFilter.addEventListener('change', applyFiltersAndRender);
     
     // El ordenamiento también resetea la paginación.
     document.querySelector('#cloudpages-table thead').addEventListener('click', handleSort);
     
-    // Listener para abrir enlaces externos en la tabla.
-    elements.cloudPagesTbody.addEventListener('click', (e) => {
-        const link = e.target.closest('a.external-link');
-        if (link) { 
-            e.preventDefault(); 
-            window.electronAPI.openExternalLink(link.href); 
-        }
-    });
+    // Listener centralizado para abrir enlaces externos
+    elements.cloudPagesTbody.addEventListener('click', handleExternalLink);
+    elements.cloudPageInternalApiLink.addEventListener('click', handleExternalLink);
 
     // Los botones de paginación llaman a la función que solo renderiza, sin resetear filtros.
     elements.prevPageBtnCloudPages.addEventListener('click', () => {
@@ -90,6 +91,7 @@ export async function view() {
  */
 export function clearCache() {
     fullCloudPageList = [];
+    elements.cloudPageIdFilter.value = '';
     elements.cloudPageNameFilter.value = '';
     elements.cloudPageTypeFilter.innerHTML = '<option value="">Todos los tipos</option>';
     elements.cloudPagesTbody.innerHTML = '';
@@ -124,7 +126,9 @@ async function fetchData() {
         
         fullCloudPageList = assetsWithFolders.map(item => ({
             ...item,
-            url: extractCloudPageUrl(item) 
+            url: extractCloudPageUrl(item),
+            publishDate: item.meta?.cloudPages?.publishDate || null,
+            pageId: null
         }));
         
         populateCloudPageFilters(fullCloudPageList);
@@ -154,6 +158,12 @@ function applyFiltersAndRender() {
 function renderFilteredTable() {
     let filtered = fullCloudPageList;
     
+    const idFilter = elements.cloudPageIdFilter.value.trim();
+    if (idFilter) {
+        // Se convierte el pageId a string para poder usar 'includes' y permitir búsquedas parciales
+        filtered = filtered.filter(p => p.pageId && String(p.pageId).includes(idFilter));
+    }
+
     const nameFilter = elements.cloudPageNameFilter.value.toLowerCase().trim();
     if (nameFilter) {
         filtered = filtered.filter(p => p.name.toLowerCase().includes(nameFilter));
@@ -177,9 +187,9 @@ function renderTable(pages) {
 
     elements.cloudPagesTbody.innerHTML = '';
     if (paginatedItems.length === 0) {
-        elements.cloudPagesTbody.innerHTML = '<tr><td colspan="5">No se encontraron Cloud Pages con los filtros aplicados.</td></tr>';
+        elements.cloudPagesTbody.innerHTML = '<tr><td colspan="7">No se encontraron Cloud Pages con los filtros aplicados.</td></tr>';
     } else {
-        paginatedItems.forEach(page => {
+         paginatedItems.forEach(page => {
             const row = document.createElement('tr');
             const urlCell = page.url.startsWith('http') 
                 ? `<td><a href="${page.url}" class="external-link" title="Abrir URL en el navegador">${page.url}</a></td>` 
@@ -188,8 +198,10 @@ function renderTable(pages) {
                 <td>${page.name || '---'}</td>
                 <td>${page.assetType.displayName || '---'}</td>
                 <td>${formatDate(page.modifiedDate)}</td>
+                <td>${formatDate(page.publishDate)}</td>
                 <td>${page.location || '---'}</td>
                 ${urlCell}
+                <td>${page.pageId || '---'}</td>
             `;
             elements.cloudPagesTbody.appendChild(row);
         });
@@ -223,7 +235,7 @@ function handleSort(e) {
  * @param {Array} data - El array a ordenar.
  */
 function sortData(data) {
-    const getValue = (obj, key) => (key === 'assetType.displayName') ? obj.assetType?.displayName : obj[key];
+    const getValue = (obj, key) => key.split('.').reduce((o, i) => (o ? o[i] : undefined), obj);
     const direction = currentSortDirection === 'asc' ? 1 : -1;
     
     data.sort((a, b) => {
@@ -234,7 +246,7 @@ function sortData(data) {
         if (currentSortColumn.includes('Date')) {
             return (new Date(valA) - new Date(valB)) * direction;
         }
-        return String(valA).localeCompare(String(valB), undefined, { sensitivity: 'base' }) * direction;
+        return String(valA).localeCompare(String(valB), undefined, { numeric: true, sensitivity: 'base' }) * direction;
     });
 }
 
@@ -312,5 +324,81 @@ function formatDate(dateString) {
         return new Date(dateString).toLocaleString('es-ES', { timeZone: 'Europe/Madrid' });
     } catch {
         return 'Fecha inválida';
+    }
+}
+
+
+/**
+ * Muestra el modal para recuperar IDs, generando el enlace dinámico.
+ */
+async function showGetIdsModal() {
+    try {
+        const stackKey = elements.stackKeyInput.value;
+        if (!stackKey) {
+            ui.showCustomAlert("No se pudo determinar el stack (S1, S7, etc.) de la cuenta. Revisa la conexión.");
+            return;
+        }
+        
+        const stackNumber = stackKey.replace('S', '');
+        const url = `https://cloud-pages.s${stackNumber}.marketingcloudapps.com/fuelapi/internal/v2/cloudpages/landing-pages?$page=1&$pageSize=5000&$orderBy=createdDate%20DESC`;
+        elements.cloudPageInternalApiLink.href = url;
+        elements.cloudPageInternalApiLink.textContent = url;
+        elements.cloudPageIdsPasteArea.value = '';
+        ui.showModal(elements.cloudPageIdsModal);
+
+    } catch (error) {
+        ui.showCustomAlert(`Error al preparar el modal: ${error.message}`);
+    }
+}
+
+/**
+ * Procesa el JSON pegado por el usuario y actualiza la tabla.
+ */
+function processPastedIds() {
+    const jsonText = elements.cloudPageIdsPasteArea.value.trim();
+    if (!jsonText) {
+        ui.showCustomAlert("El área de texto está vacía. Por favor, pega el contenido del JSON.");
+        return;
+    }
+    
+    try {
+        const data = JSON.parse(jsonText);
+        const entities = data?.entities;
+        
+        if (!Array.isArray(entities)) {
+            throw new Error("El JSON no tiene el formato esperado (no se encontró la propiedad 'entities').");
+        }
+
+        // Crear un mapa para una búsqueda eficiente
+        const idMap = new Map(entities.map(e => [e.siteAssetId, e.pageId]));
+        
+        let matchCount = 0;
+        fullCloudPageList.forEach(page => {
+            if (idMap.has(page.id)) {
+                page.pageId = idMap.get(page.id);
+                matchCount++;
+            }
+        });
+
+        logger.logMessage(`Se han importado los IDs. ${matchCount} Cloud Pages fueron actualizadas.`);
+        ui.showCustomAlert(`Proceso completado. Se han asignado ${matchCount} IDs a las Cloud Pages en la tabla.`);
+        
+        ui.hideModal(elements.cloudPageIdsModal);
+        renderFilteredTable(); // Refrescar la tabla para mostrar los nuevos IDs
+
+    } catch (error) {
+        logger.logMessage(`Error al procesar JSON de IDs: ${error.message}`);
+        ui.showCustomAlert(`Error al procesar el JSON: ${error.message}. Asegúrate de haber copiado el texto completo y válido.`);
+    }
+}
+
+/**
+ * Gestiona el clic en cualquier enlace que deba abrirse en el navegador externo.
+ */
+function handleExternalLink(e) {
+    const link = e.target.closest('a.external-link');
+    if (link && link.href) { 
+        e.preventDefault(); 
+        window.electronAPI.openExternalLink(link.href); 
     }
 }
