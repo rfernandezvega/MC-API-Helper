@@ -581,3 +581,10 @@ td a:hover { color: #003366; text-decoration: underline; }
     background-color: #69a3db; /* Un color de selección normal */
     color: white;
 }
+
+.action-button.cancel-btn {
+  background-color: #6c757d; /* Color gris del back-button */
+}
+.action-button.cancel-btn:hover {
+  background-color: #5a6268; /* Color gris oscuro del hover */
+}
