@@ -9,6 +9,7 @@ import * as logger from '../ui/logger.js';
 // --- 1. ESTADO DEL MÓDULO ---
 
 let fullCloudPageList = [];
+let currentFilteredList = [];
 let currentPage = 1;
 let currentSortColumn = 'name';
 let currentSortDirection = 'asc';
@@ -26,6 +27,7 @@ export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
 
     elements.refreshCloudPagesTableBtn.addEventListener('click', refreshData);
+    elements.downloadCloudPagesCsvBtn.addEventListener('click', downloadCloudPagesCsv);
 
     // Listeners para el nuevo botón y modal de IDs
     elements.getCloudPageIdsBtn.addEventListener('click', showGetIdsModal);
@@ -43,6 +45,7 @@ export function init(dependencies) {
     // Listener centralizado para abrir enlaces externos
     elements.cloudPagesTbody.addEventListener('click', handleExternalLink);
     elements.cloudPageInternalApiLink.addEventListener('click', handleExternalLink);
+    elements.codeResourceInternalApiLink.addEventListener('click', handleExternalLink);
 
     // Los botones de paginación llaman a la función que solo renderiza, sin resetear filtros.
     elements.prevPageBtnCloudPages.addEventListener('click', () => {
@@ -174,7 +177,9 @@ function renderFilteredTable() {
         filtered = filtered.filter(p => p.assetType.displayName === typeFilter);
     }
     
-    renderTable(filtered);
+    currentFilteredList = filtered;
+
+    renderTable(currentFilteredList);
 }
 
 /**
@@ -334,15 +339,24 @@ function formatDate(dateString) {
 async function showGetIdsModal() {
     try {
         const stackKey = elements.stackKeyInput.value;
-        if (!stackKey) {
-            ui.showCustomAlert("No se pudo determinar el stack (S1, S7, etc.) de la cuenta. Revisa la conexión.");
+        if (!stackKey || stackKey === 'No disponible') {
+            ui.showCustomAlert("No se pudo determinar el stack (S1, S7, etc.) de la cuenta. Revisa la conexión en la pestaña 'Configuración APIs'.");
             return;
         }
         
         const stackNumber = stackKey.replace('S', '');
-        const url = `https://cloud-pages.s${stackNumber}.marketingcloudapps.com/fuelapi/internal/v2/cloudpages/landing-pages?$page=1&$pageSize=5000&$orderBy=createdDate%20DESC`;
-        elements.cloudPageInternalApiLink.href = url;
-        elements.cloudPageInternalApiLink.textContent = url;
+        const baseUrl = `https://cloud-pages.s${stackNumber}.marketingcloudapps.com/fuelapi/internal/v2/cloudpages`;
+        
+        // Generar URL para Landing Pages
+        const landingPagesUrl = `${baseUrl}/landing-pages?$page=1&$pageSize=5000&$orderBy=createdDate%20DESC`;
+        elements.cloudPageInternalApiLink.href = landingPagesUrl;
+        elements.cloudPageInternalApiLink.textContent = landingPagesUrl;
+
+        // Generar URL para Code Resources
+        const codeResourcesUrl = `${baseUrl}/code-resources?$page=1&$pageSize=5000&$orderBy=createdDate%20DESC`;
+        elements.codeResourceInternalApiLink.href = codeResourcesUrl;
+        elements.codeResourceInternalApiLink.textContent = codeResourcesUrl;
+
         elements.cloudPageIdsPasteArea.value = '';
         ui.showModal(elements.cloudPageIdsModal);
 
@@ -365,11 +379,23 @@ function processPastedIds() {
         const data = JSON.parse(jsonText);
         const entities = data?.entities;
         
-        if (!Array.isArray(entities)) {
-            throw new Error("El JSON no tiene el formato esperado (no se encontró la propiedad 'entities').");
+        if (!Array.isArray(entities) || entities.length === 0) {
+            throw new Error("El JSON no tiene el formato esperado o la lista 'entities' está vacía.");
         }
 
-        // Crear un mapa para una búsqueda eficiente
+        // Detectar el tipo de JSON basándose en una propiedad única
+        let jsonType = '';
+        if (entities[0].hasOwnProperty('landingPageId')) {
+            jsonType = 'Landing Pages';
+        } else if (entities[0].hasOwnProperty('codeResourceId')) {
+            jsonType = 'Code Resources';
+        } else {
+            throw new Error("El formato del JSON no corresponde ni a Landing Pages ni a Code Resources.");
+        }
+
+        logger.logMessage(`Detectado JSON de tipo: ${jsonType}.`);
+
+        // La lógica de mapeo es la misma para ambos, ya que usan siteAssetId y pageId
         const idMap = new Map(entities.map(e => [e.siteAssetId, e.pageId]));
         
         let matchCount = 0;
@@ -381,7 +407,7 @@ function processPastedIds() {
         });
 
         logger.logMessage(`Se han importado los IDs. ${matchCount} Cloud Pages fueron actualizadas.`);
-        ui.showCustomAlert(`Proceso completado. Se han asignado ${matchCount} IDs a las Cloud Pages en la tabla.`);
+        ui.showCustomAlert(`Proceso completado con JSON de ${jsonType}. Se han asignado ${matchCount} IDs en la tabla.`);
         
         ui.hideModal(elements.cloudPageIdsModal);
         renderFilteredTable(); // Refrescar la tabla para mostrar los nuevos IDs
@@ -401,4 +427,45 @@ function handleExternalLink(e) {
         e.preventDefault(); 
         window.electronAPI.openExternalLink(link.href); 
     }
+}
+
+
+/**
+ * Genera y descarga un fichero CSV con las Cloud Pages filtradas.
+ */
+function downloadCloudPagesCsv() {
+    if (currentFilteredList.length === 0) {
+        ui.showCustomAlert("No hay datos que coincidan con los filtros actuales para descargar.");
+        return;
+    }
+
+    const headers = ['Page ID', 'Nombre', 'Tipo', 'Fecha Modificacion', 'Fecha Publicacion', 'Ubicacion', 'URL'];
+    
+    // Hacemos una copia de los datos filtrados para ordenarlos
+    const sortedData = [...currentFilteredList];
+    sortData(sortedData);
+    
+    const rows = sortedData.map(page => [
+        `"${page.pageId || ''}"`,
+        `"${page.name || ''}"`,
+        `"${page.assetType.displayName || ''}"`,
+        `"${formatDate(page.modifiedDate)}"`,
+        `"${formatDate(page.publishDate)}"`,
+        `"${page.location || ''}"`,
+        `"${page.url || ''}"`
+    ].join(','));
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "cloud_pages.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
