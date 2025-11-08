@@ -576,6 +576,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		// Activa la funcionalidad de búsqueda en la página.
 		setupFindInPage();
+
+		// Carga y muestra la versión de la aplicación en la UI
+        (async () => {
+            try {
+                const version = await window.electronAPI.getAppVersion();
+                const versionElement = document.getElementById('app-version');
+                if (versionElement) {
+                    versionElement.textContent = `${version}`;
+                }
+            } catch (error) {
+                console.error("No se pudo obtener la versión de la app:", error);
+            }
+        })();
 	}
 
 	// Inicia todo el proceso.

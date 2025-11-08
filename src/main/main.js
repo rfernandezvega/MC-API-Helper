@@ -218,6 +218,11 @@ ipcMain.handle('check-system-user-license', async () => {
     }
 });
 
+// Escucha una petición desde el renderer para obtener la versión de la app.
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion(); // app.getVersion() lee la versión desde package.json
+});
+
 ipcMain.on('open-external-link', (event, url) => {
     if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
         shell.openExternal(url);

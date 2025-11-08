@@ -616,3 +616,24 @@ td a:hover { color: #003366; text-decoration: underline; }
 #gestion-contenidos-section td {
     word-wrap: break-word;
 }
+
+#table-json th:nth-child(3),
+#table-json td:nth-child(3) {
+    width: 8%; 
+}
+
+#table-json th:nth-child(11),
+#table-json td:nth-child(11) {
+    width: 35%;
+}
+
+#app-version {
+    position: fixed; /* Lo fija en la ventana, independientemente del scroll */
+    bottom: 2px;     /* 2px desde el borde inferior */
+    right: 20px;     /* 20px desde el borde derecho */
+    font-size: 0.75em; /* Texto pequeño */
+    color: #a0a0a0;    /* Un gris suave */
+    user-select: none; /* Evita que el texto se pueda seleccionar */
+    pointer-events: none; /* Hace que el texto sea 'invisible' a los clics */
+    z-index: 99999;  /* Se asegura de que esté por encima de casi todo */
+}

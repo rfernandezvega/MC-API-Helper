@@ -299,6 +299,7 @@ export function init() {
     elements.cloudPageContentsImportBtn = document.getElementById('cloudpage-contents-import-btn');
 
     // --- 22. GESTOR DE CONTENIDOS ---
+    elements.importNewContentBtn = document.getElementById('importNewContentBtn');
     elements.contentManagerFilter = document.getElementById('contentManagerFilter');
     elements.contentManagerTabButtons = document.getElementById('content-manager-tab-buttons');
     elements.contentManagerTabContent = document.getElementById('content-manager-tab-content');

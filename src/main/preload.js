@@ -114,4 +114,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * @returns {Promise<boolean|object>} - Devuelve `true` si es válido, `false` si no, o un objeto de error.
    */
   checkSystemUserLicense: () => ipcRenderer.invoke('check-system-user-license'),
+
+  getAppVersion: () => ipcRenderer.invoke('get-app-version')
 });

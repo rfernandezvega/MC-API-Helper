@@ -7,7 +7,7 @@ import * as logger from '../ui/logger.js';
 
 // --- CONFIGURACIÓN CENTRAL DE LA VISTA ---
 const CONTENT_TYPES_CONFIG = [
-     { 
+    { 
         id: 'emails', 
         displayName: 'Emails', 
         assetTypeIds: [207, 208, 209],
@@ -15,12 +15,72 @@ const CONTENT_TYPES_CONFIG = [
             { key: 'id', label: 'ID' },
             { key: 'name', label: 'Nombre' },
             { key: 'assetTypeName', label: 'Tipo' },
-            { key: 'createdDate', label: 'Creado' },
             { key: 'modifiedDate', label: 'Modificado' },
             { key: 'templateName', label: 'Plantilla' },
             { key: 'attributes', label: 'Atributos' },
             { key: 'subject', label: 'Asunto' },
             { key: 'preheader', label: 'Preheader' }
+        ]
+    },
+    { 
+        id: 'push', 
+        displayName: 'Push', 
+        assetTypeIds: [230],
+        filter: (item) => item.type === 'push', 
+        headers: [
+            { key: 'id', label: 'ID' },
+            { key: 'name', label: 'Nombre' },
+            { key: 'modifiedDate', label: 'Modificado' },
+            { key: 'title', label: 'Título' },
+            { key: 'subtitle', label: 'Subtítulo' },
+            { key: 'action', label: 'Acción' },
+            { key: 'media', label: 'Media' },
+            { key: 'message', label: 'Mensaje' }
+        ]
+    },
+    {
+        id: 'sms',
+        displayName: 'SMS',
+        assetTypeIds: [230],
+        filter: (item) => item.type === 'SMS', 
+        headers: [
+            { key: 'id', label: 'ID' },
+            { key: 'name', label: 'Nombre' },
+            { key: 'modifiedDate', label: 'Modificado' },
+            { key: 'message', label: 'Mensaje' }
+        ]
+    },
+    { 
+        id: 'bloques', 
+        displayName: 'Bloques', 
+        assetTypeIds: [212, 223], 
+        headers: [
+            { key: 'id', label: 'ID' },
+            { key: 'name', label: 'Nombre' },
+            { key: 'assetTypeName', label: 'Tipo' },
+            { key: 'modifiedDate', label: 'Modificado' }
+        ]
+    },
+    {
+        id: 'codesnippet', 
+        displayName: 'Code Snippet',
+        assetTypeIds: [220],
+        headers: [
+            { key: 'id', label: 'ID' },
+            { key: 'name', label: 'Nombre' },
+            { key: 'modifiedDate', label: 'Modificado' },
+            { key: 'content', label: 'Contenido' }
+        ]
+    },
+    {
+        id: 'otros',
+        displayName: 'Otros',
+        assetTypeIds: [235], 
+        headers: [
+            { key: 'id', label: 'ID' },
+            { key: 'name', label: 'Nombre' },
+            { key: 'assetTypeName', label: 'Tipo' },
+            { key: 'modifiedDate', label: 'Modificado' }
         ]
     }
 ];
@@ -45,6 +105,9 @@ export function init(dependencies) {
     elements.contentManagerCancelBtn.addEventListener('click', () => ui.hideModal(elements.contentManagerModal));
     elements.contentManagerCopyScriptBtn.addEventListener('click', copyScriptToClipboard);
     elements.contentManagerCbLink.addEventListener('click', ui.handleExternalLink);
+
+    // Conecta el nuevo botón de la vista principal a la función que abre la modal.
+    elements.importNewContentBtn.addEventListener('click', showGetContentsModal);
 }
 
 /**
@@ -88,7 +151,10 @@ async function showGetContentsModal() {
         elements.contentManagerCbLink.href = cbUrl;
         elements.contentManagerCbLink.textContent = cbUrl;
         
-        const allTypeIds = CONTENT_TYPES_CONFIG.flatMap(type => type.assetTypeIds);
+        const allTypeIds = CONTENT_TYPES_CONFIG
+            .map(type => type.assetTypeIds) // Primero obtenemos todos los arrays de IDs
+            .filter(ids => ids && ids.length > 0) // Filtramos los que no estén vacíos
+            .flat(); // Aplanamos el resultado
         
         const scriptContent = `(async () => {
     const baseUrl = "https://content-builder.s${stackNumber}.marketingcloudapps.com/fuelapi/asset/v1/content/assets/";
@@ -99,25 +165,48 @@ async function showGetContentsModal() {
     console.log("🚀 Buscando assets de tipos:", allTypeIds);
 
     const extractData = (a) => {
-        const attributes = a?.data?.email?.attributes
-            ?.filter(attr => attr.value)
-            .map(attr => \`\${attr.order}: \${attr.value}\`)
-            .join('\\n') || null;
-
-        return {
+        let data = {
             id: a.id,
             name: a.name,
             assetTypeId: a.assetType?.id,
             assetTypeName: a.assetType?.displayName,
             createdDate: a.createdDate,
             modifiedDate: a.modifiedDate,
-            templateId: a?.views?.html?.template?.id ?? null,
-            templateName: a?.views?.html?.template?.name ?? null,
-            attributes: attributes,
-            subject: a?.views?.subjectline?.content ?? null,
-            preheader: a?.views?.preheader?.content ?? null,
-            content: a?.views?.html?.content ?? a.content ?? null
+            content: a.content
         };
+
+        const emailTypeIds = [207, 208, 209];
+        const jsonMessageTypeIds = [230];
+
+        if (emailTypeIds.includes(data.assetTypeId)) {
+            const attributes = a?.data?.email?.attributes?.filter(attr => attr.value).map(attr => \`\${attr.order}: \${attr.value}\`).join('\\n') || null;
+            data.templateId = a?.views?.html?.template?.id ?? null;
+            data.templateName = a?.views?.html?.template?.name ?? null;
+            data.attributes = attributes;
+            data.subject = a?.views?.subjectline?.content ?? null;
+            data.preheader = a?.views?.preheader?.content ?? null;
+            data.content = a?.views?.html?.content ?? a.content ?? null;
+        } else if (jsonMessageTypeIds.includes(data.assetTypeId)) {
+            const pushData = a?.views?.push?.meta?.options?.customBlockData;
+            const smsData = a?.views?.sMS?.meta?.options?.customBlockData; // sMS es sensible a mayúsculas
+            const customData = pushData || smsData; // Usa el que no sea nulo
+
+            data.type = a?.availableViews?.[0] || null;
+            data.title = customData?.['display:title'] ?? null;
+            data.subtitle = customData?.['display:subtitle'] ?? null;
+            data.actionType = customData?.['openBehavior:actionType']?.label ?? null;
+            data.actionUrl = customData?.['openBehavior:action'] ?? null;
+            data.message = customData?.['display:message'] ?? null; // Ahora encontrará el mensaje
+            
+            const iosMedia = customData?.['display:media:url:ios'];
+            const androidMedia = customData?.['display:media:url:android'];
+            if (iosMedia && iosMedia === androidMedia) {
+                data.media = iosMedia;
+            } else {
+                data.media = [iosMedia, androidMedia].filter(Boolean).join('\\n');
+            }
+        }
+        return data;
     };
 
     while (true) {
@@ -189,24 +278,55 @@ function renderAllTabs() {
             return (item.name && item.name.toLowerCase().includes(filterText)) ||
                    (item.content && item.content.toLowerCase().includes(filterText)) ||
                    (item.subject && item.subject.toLowerCase().includes(filterText)) ||
-                   (item.preheader && item.preheader.toLowerCase().includes(filterText));
+                   (item.preheader && item.preheader.toLowerCase().includes(filterText)) ||
+                   (item.attributes && item.attributes.toLowerCase().includes(filterText)) ||
+                   (item.title && item.title.toLowerCase().includes(filterText)) ||
+                   (item.subtitle && item.subtitle.toLowerCase().includes(filterText)) ||
+                   (item.message && item.message.toLowerCase().includes(filterText));
         });
     }
 
     CONTENT_TYPES_CONFIG.forEach(tab => renderTableForTab(tab.id, filteredList));
 }
 
+/**
+ * Convierte caracteres HTML especiales en entidades para mostrarlos como texto.
+ * @param {string} str - La cadena de texto a escapar.
+ * @returns {string} - La cadena de texto segura para ser insertada como HTML.
+ */
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#39;");
+}
+
 function renderTableForTab(tabId, sourceData) {
     const tabConfig = CONTENT_TYPES_CONFIG.find(t => t.id === tabId);
     const tbody = document.getElementById(`tbody-${tabId}`);
 
-    if (!tabConfig || tabConfig.headers.length === 0) {
-        if(tbody) tbody.innerHTML = `<tr><td colspan="10">Funcionalidad pendiente de implementación.</td></tr>`;
+    if (!tabConfig || !tabConfig.headers || tabConfig.headers.length === 0) {
+        if(tbody) tbody.innerHTML = `<tr><td colspan="12">Funcionalidad pendiente de implementación.</td></tr>`;
         return;
     }
     
     const tabState = tabsState[tabId];
-    const tabData = sourceData.filter(item => tabConfig.assetTypeIds.includes(item.assetTypeId));
+
+    // Lógica de filtrado que lee la configuración de cada pestaña
+    const tabData = sourceData.filter(item => {
+        const typeMatch = tabConfig.assetTypeIds.includes(item.assetTypeId);
+        if (!typeMatch) return false;
+
+        // Si la pestaña tiene un filtro adicional (para Push/SMS), lo aplica
+        if (tabConfig.filter) {
+            return tabConfig.filter(item);
+        }
+        return true;
+    });
+
     tabState.currentFilteredList = tabData;
 
     sortData(tabData, tabState.sortColumn, tabState.sortDirection);
@@ -218,20 +338,78 @@ function renderTableForTab(tabId, sourceData) {
         tbody.innerHTML = `<tr><td colspan="${tabConfig.headers.length}">No se encontraron resultados.</td></tr>`;
     } else {
         tbody.innerHTML = paginatedItems.map(item => {
-            const attributesHtml = item.attributes ? item.attributes.replace(/\n/g, '<br>') : '---';
-            return `
-                <tr>
-                    <td>${item.id || '---'}</td>
-                    <td>${item.name || '---'}</td>
-                    <td>${item.assetTypeName || '---'}</td>
-                    <td>${formatDate(item.createdDate)}</td>
-                    <td>${formatDate(item.modifiedDate)}</td>
-                    <td>${item.templateName || '---'}</td>
-                    <td style="white-space: pre-wrap; text-align: left; max-width: 200px; word-break: break-all;">${attributesHtml}</td>
-                    <td style="max-width: 250px; word-break: break-all;">${item.subject || '---'}</td>
-                    <td style="max-width: 250px; word-break: break-all;">${item.preheader || '---'}</td>
-                </tr>
-            `;
+            // Pestaña: Emails
+            if (tabId === 'emails') {
+                const attributesHtml = item.attributes ? item.attributes.replace(/\n/g, '<br>') : '---';
+                return `
+                    <tr>
+                        <td>${item.id || '---'}</td>
+                        <td>${item.name || '---'}</td>
+                        <td>${item.assetTypeName || '---'}</td>
+                        <td>${formatDate(item.modifiedDate)}</td>
+                        <td>${item.templateName || '---'}</td>
+                        <td style="white-space: pre-wrap; text-align: left; max-width: 200px; word-break: break-all;">${attributesHtml}</td>
+                        <td style="max-width: 250px; word-break: break-all;">${item.subject || '---'}</td>
+                        <td style="max-width: 250px; word-break: break-all;">${item.preheader || '---'}</td>
+                    </tr>
+                `;
+            // Pestaña: Push
+            } else if (tabId === 'push') {
+                const mediaHtml = item.media ? item.media.replace(/\n/g, '<br>') : '---';
+                const actionHtml = item.actionType ? `<b>${item.actionType}:</b> ${item.actionUrl || ''}` : '---';
+                return `
+                    <tr>
+                        <td>${item.id || '---'}</td>
+                        <td>${item.name || '---'}</td>
+                        <td>${formatDate(item.modifiedDate)}</td>
+                        <td style="max-width: 200px; word-break: break-all;">${item.title || '---'}</td>
+                        <td style="max-width: 200px; word-break: break-all;">${item.subtitle || '---'}</td>
+                        <td style="max-width: 250px; word-break: break-all;">${actionHtml}</td>
+                        <td style="max-width: 250px; word-break: break-all;">${mediaHtml}</td>
+                        <td style="white-space: pre-wrap; text-align: left; min-width: 300px;">${item.message || '---'}</td>
+                    </tr>
+                `;
+            // Pestaña: SMS
+            } else if (tabId === 'sms') {
+                return `
+                    <tr>
+                        <td>${item.id || '---'}</td>
+                        <td>${item.name || '---'}</td>
+                        <td>${formatDate(item.modifiedDate)}</td>
+                        <td style="white-space: pre-wrap; text-align: left; min-width: 400px;">${item.message || '---'}</td>
+                    </tr>
+                `;
+            // Pestaña: Bloques
+            } else if (tabId === 'bloques') {
+                return `
+                    <tr>
+                        <td>${item.id || '---'}</td>
+                        <td>${item.name || '---'}</td>
+                        <td>${item.assetTypeName || '---'}</td>
+                        <td>${formatDate(item.modifiedDate)}</td>
+                    </tr>
+                `;
+            // Pestaña: Code Snippet
+            } else if (tabId === 'codesnippet') {
+                return `
+                    <tr>
+                        <td>${item.id || '---'}</td>
+                        <td>${item.name || '---'}</td>
+                        <td>${formatDate(item.modifiedDate)}</td>
+                        <td style="white-space: pre-wrap; text-align: left; font-family: monospace; max-width: 400px;">${escapeHtml(item.content) || '---'}</td>
+                    </tr>
+                `;
+            } else if (tabId === 'otros') {
+                return `
+                    <tr>
+                        <td>${item.id || '---'}</td>
+                        <td>${item.name || '---'}</td>
+                        <td>${item.assetTypeName || '---'}</td>
+                        <td>${formatDate(item.modifiedDate)}</td>
+                    </tr>
+                `;
+            }
+            return ''; // Fallback por si una pestaña no tiene renderizador
         }).join('');
     }
     
