@@ -34,6 +34,8 @@ import * as emailValidator from './components/email-validator.js';       // Lóg
 import * as calendar from './components/calendar.js';                  // Lógica del calendario de automatismos.
 import * as automationCloner from './components/automation-cloner.js'; // Lógica del clonador de automatismos.
 import * as folderCreator from './components/folder-creator.js'; // Lógica del creador de carpetas
+import * as contentManager from './components/content-manager.js'; // Lógica del gestor de contenidos.
+
 
 
 
@@ -391,13 +393,20 @@ document.addEventListener('DOMContentLoaded', function () {
 				else if (macro === 'gestionAutomatismos') {
 					showSection('gestion-automatismos-section');
 					await automationsManager.view(); 
-				} else if (macro === 'gestionJourneys') {
+				}
+				else if (macro === 'gestionJourneys') {
 					showSection('gestion-journeys-section');
 					await journeysManager.view();
-				} else if (macro === 'gestionCloudPages') {
+				}
+				else if (macro === 'gestionCloudPages') {
 					showSection('gestion-cloudpages-section');
 					await cloudPagesManager.view();
-				}else if (macroToActionMap[macro]) { 
+				}
+				else if (macro === 'gestionContenidos') {
+                    showSection('gestion-contenidos-section');
+                    await contentManager.view();
+                }
+				else if (macroToActionMap[macro]) { 
 					showSection(macroToActionMap[macro]);
 				}
 			});
@@ -532,7 +541,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			automationsManager,
 			journeysManager,
 			cloudPagesManager,
-			automationCloner 
+			automationCloner, 
 		});
 
         deCreator.init({ getAuthenticatedConfig });
@@ -552,6 +561,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		calendar.init({ getAuthenticatedConfig, showAutomationsView: showFilteredAutomations });
 		automationCloner.init({ getAuthenticatedConfig, goBack });
 		folderCreator.init({ getAuthenticatedConfig });
+		contentManager.init({ getAuthenticatedConfig });
 		
 		// Carga las configuraciones de cliente guardadas y arranca sin ninguna seleccionada.
 		orgManager.loadConfigsIntoSelect();

@@ -297,6 +297,20 @@ export function init() {
     elements.cloudPageContentsPasteArea = document.getElementById('cloudpage-contents-paste-area');
     elements.cloudPageContentsCancelBtn = document.getElementById('cloudpage-contents-cancel-btn');
     elements.cloudPageContentsImportBtn = document.getElementById('cloudpage-contents-import-btn');
+
+    // --- 22. GESTOR DE CONTENIDOS ---
+    elements.contentManagerFilter = document.getElementById('contentManagerFilter');
+    elements.contentManagerTabButtons = document.getElementById('content-manager-tab-buttons');
+    elements.contentManagerTabContent = document.getElementById('content-manager-tab-content');
+
+    // Modal de importación de contenidos (sin cambios en sus IDs)
+    elements.contentManagerModal = document.getElementById('content-manager-modal-overlay');
+    elements.contentManagerCbLink = document.getElementById('content-manager-cb-link');
+    elements.contentManagerCopyScriptBtn = document.getElementById('content-manager-copy-script-btn');
+    elements.contentManagerFetchScript = document.getElementById('content-manager-fetch-script');
+    elements.contentManagerPasteArea = document.getElementById('content-manager-paste-area');
+    elements.contentManagerCancelBtn = document.getElementById('content-manager-cancel-btn');
+    elements.contentManagerImportBtn = document.getElementById('content-manager-import-btn');
 }
 
 export default elements;

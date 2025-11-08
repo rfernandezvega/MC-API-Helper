@@ -712,3 +712,17 @@ export function hideModal(modalElement) {
         modalElement.style.display = 'none';
     }
 }
+
+/**
+ * Gestiona el clic en cualquier enlace con la clase 'external-link'.
+ * Previene la navegación interna y lo abre en el navegador por defecto del sistema.
+ * @param {Event} e - El evento de clic.
+ */
+export function handleExternalLink(e) {
+    const link = e.target.closest('a.external-link');
+    if (link && link.href) { 
+        e.preventDefault(); 
+        // Llama a la API expuesta por el preload script
+        window.electronAPI.openExternalLink(link.href); 
+    }
+}

@@ -50,10 +50,10 @@ export function init(dependencies) {
     document.querySelector('#cloudpages-table thead').addEventListener('click', handleSort);
     
     // Listener centralizado para abrir enlaces externos
-    elements.cloudPagesTbody.addEventListener('click', handleExternalLink);
-    elements.cloudPageInternalApiLink.addEventListener('click', handleExternalLink);
-    elements.codeResourceInternalApiLink.addEventListener('click', handleExternalLink);
-    elements.cloudPageCbLink.addEventListener('click', handleExternalLink);
+    elements.cloudPagesTbody.addEventListener('click', ui.handleExternalLink);
+    elements.cloudPageInternalApiLink.addEventListener('click', ui.handleExternalLink);
+    elements.codeResourceInternalApiLink.addEventListener('click', ui.handleExternalLink);
+    elements.cloudPageCbLink.addEventListener('click', ui.handleExternalLink);
 
     // Los botones de paginación llaman a la función que solo renderiza, sin resetear filtros.
     elements.prevPageBtnCloudPages.addEventListener('click', () => {
@@ -583,18 +583,6 @@ function processPastedContents() {
         ui.showCustomAlert(`Error al procesar el JSON: ${error.message}. Asegúrate de haber copiado el texto completo y válido.`);
     }
 }
-
-/**
- * Gestiona el clic en cualquier enlace que deba abrirse en el navegador externo.
- */
-function handleExternalLink(e) {
-    const link = e.target.closest('a.external-link');
-    if (link && link.href) { 
-        e.preventDefault(); 
-        window.electronAPI.openExternalLink(link.href); 
-    }
-}
-
 
 /**
  * Genera y descarga un fichero CSV con las Cloud Pages filtradas.
