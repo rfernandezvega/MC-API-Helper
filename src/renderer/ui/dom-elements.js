@@ -192,6 +192,7 @@ export function init() {
     elements.cloudPagesTbody = document.getElementById('cloudpages-tbody');
     elements.cloudPageIdFilter = document.getElementById('cloudPageIdFilter');
     elements.cloudPageNameFilter = document.getElementById('cloudPageNameFilter');
+    elements.cloudPageContentFilter = document.getElementById('cloudPageContentFilter');
     elements.cloudPageTypeFilter = document.getElementById('cloudPageTypeFilter');
     elements.refreshCloudPagesTableBtn = document.getElementById('refreshCloudPagesTableBtn');
     elements.getCloudPageIdsBtn = document.getElementById('getCloudPageIdsBtn');
@@ -286,6 +287,16 @@ export function init() {
     elements.cloudPageIdsPasteArea = document.getElementById('cloudpage-ids-paste-area');
     elements.cloudPageIdsCancelBtn = document.getElementById('cloudpage-ids-cancel-btn');
     elements.cloudPageIdsImportBtn = document.getElementById('cloudpage-ids-import-btn');
+
+    // --- 21. MODAL DE CONTENIDOS DE CLOUD PAGES ---
+    elements.getCloudPageContentsBtn = document.getElementById('getCloudPageContentsBtn');
+    elements.cloudPageContentsModal = document.getElementById('cloudpage-contents-modal-overlay');
+    elements.cloudPageCbLink = document.getElementById('cloudpage-cb-link');
+    elements.cloudPageFetchScript = document.getElementById('cloudpage-fetch-script');
+    elements.cloudPageCopyScriptBtn = document.getElementById('cloudpage-copy-script-btn');
+    elements.cloudPageContentsPasteArea = document.getElementById('cloudpage-contents-paste-area');
+    elements.cloudPageContentsCancelBtn = document.getElementById('cloudpage-contents-cancel-btn');
+    elements.cloudPageContentsImportBtn = document.getElementById('cloudpage-contents-import-btn');
 }
 
 export default elements;

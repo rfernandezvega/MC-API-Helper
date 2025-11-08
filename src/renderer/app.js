@@ -141,9 +141,11 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	function updateLoginStatus(isLoggedIn, clientName = '', userInfo = null) {
 		if (isLoggedIn) {
-			let statusHTML = `🟢 Sesión activa: <strong>${clientName}</strong>`;
+			let statusHTML = `🟢 `;
 			if (userInfo && userInfo.email) {
-				statusHTML += `<br><small style="font-weight: normal;">Usuario: ${userInfo.email}</small>`;
+				statusHTML += `<small style="font-weight: normal;">${userInfo.preferred_username}</small>`;
+			}else{
+				statusHTML += `<strong>${clientName}</strong>`;
 			}
 			elements.loginStatusEl.innerHTML = statusHTML;
 		} else {

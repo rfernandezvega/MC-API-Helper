@@ -29,14 +29,21 @@ export function init(dependencies) {
     elements.refreshCloudPagesTableBtn.addEventListener('click', refreshData);
     elements.downloadCloudPagesCsvBtn.addEventListener('click', downloadCloudPagesCsv);
 
-    // Listeners para el nuevo botón y modal de IDs
+    // Listeners para el botón y modal de IDs
     elements.getCloudPageIdsBtn.addEventListener('click', showGetIdsModal);
     elements.cloudPageIdsCancelBtn.addEventListener('click', () => ui.hideModal(elements.cloudPageIdsModal));
     elements.cloudPageIdsImportBtn.addEventListener('click', processPastedIds);
+
+    // Listeners para el modal de Contenidos
+    elements.getCloudPageContentsBtn.addEventListener('click', showGetContentsModal);
+    elements.cloudPageContentsCancelBtn.addEventListener('click', () => ui.hideModal(elements.cloudPageContentsModal));
+    elements.cloudPageCopyScriptBtn.addEventListener('click', copyContentScriptToClipboard);
+    elements.cloudPageContentsImportBtn.addEventListener('click', processPastedContents);
     
     // Los filtros llaman a la función que resetea la paginación a la página 1.
     elements.cloudPageIdFilter.addEventListener('input', applyFiltersAndRender);
     elements.cloudPageNameFilter.addEventListener('input', applyFiltersAndRender);
+    elements.cloudPageContentFilter.addEventListener('input', applyFiltersAndRender);
     elements.cloudPageTypeFilter.addEventListener('change', applyFiltersAndRender);
     
     // El ordenamiento también resetea la paginación.
@@ -46,6 +53,7 @@ export function init(dependencies) {
     elements.cloudPagesTbody.addEventListener('click', handleExternalLink);
     elements.cloudPageInternalApiLink.addEventListener('click', handleExternalLink);
     elements.codeResourceInternalApiLink.addEventListener('click', handleExternalLink);
+    elements.cloudPageCbLink.addEventListener('click', handleExternalLink);
 
     // Los botones de paginación llaman a la función que solo renderiza, sin resetear filtros.
     elements.prevPageBtnCloudPages.addEventListener('click', () => {
@@ -96,6 +104,7 @@ export function clearCache() {
     fullCloudPageList = [];
     elements.cloudPageIdFilter.value = '';
     elements.cloudPageNameFilter.value = '';
+    elements.cloudPageContentFilter.value = '';
     elements.cloudPageTypeFilter.innerHTML = '<option value="">Todos los tipos</option>';
     elements.cloudPagesTbody.innerHTML = '';
 }
@@ -131,7 +140,8 @@ async function fetchData() {
             ...item,
             url: extractCloudPageUrl(item),
             publishDate: item.meta?.cloudPages?.publishDate || null,
-            pageId: null
+            pageId: null,
+            content: item.content || '' 
         }));
         
         populateCloudPageFilters(fullCloudPageList);
@@ -170,6 +180,13 @@ function renderFilteredTable() {
     const nameFilter = elements.cloudPageNameFilter.value.toLowerCase().trim();
     if (nameFilter) {
         filtered = filtered.filter(p => p.name.toLowerCase().includes(nameFilter));
+    }
+
+    const contentFilter = elements.cloudPageContentFilter.value.toLowerCase().trim();
+    if (contentFilter) {
+        filtered = filtered.filter(p => 
+            p.content && p.content.toLowerCase().includes(contentFilter)
+        );
     }
     
     const typeFilter = elements.cloudPageTypeFilter.value;
@@ -414,6 +431,155 @@ function processPastedIds() {
 
     } catch (error) {
         logger.logMessage(`Error al procesar JSON de IDs: ${error.message}`);
+        ui.showCustomAlert(`Error al procesar el JSON: ${error.message}. Asegúrate de haber copiado el texto completo y válido.`);
+    }
+}
+
+/**
+ * Muestra el modal para recuperar contenidos, generando el enlace y script dinámicos.
+ */
+async function showGetContentsModal() {
+    try {
+        const stackKey = elements.stackKeyInput.value;
+        if (!stackKey || stackKey === 'No disponible') {
+            ui.showCustomAlert("No se pudo determinar el stack (S1, S7, etc.) de la cuenta. Revisa la conexión.");
+            return;
+        }
+        
+        const stackNumber = stackKey.replace('S', '');
+        
+        // 1. Generar URL dinámica para Content Builder
+        const cbUrl = `https://content-builder.s${stackNumber}.marketingcloudapps.com/`;
+        elements.cloudPageCbLink.href = cbUrl;
+        elements.cloudPageCbLink.textContent = cbUrl;
+
+        // 2. Generar Script dinámico (VERSIÓN CORREGIDA)
+        const scriptContent = `(async () => {
+    const baseUrl = "https://content-builder.s${stackNumber}.marketingcloudapps.com/fuelapi/asset/v1/content/assets/";
+    const validTypeIds = [240, 241, 242, 243, 244, 245, 247, 248, 249];
+    const pageSize = 500;
+    let page = 1;
+    let allResults = [];
+
+    console.log("🚀 Buscando assets de tipos:", validTypeIds.join(", "));
+
+    while (true) {
+        const url = \`\${baseUrl}?$page=\${page}&$pageSize=\${pageSize}&$orderBy=modifiedDate%20desc\`;
+        console.log(\`📄 Consultando página \${page}...\`);
+        const res = await fetch(url);
+        if (!res.ok) { console.error(\`❌ Error en la página \${page}: \${res.status}\`); break; }
+        const data = await res.json();
+
+        const items = data.items || [];
+        if (items.length === 0) break;
+
+        for (const a of items) {
+            const typeId = a?.assetType?.id;
+            if (!validTypeIds.includes(typeId)) continue;
+
+            let content = a.content || null;
+            let urlPublica = null;
+
+            try {
+                const parsed = JSON.parse(a.content || "{}");
+                if (parsed.url) urlPublica = parsed.url;
+            } catch {}
+
+            if (typeId === 247 && a.meta?.thumbnailRefAssetId) {
+                try {
+                    const subUrl = \`\${baseUrl}\${a.meta.thumbnailRefAssetId}\`;
+                    const subRes = await fetch(subUrl);
+                    if (subRes.ok) {
+                        const subData = await subRes.json();
+                        content = subData?.views?.html?.content || subData.content || content;
+                    } else {
+                        console.warn(\`⚠️ No se pudo obtener el contenido de la landing \${a.id} (\${a.name})\`);
+                    }
+                } catch (e) {
+                    console.warn(\`⚠️ Error al cargar contenido de landing \${a.id}:\`, e);
+                }
+            }
+
+            allResults.push({
+                id: a.id,
+                name: a.name || "(sin nombre)",
+                assetTypeId: typeId,
+                assetTypeName: a.assetType?.name || "(desconocido)",
+                url: urlPublica,
+                content: content
+            });
+        }
+
+        if (items.length < pageSize) break;
+        page++;
+    }
+
+    const finalJson = { items: allResults };    
+    console.log("✅ JSON generado con", allResults.length, "elementos. Haz click derecho en el siguiente elemento para copiarlo");
+    console.log(finalJson);
+    
+})();`;
+
+        elements.cloudPageFetchScript.textContent = scriptContent;
+        elements.cloudPageContentsPasteArea.value = '';
+        ui.showModal(elements.cloudPageContentsModal);
+
+    } catch (error) {
+        ui.showCustomAlert(`Error al preparar el modal de contenidos: ${error.message}`);
+    }
+}
+
+/**
+ * Copia el contenido del script de la modal al portapapeles.
+ */
+function copyContentScriptToClipboard() {
+    const scriptText = elements.cloudPageFetchScript.textContent;
+    navigator.clipboard.writeText(scriptText)
+        .then(() => ui.showCustomAlert("¡Código copiado al portapapeles!"))
+        .catch(err => ui.showCustomAlert(`Error al copiar: ${err.message}`));
+}
+
+/**
+ * Procesa el JSON de contenidos pegado por el usuario y actualiza la tabla.
+ */
+function processPastedContents() {
+    const jsonText = elements.cloudPageContentsPasteArea.value.trim();
+    if (!jsonText) {
+        ui.showCustomAlert("El área de texto está vacía. Pega el contenido del JSON generado.");
+        return;
+    }
+    
+    try {
+        const data = JSON.parse(jsonText);
+        const items = data?.items;
+        
+        if (!Array.isArray(items)) {
+            throw new Error("El JSON no tiene el formato esperado o la lista 'items' no existe.");
+        }
+
+        const contentMap = new Map(items.map(item => [item.id, { content: item.content, url: item.url }]));
+        
+        let matchCount = 0;
+        fullCloudPageList.forEach(page => {
+            if (contentMap.has(page.id)) {
+                const enrichedData = contentMap.get(page.id);
+                page.content = enrichedData.content;
+                // También actualizamos la URL por si el script la encontró de forma más fiable
+                if (enrichedData.url) {
+                    page.url = enrichedData.url;
+                }
+                matchCount++;
+            }
+        });
+
+        logger.logMessage(`Se han importado los contenidos. ${matchCount} Cloud Pages fueron actualizadas.`);
+        ui.showCustomAlert(`Proceso completado. Se ha actualizado el contenido de ${matchCount} Cloud Pages en la tabla.`);
+        
+        ui.hideModal(elements.cloudPageContentsModal);
+        renderFilteredTable(); // Refrescar la tabla para mostrar los nuevos contenidos y aplicar filtros
+
+    } catch (error) {
+        logger.logMessage(`Error al procesar JSON de contenidos: ${error.message}`);
         ui.showCustomAlert(`Error al procesar el JSON: ${error.message}. Asegúrate de haber copiado el texto completo y válido.`);
     }
 }

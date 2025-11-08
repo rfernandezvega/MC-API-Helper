@@ -6,6 +6,7 @@
             <button id="refreshCloudPagesTableBtn" class="action-button">Refrescar</button>
             <button id="downloadCloudPagesCsvBtn" class="action-button">Exportar</button>
             <button id="getCloudPageIdsBtn" class="action-button">Recuperar IDs</button>
+            <button id="getCloudPageContentsBtn" class="action-button">Recuperar Contenidos</button>
         </div>          
     </div>
     <h2>Gestión de Cloud Pages</h2>
@@ -13,6 +14,7 @@
     <div class="header-filters">
         <input type="text" id="cloudPageNameFilter" class="filter-input" placeholder="Buscar por nombre...">
         <input type="text" id="cloudPageIdFilter" class="filter-input" placeholder="Buscar por Page ID...">
+        <input type="text" id="cloudPageContentFilter" class="filter-input" placeholder="Buscar en contenido...">
         <select id="cloudPageTypeFilter" class="filter-input">
             <option value="">Todos los tipos</option>
             <!-- Opciones se cargarán dinámicamente -->
@@ -41,6 +43,8 @@
       <button id="nextPageBtnCloudPages" class="action-button pagination-arrow">&raquo;</button>
     </div>
 </div>
+
+<!-- ===================== MODAL PARA IDS ===================== -->
 <div id="cloudpage-ids-modal-overlay" class="modal-overlay" style="display: none;">
     <div class="modal-content">
         <h3>Recuperar Page IDs</h3>
@@ -62,6 +66,37 @@
         <div class="modal-actions">
             <button id="cloudpage-ids-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="cloudpage-ids-import-btn" class="action-button activate-btn">Importar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== MODAL PARA CONTENIDOS ===================== -->
+<div id="cloudpage-contents-modal-overlay" class="modal-overlay" style="display: none;">
+    <div class="modal-content modal-lg"> <!-- Usamos modal-lg para más espacio -->
+        <h3>Recuperar Contenidos de Cloud Pages</h3>
+        <p>Sigue estos pasos para obtener el contenido completo de todas las Cloud Pages y poder usar el buscador de contenido.</p>
+        <ol style="line-height: 1.6;">
+            <li>En tu navegador, ve a Content Builder y luego haz clic en el siguiente enlace para asegurar que estás en el dominio correcto: <br>
+                <a href="#" id="cloudpage-cb-link" class="external-link" style="word-break: break-all;">Generando enlace...</a>
+            </li>
+            <li>Abre las herramientas de desarrollador (con F12 o clic derecho > Inspeccionar) y navega a la pestaña <b>Consola</b>.</li>
+            <li>Copia el siguiente script, pégalo en la consola y presiona Enter. Tardará más o menos según el número de Cloud Pages de la org.</li>
+        </ol>
+        
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label style="font-weight: bold;">Script para la consola:</label>
+                <button id="cloudpage-copy-script-btn" class="action-button" style="padding: 5px 10px; font-size: 0.9em;">Copiar Código</button>
+            </div>
+            <pre id="cloudpage-fetch-script" style="background-color: #e9ecef; padding: 10px; border-radius: 5px; white-space: pre-wrap; word-break: break-all; max-height: 150px; overflow-y: auto; font-size: 0.85em;"></pre>
+        </div>
+
+        <p>4. Al finalizar, se mostrará un objeto. Copialo (click derecho > Copiar Objeto), pégalo en el cuadro de abajo y pulsa <b>Importar</b>.</p>
+        <textarea id="cloudpage-contents-paste-area" placeholder="Pega aquí el contenido del JSON generado..." style="width: 100%; height: 150px; margin-top: 10px;"></textarea>
+        
+        <div class="modal-actions">
+            <button id="cloudpage-contents-cancel-btn" class="action-button cancel-btn">Cancelar</button>
+            <button id="cloudpage-contents-import-btn" class="action-button activate-btn">Importar</button>
         </div>
     </div>
 </div>
