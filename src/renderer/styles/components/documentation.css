@@ -1,0 +1,121 @@
+/* ===================================================================
+   styles/components/documentation.css
+   Estilos específicos para la sección de Documentación.
+   =================================================================== */
+
+/* Hace que las pestañas de la documentación sean fijas al hacer scroll */
+.docu-container .tab-buttons {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  background-color: #fff;
+  z-index: 10;
+}
+
+/* Estilos generales para el contenido de las pestañas */
+.docu-container .tab-content {
+  padding: 10px 5px;
+  line-height: 1.6;
+}
+.docu-container .tab-content ul, .docu-container .tab-content ol { 
+    padding-left: 20px; 
+}
+.docu-container .tab-content li { 
+    margin-bottom: 10px; 
+}
+.docu-container code {
+  background-color: #e9ecef;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+/* --- ESTILOS RESTAURADOS PARA PANELES/TARJETAS --- */
+
+/* Contenedor principal de listas en la documentación */
+.docu-list {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+/* Estilo de "tarjeta" para cada item principal de la lista */
+.docu-list > li {
+  list-style-type: none; /* Quitamos los puntos de la lista principal */
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+
+/* Cabecera dentro de una tarjeta de documentación */
+.docu-item-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.docu-item-header strong {
+    font-size: 1.1em;
+    color: #333;
+}
+
+/* Iconos dentro de las cabeceras */
+.docu-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #558ac7;
+}
+.docu-icon.warning {
+    color: #f39c12; /* Naranja/ámbar para advertencias */
+}
+
+/* --- ESTILOS PARA EL ACORDEÓN --- */
+.docu-accordion {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.docu-accordion-item {
+  border-bottom: 1px solid #e9ecef;
+}
+.docu-accordion-item:last-child {
+  border-bottom: none;
+}
+.docu-accordion-header {
+  padding: 18px 10px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  font-size: 1.1em;
+  color: #005A9C;
+  transition: background-color 0.2s;
+  user-select: none;
+}
+.docu-accordion-header:hover {
+  background-color: #f8f9fa;
+}
+.docu-accordion-header::after {
+  content: '▶';
+  font-size: 0.6em;
+  color: #558ac7;
+  transition: transform 0.3s ease;
+}
+.docu-accordion-header.active::after {
+  transform: rotate(90deg);
+}
+.docu-accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease-in-out;
+  padding: 0 15px; /* Añade un poco de padding al contenido desplegado */
+}
+.docu-accordion-header.active + .docu-accordion-content {
+    padding-top: 10px;
+    padding-bottom: 20px;
+}

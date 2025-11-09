@@ -1,0 +1,26 @@
+<!-- 7. SECCIÓN: CALENDARIO DE AUTOMATIZACIONES -->
+<div id="calendario-section" class="section">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>
+            <div class="calendar-controls">
+            <label for="calendarYearSelect">Año:</label>
+            <select id="calendarYearSelect"></select>
+            <button id="refreshAutomationsBtn" class="action-button">Refrescar Automatismos</button>
+            <button id="refreshJourneyAutomationsBtn" class="action-button activate-btn">Refrescar Automatismos de Journeys</button>
+        </div>
+    </div>
+    <div class="calendar-container">
+        <!-- Rejilla de meses del calendario -->
+        <div id="calendar-main" class="calendar-main-view">
+            <h2>Calendario de Automatizaciones</h2>
+            <div id="calendar-grid" class="calendar-grid"></div>
+        </div>
+        <!-- Barra lateral para mostrar detalles del día seleccionado -->
+        <aside id="calendar-sidebar" class="calendar-sidebar">
+            <h3 id="automation-list-header">Automatizaciones del Día</h3>
+            <div id="automation-list">
+                <p>Selecciona un día para ver los detalles.</p>
+            </div>
+        </aside>
+    </div>
+</div>

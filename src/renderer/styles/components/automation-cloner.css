@@ -1,0 +1,78 @@
+/* ===================================================================
+   styles/components/automation-cloner.css (o similar)
+   Estilos mejorados para la herramienta de Clonador de Automatismos.
+   =================================================================== */
+
+/* --- Contenedores Principales --- */
+
+.automation-config-grid, .default-destination-controls {
+    display: grid;
+    /* Se ajusta a 2 columnas en pantallas anchas, y 1 en estrechas */
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    align-items: end; /* Alinea los elementos en la parte inferior para un look más limpio */
+}
+
+.folder-input-group {
+    display: flex;
+    gap: 8px;
+}
+
+.folder-input-group input {
+    flex-grow: 1;
+}
+
+.step-block {
+    margin-bottom: 25px;
+    padding-top: 15px;
+    border-top: 1px solid #e9ecef;
+}
+
+/* --- Estilos de la Tabla de Actividades (AQUÍ ESTÁ LA MAGIA) --- */
+
+#automationClonerStepsContainer table {
+    /* Usamos 'auto' para que las columnas se ajusten al contenido, pero con anchos sugeridos. */
+    table-layout: auto; 
+    width: 100%;
+    border-collapse: separate; /* Permite un mejor espaciado */
+    border-spacing: 0;
+}
+
+#automationClonerStepsContainer th,
+#automationClonerStepsContainer td {
+    /* PERMITE QUE EL TEXTO OCUPE VARIAS LÍNEAS */
+    white-space: normal; 
+    word-break: break-word; /* Rompe palabras largas si es necesario */
+    
+    text-align: left;
+    vertical-align: middle; /* Centra verticalmente el contenido en filas altas */
+    padding: 12px 10px; /* Más padding vertical para que respire */
+}
+
+/* --- Definición de Anchos de Columna Sugeridos --- */
+/* Estos anchos ahora actúan como guías, no como reglas estrictas. */
+#automationClonerStepsContainer th:nth-child(1) { width: 5%; text-align: center; } /* Checkbox */
+#automationClonerStepsContainer th:nth-child(2) { width: 12%; } /* Tipo */
+#automationClonerStepsContainer th:nth-child(3) { width: 20%; } /* Nombre Origen */
+#automationClonerStepsContainer th:nth-child(4) { width: 20%; } /* Nombre Destino */
+#automationClonerStepsContainer th:nth-child(5) { width: 15%; } /* Carpeta Query */
+#automationClonerStepsContainer th:nth-child(6) { width: 20%; } /* Nombre DE */
+#automationClonerStepsContainer th:nth-child(7) { width: 15%; } /* Carpeta DE */
+
+/* --- Celda de Carpeta Clicable --- */
+#automationClonerStepsContainer td.folder-cell {
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-style: italic;
+    color: #005A9C;
+    font-size: 0.9em; /* Un poco más pequeño para que quepa mejor */
+}
+
+#automationClonerStepsContainer td.folder-cell:hover {
+    background-color: #e9f2fa;
+    text-decoration: underline;
+}
+
+#automationClonerStepsContainer td:first-child {
+    text-align: center;
+}

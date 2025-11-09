@@ -48,6 +48,36 @@ contextBridge.exposeInMainWorld('electronAPI', {
    */
   openExternalLink: (url) => ipcRenderer.send('open-external-link', url),
 
+  /**
+   * Envía contenido CSV al proceso principal para guardarlo en un fichero.
+   * @param {object} data - Un objeto con { content: '...', defaultName: '...' }.
+   * @returns {Promise<object>} Una promesa que resuelve con el resultado de la operación.
+   */
+  saveCsvFile: (data) => ipcRenderer.invoke('save-csv-file', data),
+
+  /**
+   * Pide al proceso principal que abra un diálogo para seleccionar un fichero CSV y leer su contenido.
+   * @returns {Promise<object>} Una promesa que resuelve con el contenido del fichero o un estado de cancelación.
+   */
+  openCsvFile: () => ipcRenderer.invoke('open-csv-file'),
+
+    /**
+   * Pide al proceso principal que busque texto en la página.
+   * @param {string} text - El texto a buscar.
+   * @param {object} options - Opciones como { findNext: boolean, forward: boolean }.
+   */
+  findInPage: (text, options) => ipcRenderer.send('find-in-page', { text, options }),
+
+  /**
+   * Pide al proceso principal que detenga la búsqueda y limpie los resaltados.
+   */
+  stopFindInPage: () => ipcRenderer.send('stop-find-in-page'),
+
+  /**
+   * Registra un callback para recibir los resultados de la búsqueda desde el proceso principal.
+   * @param {function(object)} callback - La función que manejará el objeto de resultados.
+   */
+  onFindReply: (callback) => ipcRenderer.on('find-reply', (_event, result) => callback(result)),
 
   // ==========================================================
   // --- MÉTODOS: PRINCIPAL -> RENDERIZADOR (LISTENERS) ---
@@ -79,9 +109,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onRequireLogin: (callback) => ipcRenderer.on('require-login', (_event, data) => callback(data)),
 
    /**
-   * Envía las credenciales al proceso principal para ser validadas contra Google Sheets.
-   * @param {object} credentials - Un objeto con { email, key }.
+   * Verifica automáticamente la licencia del usuario del sistema contra Google Sheets.
+   * No requiere parámetros.
    * @returns {Promise<boolean|object>} - Devuelve `true` si es válido, `false` si no, o un objeto de error.
    */
-  validateLicense: (credentials) => ipcRenderer.invoke('validate-license', credentials),
+  checkSystemUserLicense: () => ipcRenderer.invoke('check-system-user-license'),
+
+  getAppVersion: () => ipcRenderer.invoke('get-app-version')
 });

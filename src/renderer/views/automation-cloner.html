@@ -1,0 +1,67 @@
+<!-- 15. SECCIÓN: CLONADOR DE AUTOMATISMOS -->
+<div id="automation-cloner-section" class="section">
+    <div class="section-header">
+        <!-- El botón "Atrás" será gestionado por la lógica para volver a la tabla de automatismos -->
+        <button id="automationClonerBackBtn" class="back-button">← Volver a la lista</button>            
+        <div class="header-actions">
+            <!-- Este botón estará deshabilitado hasta que implementemos el siguiente paso -->
+            <button id="automationClonerContinueBtn" class="action-button activate-btn" disabled>Clonar</button>
+        </div>
+    </div>
+    <h2>Clonador Selectivo de Automatismo</h2>
+
+    <!-- Contenedor principal que se rellenará dinámicamente -->
+    <div class="config-section-container">
+        <!-- BLOQUE 1: CONFIGURACIÓN GENERAL DEL AUTOMATISMO -->
+        <div class="config-block">
+            <h3>Configuración del Automatismo Destino</h3>
+            <div class="automation-config-grid">
+                <!-- Nombre del Automatismo -->
+                <div class="form-group">
+                    <label>Nombre Origen</label>
+                    <input type="text" id="automationClonerSourceName" disabled>
+                </div>
+                <div class="form-group">
+                    <label>Nombre Destino (Editable)</label>
+                    <input type="text" id="automationClonerDestName">
+                </div>
+                <!--  Selección de Carpeta para el Automatismo -->
+                <div class="form-group">
+                    <label>Carpeta Destino</label>
+                    <div class="folder-input-group">
+                        <input type="text" id="automationClonerDestFolder" placeholder="Misma carpeta que el original" disabled>
+                        <button id="changeAutomationFolderBtn" class="action-button">Cambiar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BLOQUE 2: CONFIGURACIÓN DE ACTIVIDADES -->
+        <div class="config-block">
+            <h3>Selecciona y configura las actividades a clonar</h3>
+            
+            <!--  Controles para Destinos por Defecto -->
+            <div class="default-destination-controls">
+                <div class="form-group">
+                    <label>Destino por defecto para Queries</label>
+                    <div class="folder-input-group">
+                        <input type="text" id="defaultQueryFolder" placeholder="Misma carpeta que la original" disabled>
+                        <button id="changeDefaultQueryFolderBtn" class="action-button">Seleccionar</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Destino por defecto para Data Extensions</label>
+                    <div class="folder-input-group">
+                        <input type="text" id="defaultDEFolder" placeholder="Misma carpeta que la original" disabled>
+                        <button id="changeDefaultDEFolderBtn" class="action-button">Seleccionar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenedor de Pasos (sin cambios en su estructura) -->
+            <div id="automationClonerStepsContainer">
+                <!-- Las tablas de actividades se renderizarán aquí, pero con nuevas columnas -->
+            </div>
+        </div>
+    </div>
+</div>
