@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Marketing Cloud API Helper</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://*.marketingcloudapis.com https://*.exacttarget.com https://www.googleapis.com">
+  <!-- Enlaza la hoja de estilos principal -->
+  <link rel="stylesheet" href="styles/style.css">
+</head>
+<body>
+
+<!-- ========================================================== -->
+<!-- START: MODALES Y OVERLAYS GLOBALES -->
+<!-- ========================================================== -->
+<div id="license-modal-overlay" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <h3>Acceso a la Aplicación</h3>
+        <!-- Este párrafo será actualizado por el script para mostrar el estado -->
+        <p id="license-status-message">Verificando licencia de usuario...</p>
+    </div>
+</div>
+<div id="loader-overlay" class="loader-overlay" style="display: none;">
+    <div class="loader-spinner"></div>
+    <p id="loader-text" class="loader-text">Cargando...</p>
+</div>
+
+<!-- ========================================================== -->
+<!-- BUSCADOR EN LA PÁGINA (CTRL+F) -->
+<!-- ========================================================== -->
+<div id="find-in-page-box" style="display: none;">
+    <input type="text" id="find-input" placeholder="Buscar en la página...">
+    <span id="find-results"></span>
+    <button id="find-prev" title="Anterior">▲</button>
+    <button id="find-next" title="Siguiente">▼</button>
+    <button id="find-close" title="Cerrar">&times;</button>
+</div>
+
+<!-- ===================================================================
+     CONTENEDOR PRINCIPAL DE LA APLICACIÓN
+     =================================================================== -->
+<div class="app-container">
+  
+  <!-- ========================================================== -->
+  <!-- BARRA LATERAL IZQUIERDA (NAVEGACIÓN) -->
+  <!-- ========================================================== -->
+<aside id="macros-sidebar">
+	<div class="sidebar-content-wrapper">
+		<div class="sidebar-header">
+			<!-- Selector de Cliente y Estado de Sesión -->
+			<div class="sidebar-client-selector">
+				<h2>Cliente</h2>
+				<select id="sidebarClientSelect">
+					<option value="">Ninguno seleccionado</option>
+				</select>
+				<p id="login-status" class="login-status inactive">🔴 Sesión no iniciada</p>
+			</div>
+
+			<h2 id="sidebar-views-title">Vistas</h2>
+		</div>
+		<div id="sidebar-menu-scroll-container">
+			<!-- Menús colapsables -->
+			<div class="collapsible-group">
+				<h3 class="collapsible-header">General</h3>
+				<ul class="collapsible-content">
+					<li><a class="macro-item" data-macro="docu">Documentación</a></li>
+					<li><a class="macro-item" data-macro="configuracionAPIs">Configuración de APIs</a></li>
+				</ul>
+			</div>
+			<div class="collapsible-group">
+				<h3 class="collapsible-header">Data Extensions</h3>
+				<ul class="collapsible-content">
+					<li><a class="macro-item" data-macro="configuracionDE">Creación de Data Extension</a></li>
+					<li><a class="macro-item" data-macro="campos">Configuración de Campos</a></li>
+					<li><a class="macro-item" data-macro="gestionCampos">Recuperación y Borrado de Campos</a></li>
+				</ul>
+			</div>
+			<div class="collapsible-group">
+				<h3 class="collapsible-header">Funcionalidades</h3>
+				<ul class="collapsible-content">
+					<li><a class="macro-item" data-macro="buscadores">Buscadores</a></li>
+					<li><a class="macro-item" data-macro="calendario">Calendario</a></li>         
+					<li><a class="macro-item" data-macro="gestionAutomatismos">Automatismos</a></li> 
+					<li><a class="macro-item" data-macro="clonadorQueries">Clonar Queries</a></li>
+					<li><a class="macro-item" data-macro="gestionJourneys">Journeys</a></li>      
+					<li><a class="macro-item" data-macro="carpetas">Crear Carpetas</a></li>    
+					<li><a class="macro-item" data-macro="gestionCloudPages">Cloud Pages</a></li>
+                    <li><a class="macro-item" data-macro="gestionContenidos">Contenidos</a></li>  
+					<li><a class="macro-item" data-macro="validadorEmail">Validar Emails</a></li>          
+				</ul>
+			</div>
+		</div>
+	</div>
+</aside>
+
+  <!-- ========================================================== -->
+  <!-- CONTENIDO PRINCIPAL (VACÍO) -->
+  <!-- ========================================================== -->
+  <main id="main-content">   
+    <!-- 
+      Este es el marcador de inyección.
+      El script 'build-html.js' leerá todos los ficheros de la carpeta /views
+      y pegará su contenido aquí para construir el 'index.html' final.
+    -->
+    <!-- VIEWS WILL BE INJECTED HERE -->
+  </main> 
+
+  <!-- ========================================================== -->
+  <!-- BARRA LATERAL DERECHA (LOG) -->
+  <!-- ========================================================== -->
+  <aside id="log-sidebar">
+    <div class="log-header">
+      <h2 id="log-header-title">Log de Eventos</h2>
+      <button id="toggleLogBtn" title="Colapsar/Expandir Log"></button>
+    </div>
+    <div id="log-message-block" class="log-block">
+      <h4>Mensajes</h4>
+      <pre><code id="log-messages">Esperando acciones...</code></pre>
+    </div>
+    <div id="log-request-block" class="log-block">
+      <h4>Llamadas API</h4>
+      <pre><code id="log-request"></code></pre>
+    </div>
+    <div id="log-response-block" class="log-block">
+      <h4>Respuestas API</h4>
+      <pre><code id="log-response"></code></pre>
+    </div>
+  </aside>
+
+</div> <!-- FIN .app-container -->
+
+<!-- ========================================================== -->
+<!-- START: MODALES GLOBALES (parte inferior) -->
+<!-- ========================================================== -->
+<div id="import-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Importar Campos desde Portapapeles</h3>
+        <p>Pega aquí los datos. Las columnas deben ser: <b>Nombre</b>, <b>Tipo</b> y <b>Longitud</b> (opcional).</p>
+        <div class="delimiter-selector">
+            <label for="delimiter-select">Separador:</label>
+            <select id="delimiter-select">
+                <option value="tab" selected>Tabulador (Excel)</option>
+                <option value="comma">Coma (,)</option>
+                <option value="semicolon">Punto y coma (;)</option>
+                <option value="other">Otro...</option>
+            </select>
+            <input type="text" id="custom-delimiter-input" class="hidden" maxlength="1" placeholder="|">
+        </div>
+        <textarea id="paste-data-area" rows="10" placeholder="Ciudad	Text	50&#10;Email	EmailAddress	254"></textarea>
+        <div class="modal-actions">
+            <button id="process-paste-btn" class="action-button">Añadir Campos</button>
+            <button id="cancel-paste-btn" class="action-button delete-btn">Cancelar</button>
+        </div>
+    </div>
+</div>
+<div id="journey-flow-modal" class="modal-overlay">
+    <div class="modal-content modal-lg">
+        <h3>Flujo del Journey</h3>
+        <div class="journey-flow-container">
+            <pre id="journey-flow-content">Cargando flujo...</pre>
+        </div>
+        <div class="modal-actions">
+            <button id="copyFlowBtn" class="action-button">Copiar</button>
+            <button id="close-flow-btn" class="action-button">Cerrar</button>
+        </div>
+    </div>
+</div>
+<div id="custom-alert-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Aviso</h3>
+        <p id="custom-alert-message" style="line-height: 1.6;"></p>
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button id="custom-alert-close-btn" class="action-button">Aceptar</button>
+        </div>
+    </div>
+</div>
+<div id="custom-confirm-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Confirmación Requerida</h3>
+        <p id="custom-confirm-message" style="line-height: 1.6;"></p>
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button id="custom-confirm-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="custom-confirm-ok-btn" class="action-button activate-btn">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================== -->
+<!-- MODAL REUTILIZABLE PARA SELECCIÓN DE CARPETAS -->
+<!-- ========================================================== -->
+<div id="folder-selector-modal" class="modal-overlay">
+    <div class="modal-content modal-lg">
+        <h3 id="folder-selector-title">Seleccionar Carpeta</h3>
+        <div class="config-block" style="margin-bottom: 15px; padding: 15px;">
+            <div class="form-group">
+                <label for="folderSearchInput">Buscar por nombre de carpeta</label>
+                <div class="folder-input-group">
+                    <input type="text" id="folderSearchInput" placeholder="Introduce un nombre o parte de él">
+                    <button id="folderSearchBtn" class="action-button">Buscar</button>
+                </div>
+            </div>
+        </div>
+        <div class="config-block" style="flex-grow: 1;">
+            <h4>Resultados de Búsqueda</h4>
+            <div id="folder-selector-results-container" class="table-container" style="max-height: 400px;">
+                <p>Realiza una búsqueda para ver los resultados.</p>
+                <table id="folder-selector-table" class="folder-results-table hidden">
+                    <thead><tr><th>Ruta de Carpeta</th></tr></thead>
+                    <tbody id="folder-selector-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button id="folder-selector-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="folder-selector-ok-btn" class="action-button activate-btn" disabled>Seleccionar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================== -->
+<!-- MODAL PARA SELECCIÓN DE AUTOMATISMO Y DATA EXTENSION     -->
+<!-- ========================================================== -->
+<div id="automation-de-selector-modal" class="modal-overlay">
+    <div class="modal-content modal-lg">
+        <!-- Contenido dinámico del modal -->
+        <div id="automation-selection-step">
+            <h3>Paso 1: Seleccionar Automatismo de Origen</h3>
+            <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+                Busca por el <strong>nombre exacto o parcial</strong> del automatismo que quieres usar como base para la entrada del Journey.
+            </p>
+            <div class="config-block" style="margin-bottom: 15px; padding: 15px;">
+                <div class="form-group">
+                    <label for="automationSearchInput">Buscar por nombre de automatismo</label>
+                    <div class="folder-input-group">
+                        <input type="text" id="automationSearchInput" placeholder="Introduce el nombre exacto o parcial">
+                        <button id="automationSearchBtn" class="action-button">Buscar</button>
+                    </div>
+                </div>
+            </div>
+            <div class="config-block" style="flex-grow: 1;">
+                <h4>Resultados de Búsqueda</h4>
+                <div id="automation-selector-results-container" class="table-container" style="max-height: 300px;">
+                    <p>Realiza una búsqueda para ver los resultados.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="de-selection-step" class="hidden">
+            <h3>Paso 2: Seleccionar Data Extension de Entrada</h3>
+            <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+                El automatismo seleccionado usa las siguientes Data Extensions como destino en sus queries. Selecciona cuál de ellas actuará como la <strong>fuente de datos principal</strong> para el nuevo Journey.
+            </p>
+            <div class="config-block" style="flex-grow: 1;">
+                <h4>Data Extensions de Destino Encontradas</h4>
+                <div id="de-selector-results-container" class="table-container" style="max-height: 300px;">
+                    <p>Cargando...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Botones de acción del modal -->
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button id="automation-de-selector-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="automation-de-selector-continue-btn" class="action-button" disabled>Continuar →</button>
+            <button id="automation-de-selector-clone-btn" class="action-button activate-btn hidden" disabled>Clonar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================== -->
+<!-- MODAL PARA LA CLONACIÓN DE JOURNEYS (MULTI-PASO)          -->
+<!-- ========================================================== -->
+<div id="journey-cloner-modal" class="modal-overlay">
+    <div class="modal-content modal-lg">
+        <!-- Envolvemos todo el contenido en esta clase para que herede los estilos -->
+        <div class="config-section-container"> 
+            <h3 id="journey-cloner-title">Clonar Journey</h3>
+
+            <!-- PASO E-1: Pregunta para EmailAudience -->
+            <div id="journey-cloner-confirm-reuse-de" class="cloner-step hidden">
+                <p class="info-text" style="text-align: left; margin: 20px 0;">¿Quieres clonar la Data Extension de entrada o reutilizar una que ya existe?</p>
+                <div class="modal-actions" style="justify-content: center;">
+                    <button id="journey-cloner-reuse-de-btn" class="action-button">Reutilizar Existente</button>
+                    <button id="journey-cloner-clone-new-de-btn" class="action-button activate-btn">Clonar Nueva</button>
+                </div>
+            </div>
+
+            <!-- PASO E-2a: Buscador de DE para EmailAudience -->
+            <div id="journey-cloner-search-de" class="cloner-step hidden">
+                <h4>Paso 1: Selecciona la Data Extension a reutilizar</h4>
+                 <div class="config-block" style="padding: 15px;">
+                    <div class="form-group">
+                        <label for="journeyClonerDESearchInput">Buscar por nombre de Data Extension</label>
+                        <div class="folder-input-group">
+                            <input type="text" id="journeyClonerDESearchInput" placeholder="Introduce un nombre o parte de él">
+                            <button id="journeyClonerDESearchBtn" class="action-button">Buscar</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="config-block" style="flex-grow: 1;">
+                    <div id="journey-cloner-de-results-container" class="table-container" style="max-height: 250px;">
+                        <p>Realiza una búsqueda para ver los resultados.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PASO E-2b: Configurar nueva DE para EmailAudience -->
+            <div id="journey-cloner-configure-new-de" class="cloner-step hidden">
+                <h4>Paso 1: Configura la nueva Data Extension</h4>
+                 <div class="config-block" style="padding: 15px;">
+                    <div class="form-group">
+                        <label for="journeyClonerNewDEName">Nombre de la nueva Data Extension (Editable)</label>
+                        <input type="text" id="journeyClonerNewDEName">
+                    </div>
+                    <div class="form-group">
+                        <label>Carpeta de Destino para la DE</label>
+                        <div class="folder-input-group">
+                            <input type="text" id="journeyClonerNewDEFolder" disabled>
+                            <button id="journeyClonerSelectDEFolderBtn" class="action-button">Cambiar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PASO FINAL (Común para ambos flujos) -->
+            <div id="journey-cloner-final-config" class="cloner-step hidden">
+                <h4 id="journey-cloner-final-step-title">Paso 2: Configuración Final del Journey</h4>
+                 <div class="config-block" style="padding: 15px;">
+                    <div class="form-group">
+                        <label for="journeyClonerNewJourneyName">Nombre del nuevo Journey (Editable)</label>
+                        <input type="text" id="journeyClonerNewJourneyName">
+                    </div>
+                    <div class="form-group">
+                        <label>Carpeta de Destino para el Journey</label>
+                        <div class="folder-input-group">
+                            <input type="text" id="journeyClonerNewJourneyFolder" disabled>
+                            <button id="journeyClonerSelectJourneyFolderBtn" class="action-button">Cambiar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Los botones de acción van fuera del contenedor de estilos -->
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button id="journey-cloner-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="journey-cloner-continue-btn" class="action-button" disabled>Continuar →</button>
+            <button id="journey-cloner-clone-btn" class="action-button activate-btn hidden" disabled>Clonar</button>
+        </div>
+    </div>
+</div>
+
+
+<div id="app-version"></div> 
+<script type="module" src="app.js"></script>
+</body>
+</html>

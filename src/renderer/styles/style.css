@@ -1,0 +1,25 @@
+/* ===================================================================
+   style.css
+   Fichero principal de estilos.
+   Este fichero actúa como un "hub" que importa los estilos comunes
+   y los de cada componente específico.
+   =================================================================== */
+
+/* 1. Importa los estilos comunes y globales */
+@import url("common.css");
+
+/* 2. Importa los estilos específicos de cada componente */
+@import url("components/main-menu.css");
+@import url("components/calendar.css");
+@import url("components/documentation.css");
+@import url("components/journeys-manager.css");
+@import url("components/query-cloner.css");
+@import url("components/fields-table.css");
+@import url("components/automation-cloner.css");
+
+/* 
+   NOTA: No es necesario crear un CSS para cada vista si no tiene
+   estilos complejos o muy específicos. Las vistas de formulario simples
+   (como DE Creator, Field Manager, etc.) ya se ven bien solo con
+   los estilos de "common.css".
+*/
