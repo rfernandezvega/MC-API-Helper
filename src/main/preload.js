@@ -74,7 +74,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * @returns {Promise<object>} Una promesa que resuelve con los contenidos cargados o null.
    */
   loadClientContents: (clientName) => ipcRenderer.invoke('load-client-contents-from-file', clientName),
+  /**
+   * Guarda la lista enriquecida de Cloud Pages en un fichero de caché local.
+   * @param {object} data - Un objeto con { clientName: string, cloudPagesData: Array<object> }.
+   * @returns {Promise<object>}
+   */
+  saveCloudPagesCache: (data) => ipcRenderer.invoke('save-cloud-pages-cache', data),
 
+  /**
+   * Carga la lista enriquecida de Cloud Pages desde el fichero de caché local.
+   * @param {string} clientName - El nombre del cliente.
+   * @returns {Promise<object>}
+   */
+  loadCloudPagesCache: (clientName) => ipcRenderer.invoke('load-cloud-pages-cache', clientName),
     /**
    * Pide al proceso principal que busque texto en la página.
    * @param {string} text - El texto a buscar.

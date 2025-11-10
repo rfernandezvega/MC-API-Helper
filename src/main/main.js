@@ -284,8 +284,8 @@ ipcMain.handle('save-client-contents-to-file', (event, { clientName, contents })
     try {
         // Obtiene la ruta estándar para guardar datos de la aplicación
         const userDataPath = app.getPath('userData');
-        // Crea una subcarpeta 'ClientContents' si no existe
-        const contentsDirPath = path.join(userDataPath, 'ClientContents');
+        // Crea una subcarpeta 'ClientCloudPages' si no existe
+        const contentsDirPath = path.join(userDataPath, 'ClientCloudPages');
         if (!fs.existsSync(contentsDirPath)) {
             fs.mkdirSync(contentsDirPath);
         }
@@ -302,7 +302,7 @@ ipcMain.handle('save-client-contents-to-file', (event, { clientName, contents })
 ipcMain.handle('load-client-contents-from-file', (event, clientName) => {
     try {
         const userDataPath = app.getPath('userData');
-        const filePath = path.join(userDataPath, 'ClientContents', `${clientName}.json`);
+        const filePath = path.join(userDataPath, 'ClientCloudPages', `${clientName}.json`);
         // Comprueba si el fichero existe
         if (fs.existsSync(filePath)) {
             const fileContents = fs.readFileSync(filePath, 'utf-8');
@@ -312,6 +312,37 @@ ipcMain.handle('load-client-contents-from-file', (event, clientName) => {
         return { success: true, contents: null };
     } catch (error) {
         console.error('Error al cargar contenidos desde fichero:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('save-cloud-pages-cache', (event, { clientName, cloudPagesData }) => {
+    try {
+        const userDataPath = app.getPath('userData');
+        const cacheDirPath = path.join(userDataPath, 'ClientCache');
+        if (!fs.existsSync(cacheDirPath)) {
+            fs.mkdirSync(cacheDirPath);
+        }
+        const filePath = path.join(cacheDirPath, `cloudpages_${clientName}.json`);
+        fs.writeFileSync(filePath, JSON.stringify(cloudPagesData, null, 2));
+        return { success: true };
+    } catch (error) {
+        console.error('Error al guardar caché de Cloud Pages:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('load-cloud-pages-cache', (event, clientName) => {
+    try {
+        const userDataPath = app.getPath('userData');
+        const filePath = path.join(userDataPath, 'ClientCache', `cloudpages_${clientName}.json`);
+        if (fs.existsSync(filePath)) {
+            const fileContents = fs.readFileSync(filePath, 'utf-8');
+            return { success: true, data: JSON.parse(fileContents) };
+        }
+        return { success: true, data: null }; // No hay caché, no es un error
+    } catch (error) {
+        console.error('Error al cargar caché de Cloud Pages:', error);
         return { success: false, error: error.message };
     }
 });

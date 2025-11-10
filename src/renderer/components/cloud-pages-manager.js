@@ -123,28 +123,59 @@ async function refreshData() {
  * Orquesta la obtención de todos los datos de Cloud Pages.
  */
 async function fetchData() {
-    ui.blockUI("Recuperando Cloud Pages...");
+    ui.blockUI("Recuperando y fusionando datos de Cloud Pages...");
     logger.startLogBuffering();
     try {
-        logger.logMessage("Cargando lista de Cloud Pages por primera vez...");
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
+        const clientName = elements.clientNameInput.value.trim();
 
+        // 1. Cargar la caché guardada
+        logger.logMessage("Cargando caché local de Cloud Pages...");
+        const cacheResult = await window.electronAPI.loadCloudPagesCache(clientName);
+        const cachedPagesMap = new Map();
+        if (cacheResult.success && cacheResult.data) {
+            cacheResult.data.forEach(page => cachedPagesMap.set(page.id, page));
+            logger.logMessage(`Se encontraron ${cachedPagesMap.size} Cloud Pages en la caché.`);
+        } else {
+            logger.logMessage("No se encontró caché local.");
+        }
+
+        // 2. Obtener la lista fresca desde la API
+        logger.logMessage("Obteniendo lista actualizada de Cloud Pages desde la API...");
         const rawAssets = await mcApiService.fetchAllCloudPages(apiConfig);
-        logger.logMessage(`Se encontraron ${rawAssets.length} assets. Obteniendo rutas de carpeta...`);
-
+        logger.logMessage(`API devolvió ${rawAssets.length} assets. Obteniendo rutas de carpeta...`);
         const assetsWithFolders = await mcApiService.enrichCloudPagesWithFolders(rawAssets, apiConfig);
-        logger.logMessage("Rutas obtenidas. Procesando URLs y renderizando tabla...");
-        
-        fullCloudPageList = assetsWithFolders.map(item => ({
-            ...item,
-            url: extractCloudPageUrl(item),
-            publishDate: item.meta?.cloudPages?.publishDate || null,
-            pageId: null,
-            content: item.content || '' 
-        }));
-        
+
+        // 3. Fusionar API y Caché
+        logger.logMessage("Fusionando datos de la API con la caché...");
+        fullCloudPageList = assetsWithFolders.map(apiPage => {
+            const cachedPage = cachedPagesMap.get(apiPage.id);
+            if (cachedPage) {
+                // Si la página existe en la caché, usamos la versión de la API (más fresca)
+                // pero le añadimos los datos enriquecidos de la caché.
+                return {
+                    ...apiPage, // Datos base de la API
+                    url: extractCloudPageUrl(apiPage),
+                    publishDate: apiPage.meta?.cloudPages?.publishDate || null,
+                    pageId: cachedPage.pageId || null,       // Dato enriquecido
+                    content: cachedPage.content || apiPage.content || '' // Dato enriquecido
+                };
+            } else {
+                // Si es una página nueva que no estaba en caché, la procesamos normalmente.
+                return {
+                    ...apiPage,
+                    url: extractCloudPageUrl(apiPage),
+                    publishDate: apiPage.meta?.cloudPages?.publishDate || null,
+                    pageId: null,
+                    content: apiPage.content || ''
+                };
+            }
+        });
+
+        logger.logMessage("Fusión completada. La nueva lista tiene " + fullCloudPageList.length + " elementos.");
         populateCloudPageFilters(fullCloudPageList);
+
     } catch (error) {
         logger.logMessage(`Error al obtener Cloud Pages: ${error.message}`);
         ui.showCustomAlert(`Error al cargar Cloud Pages: ${error.message}`);
@@ -385,34 +416,15 @@ async function showGetIdsModal() {
 /**
  * Procesa el JSON pegado por el usuario y actualiza la tabla.
  */
-function processPastedIds() {
+async function processPastedIds() {
     const jsonText = elements.cloudPageIdsPasteArea.value.trim();
-    if (!jsonText) {
-        ui.showCustomAlert("El área de texto está vacía. Por favor, pega el contenido del JSON.");
-        return;
-    }
+    if (!jsonText) return ui.showCustomAlert("El área de texto está vacía.");
     
     try {
         const data = JSON.parse(jsonText);
         const entities = data?.entities;
-        
-        if (!Array.isArray(entities) || entities.length === 0) {
-            throw new Error("El JSON no tiene el formato esperado o la lista 'entities' está vacía.");
-        }
+        if (!Array.isArray(entities)) throw new Error("Formato JSON no válido o falta la clave 'entities'.");
 
-        // Detectar el tipo de JSON basándose en una propiedad única
-        let jsonType = '';
-        if (entities[0].hasOwnProperty('landingPageId')) {
-            jsonType = 'Landing Pages';
-        } else if (entities[0].hasOwnProperty('codeResourceId')) {
-            jsonType = 'Code Resources';
-        } else {
-            throw new Error("El formato del JSON no corresponde ni a Landing Pages ni a Code Resources.");
-        }
-
-        logger.logMessage(`Detectado JSON de tipo: ${jsonType}.`);
-
-        // La lógica de mapeo es la misma para ambos, ya que usan siteAssetId y pageId
         const idMap = new Map(entities.map(e => [e.siteAssetId, e.pageId]));
         
         let matchCount = 0;
@@ -423,15 +435,18 @@ function processPastedIds() {
             }
         });
 
-        logger.logMessage(`Se han importado los IDs. ${matchCount} Cloud Pages fueron actualizadas.`);
-        ui.showCustomAlert(`Proceso completado con JSON de ${jsonType}. Se han asignado ${matchCount} IDs en la tabla.`);
+        // --- GUARDAR EN CACHÉ ---
+        const clientName = elements.clientNameInput.value.trim();
+        await window.electronAPI.saveCloudPagesCache({ clientName, cloudPagesData: fullCloudPageList });
+        logger.logMessage(`Caché guardada con ${matchCount} IDs actualizados.`);
         
+        ui.showCustomAlert(`Proceso completado. Se han asignado ${matchCount} IDs y la caché ha sido actualizada.`);
         ui.hideModal(elements.cloudPageIdsModal);
-        renderFilteredTable(); // Refrescar la tabla para mostrar los nuevos IDs
+        renderFilteredTable();
 
     } catch (error) {
-        logger.logMessage(`Error al procesar JSON de IDs: ${error.message}`);
-        ui.showCustomAlert(`Error al procesar el JSON: ${error.message}. Asegúrate de haber copiado el texto completo y válido.`);
+        logger.logError(`Error al procesar JSON de IDs: ${error.message}`);
+        ui.showCustomAlert(`Error al procesar el JSON: ${error.message}.`);
     }
 }
 
@@ -542,20 +557,14 @@ function copyContentScriptToClipboard() {
 /**
  * Procesa el JSON de contenidos pegado por el usuario y actualiza la tabla.
  */
-function processPastedContents() {
+async function processPastedContents() {
     const jsonText = elements.cloudPageContentsPasteArea.value.trim();
-    if (!jsonText) {
-        ui.showCustomAlert("El área de texto está vacía. Pega el contenido del JSON generado.");
-        return;
-    }
+    if (!jsonText) return ui.showCustomAlert("El área de texto está vacía.");
     
     try {
         const data = JSON.parse(jsonText);
         const items = data?.items;
-        
-        if (!Array.isArray(items)) {
-            throw new Error("El JSON no tiene el formato esperado o la lista 'items' no existe.");
-        }
+        if (!Array.isArray(items)) throw new Error("Formato JSON no válido o falta la clave 'items'.");
 
         const contentMap = new Map(items.map(item => [item.id, { content: item.content, url: item.url }]));
         
@@ -564,7 +573,6 @@ function processPastedContents() {
             if (contentMap.has(page.id)) {
                 const enrichedData = contentMap.get(page.id);
                 page.content = enrichedData.content;
-                // También actualizamos la URL por si el script la encontró de forma más fiable
                 if (enrichedData.url) {
                     page.url = enrichedData.url;
                 }
@@ -572,15 +580,18 @@ function processPastedContents() {
             }
         });
 
-        logger.logMessage(`Se han importado los contenidos. ${matchCount} Cloud Pages fueron actualizadas.`);
-        ui.showCustomAlert(`Proceso completado. Se ha actualizado el contenido de ${matchCount} Cloud Pages en la tabla.`);
-        
+        // --- GUARDAR EN CACHÉ ---
+        const clientName = elements.clientNameInput.value.trim();
+        await window.electronAPI.saveCloudPagesCache({ clientName, cloudPagesData: fullCloudPageList });
+        logger.logMessage(`Caché guardada con contenido para ${matchCount} páginas actualizado.`);
+
+        ui.showCustomAlert(`Proceso completado. Se ha actualizado el contenido de ${matchCount} Cloud Pages y la caché ha sido actualizada.`);
         ui.hideModal(elements.cloudPageContentsModal);
-        renderFilteredTable(); // Refrescar la tabla para mostrar los nuevos contenidos y aplicar filtros
+        renderFilteredTable();
 
     } catch (error) {
-        logger.logMessage(`Error al procesar JSON de contenidos: ${error.message}`);
-        ui.showCustomAlert(`Error al procesar el JSON: ${error.message}. Asegúrate de haber copiado el texto completo y válido.`);
+        logger.logError(`Error al procesar JSON de contenidos: ${error.message}`);
+        ui.showCustomAlert(`Error al procesar el JSON: ${error.message}.`);
     }
 }
 
