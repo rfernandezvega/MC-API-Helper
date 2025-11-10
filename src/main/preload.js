@@ -61,6 +61,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
    */
   openCsvFile: () => ipcRenderer.invoke('open-csv-file'),
 
+  /**
+   * Guarda los contenidos de un cliente en un fichero JSON local.
+   * @param {object} data - Un objeto con { clientName: string, contents: Array<object> }.
+   * @returns {Promise<object>} Una promesa que resuelve con el resultado de la operación.
+   */
+  saveClientContents: (data) => ipcRenderer.invoke('save-client-contents-to-file', data),
+
+  /**
+   * Carga los contenidos de un cliente desde un fichero JSON local.
+   * @param {string} clientName - El nombre del cliente.
+   * @returns {Promise<object>} Una promesa que resuelve con los contenidos cargados o null.
+   */
+  loadClientContents: (clientName) => ipcRenderer.invoke('load-client-contents-from-file', clientName),
+
     /**
    * Pide al proceso principal que busque texto en la página.
    * @param {string} text - El texto a buscar.

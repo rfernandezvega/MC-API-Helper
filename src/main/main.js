@@ -280,6 +280,42 @@ ipcMain.handle('open-csv-file', async (event) => {
     }
 });
 
+ipcMain.handle('save-client-contents-to-file', (event, { clientName, contents }) => {
+    try {
+        // Obtiene la ruta estándar para guardar datos de la aplicación
+        const userDataPath = app.getPath('userData');
+        // Crea una subcarpeta 'ClientContents' si no existe
+        const contentsDirPath = path.join(userDataPath, 'ClientContents');
+        if (!fs.existsSync(contentsDirPath)) {
+            fs.mkdirSync(contentsDirPath);
+        }
+        // Guarda los contenidos en un fichero llamado como el cliente (ej: Atresmedia.json)
+        const filePath = path.join(contentsDirPath, `${clientName}.json`);
+        fs.writeFileSync(filePath, JSON.stringify(contents, null, 2));
+        return { success: true };
+    } catch (error) {
+        console.error('Error al guardar contenidos en fichero:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('load-client-contents-from-file', (event, clientName) => {
+    try {
+        const userDataPath = app.getPath('userData');
+        const filePath = path.join(userDataPath, 'ClientContents', `${clientName}.json`);
+        // Comprueba si el fichero existe
+        if (fs.existsSync(filePath)) {
+            const fileContents = fs.readFileSync(filePath, 'utf-8');
+            return { success: true, contents: JSON.parse(fileContents) };
+        }
+        // Si no existe, no es un error, simplemente no hay datos guardados
+        return { success: true, contents: null };
+    } catch (error) {
+        console.error('Error al cargar contenidos desde fichero:', error);
+        return { success: false, error: error.message };
+    }
+});
+
 // --- 5. GESTIÓN DE CREDENCIALES Y TOKENS ---
 async function refreshAccessToken(clientName) {
     const refreshToken = await keytar.getPassword(KEYTAR_SERVICE_NAME, `${clientName}-refreshToken`);

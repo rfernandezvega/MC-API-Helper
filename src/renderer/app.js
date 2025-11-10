@@ -542,6 +542,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			journeysManager,
 			cloudPagesManager,
 			automationCloner, 
+			contentManager 
 		});
 
         deCreator.init({ getAuthenticatedConfig });
