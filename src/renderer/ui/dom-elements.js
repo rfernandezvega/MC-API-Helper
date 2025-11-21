@@ -105,13 +105,13 @@ export function init() {
     elements.customerSearchValue = document.getElementById('customerSearchValue');
     elements.searchCustomerBtn = document.getElementById('searchCustomerBtn');
     elements.customerSearchTbody = document.getElementById('customer-search-tbody');
-    elements.getDEsBtn = document.getElementById('getDEsBtn');
+    elements.selectTablesBtn = document.getElementById('selectTablesBtn');
     elements.getCustomerJourneysBtn = document.getElementById('getCustomerJourneysBtn');
     elements.ejectCustomerFromJourneysBtn = document.getElementById('ejectCustomerFromJourneysBtn');
     elements.customerJourneysResultsBlock = document.getElementById('customer-journeys-results-block');
     elements.customerJourneysTbody = document.getElementById('customer-journeys-tbody');
-    elements.customerSendsResultsBlock = document.getElementById('customer-sends-results-block');
-    elements.sendsResultsContainer = document.getElementById('sends-results-container');
+    elements.customerDesResultsBlock = document.getElementById('customer-des-results-block');
+    elements.desResultsContainer = document.getElementById('des-results-container');
     elements.querySearchText = document.getElementById('querySearchText');
     elements.searchQueriesByTextBtn = document.getElementById('searchQueriesByTextBtn');
     elements.querySearchResultsTable = document.getElementById('query-search-results-table');
@@ -120,6 +120,10 @@ export function init() {
     elements.contentSearchValue = document.getElementById('contentSearchValue');
     elements.searchContentBtn = document.getElementById('searchContentBtn');
     elements.contentSearchResultsTbody = document.getElementById('content-search-results-tbody');
+    elements.deSelectionBlock = document.getElementById('de-selection-block');
+    elements.deSelectionTable = document.getElementById('de-selection-table');
+    elements.selectAllDEsCheckbox = document.getElementById('selectAllDEsCheckbox');
+    elements.searchSelectedDEsBtn = document.getElementById('searchSelectedDEsBtn');
 
     // --- 9. Sección: Validador de Email ---
     elements.emailToValidateInput = document.getElementById('emailToValidate');
