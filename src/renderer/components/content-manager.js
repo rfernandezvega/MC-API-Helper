@@ -324,7 +324,8 @@ function renderAllTabs() {
                    (item.preheader && item.preheader.toLowerCase().includes(filterText)) ||
                    (item.attributes && item.attributes.toLowerCase().includes(filterText)) ||
                    (item.title && item.title.toLowerCase().includes(filterText)) ||
-                   (item.subtitle && item.subtitle.toLowerCase().includes(filterText)) ||
+                   (item.subtitle && item.subtitle.toLowerCase().includes(filterText)) || 
+                   (item.templateName && item.templateName.toLowerCase().includes(filterText)) || 
                    (item.message && item.message.toLowerCase().includes(filterText));
         });
     }
