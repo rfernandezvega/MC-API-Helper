@@ -52,7 +52,7 @@ export function init(dependencies) {
     // Listener centralizado para abrir enlaces externos
     elements.cloudPagesTbody.addEventListener('click', ui.handleExternalLink);
     elements.cloudPageInternalApiLink.addEventListener('click', ui.handleExternalLink);
-    elements.codeResourceInternalApiLink.addEventListener('click', ui.handleExternalLink);
+    //elements.codeResourceInternalApiLink.addEventListener('click', ui.handleExternalLink);
     elements.cloudPageCbLink.addEventListener('click', ui.handleExternalLink);
 
     // Los botones de paginación llaman a la función que solo renderiza, sin resetear filtros.
@@ -396,14 +396,14 @@ async function showGetIdsModal() {
         const baseUrl = `https://cloud-pages.s${stackNumber}.marketingcloudapps.com/fuelapi/internal/v2/cloudpages`;
         
         // Generar URL para Landing Pages
-        const landingPagesUrl = `${baseUrl}/landing-pages?$page=1&$pageSize=5000&$orderBy=createdDate%20DESC`;
+        const landingPagesUrl = `${baseUrl}/sites?$page=1&$pageSize=5000&$orderBy=createdDate%20DESC`;
         elements.cloudPageInternalApiLink.href = landingPagesUrl;
         elements.cloudPageInternalApiLink.textContent = landingPagesUrl;
 
         // Generar URL para Code Resources
-        const codeResourcesUrl = `${baseUrl}/code-resources?$page=1&$pageSize=5000&$orderBy=createdDate%20DESC`;
+       /* const codeResourcesUrl = `${baseUrl}/code-resources?$page=1&$pageSize=5000&$orderBy=createdDate%20DESC`;
         elements.codeResourceInternalApiLink.href = codeResourcesUrl;
-        elements.codeResourceInternalApiLink.textContent = codeResourcesUrl;
+        elements.codeResourceInternalApiLink.textContent = codeResourcesUrl;*/
 
         elements.cloudPageIdsPasteArea.value = '';
         ui.showModal(elements.cloudPageIdsModal);
@@ -411,6 +411,7 @@ async function showGetIdsModal() {
     } catch (error) {
         ui.showCustomAlert(`Error al preparar el modal: ${error.message}`);
     }
+
 }
 
 /**
@@ -425,7 +426,7 @@ async function processPastedIds() {
         const entities = data?.entities;
         if (!Array.isArray(entities)) throw new Error("Formato JSON no válido o falta la clave 'entities'.");
 
-        const idMap = new Map(entities.map(e => [e.siteAssetId, e.pageId]));
+        const idMap = new Map(entities.map(e => [e.siteAssetId, e.defaultPageId]));
         
         let matchCount = 0;
         fullCloudPageList.forEach(page => {

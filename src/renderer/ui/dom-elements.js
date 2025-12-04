@@ -287,7 +287,7 @@ export function init() {
     // --- 20. MODAL DE IDS DE CLOUD PAGES ---
     elements.cloudPageIdsModal = document.getElementById('cloudpage-ids-modal-overlay');
     elements.cloudPageInternalApiLink = document.getElementById('cloudpage-internal-api-link');
-    elements.codeResourceInternalApiLink = document.getElementById('code-resource-internal-api-link');
+    //elements.codeResourceInternalApiLink = document.getElementById('code-resource-internal-api-link');
     elements.cloudPageIdsPasteArea = document.getElementById('cloudpage-ids-paste-area');
     elements.cloudPageIdsCancelBtn = document.getElementById('cloudpage-ids-cancel-btn');
     elements.cloudPageIdsImportBtn = document.getElementById('cloudpage-ids-import-btn');
