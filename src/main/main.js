@@ -205,7 +205,7 @@ ipcMain.handle('check-system-user-license', async () => {
     try {
         const systemUsername = os.userInfo().username;
         
-        const userEmail = `${systemUsername.toLowerCase()}@seidor.es`; 
+        const userEmail = `${systemUsername.toLowerCase()}`; 
 
         console.log(`Verificando licencia para el usuario del sistema: ${userEmail}`);
         
