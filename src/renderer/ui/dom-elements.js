@@ -154,6 +154,7 @@ export function init() {
     elements.nextPageBtnAutomations = document.getElementById('nextPageBtnAutomations');
     elements.pageInputAutomations = document.getElementById('pageInputAutomations');
     elements.totalPagesAutomations = document.getElementById('totalPagesAutomations');
+    elements.getNotificationsBtn = document.getElementById('getNotificationsBtn');
 
     // --- 12. Sección: Gestión de Journeys ---
     elements.journeysTbody = document.getElementById('journeys-tbody');

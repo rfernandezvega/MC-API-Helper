@@ -4,6 +4,7 @@
         <button class="back-button">← Atrás</button>            
         <div class="header-actions">
             <button id="refreshAutomationsTableBtn" class="action-button">Refrescar</button>
+            <button id="getNotificationsBtn" class="action-button">Cargar Notificaciones</button>
             <button id="downloadAutomationsCsvBtn" class="action-button">Exportar</button>
             <button id="activateAutomationBtn" class="action-button activate-btn" disabled>Activar</button>
             <button id="runAutomationBtn" class="action-button" disabled>Ejecutar</button>
@@ -27,6 +28,8 @@
             <th class="sortable-header" data-sort-by="lastRunTime">Última Ejecución</th>
             <th class="sortable-header" data-sort-by="scheduledTime">Próxima Ejecución</th>
             <th class="sortable-header" data-sort-by="status">Estado</th>
+            <th class="sortable-header" data-sort-by="notifications.Error">Notificación Errores</th>
+            <th class="sortable-header" data-sort-by="notifications.Complete">Notificación Ejecuciones</th>
             </tr>
         </thead>
         <tbody id="automations-tbody"></tbody>
