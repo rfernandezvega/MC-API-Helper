@@ -23,7 +23,7 @@
     "electron-builder": "^26.0.12"
   },
   "build": {
-    "appId": "com.seidor.mc-api-helper",
+    "appId": "com.mc-api-helper",
     "productName": "MC API Helper",
     "artifactName": "MC-API-Helper-Setup-${version}.${ext}",
     "forceCodeSigning": false,

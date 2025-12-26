@@ -20,7 +20,7 @@ const appVersion = require(path.join(__dirname, '..', '..', 'package.json')).ver
 
 
 // --- Configuración Inicial ---
-app.setAppUserModelId("com.seidor.mc-api-helper");
+app.setAppUserModelId("com.mc-api-helper");
 app.disableHardwareAcceleration();
 
 // --- Variables de estado ---
