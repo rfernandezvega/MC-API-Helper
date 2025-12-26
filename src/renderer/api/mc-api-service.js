@@ -153,6 +153,21 @@ export async function findAutomationByName(automationName, apiConfig) {
     return data.items || [];
 }
 
+/**
+ * Recupera la configuración de notificaciones de un automatismo específico.
+ * @param {string} automationId - El ID del automatismo.
+ * @param {object} apiConfig - El objeto de configuración de API.
+ * @returns {Promise<object>} La respuesta con los workers de notificación.
+ */
+export async function fetchAutomationNotifications(automationId, apiConfig) {
+    // Nota: El endpoint es /legacy/v1/beta/automations/notifications/ (sin el "bulk")
+    const url = `${apiConfig.restUri}/legacy/v1/beta/automations/notifications/${automationId}`;
+    const options = { 
+        headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } 
+    };
+    return await executeRestRequest(url, options);
+}
+
 // ==========================================================
 // --- 2. DATA EXTENSIONS & FIELDS API (SOAP & REST) ---
 // ==========================================================

@@ -78,13 +78,15 @@ document.addEventListener('DOMContentLoaded', function () {
 			'configuracion-de-section': 'configuracionDE',
 			'campos-section': 'campos',
 			'configuracion-campos-section': 'gestionCampos',
-			'validadorEmail-section': 'validadorEmail',
 			'buscadores-section': 'buscadores',
-			'clonadorQueries-section': 'clonadorQueries',
+			'clonador-queries-section': 'clonadorQueries',
 			'calendario-section': 'calendario',
 			'gestion-automatismos-section': 'gestionAutomatismos',
 			'gestion-journeys-section': 'gestionJourneys',
-			'gestion-cloudpages-section': 'gestionCloudPages'
+			'gestion-cloudpages-section': 'gestionCloudPages',
+			'gestion-contenidos-section': 'gestionContenidos',
+			'carpetas-section':'gestionCarpetas',
+			'email-validator-section':'validadorEmail'
 		};
 
 		const activeMacro = sectionToMacroMap[activeSectionId];
@@ -372,7 +374,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     'docu': 'documentacion-section', 'configuracionAPIs': 'configuracion-apis-section', 
                     'configuracionDE': 'configuracion-de-section', 'gestionCampos': 'configuracion-campos-section', 
 					'validadorEmail': 'email-validator-section', 'buscadores': 'buscadores-section', 
-					'clonadorQueries': 'clonador-queries-section','clonadorQueries': 'clonador-queries-section'
+					'clonadorQueries': 'clonador-queries-section'
                 };
 				const macroToActionMap = { //Un mapa para vistas simples
 					'carpetas': 'carpetas-section'
@@ -542,6 +544,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			journeysManager,
 			cloudPagesManager,
 			automationCloner, 
+			contentManager 
 		});
 
         deCreator.init({ getAuthenticatedConfig });

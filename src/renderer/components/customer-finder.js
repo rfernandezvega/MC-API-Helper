@@ -14,6 +14,12 @@ let currentClientConfig;    // Configuración del cliente activo (para las DEs d
 let selectedCustomerRow = null;
 let selectedSubscriberData = null;
 
+const DE_ITEMS_PER_PAGE = 5; 
+// Mapa para guardar el estado de paginación y ordenación de cada tabla de DE
+let dePaginationStates = new Map(); 
+// Objeto para guardar el estado de la tabla principal de clientes
+let customerResultsState = { allRows: [], sortColumn: null, sortDirection: 'asc' };
+
 // --- 2. FUNCIONES PÚBLICAS ---
 
 /**
@@ -24,11 +30,39 @@ export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
 
     elements.searchCustomerBtn.addEventListener('click', searchCustomer);
-    elements.getDEsBtn.addEventListener('click', getCustomerDEs);
+    elements.selectTablesBtn.addEventListener('click', displayDESelection);
     elements.getCustomerJourneysBtn.addEventListener('click', getCustomerJourneys);
     elements.customerSearchTbody.addEventListener('click', handleRowSelection);
     elements.customerJourneysTbody.addEventListener('click', handleJourneyRowSelection);
     elements.ejectCustomerFromJourneysBtn.addEventListener('click', ejectCustomer);
+
+    elements.selectAllDEsCheckbox.addEventListener('change', handleSelectAllDEs);
+    elements.searchSelectedDEsBtn.addEventListener('click', startSelectedDESearch);
+
+    // Delegación de eventos para la ordenación y paginación
+    document.getElementById('clientes-tab').addEventListener('click', e => {
+        // Manejar clics en cabeceras ordenables
+        const header = e.target.closest('.sortable-header');
+        if (header) {
+            handleSortClick(e);
+            return;
+        }
+
+        // Manejar clics en botones de paginación
+        const paginationButton = e.target.closest('.pagination-arrow');
+        if (paginationButton) {
+            handlePaginationClick(e);
+            return;
+        }
+    });
+
+    // Delegación de eventos para el input de página
+    document.getElementById('clientes-tab').addEventListener('change', e => {
+        const pageInput = e.target.closest('.page-input');
+        if (pageInput) {
+            handlePageInputChange(e);
+        }
+    });
 }
 
 /**
@@ -45,6 +79,9 @@ export function updateClientConfig(clientConfig) {
  * Orquesta la búsqueda de un cliente por Subscriber Key o Email.
  */
 async function searchCustomer() {
+    elements.deSelectionBlock.classList.add('hidden');
+    elements.customerDesResultsBlock.classList.add('hidden');
+
     ui.blockUI("Buscando cliente...");
     logger.startLogBuffering();
     
@@ -52,10 +89,10 @@ async function searchCustomer() {
     if (selectedCustomerRow) selectedCustomerRow.classList.remove('selected');
     selectedCustomerRow = null;
     selectedSubscriberData = null;
-    elements.getDEsBtn.disabled = true;
+    elements.selectTablesBtn.disabled = true;
     elements.getCustomerJourneysBtn.disabled = true;
     elements.customerJourneysResultsBlock.classList.add('hidden');
-    elements.customerSendsResultsBlock.classList.add('hidden');
+    elements.customerDesResultsBlock.classList.add('hidden');
     elements.customerSearchTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
 
     try {
@@ -81,7 +118,9 @@ async function searchCustomer() {
             finalResults = await mcApiService.searchContactByKey(value, apiConfig);
         }
 
-        renderCustomerSearchResults(finalResults);
+        customerResultsState.allRows = finalResults;
+        renderCustomerSearchResults();
+
         logger.logMessage(`Búsqueda completada. Se encontraron ${finalResults.length} resultado(s).`);
 
     } catch (error) {
@@ -137,53 +176,79 @@ async function getCustomerJourneys() {
     }
 }
 
-/**
- * Obtiene los datos del cliente en las Data Extensions configuradas.
- */
-async function getCustomerDEs() {
+function displayDESelection() {
     if (!selectedSubscriberData?.subscriberKey) return;
     
+    const configs = currentClientConfig?.dvConfigs?.filter(c => c.deKey && c.field) || [];
+    const tbody = elements.deSelectionTable.querySelector('tbody');
+    tbody.innerHTML = '';
+
+    if (configs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="2">No hay Data Extensions configuradas para buscar.</td></tr>';
+    } else {
+        configs.forEach(config => {
+            const row = document.createElement('tr');
+            // Usamos deKey como valor para el checkbox
+            row.innerHTML = `<td><input type="checkbox" class="de-select-checkbox" value="${config.deKey}"></td><td>${config.title}</td>`;
+            tbody.appendChild(row);
+        });
+    }
+
+    elements.selectAllDEsCheckbox.checked = false;
+    elements.deSelectionBlock.classList.remove('hidden');
+    // Ocultamos resultados anteriores
+    elements.customerDesResultsBlock.classList.add('hidden');
+}
+
+async function startSelectedDESearch() {
+    const selectedCheckboxes = elements.deSelectionTable.querySelectorAll('tbody input:checked');
+    if (selectedCheckboxes.length === 0) {
+        ui.showCustomAlert("Por favor, selecciona al menos una tabla.");
+        return;
+    }
+
     ui.blockUI("Buscando en Data Extensions...");
     logger.startLogBuffering();
+
+    elements.deSelectionBlock.classList.add('hidden');
+    elements.customerDesResultsBlock.classList.remove('hidden');
+    elements.desResultsContainer.innerHTML = '';
+    dePaginationStates.clear();
+
+    const selectedDEKeys = Array.from(selectedCheckboxes).map(cb => cb.value);
+    const configs = currentClientConfig?.dvConfigs.filter(c => selectedDEKeys.includes(c.deKey)) || [];
+    const apiConfig = await getAuthenticatedConfig();
+    mcApiService.setLogger(logger);
     
-    elements.customerSendsResultsBlock.classList.remove('hidden');
-    elements.sendsResultsContainer.innerHTML = '';
-
-    try {
-        const apiConfig = await getAuthenticatedConfig();
-        mcApiService.setLogger(logger); 
-        const searchValue = selectedSubscriberData.subscriberKey;
-        const configs = currentClientConfig?.dvConfigs?.filter(c => c.deKey && c.field) || [];
-
-        if (configs.length === 0) {
-            elements.sendsResultsContainer.innerHTML = '<p>No hay Data Extensions configuradas para la búsqueda.</p>';
-            return; 
-        }
+    for (const config of configs) {
+        const resultBlock = createResultBlock(config.title, config.deKey);
+        elements.desResultsContainer.appendChild(resultBlock);
         
-        logger.logMessage(`Iniciando búsqueda para '${searchValue}' en ${configs.length} DE(s) configurada(s).`);
+        try {
+            ui.blockUI(`Buscando en "${config.title}"...`);
+            logger.logMessage(`-> Consultando DE: ${config.deKey} en el campo "${config.field}"...`);
+            const items = await mcApiService.searchDataExtensionRows(config.deKey, config.field, selectedSubscriberData.subscriberKey, apiConfig);
 
-        for (const config of configs) {
-            const resultBlock = createResultBlock(config.title, config.deKey);
-            elements.sendsResultsContainer.appendChild(resultBlock);
-            const tableContainer = resultBlock.querySelector('.table-container');
-
-            try {
-                logger.logMessage(`-> Consultando DE: ${config.deKey} en el campo "${config.field}"...`);
-                const items = await mcApiService.searchDataExtensionRows(config.deKey, config.field, searchValue, apiConfig);
-                renderDETable(tableContainer, items);
-            } catch (error) {
-                logger.logMessage(`-> Error consultando ${config.deKey}: ${error.message}`);
-                tableContainer.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            if (items.length > 0) {
+                dePaginationStates.set(config.deKey, {
+                    allRows: items.map(item => item.values), // Guardamos solo los valores
+                    currentPage: 1,
+                    sortColumn: null,
+                    sortDirection: 'asc'
+                });
+                renderDEPage(config.deKey, 1);
+            } else {
+                resultBlock.querySelector('.table-container').innerHTML = '<p>No se encontraron registros en esta Data Extension.</p>';
             }
+        } catch (error) {
+            logger.logMessage(`-> Error consultando ${config.deKey}: ${error.message}`);
+            resultBlock.querySelector('.table-container').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
         }
-        logger.logMessage("Búsqueda en Data Extensions completada.");
-    } catch (error) {
-        logger.logMessage(`Error fatal durante la búsqueda en DEs: ${error.message}`);
-        elements.sendsResultsContainer.innerHTML = `<p style="color: red;">${error.message}</p>`;
-    } finally {
-        ui.unblockUI();
-        logger.endLogBuffering();
     }
+
+    logger.logMessage("Búsqueda en Data Extensions completada.");
+    logger.endLogBuffering();
+    ui.unblockUI();
 }
 
 // --- 4. MANIPULACIÓN DE EVENTOS Y UI ---
@@ -207,11 +272,12 @@ function handleRowSelection(e) {
     
     // Siempre que hay una clave (SubscriberKey o ContactKey), podemos buscar en DEs y Journeys.
     elements.getCustomerJourneysBtn.disabled = false;
-    elements.getDEsBtn.disabled = false;
+    elements.selectTablesBtn.disabled = false;
     
     // Ocultar resultados anteriores al seleccionar un nuevo cliente
     elements.customerJourneysResultsBlock.classList.add('hidden');
-    elements.customerSendsResultsBlock.classList.add('hidden');
+    elements.customerDesResultsBlock.classList.add('hidden'); // Oculta resultados de DEs
+    elements.deSelectionBlock.classList.add('hidden');     // Oculta el selector de DEs
     elements.ejectCustomerFromJourneysBtn.disabled = true;
 }
 
@@ -282,13 +348,29 @@ async function ejectCustomer() {
 
 // --- 5. RENDERIZADO Y HELPERS ---
 
-function renderCustomerSearchResults(results) {
+function renderCustomerSearchResults() {
     elements.customerSearchTbody.innerHTML = '';
-    if (!results || results.length === 0) {
+    
+    const headers = [
+        { label: 'Subscriber Key', key: 'subscriberKey' },
+        { label: 'Email', key: 'emailAddress' },
+        { label: 'Estado', key: 'status' },
+        { label: 'Fecha Creación', key: 'createdDate' },
+        { label: 'Fecha Baja', key: 'unsubscribedDate' },
+        { label: 'Es Suscriptor', key: 'isSubscriber' }
+    ];
+
+    const thead = elements.customerSearchTbody.parentElement.querySelector('thead');
+    thead.innerHTML = `<tr>${headers.map(h => `<th class="sortable-header" data-column="${h.key}">${h.label}</th>`).join('')}</tr>`;
+
+    const sortedRows = sortData(customerResultsState.allRows, customerResultsState.sortColumn, customerResultsState.sortDirection);
+    
+    if (!sortedRows || sortedRows.length === 0) {
         elements.customerSearchTbody.innerHTML = '<tr><td colspan="6">No se encontraron clientes con ese criterio.</td></tr>';
         return;
     }
-    results.forEach((sub, index) => {
+
+    sortedRows.forEach((sub, index) => {
         const row = document.createElement('tr');
         row.dataset.subscriberKey = sub.subscriberKey;
         row.dataset.isSubscriber = sub.isSubscriber;
@@ -298,11 +380,12 @@ function renderCustomerSearchResults(results) {
             <td>${sub.isSubscriber ? 'Sí' : 'No'}</td>`;
         elements.customerSearchTbody.appendChild(row);
         
-        // Auto-seleccionar si solo hay un resultado
-        if (results.length === 1 && index === 0) {
+        if (sortedRows.length === 1 && index === 0) {
             row.click();
         }
     });
+    
+    updateSortIndicators(elements.customerSearchTbody.parentElement, customerResultsState);
 }
 
 function renderCustomerJourneysTable(journeys) {
@@ -331,25 +414,47 @@ function renderCustomerJourneysTable(journeys) {
 
 function createResultBlock(title, deKey) {
     const resultBlock = document.createElement('div');
-    resultBlock.className = 'sends-dataview-block';
+    resultBlock.className = 'sends-dataview-block'; // Puedes renombrar esta clase si quieres
+    resultBlock.dataset.deKey = deKey; // Importante para identificar el bloque
     resultBlock.innerHTML = `
         <h4>${title} <small>(${deKey})</small></h4>
-        <div class="table-container"><p>Buscando...</p></div>`;
+        <div class="table-container">
+            <table><thead></thead><tbody></tbody></table>
+        </div>
+        <div class="pagination-controls hidden">
+            <button class="action-button pagination-arrow" data-action="prev">&laquo;</button>
+            <input type="number" class="page-input" min="1">
+            <span class="total-pages-span">/ 1</span>
+            <button class="action-button pagination-arrow" data-action="next">&raquo;</button>
+        </div>`;
     return resultBlock;
 }
 
-function renderDETable(container, items) {
-    if (!items || items.length === 0) {
-        container.innerHTML = '<p>No se encontraron registros en esta Data Extension.</p>';
-        return;
-    }
-    const headers = Object.keys(items[0].values);
-    const table = document.createElement('table');
-    const thead = `<thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
-    const tbodyRows = items.map(item => `<tr>${headers.map(h => `<td>${item.values[h] || '---'}</td>`).join('')}</tr>`).join('');
-    table.innerHTML = `${thead}<tbody>${tbodyRows}</tbody>`;
-    container.innerHTML = '';
-    container.appendChild(table);
+function renderDEPage(deKey, pageNum) {
+    const state = dePaginationStates.get(deKey);
+    if (!state) return;
+
+    const block = elements.desResultsContainer.querySelector(`[data-de-key="${deKey}"]`);
+    if (!block) return;
+
+    const sortedRows = sortData(state.allRows, state.sortColumn, state.sortDirection);
+    const totalPages = Math.ceil(sortedRows.length / DE_ITEMS_PER_PAGE);
+    pageNum = Math.max(1, Math.min(pageNum, totalPages));
+    state.currentPage = pageNum;
+
+    const startIndex = (pageNum - 1) * DE_ITEMS_PER_PAGE;
+    const paginatedRows = sortedRows.slice(startIndex, startIndex + DE_ITEMS_PER_PAGE);
+
+    const table = block.querySelector('table');
+    const thead = table.querySelector('thead');
+    const tbody = table.querySelector('tbody');
+    
+    const headers = Object.keys(state.allRows[0] || {});
+    thead.innerHTML = `<tr>${headers.map(h => `<th class="sortable-header" data-column="${h}">${h}</th>`).join('')}</tr>`;
+    tbody.innerHTML = paginatedRows.map(item => `<tr>${headers.map(h => `<td>${item[h] || '---'}</td>`).join('')}</tr>`).join('');
+    
+    updateSortIndicators(table, state);
+    updateDEPaginationUI(block, pageNum, totalPages);
 }
 
 /**
@@ -358,4 +463,111 @@ function renderDETable(container, items) {
 function updateEjectButtonState() {
     const selectedCount = document.querySelectorAll('#customer-journeys-table tbody tr.selected').length;
     elements.ejectCustomerFromJourneysBtn.disabled = selectedCount === 0;
+}
+
+/**
+ * Ordena un array de objetos por una clave específica.
+ */
+function sortData(data, column, direction) {
+    if (!column) return [...data];
+    const sortedData = [...data];
+    const dir = direction === 'asc' ? 1 : -1;
+    sortedData.sort((a, b) => {
+        let valA = a[column];
+        let valB = b[column];
+        if (valA == null) return 1;
+        if (valB == null) return -1;
+        // Asumimos que los nombres de campo que contienen 'date' son fechas
+        if (typeof column === 'string' && column.toLowerCase().includes('date')) {
+            return (new Date(valA) - new Date(valB)) * dir;
+        }
+        if (valA < valB) return -1 * dir;
+        if (valA > valB) return 1 * dir;
+        return 0;
+    });
+    return sortedData;
+}
+
+/**
+ * Actualiza los indicadores visuales (flechas) en las cabeceras de una tabla.
+ */
+function updateSortIndicators(tableElement, state) {
+    tableElement.querySelectorAll('.sortable-header').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+        if (th.dataset.column === state.sortColumn) {
+            th.classList.add(state.sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+        }
+    });
+}
+
+/**
+ * Actualiza la UI de los controles de paginación para una tabla de DE.
+ */
+function updateDEPaginationUI(block, pageNum, totalPages) {
+    const paginationControls = block.querySelector('.pagination-controls');
+    if (totalPages > 1) {
+        paginationControls.classList.remove('hidden');
+        const pageInput = paginationControls.querySelector('.page-input');
+        pageInput.value = pageNum;
+        pageInput.max = totalPages;
+        paginationControls.querySelector('.total-pages-span').textContent = `/ ${totalPages}`;
+        paginationControls.querySelector('[data-action="prev"]').disabled = (pageNum === 1);
+        paginationControls.querySelector('[data-action="next"]').disabled = (pageNum === totalPages);
+    } else {
+        paginationControls.classList.add('hidden');
+    }
+}
+
+function handleSortClick(e) {
+    const header = e.target.closest('.sortable-header');
+    const columnKey = header.dataset.column;
+    const table = header.closest('table');
+
+    if (table.id === 'customer-search-table') {
+        if (customerResultsState.sortColumn === columnKey) {
+            customerResultsState.sortDirection = customerResultsState.sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            customerResultsState.sortColumn = columnKey;
+            customerResultsState.sortDirection = 'asc';
+        }
+        renderCustomerSearchResults();
+    } else {
+        const block = table.closest('[data-de-key]');
+        if (!block) return;
+        const deKey = block.dataset.deKey;
+        const state = dePaginationStates.get(deKey);
+        if (!state) return;
+        if (state.sortColumn === columnKey) {
+            state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            state.sortColumn = columnKey;
+            state.sortDirection = 'asc';
+        }
+        renderDEPage(deKey, state.currentPage);
+    }
+}
+
+function handlePaginationClick(e) {
+    const button = e.target.closest('.pagination-arrow');
+    const block = button.closest('[data-de-key]');
+    const deKey = block.dataset.deKey;
+    const state = dePaginationStates.get(deKey);
+    let newPage = state.currentPage;
+    if (button.dataset.action === 'prev') newPage--;
+    if (button.dataset.action === 'next') newPage++;
+    renderDEPage(deKey, newPage);
+}
+
+function handlePageInputChange(e) {
+    const input = e.target.closest('.page-input');
+    const block = input.closest('[data-de-key]');
+    const deKey = block.dataset.deKey;
+    const newPage = parseInt(input.value, 10);
+    renderDEPage(deKey, newPage);
+}
+
+function handleSelectAllDEs(e) {
+    elements.deSelectionTable.querySelectorAll('tbody input[type="checkbox"]').forEach(cb => {
+        cb.checked = e.target.checked;
+    });
 }

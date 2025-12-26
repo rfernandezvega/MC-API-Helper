@@ -81,10 +81,10 @@
 					<li><a class="macro-item" data-macro="calendario">Calendario</a></li>         
 					<li><a class="macro-item" data-macro="gestionAutomatismos">Automatismos</a></li> 
 					<li><a class="macro-item" data-macro="clonadorQueries">Clonar Queries</a></li>
-					<li><a class="macro-item" data-macro="gestionJourneys">Journeys</a></li>      
-					<li><a class="macro-item" data-macro="carpetas">Crear Carpetas</a></li>    
+					<li><a class="macro-item" data-macro="gestionJourneys">Journeys</a></li>   
 					<li><a class="macro-item" data-macro="gestionCloudPages">Cloud Pages</a></li>
-                    <li><a class="macro-item" data-macro="gestionContenidos">Contenidos</a></li>  
+                    <li><a class="macro-item" data-macro="gestionContenidos">Contenidos</a></li>      
+					<li><a class="macro-item" data-macro="carpetas">Crear Carpetas</a></li>   
 					<li><a class="macro-item" data-macro="validadorEmail">Validar Emails</a></li>          
 				</ul>
 			</div>
@@ -255,6 +255,7 @@
         <button class="back-button">← Atrás</button>            
         <div class="header-actions">
             <button id="refreshAutomationsTableBtn" class="action-button">Refrescar</button>
+            <button id="getNotificationsBtn" class="action-button">Cargar Notificaciones</button>
             <button id="downloadAutomationsCsvBtn" class="action-button">Exportar</button>
             <button id="activateAutomationBtn" class="action-button activate-btn" disabled>Activar</button>
             <button id="runAutomationBtn" class="action-button" disabled>Ejecutar</button>
@@ -278,6 +279,8 @@
             <th class="sortable-header" data-sort-by="lastRunTime">Última Ejecución</th>
             <th class="sortable-header" data-sort-by="scheduledTime">Próxima Ejecución</th>
             <th class="sortable-header" data-sort-by="status">Estado</th>
+            <th class="sortable-header" data-sort-by="notifications.Error">Notificación Errores</th>
+            <th class="sortable-header" data-sort-by="notifications.Complete">Notificación Ejecuciones</th>
             </tr>
         </thead>
         <tbody id="automations-tbody"></tbody>
@@ -369,18 +372,18 @@
     <div class="modal-content">
         <h3>Recuperar Page IDs</h3>
         <p>
-            1. Haz clic en los siguientes enlaces para abrirlos en tu navegador. Necesitarás tener una sesión activa de Marketing Cloud en el cliente.
+            1. Haz clic en el siguiente enlace para abrirlo en tu navegador. Necesitarás tener una sesión activa de Marketing Cloud en el cliente.
         </p>
         <p>
-          <b>Landing Pages:</b><br>
+          <!--<b>Landing Pages:</b><br>-->
           <a href="#" id="cloudpage-internal-api-link" class="external-link" style="word-break: break-all;">Generando enlace...</a>
         </p>
-        <p>
+        <!--<p>
           <b>Code Resources:</b><br>
           <a href="#" id="code-resource-internal-api-link" class="external-link" style="word-break: break-all;">Generando enlace...</a>
-        </p>
+        </p>-->
         <p>
-            2. Copia TODO el contenido JSON de cada página que se abre y pégalo en el cuadro de abajo. Pega uno y dale a Importar. Después pega el otro y haz lo mismo.
+            2. Copia TODO el contenido JSON que se abre y pégalo en el cuadro de abajo. Pega uno y dale a Importar.
         </p>
         <textarea id="cloudpage-ids-paste-area" placeholder="Pega aquí el contenido del JSON..." style="width: 100%; height: 150px; margin-top: 10px;"></textarea>
         <div class="modal-actions">
@@ -1193,11 +1196,11 @@
     <div id="clientes-tab" class="tab-content config-section-container">
         <div class="config-block">
             <h3>Parámetros de Búsqueda</h3>
-            <div class="form-group">
+            <div class="search-container">
+            <div class="search-input-group">
                 <label for="customerSearchValue">Buscar por Subscriber Key o Email:</label>
                 <input type="text" id="customerSearchValue" placeholder="Ingresa el valor a buscar">
             </div>
-            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
                 <button id="searchCustomerBtn" class="action-button">Buscar Cliente</button>
             </div>
         </div>
@@ -1206,7 +1209,7 @@
             <div class="config-block-header">
                 <h3>Resultados</h3>
                 <div class="header-actions">
-                    <button id="getDEsBtn" class="action-button" disabled>DEs</button>
+                    <button id="selectTablesBtn" class="action-button" disabled>Seleccionar Tablas</button>
                     <button id="getCustomerJourneysBtn" class="action-button" disabled>Journeys</button>
                 </div>
             </div>
@@ -1222,6 +1225,27 @@
                 </table>
             </div>
         </div>
+
+        <div id="de-selection-block" class="config-block hidden">
+            <h3>Seleccionar Tablas para la Búsqueda</h3>
+            <div class="table-container">
+                <table id="de-selection-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px; text-align: center;"><input type="checkbox" id="selectAllDEsCheckbox"></th>
+                            <th>Nombre de Tabla</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Las filas se generarán dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="header-actions" style="justify-content: flex-end; margin-top: 20px;">
+                <button id="searchSelectedDEsBtn" class="action-button">Buscar en Tablas Seleccionadas</button>
+            </div>
+        </div>
+
         <!-- Bloque de Resultados de Journeys (oculto por defecto) -->
         <div id="customer-journeys-results-block" class="config-block hidden">
             <div class="config-block-header">
@@ -1242,10 +1266,10 @@
                 </table>
             </div>
         </div>
-        <!-- Bloque de Resultados de Envíos (oculto por defecto) -->
-        <div id="customer-sends-results-block" class="config-block hidden">
+        <!-- Bloque de Resultados de DEs (oculto por defecto) -->
+        <div id="customer-des-results-block" class="config-block hidden">
             <h3>Resultados de Búsqueda en Data Extensions</h3>
-            <div id="sends-results-container">
+            <div id="des-results-container">
                 <!-- Los resultados se inyectarán aquí dinámicamente -->
             </div>
         </div>

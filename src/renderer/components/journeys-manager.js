@@ -221,6 +221,31 @@ async function fetchData() {
         // Pasamos la lista de journeys y el array completo de eventos para el enriquecimiento.
         fullJourneyList = enrichJourneys(allJourneys, allEventDefs);
 
+        /* DESCOMENTAR PARA DESCARGAR TODAS LAS COMUNICACIONES DE TODOS LOS JOURNEYS
+        // Ahora, iteramos sobre CADA journey para obtener sus comunicaciones antes de pintar la tabla.
+        logger.logMessage(`Iniciando obtención de detalles de comunicación para los ${fullJourneyList.length} journeys...`);
+
+        // Usamos Promise.all para hacer las llamadas en paralelo y acelerar el proceso
+        const communicationPromises = fullJourneyList.map(async (journey) => {
+            try {
+                // Esta es la lógica central reutilizada de getCommunications()
+                logger.logMessage(`Obteniendo actividades para: "${journey.name}"`);
+                const details = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
+                const comms = parseJourneyActivities(details.activities);
+                // Usamos Object.assign para modificar el objeto journey directamente en la lista principal
+                Object.assign(journey, { ...comms, activities: details.activities || [], hasCommunications: true });
+            } catch (error) {
+                logger.logMessage(` -> ERROR al obtener detalles para "${journey.name}": ${error.message}`);
+                // Opcional: añadir una bandera para saber que falló
+                journey.hasCommunications = false; 
+            }
+        });
+
+        // Esperamos a que todas las peticiones terminen
+        await Promise.all(communicationPromises);
+
+        logger.logMessage("Todas las comunicaciones han sido procesadas."); */
+
         populateJourneyFilters(fullJourneyList);
     } catch (error) {
         logger.logMessage(`Error al obtener journeys: ${error.message}`);

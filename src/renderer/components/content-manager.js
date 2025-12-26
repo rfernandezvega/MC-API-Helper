@@ -115,10 +115,36 @@ export function init(dependencies) {
  */
 export async function view() {
     logger.logMessage("Iniciando vista del Gestor de Contenidos.");
-    if (fullContentList.length === 0) {
-        await showGetContentsModal();
-    } else {
-        renderAllTabs();
+    const clientName = elements.clientNameInput.value.trim();
+
+    if (!clientName) {
+        ui.showCustomAlert("Por favor, selecciona un cliente para gestionar sus contenidos.");
+        // Opcional: podrías navegar al menú principal o a la configuración aquí si lo deseas.
+        return; 
+    }
+
+    ui.blockUI("Cargando contenidos...");
+    try {
+        const result = await window.electronAPI.loadClientContents(clientName);
+
+        if (result.success && result.contents) {
+            // Si encontramos contenidos, los cargamos en la tabla
+            fullContentList = result.contents;
+            logger.logMessage(`Cargados ${fullContentList.length} contenidos desde fichero para "${clientName}".`);
+            renderAllTabs();
+        } else if (result.success) {
+            // Si no hay contenidos, mostramos la modal para que el usuario los importe
+            logger.logMessage(`No hay contenidos guardados para "${clientName}". Abriendo modal de importación.`);
+            await showGetContentsModal();
+        } else {
+            // Si hubo un error al cargar, lo mostramos
+            throw new Error(result.error);
+        }
+    } catch (error) {
+        logger.logError(`Error al cargar contenidos: ${error.message}`);
+        ui.showCustomAlert(`Error al cargar contenidos: ${error.message}`);
+    } finally {
+        ui.unblockUI();
     }
 }
 
@@ -127,12 +153,18 @@ export async function view() {
  */
 export function clearCache() {
     fullContentList = [];
-    tabsState = {};
+    // Esta función reinicializa el objeto 'tabsState' y la estructura de las pestañas
+    createDynamicTabs();
+
+    // Limpia el contenido visible de las tablas
     CONTENT_TYPES_CONFIG.forEach(tab => {
         const tbody = document.getElementById(`tbody-${tab.id}`);
         if (tbody) tbody.innerHTML = '';
     });
     
+    // Limpia el campo de filtro
+    elements.contentManagerFilter.value = '';
+    logger.logMessage("Caché y tablas del Gestor de Contenidos limpiadas.");
 }
 
 /**
@@ -249,7 +281,7 @@ function copyScriptToClipboard() {
         .catch(err => ui.showCustomAlert(`Error al copiar: ${err.message}`));
 }
 
-function processPastedContents() {
+async function processPastedContents() {
     const jsonText = elements.contentManagerPasteArea.value.trim();
     if (!jsonText) return ui.showCustomAlert("El área de texto está vacía.");
     
@@ -259,13 +291,24 @@ function processPastedContents() {
 
         fullContentList = data.items;
         logger.logMessage(`Importados ${fullContentList.length} contenidos.`);
-        ui.showCustomAlert(`Se han importado ${fullContentList.length} contenidos.`);
+        
+        const clientName = elements.clientNameInput.value.trim();
+        if (clientName) {
+            const saveResult = await window.electronAPI.saveClientContents({ clientName, contents: fullContentList });
+            if (saveResult.success) {
+                ui.showCustomAlert(`Se han importado y guardado ${fullContentList.length} contenidos para "${clientName}".`);
+            } else {
+                throw new Error(saveResult.error);
+            }
+        } else {
+            ui.showCustomAlert(`Se han importado ${fullContentList.length} contenidos, pero no se guardarán porque no hay un cliente seleccionado.`);
+        }
         
         ui.hideModal(elements.contentManagerModal);
         renderAllTabs();
     } catch (error) {
-        logger.logMessage(`Error al procesar JSON: ${error.message}`);
-        ui.showCustomAlert(`Error al procesar el JSON: ${error.message}`);
+        logger.logMessage(`Error al procesar o guardar JSON: ${error.message}`);
+        ui.showCustomAlert(`Error: ${error.message}`);
     }
 }
 
@@ -281,7 +324,8 @@ function renderAllTabs() {
                    (item.preheader && item.preheader.toLowerCase().includes(filterText)) ||
                    (item.attributes && item.attributes.toLowerCase().includes(filterText)) ||
                    (item.title && item.title.toLowerCase().includes(filterText)) ||
-                   (item.subtitle && item.subtitle.toLowerCase().includes(filterText)) ||
+                   (item.subtitle && item.subtitle.toLowerCase().includes(filterText)) || 
+                   (item.templateName && item.templateName.toLowerCase().includes(filterText)) || 
                    (item.message && item.message.toLowerCase().includes(filterText));
         });
     }

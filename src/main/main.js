@@ -20,7 +20,7 @@ const appVersion = require(path.join(__dirname, '..', '..', 'package.json')).ver
 
 
 // --- Configuración Inicial ---
-app.setAppUserModelId("com.seidor.mc-api-helper");
+app.setAppUserModelId("com.mc-api-helper");
 app.disableHardwareAcceleration();
 
 // --- Variables de estado ---
@@ -205,7 +205,7 @@ ipcMain.handle('check-system-user-license', async () => {
     try {
         const systemUsername = os.userInfo().username;
         
-        const userEmail = `${systemUsername.toLowerCase()}@seidor.es`; 
+        const userEmail = `${systemUsername.toLowerCase()}`; 
 
         console.log(`Verificando licencia para el usuario del sistema: ${userEmail}`);
         
@@ -276,6 +276,73 @@ ipcMain.handle('open-csv-file', async (event) => {
         return { success: true, content };
     } catch (error) {
         console.error('Error al leer el fichero CSV:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('save-client-contents-to-file', (event, { clientName, contents }) => {
+    try {
+        // Obtiene la ruta estándar para guardar datos de la aplicación
+        const userDataPath = app.getPath('userData');
+        // Crea una subcarpeta 'ClientCloudPages' si no existe
+        const contentsDirPath = path.join(userDataPath, 'ClientCloudPages');
+        if (!fs.existsSync(contentsDirPath)) {
+            fs.mkdirSync(contentsDirPath);
+        }
+        // Guarda los contenidos en un fichero llamado como el cliente (ej: Atresmedia.json)
+        const filePath = path.join(contentsDirPath, `${clientName}.json`);
+        fs.writeFileSync(filePath, JSON.stringify(contents, null, 2));
+        return { success: true };
+    } catch (error) {
+        console.error('Error al guardar contenidos en fichero:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('load-client-contents-from-file', (event, clientName) => {
+    try {
+        const userDataPath = app.getPath('userData');
+        const filePath = path.join(userDataPath, 'ClientCloudPages', `${clientName}.json`);
+        // Comprueba si el fichero existe
+        if (fs.existsSync(filePath)) {
+            const fileContents = fs.readFileSync(filePath, 'utf-8');
+            return { success: true, contents: JSON.parse(fileContents) };
+        }
+        // Si no existe, no es un error, simplemente no hay datos guardados
+        return { success: true, contents: null };
+    } catch (error) {
+        console.error('Error al cargar contenidos desde fichero:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('save-cloud-pages-cache', (event, { clientName, cloudPagesData }) => {
+    try {
+        const userDataPath = app.getPath('userData');
+        const cacheDirPath = path.join(userDataPath, 'ClientCache');
+        if (!fs.existsSync(cacheDirPath)) {
+            fs.mkdirSync(cacheDirPath);
+        }
+        const filePath = path.join(cacheDirPath, `cloudpages_${clientName}.json`);
+        fs.writeFileSync(filePath, JSON.stringify(cloudPagesData, null, 2));
+        return { success: true };
+    } catch (error) {
+        console.error('Error al guardar caché de Cloud Pages:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('load-cloud-pages-cache', (event, clientName) => {
+    try {
+        const userDataPath = app.getPath('userData');
+        const filePath = path.join(userDataPath, 'ClientCache', `cloudpages_${clientName}.json`);
+        if (fs.existsSync(filePath)) {
+            const fileContents = fs.readFileSync(filePath, 'utf-8');
+            return { success: true, data: JSON.parse(fileContents) };
+        }
+        return { success: true, data: null }; // No hay caché, no es un error
+    } catch (error) {
+        console.error('Error al cargar caché de Cloud Pages:', error);
         return { success: false, error: error.message };
     }
 });

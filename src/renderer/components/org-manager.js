@@ -8,6 +8,7 @@ import * as logger from '../ui/logger.js';
 
 // --- ESTADO DEL MÓDULO ---
 let selectedConfigRow = null;
+let currentActiveClient = '';
 
 // --- DEPENDENCIAS INYECTADAS ---
 let getAuthenticatedConfig;
@@ -17,6 +18,7 @@ let calendar;
 let automationsManager;
 let journeysManager;
 let cloudPagesManager;
+let contentManager;
 
 /**
  * Recoge los valores del formulario que son seguros para guardar en localStorage.
@@ -152,14 +154,29 @@ export function loadConfigsIntoSelect() {
  */
 export function loadAndSyncClientConfig(clientName) {
     logger.startLogBuffering();
-    try {
-        const configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
-        updateLoginStatus(false);
 
+    // --- LÓGICA DE CAMBIO AÑADIDA ---
+    // Si el cliente seleccionado es el mismo que ya está activo, no hacemos nada.
+    if (clientName === currentActiveClient) {
+        logger.logMessage(`Cliente "${clientName}" ya está activo.`);
+        logger.endLogBuffering();
+        return;
+    }
+
+    try {
+        // Solo limpiamos las cachés si estamos cambiando de cliente (o seleccionando "ninguno")
+        logger.logMessage(`Cambiando de cliente: de "${currentActiveClient || 'ninguno'}" a "${clientName || 'ninguno'}"`);
         calendar.clearData();
         automationsManager.clearCache();
         journeysManager.clearCache();
         cloudPagesManager.clearCache();
+        if (contentManager) contentManager.clearCache();
+
+        // Actualizamos el cliente activo
+        currentActiveClient = clientName; 
+        
+        const configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
+        updateLoginStatus(false);
 
         if (clientName) {
             ui.blockUI("Cargando configuración...");
@@ -322,6 +339,7 @@ export function init(dependencies) {
     automationsManager = dependencies.automationsManager;
     journeysManager = dependencies.journeysManager;
     cloudPagesManager = dependencies.cloudPagesManager;
+    contentManager = dependencies.contentManager;
 
     elements.saveConfigBtn.addEventListener('click', saveClientConfig);
     elements.loginBtn.addEventListener('click', startLogin);

@@ -69,7 +69,19 @@ function renderTable(automations) {
         paginatedItems.forEach(auto => {
             const row = document.createElement('tr');
             row.dataset.automationId = auto.id;
-            row.innerHTML = `<td>${auto.name || 'Sin Nombre'}</td><td>${formatDate(auto.lastRunTime)}</td><td>${formatDate(auto.scheduledTime)}</td><td>${auto.status || '---'}</td>`;
+
+            // Obtenemos los valores de notificaciones si existen
+            const errorNotif = auto.notifications?.Error ?? '---';
+            const completeNotif = auto.notifications?.Complete ?? '---';
+
+             row.innerHTML = `
+                <td>${auto.name || 'Sin Nombre'}</td>
+                <td>${formatDate(auto.lastRunTime)}</td>
+                <td>${formatDate(auto.scheduledTime)}</td>
+                <td>${auto.status || '---'}</td>
+                <td class="notif-cell">${errorNotif}</td>
+                <td class="notif-cell">${completeNotif}</td>
+            `;
             elements.automationsTbody.appendChild(row);
         });
     }
@@ -96,6 +108,7 @@ export function init(dependencies) {
     elements.stopAutomationBtn.addEventListener('click', () => performAction('pause'));
     elements.cloneAutomationBtn.addEventListener('click', () => inspectAndShowCloner());
     elements.refreshAutomationsTableBtn.addEventListener('click', refreshData);
+    elements.getNotificationsBtn.addEventListener('click', loadNotificationsForVisibleRows);
 
     elements.automationNameFilter.addEventListener('input', applyFiltersAndRender);
     elements.automationStatusFilter.addEventListener('change', applyFiltersAndRender);
@@ -461,18 +474,33 @@ function downloadAutomationsCsv() {
         return;
     }
 
-    const headers = ['Nombre', 'Última Ejecución', 'Próxima Ejecución', 'Estado'];
+    // Cabeceras base
+    let headers = ['Nombre', 'Última Ejecución', 'Próxima Ejecución', 'Estado'];
     
-    // Mapeamos los datos filtrados y ordenados a formato CSV
-    const sortedData = [...currentFilteredList]; // Copiamos para no modificar la original
-    sortData(sortedData); // Usamos la función de ordenación existente
+    // Comprobar si algún elemento tiene notificaciones para añadir cabeceras
+    const hasNotifs = currentFilteredList.some(a => a.notifications);
+    if (hasNotifs) {
+        headers.push('Errores', 'Ejecuciones');
+    }
+
+    const sortedData = [...currentFilteredList];
+    sortData(sortedData);
     
-    const rows = sortedData.map(auto => [
-        `"${auto.name || ''}"`,
-        `"${formatDate(auto.lastRunTime)}"`,
-        `"${formatDate(auto.scheduledTime)}"`,
-        `"${auto.status || ''}"`
-    ].join(','));
+    const rows = sortedData.map(auto => {
+        let rowData = [
+            `"${auto.name || ''}"`,
+            `"${formatDate(auto.lastRunTime)}"`,
+            `"${formatDate(auto.scheduledTime)}"`,
+            `"${auto.status || ''}"`
+        ];
+
+        if (hasNotifs) {
+            rowData.push(`"${auto.notifications?.Error || ''}"`);
+            rowData.push(`"${auto.notifications?.Complete || ''}"`);
+        }
+
+        return rowData.join(',');
+    });
 
     const csvContent = [headers.join(','), ...rows].join('\n');
     
@@ -488,4 +516,64 @@ function downloadAutomationsCsv() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+
+
+/**
+ * Carga las notificaciones para todos los automatismos que están visibles actualmente (filtrados).
+ */
+async function loadNotificationsForVisibleRows() {
+    if (currentFilteredList.length === 0) return;
+
+    ui.blockUI(`Cargando notificaciones de ${currentFilteredList.length} automatismos...`);
+    logger.startLogBuffering();
+
+    try {
+        const apiConfig = await getAuthenticatedConfig();
+        
+        // Ejecutamos las llamadas en paralelo para mayor velocidad
+        const promises = currentFilteredList.map(async (auto) => {
+            try {
+                const data = await mcApiService.fetchAutomationNotifications(auto.id, apiConfig);
+                
+                // Inicializamos el objeto de notificaciones en el automatismo
+                auto.notifications = {
+                    Error: '---',
+                    Complete: '---'
+                };
+
+                if (data && data.workers && data.workers.length > 0) {
+                    // Agrupamos los emails por tipo (Error o Complete)
+                    const errors = data.workers
+                        .filter(w => w.notificationType === 'Error')
+                        .map(w => w.definition)
+                        .join(' ');
+                    
+                    const completes = data.workers
+                        .filter(w => w.notificationType === 'Complete')
+                        .map(w => w.definition)
+                        .join(' ');
+
+                    auto.notifications.Error = errors || '---';
+                    auto.notifications.Complete = completes || '---';
+                }
+            } catch (err) {
+                console.error(`Error cargando notificación para ${auto.id}`, err);
+                auto.notifications = { Error: 'Error API', Complete: 'Error API' };
+            }
+        });
+
+        await Promise.all(promises);
+        logger.logMessage("Notificaciones cargadas correctamente.");
+        
+        // Volvemos a renderizar la tabla para mostrar los nuevos datos
+        renderFilteredTable();
+
+    } catch (error) {
+        logger.logMessage(`Error general al cargar notificaciones: ${error.message}`);
+        ui.showCustomAlert("Error al cargar notificaciones.");
+    } finally {
+        ui.unblockUI();
+        logger.endLogBuffering();
+    }
 }
