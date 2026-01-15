@@ -270,6 +270,12 @@ body {
   background-color: #cccccc !important; color: #888888 !important;
   cursor: not-allowed !important; opacity: 0.7 !important;
 }
+/* Estilo para botones con texto pequeño */
+.action-button.small-text-btn {
+    font-size: 0.75rem;
+    padding: 5px 10px;
+    line-height: 1.2;
+}
 
 /* --- 3.3. Formularios y Bloques de Configuración --- */
 .config-section-container .config-block {

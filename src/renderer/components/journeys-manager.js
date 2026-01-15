@@ -107,6 +107,7 @@ export function init(dependencies) {
     elements.downloadJourneysCsvBtn.addEventListener('click', downloadJourneysCsv);
     elements.refreshJourneysTableBtn.addEventListener('click', refreshData);
     elements.getCommunicationsBtn.addEventListener('click', getCommunications);
+    elements.getAllCommunicationsBtn.addEventListener('click', getAllCommunications);
     elements.drawJourneyBtn.addEventListener('click', drawJourney);
     elements.copyJourneyBtn.addEventListener('click', copyJourney);
     elements.stopJourneyBtn.addEventListener('click', stopJourneys);
@@ -221,7 +222,7 @@ async function fetchData() {
         // Pasamos la lista de journeys y el array completo de eventos para el enriquecimiento.
         fullJourneyList = enrichJourneys(allJourneys, allEventDefs);
 
-        /* DESCOMENTAR PARA DESCARGAR TODAS LAS COMUNICACIONES DE TODOS LOS JOURNEYS
+        /*DESCOMENTAR PARA DESCARGAR TODAS LAS COMUNICACIONES DE TODOS LOS JOURNEYS
         // Ahora, iteramos sobre CADA journey para obtener sus comunicaciones antes de pintar la tabla.
         logger.logMessage(`Iniciando obtención de detalles de comunicación para los ${fullJourneyList.length} journeys...`);
 
@@ -351,6 +352,64 @@ async function getCommunications() {
         ui.showCustomAlert(`Error: ${error.message}`);
     } finally {
         applyFiltersAndRender();
+        ui.unblockUI();
+        logger.endLogBuffering();
+    }
+}
+
+/**
+ * Obtiene los detalles de las comunicaciones para TODOS los journeys cargados.
+ */
+async function getAllCommunications() {
+    const totalJourneys = fullJourneyList.length;
+    if (totalJourneys === 0) return;
+
+    // 1. Aviso de confirmación
+    const msg = `Vas a obtener las comunicaciones de los ${totalJourneys} journeys cargados. 
+                 Este proceso realiza muchas peticiones a la API y puede tardar varios minutos dependiendo del tamaño de los journeys. 
+                 ¿Deseas continuar?`;
+    
+    if (!await ui.showCustomConfirm(msg)) return;
+
+    ui.blockUI(`Procesando ${totalJourneys} Journeys...`);
+    logger.startLogBuffering();
+
+    try {
+        const apiConfig = await getAuthenticatedConfig();
+        mcApiService.setLogger(logger);
+
+        logger.logMessage(`Iniciando descarga masiva de comunicaciones para ${totalJourneys} journeys...`);
+
+        // Usamos Promise.all para ejecutar en paralelo (igual que el código que tenías comentado)
+        const communicationPromises = fullJourneyList.map(async (journey) => {
+            try {
+                // Solo descargamos si no las tiene ya
+                if (!journey.hasCommunications) {
+                    logger.logMessage(`Obteniendo actividades para: "${journey.name}"`);
+                    const details = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
+                    const comms = parseJourneyActivities(details.activities);
+                    Object.assign(journey, { 
+                        ...comms, 
+                        activities: details.activities || [], 
+                        hasCommunications: true 
+                    });
+                }
+            } catch (error) {
+                logger.logMessage(` -> ERROR en "${journey.name}": ${error.message}`);
+                journey.hasCommunications = false; 
+            }
+        });
+
+        await Promise.all(communicationPromises);
+        
+        logger.logMessage("Descarga masiva completada.");
+        ui.showCustomAlert("Se han procesado todas las comunicaciones.");
+
+    } catch (error) {
+        logger.logMessage(`Error general: ${error.message}`);
+        ui.showCustomAlert(`Error: ${error.message}`);
+    } finally {
+        applyFiltersAndRender(); // Refrescar la tabla para ver los cambios
         ui.unblockUI();
         logger.endLogBuffering();
     }
@@ -642,6 +701,7 @@ function getSelectedJourneys() {
 function updateButtonsState() {
     const selected = getSelectedJourneys();
     const count = selected.length;
+    elements.getAllCommunicationsBtn.disabled = fullJourneyList.length === 0;
     elements.getCommunicationsBtn.disabled = count === 0;
     elements.drawJourneyBtn.disabled = !(count === 1 && selected[0].hasCommunications);
 
@@ -951,10 +1011,10 @@ function downloadJourneysCsv() {
         `"${j.status || ''}"`,
         `"${j.dataExtensionName || ''}"`,
         `"${j.hasCommunications ? 'Sí' : 'No'}"`,
-        `"${j.emails.join('; ')}"`, // Usamos ; para listas dentro de una celda
-        `"${j.sms.join('; ')}"`,
-        `"${j.pushes.join('; ')}"`,
-        `"${j.whatsapps.join('; ')}"`
+        `"${j.emails.join(' | ')}"`, // Usamos ; para listas dentro de una celda
+        `"${j.sms.join(' | ')}"`,
+        `"${j.pushes.join(' | ')}"`,
+        `"${j.whatsapps.join(' | ')}"`
     ].join(','));
 
     const csvContent = [headers.join(','), ...rows].join('\n');
