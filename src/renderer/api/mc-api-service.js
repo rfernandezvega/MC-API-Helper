@@ -878,15 +878,23 @@ export async function getDataExtensionDetailsByName(deName, apiConfig) {
  * @returns {Promise<Array>} Un array de objetos de importación encontrados.
  */
 export async function findImportsTargetingDE(deObjectId, apiConfig) {
-    const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>ImportDefinition</ObjectType><Properties>Name</Properties><Properties>Description</Properties><Filter xsi:type="SimpleFilterPart"><Property>DestinationObject.ObjectID</Property><SimpleOperator>equals</SimpleOperator><Value>${deObjectId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+    const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>ImportDefinition</ObjectType><Properties>Name</Properties><Properties>Description</Properties><Properties>ObjectID</Properties><Filter xsi:type="SimpleFilterPart"><Property>DestinationObject.ObjectID</Property><SimpleOperator>equals</SimpleOperator><Value>${deObjectId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
     
     const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
-    
-    return Array.from(new DOMParser().parseFromString(responseText, "application/xml").querySelectorAll("Results")).map(node => ({
+    const importDefinitions = Array.from(new DOMParser().parseFromString(responseText, "application/xml").querySelectorAll("Results")).map(node => ({
         name: node.querySelector("Name")?.textContent || 'N/A',
         type: 'Import',
-        description: node.querySelector("Description")?.textContent || '---'
+        description: node.querySelector("Description")?.textContent || '---',
+        objectID: node.querySelector("ObjectID")?.textContent // Necesitamos el ObjectID para buscar el automatismo
     }));
+
+    // Enriquecer cada import con la lista de automatizaciones donde se usa
+    const importsWithAutomations = await Promise.all(importDefinitions.map(async (imp) => {
+        const automations = await findAutomationForActivity(imp.objectID, apiConfig);
+        return { ...imp, automations }; // Añadimos el array de automatizaciones
+    }));
+
+    return importsWithAutomations;
 }
 
 /**
@@ -906,32 +914,63 @@ export async function searchQueriesBySimpleFilter({ property, simpleOperator, va
 
 /**
  * Busca la automatización a la que pertenece una actividad de query.
- * @param {object} query - El objeto de la query.
+ * Modificado para encontrar y devolver TODAS las automatizaciones a las que pertenece una query/actividad.
+ * @param {object} query - El objeto de la query (o cualquier actividad con objectID).
  * @param {object} apiConfig - Configuración de la API.
- * @returns {Promise<object>} El objeto de la query enriquecido con `automationName` y `step`.
+ * @returns {Promise<Array<{automationName: string, step: string}>>} Un array de objetos, cada uno representando una ocurrencia en un automatismo.
  */
-async function findAutomationForQuery(query, apiConfig) {
-    if (!query.objectID) return { ...query, automationName: '---', step: '---' };
+async function findAutomationForActivity(activityObjectId, apiConfig) { // Renombramos para ser más genéricos
+    if (!activityObjectId) return [];
+
+    const result = [];
+
+    // Paso 1: Buscar todas las "Activities" que apuntan a nuestro activityObjectId
+    // Esto nos dará los ObjectID de los "Program" (Automatizaciones) a los que pertenece.
+    const retrieveActivitiesPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>Activity</ObjectType><Properties>Program.ObjectID</Properties><Filter xsi:type="SimpleFilterPart"><Property>Definition.ObjectID</Property><SimpleOperator>equals</SimpleOperator><Value>${activityObjectId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+    const responseText = await executeSoapRequest(apiConfig.soapUri, retrieveActivitiesPayload);
+    const xmlDoc = new DOMParser().parseFromString(responseText, "application/xml");
     
-    // La primera parte con executeSoapRequest se queda como está.
-    const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>Activity</ObjectType><Properties>Program.ObjectID</Properties><Filter xsi:type="SimpleFilterPart"><Property>Definition.ObjectID</Property><SimpleOperator>equals</SimpleOperator><Value>${query.objectID}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-    const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
-    const programIdNode = new DOMParser().parseFromString(responseText, "application/xml").querySelector("Program > ObjectID");
+    const programIdNodes = xmlDoc.querySelectorAll("Results > Program > ObjectID");
 
-    if (!programIdNode) return { ...query, automationName: '---', step: '---' };
-
-    const url = `${apiConfig.restUri}automation/v1/automations/${programIdNode.textContent}`;
-    const options = { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } };
-
-    try {
-        const autoData = await executeRestRequest(url, options);
-        const step = autoData.steps?.find(s => s.activities?.some(a => a.activityObjectId === query.objectID))?.step || 'N/A';
-        return { ...query, automationName: autoData.name || 'N/A', step };
-    } catch (error) {
-        // Si executeRestRequest falla (ej. 404), lo capturamos y devolvemos un estado de error.
-        return { ...query, automationName: 'Error recuperando Automation', step: '---' };
+    if (programIdNodes.length === 0) {
+        return []; // No se encontró en ninguna automatización
     }
+
+    // Usaremos un Set para evitar duplicados si una actividad aparece más de una vez en la misma automatización
+    const uniqueAutomationIds = new Set();
+    programIdNodes.forEach(node => uniqueAutomationIds.add(node.textContent));
+
+    // Para cada automatización encontrada, obtenemos sus detalles REST
+    for (const automationId of uniqueAutomationIds) {
+        const url = `${apiConfig.restUri}automation/v1/automations/${automationId}`;
+        const options = { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } };
+
+        try {
+            const autoData = await executeRestRequest(url, options);
+            let stepName = 'N/A';
+            
+            // Buscar en qué paso específico está nuestra actividad
+            if (autoData.steps) {
+                for (const step of autoData.steps) {
+                    if (step.activities?.some(a => a.activityObjectId === activityObjectId)) {
+                        stepName = step.step || 'N/A';
+                        break; // Ya encontramos el paso en esta automatización
+                    }
+                }
+            }
+            
+            result.push({ automationName: autoData.name || 'N/A', step: stepName });
+
+        } catch (error) {
+            // Si executeRestRequest falla (ej. 404 para una automatización borrada),
+            // lo capturamos y devolvemos un estado de error para esa automatización.
+            console.warn(`Error recuperando detalles para Automation ID ${automationId}: ${error.message}`);
+            result.push({ automationName: `Error (${automationId})`, step: '---' });
+        }
+    }
+    return result;
 }
+
 
 /**
  * Busca Query Definitions usando un fragmento de filtro SOAP genérico.
@@ -952,7 +991,13 @@ async function findQueriesByFilter(filterXml, apiConfig) {
         objectID: node.querySelector("ObjectID")?.textContent
     }));
 
-    return await Promise.all(queries.map(q => findAutomationForQuery(q, apiConfig)));
+    // Enriquecer cada query con la lista de automatizaciones donde se usa
+    const queriesWithAutomations = await Promise.all(queries.map(async (q) => {
+        const automations = await findAutomationForActivity(q.objectID, apiConfig);
+        return { ...q, automations }; // Añadimos el array de automatizaciones
+    }));
+
+    return queriesWithAutomations;
 }
 
 /**

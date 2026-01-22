@@ -30,6 +30,11 @@ export function init(dependencies) {
 async function findDataSources() {
     ui.blockUI("Buscando orígenes de datos...");
     logger.startLogBuffering();
+    // Ajustar colspan para 5 columnas si "Automatización" y "Paso" se combinan,
+    // o mantener 6 si "Automatización" y "Paso" son dos columnas separadas.
+    // Con la nueva estructura de lista, es mejor tener una columna para "Automatización".
+    // Las cabeceras son: Actividad | Tipo | Automatización | Paso | Acción | Descripción / Query
+    // -> Esto implica 6 columnas.
     elements.dataSourcesTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
     try {
         const apiConfig = await getAuthenticatedConfig();
@@ -86,14 +91,53 @@ function renderTable(sources) {
     }
     sources.forEach(source => {
         const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${source.name || '---'}</td>
-            <td>${source.type || '---'}</td>
-            <td>${source.automationName || '---'}</td>
-            <td>${source.step || '---'}</td>
-            <td>${source.action || '---'}</td>
-            <td style="white-space: pre-wrap; word-break: break-all;">${source.description || '---'}</td>
-        `;
+        
+        // Columna: Actividad (Nombre de la actividad)
+        const activityNameCell = document.createElement('td');
+        activityNameCell.textContent = source.name || '---';
+        row.appendChild(activityNameCell);
+
+        // Columna: Tipo
+        const typeCell = document.createElement('td');
+        typeCell.textContent = source.type || '---';
+        row.appendChild(typeCell);
+
+        // Columna: Automatización (Modificado para mostrar múltiples líneas sin bullets)
+        const automationCell = document.createElement('td');
+        if (source.automations && source.automations.length > 0) {
+            // Unir todos los nombres de automatización en líneas separadas
+            automationCell.innerHTML = source.automations
+                .map(auto => auto.automationName || 'N/A')
+                .join('<br>'); // Usar <br> para saltos de línea
+        } else {
+            automationCell.textContent = '---'; // Mostrar "---" si no hay automatismos
+        }
+        row.appendChild(automationCell);
+
+        // Columna: Paso (Modificado para mostrar múltiples líneas sin bullets)
+        const stepCell = document.createElement('td');
+        if (source.automations && source.automations.length > 0) {
+            // Unir todos los pasos en líneas separadas
+            stepCell.innerHTML = source.automations
+                .map(auto => auto.step ? `${auto.step}` : '---')
+                .join('<br>'); // Usar <br> para saltos de línea
+        } else {
+            stepCell.textContent = '---'; // Mostrar "---" si no hay pasos
+        }
+        row.appendChild(stepCell);
+
+        // Columna: Acción (Solo relevante para Queries, aunque los Imports también tienen una "acción" implícita)
+        const actionCell = document.createElement('td');
+        actionCell.textContent = source.action || '---';
+        row.appendChild(actionCell);
+
+        // Columna: Descripción / Query (puede ser multi-línea)
+        const descriptionQueryCell = document.createElement('td');
+        descriptionQueryCell.style.whiteSpace = 'pre-wrap'; // Conserva saltos de línea y espacios
+        descriptionQueryCell.style.wordBreak = 'break-all'; // Rompe palabras largas si es necesario
+        descriptionQueryCell.textContent = source.description || '---';
+        row.appendChild(descriptionQueryCell);
+
         elements.dataSourcesTbody.appendChild(row);
     });
 }
