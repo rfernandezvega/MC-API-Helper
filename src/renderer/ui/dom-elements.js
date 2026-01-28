@@ -124,6 +124,11 @@ export function init() {
     elements.deSelectionTable = document.getElementById('de-selection-table');
     elements.selectAllDEsCheckbox = document.getElementById('selectAllDEsCheckbox');
     elements.searchSelectedDEsBtn = document.getElementById('searchSelectedDEsBtn');
+    elements.showSourceQueryCheckbox = document.getElementById('showSourceQueryCheckbox'); 
+    elements.activitySearchValue = document.getElementById('activitySearchValue');
+    elements.searchActivityBtn = document.getElementById('searchActivityBtn'); 
+    elements.activityUsageTbody = document.getElementById('activity-usage-tbody'); 
+    elements.dataSourcesTable = document.getElementById('data-sources-table');
 
     // --- 9. Sección: Validador de Email ---
     elements.emailToValidateInput = document.getElementById('emailToValidate');

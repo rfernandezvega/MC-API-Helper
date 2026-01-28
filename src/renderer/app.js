@@ -35,6 +35,7 @@ import * as calendar from './components/calendar.js';                  // Lógic
 import * as automationCloner from './components/automation-cloner.js'; // Lógica del clonador de automatismos.
 import * as folderCreator from './components/folder-creator.js'; // Lógica del creador de carpetas
 import * as contentManager from './components/content-manager.js'; // Lógica del gestor de contenidos.
+import * as actividadesFinder from './components/actividades-finder.js';
 
 
 

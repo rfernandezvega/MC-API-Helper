@@ -1,28 +1,18 @@
 // Fichero: src/renderer/components/query-text-finder.js
-// Descripción: Módulo que encapsula la lógica del Buscador de Texto en Queries.
-
 import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 
-// --- 1. ESTADO DEL MÓDULO ---
+let getAuthenticatedConfig;
 
-let getAuthenticatedConfig; // Dependencia inyectada desde app.js
-let currentOrgInfo; // Necesitamos esto para construir los enlaces
-
-// --- 2. FUNCIONES PÚBLICAS ---
-
-/**
- * Inicializa el módulo, configurando listeners y dependencias.
- * @param {object} dependencies - Objeto con dependencias externas.
- */
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
-
     elements.searchQueriesByTextBtn.addEventListener('click', searchQueriesByText);
     
-    // Listener para mostrar/ocultar la columna de texto de la query
+    // Delegación de eventos para abrir enlaces externos
+    elements.querySearchResultsTbody.addEventListener('click', ui.handleExternalLink);
+
     elements.showQueryTextCheckbox.addEventListener('change', () => {
         const isChecked = elements.showQueryTextCheckbox.checked;
         const displayStyle = isChecked ? '' : 'none';
@@ -33,98 +23,102 @@ export function init(dependencies) {
     });
 }
 
-/**
- * Actualiza la información de la organización (necesaria para los enlaces).
- * @param {object} orgInfo - El objeto de información de la organización de la API.
- */
-export function updateOrgInfo(orgInfo) {
-    currentOrgInfo = orgInfo;
-}
+// Mantenemos la función para evitar errores de app.js
+export function updateOrgInfo(orgInfo) {}
 
-// --- 3. LÓGICA PRINCIPAL ---
-
-/**
- * Orquesta la búsqueda de queries que contienen un texto específico.
- */
 async function searchQueriesByText() {
-    ui.blockUI("Buscando en Queries...");
+    ui.blockUI("Buscando en Queries y analizando automatismos...");
     logger.startLogBuffering();
-    elements.querySearchResultsTbody.innerHTML = '<tr><td colspan="4">Buscando en todas las queries...</td></tr>';
+    elements.querySearchResultsTbody.innerHTML = '<tr><td colspan="4">Buscando...</td></tr>';
+    
     try {
         const apiConfig = await getAuthenticatedConfig();
+        if (!apiConfig || !apiConfig.soapUri) throw new Error("Configuración de API incompleta.");
+
         mcApiService.setLogger(logger);
 
         const searchText = elements.querySearchText.value.trim();
-        if (!searchText) {
-            throw new Error("El campo 'Texto a buscar' no puede estar vacío.");
-        }
+        if (!searchText) throw new Error("El campo 'Texto a buscar' no puede estar vacío.");
 
-        logger.logMessage(`Buscando queries que contengan el texto: "${searchText}"`);
+        logger.logMessage(`Buscando queries con el texto: "${searchText}"`);
 
-        const allQueries = await mcApiService.searchQueriesBySimpleFilter({
+        // 1. Buscamos las actividades de Query
+        const queriesFound = await mcApiService.searchQueriesBySimpleFilter({
             property: 'QueryText',
             simpleOperator: 'like',
             value: searchText
         }, apiConfig);
+
+        if (!queriesFound || queriesFound.length === 0) {
+            elements.querySearchResultsTbody.innerHTML = '<tr><td colspan="4">No se encontraron queries con ese texto.</td></tr>';
+            return;
+        }
+
+        // 2. ENRIQUECIMIENTO: Buscamos la ubicación usando la función tal cual está en el service
+        logger.logMessage(`Encontradas ${queriesFound.length} queries. Analizando ubicación...`);
         
-        renderTable(allQueries);
-        logger.logMessage(`Búsqueda completada. Se encontraron ${allQueries.length} queries.`);
+        const enrichedQueries = await Promise.all(queriesFound.map(async (query) => {
+            try {
+                // Sacamos el ID (ObjectID es el que suele usar Automation Studio)
+                const activityId = query.objectID || query.ObjectID || query.id || query.ID;
+                
+                if (activityId) {
+                    // LLAMADA CORREGIDA: Solo 2 parámetros como pide tu mc-api-service.js
+                    const autoInfo = await mcApiService.findAutomationForActivity(activityId, apiConfig);
+                    query.automations = autoInfo || [];
+                }
+            } catch (e) {
+                console.warn(`No se pudo encontrar automatismo para: ${query.name}`);
+                query.automations = [];
+            }
+            return query;
+        }));
+
+        renderTable(enrichedQueries);
+        logger.logMessage(`Búsqueda y análisis de ubicación completado.`);
 
     } catch (error) {
-        logger.logMessage(`Error al buscar en queries: ${error.message}`);
+        logger.logMessage(`Error: ${error.message}`);
         elements.querySearchResultsTbody.innerHTML = `<tr><td colspan="4" style="color: red;">Error: ${error.message}</td></tr>`;
-        ui.showCustomAlert(`Error: ${error.message}`);
     } finally {
         ui.unblockUI();
         logger.endLogBuffering();
     }
 }
 
-// --- 4. RENDERIZADO DE LA TABLA ---
-
-/**
- * Dibuja la tabla con los resultados de la búsqueda de queries.
- * @param {Array} queries - Array de queries encontradas.
- */
 function renderTable(queries) {
     elements.querySearchResultsTbody.innerHTML = '';
     const showQuery = elements.showQueryTextCheckbox.checked;
     const displayStyle = showQuery ? '' : 'none';
-    elements.querySearchResultsTable.querySelector('thead th:nth-child(4)').style.display = displayStyle;
-
-    if (queries.length === 0) {
-        elements.querySearchResultsTbody.innerHTML = '<tr><td colspan="4">No se encontraron queries con ese texto.</td></tr>';
-        return;
-    }
+    
+    // Sincronizar cabecera
+    const header = elements.querySearchResultsTable.querySelector('thead th:nth-child(4)');
+    if (header) header.style.display = displayStyle;
 
     queries.forEach(query => {
         const row = document.createElement('tr');
-        const queryLink = constructQueryLink(query.objectID);
-        const queryNameCell = queryLink 
-            ? `<td><a href="${queryLink}" class="external-link" title="Abrir query en Marketing Cloud">${query.name}</a></td>` 
-            : `<td>${query.name}</td>`;
         
+        // Link dinámico
+        const mid = elements.businessUnitInput.value;
+        const stack = elements.stackKeyInput.value.toLowerCase().replace('s', '').replace('tack', '');
+        const objId = query.objectID || query.ObjectID || '';
+        const queryLink = `https://mc.s${stack}.exacttarget.com/cloud/#app/Automation%20Studio/AutomationStudioFuel3/%23ActivityDetails/300/${objId}`;
+
+        // Nombres y Pasos (Mismo sistema que Origen de Datos)
+        const autoNames = (query.automations && query.automations.length > 0)
+            ? query.automations.map(a => a.automationName || 'N/A').join('<br>')
+            : '---';
+
+        const autoSteps = (query.automations && query.automations.length > 0)
+            ? query.automations.map(a => a.step || '---').join('<br>')
+            : '---';
+
         row.innerHTML = `
-            ${queryNameCell}
-            <td>${query.automationName || '---'}</td>
-            <td>${query.step || '---'}</td>
-            <td style="white-space: pre-wrap; word-break: break-all; display: ${displayStyle};">${query.description}</td>
+            <td><a href="${queryLink}" class="external-link" title="Abrir en MC">${query.name}</a></td>
+            <td>${autoNames}</td>
+            <td>${autoSteps}</td>
+            <td style="white-space: pre-wrap; word-break: break-all; display: ${displayStyle};">${query.description || query.queryText || ''}</td>
         `;
         elements.querySearchResultsTbody.appendChild(row);
     });
-}
-
-// --- 5. HELPERS ---
-
-/**
- * Construye la URL para abrir una Query Activity en la UI de Automation Studio.
- * @param {string} queryObjectId - El ObjectID de la Query Definition.
- * @returns {string|null} La URL completa o null si falta información.
- */
-function constructQueryLink(queryObjectId) {
-    if (!currentOrgInfo || !currentOrgInfo.stack_key || !elements.businessUnitInput.value) return null;
-    const stack = currentOrgInfo.stack_key.toLowerCase();
-    const mid = elements.businessUnitInput.value;
-    // La URL usa el MID, pero lo obtenemos de los elementos del DOM que son globales.
-    return `https://mc.${stack}.exacttarget.com/cloud/#app/Automation%20Studio/AutomationStudioFuel3/%23ActivityDetails/300/${queryObjectId}`;
 }

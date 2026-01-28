@@ -1127,6 +1127,7 @@
         <button class="tab-button" data-tab="clientes-tab">Clientes</button>
         <button class="tab-button" data-tab="queries-tab">Texto en Queries</button>
         <button class="tab-button" data-tab="contenido-tab">Contenidos</button>
+        <button class="tab-button" data-tab="actividades-tab">Actividades</button>
     </div>
 
     <!-- Pestaña: Búsqueda de Data Extension -->
@@ -1171,6 +1172,10 @@
             <div class="form-group">
                 <label for="deNameToFind">Nombre de la Data Extension:</label>
                 <input type="text" id="deNameToFind" placeholder="Introduce el nombre exacto de la DE">
+            </div>
+            <div class="form-group checkbox-group" style="justify-content: flex-start;">
+                <label for="showSourceQueryCheckbox">Mostrar Descripción / Query:</label>
+                <input type="checkbox" id="showSourceQueryCheckbox" checked>
             </div>
             <div class="header-actions" style="justify-content: center; margin-top: 20px;">
                 <button id="findDataSourcesBtn" class="action-button">Buscar Orígenes</button>
@@ -1335,7 +1340,39 @@
             </div>
         </div>
     </div>
-
+    <!--  Actividades -->
+    <div id="actividades-tab" class="tab-content config-section-container">
+        <div class="config-block">
+            <h3>Buscador de Actividades</h3>
+            <p>Busca una actividad por nombre o External Key para ver dónde se utiliza.</p>
+            <div class="form-group">
+                <label for="activitySearchValue">Nombre o Key de la Actividad:</label>
+                <input type="text" id="activitySearchValue" placeholder="Ej: SQL_Update_Main">
+            </div>
+            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                <button id="searchActivityBtn" class="action-button">Buscar Actividad</button>
+            </div>
+        </div>
+        <div class="config-block" style="flex-grow: 1;">
+            <h3>Ubicación en Automatismos</h3>
+            <div class="table-container">
+                <table id="activity-usage-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre Actividad</th>
+                            <th>Tipo</th>
+                            <th>External Key</th>
+                            <th>Automatización</th>
+                            <th>Paso</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activity-usage-tbody">
+                        <tr><td colspan="5">Inicia una búsqueda...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
     </div>
 </div>
 

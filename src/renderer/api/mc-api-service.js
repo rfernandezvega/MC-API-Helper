@@ -919,7 +919,7 @@ export async function searchQueriesBySimpleFilter({ property, simpleOperator, va
  * @param {object} apiConfig - Configuración de la API.
  * @returns {Promise<Array<{automationName: string, step: string}>>} Un array de objetos, cada uno representando una ocurrencia en un automatismo.
  */
-async function findAutomationForActivity(activityObjectId, apiConfig) { // Renombramos para ser más genéricos
+export async function findAutomationForActivity(activityObjectId, apiConfig) { // Renombramos para ser más genéricos
     if (!activityObjectId) return [];
 
     const result = [];
