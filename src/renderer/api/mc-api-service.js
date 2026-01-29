@@ -1001,31 +1001,89 @@ async function findQueriesByFilter(filterXml, apiConfig) {
  * Busca una actividad específica basándose en el tipo seleccionado.
  */
 export async function searchActivityTargeted(type, value, apiConfig) {
-    if (type === 'Script') {
-        return await findScriptActivityRest(value, apiConfig);
-    }
-
-    // Mapa de configuración por tipo de objeto SOAP
-    const typeConfig = {
-        'QueryDefinition': { label: 'SQL Query', keyProp: 'CustomerKey' },
-        'ImportDefinition': { label: 'Data Copy or Import', keyProp: 'CustomerKey' },
-        'EmailSendDefinition': { label: 'Send Email', keyProp: 'CustomerKey' },
-        'FileTransferActivity': { label: 'File Transfer', keyProp: 'ObjectID' }, // No tiene CustomerKey fiable
-        'DataExtractActivity': { label: 'Data Extract', keyProp: 'ObjectID' }, // No tiene CustomerKey
-        'FilterActivity': { label: 'Filter', keyProp: 'ObjectID' }             // No tiene CustomerKey
+    
+    // Mapeo de actividades que ahora buscaremos vía REST (más fiable)
+    const restMappings = {
+        'Script': { 
+            endpoint: 'automation/v1/scripts', 
+            idField: 'ssjsActivityId', nameField: 'name', keyField: 'key', label: 'Script' 
+        },
+        'FileTransferActivity': { 
+            endpoint: 'automation/v1/fileTransfers', 
+            idField: 'id', nameField: 'name', keyField: 'customerKey', label: 'File Transfer' 
+        },
+        'DataExtractActivity': { 
+            endpoint: 'automation/v1/dataextracts', 
+            idField: 'dataExtractDefinitionId', nameField: 'name', keyField: 'key', label: 'Data Extract' 
+        },
+        'FilterActivity': { 
+            endpoint: 'automation/v1/filters', 
+            idField: 'filterActivityId', nameField: 'name', keyField: 'customerKey', label: 'Filter' 
+        }
     };
 
-    const config = typeConfig[type];
-    if (!config) throw new Error("Tipo de actividad no soportado.");
+    if (restMappings[type]) {
+        return await findActivityViaRest(restMappings[type], value, apiConfig);
+    }
 
-    return await findActivityInSoap(type, config.label, config.keyProp, value, apiConfig);
+    // Para el resto (Queries, Imports, Emails), seguimos usando SOAP
+    const soapLabels = {
+        'QueryDefinition': 'SQL Query',
+        'ImportDefinition': 'Data Copy or Import',
+        'EmailSendDefinition': 'Send Email'
+    };
+
+    return await findActivityInSoap(type, soapLabels[type], 'CustomerKey', value, apiConfig);
+}
+
+/**
+ * BUSCADOR REST GENÉRICO: Recorre cualquier endpoint paginado de Automation (Scripts, Transfers, etc.)
+ * y busca por ID, Name o CustomerKey.
+ */
+async function findActivityViaRest(config, searchTerm, apiConfig) {
+    const { endpoint, idField, nameField, keyField, label } = config;
+    let page = 1;
+    const pageSize = 50; 
+    let totalCount = 0;
+    let allProcessed = 0;
+    const term = searchTerm.toLowerCase();
+
+    logger.logMessage(`Buscando ${label} vía REST (exhaustivo)...`);
+
+    do {
+        const url = `${apiConfig.restUri}${endpoint}?$page=${page}&$pageSize=${pageSize}`;
+        const data = await executeRestRequest(url, { 
+            headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } 
+        });
+
+        const items = data.items || [];
+        totalCount = data.count || 0;
+        allProcessed += items.length;
+
+        // Buscamos el match exacto en los 3 campos posibles
+        const found = items.find(i => 
+            (i[idField] && i[idField].toLowerCase() === term) ||
+            (i[nameField] && i[nameField].toLowerCase() === term) ||
+            (i[keyField] && i[keyField].toLowerCase() === term)
+        );
+
+        if (found) {
+            return { 
+                objectID: found[idField],   // El ID que usaremos para vincular con Automation
+                customerKey: found[keyField], 
+                name: found[nameField], 
+                typeLabel: label 
+            };
+        }
+
+        page++;
+    } while (allProcessed < totalCount && totalCount > 0);
+
+    return null;
 }
 
 /**
  * Helper para buscar en SOAP usando las propiedades correctas.
- */
-/**
- * BUSCADOR SOAP: Restaurado a la versión estable.
  */
 async function findActivityInSoap(soapType, label, keyPropertyName, value, apiConfig) {
     try {
@@ -1080,64 +1138,7 @@ async function findActivityInSoap(soapType, label, keyPropertyName, value, apiCo
     }
     return null;
 }
-/**
- * Busca un Script Activity vía REST manejando paginación para asegurar 
- * que revisa todos los registros.
- */
-async function findScriptActivityRest(value, apiConfig) {
-    // 1. Intento rápido: ¿Es el ID del script (ssjsActivityId)?
-    try {
-        const urlId = `${apiConfig.restUri}automation/v1/scripts/${value}`;
-        const dataId = await executeRestRequest(urlId, { 
-            headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } 
-        });
-        if (dataId && dataId.ssjsActivityId) {
-            return { 
-                objectID: dataId.ssjsActivityId, 
-                customerKey: dataId.key, 
-                name: dataId.name, 
-                typeLabel: 'Script' 
-            };
-        }
-    } catch (e) { /* No es un ID o no existe por ID, seguimos */ }
 
-    // 2. Búsqueda por Nombre o Key con PAGINACIÓN
-    let page = 1;
-    let pageSize = 50; 
-    let totalCount = 0;
-    let allProcessed = 0;
-
-    do {
-        const url = `${apiConfig.restUri}automation/v1/scripts?$page=${page}&$pageSize=${pageSize}`;
-        const data = await executeRestRequest(url, { 
-            headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } 
-        });
-
-        const items = data.items || [];
-        totalCount = data.count || 0;
-        allProcessed += items.length;
-
-        // Buscamos en los items de esta página
-        const found = items.find(s => 
-            s.name.toLowerCase() === value.toLowerCase() || 
-            s.key.toLowerCase() === value.toLowerCase()
-        );
-
-        if (found) {
-            return { 
-                objectID: found.ssjsActivityId, 
-                customerKey: found.key, 
-                name: found.name, 
-                typeLabel: 'Script' 
-            };
-        }
-
-        page++;
-        // Seguimos mientras no hayamos encontrado nada y queden registros por leer
-    } while (allProcessed < totalCount && totalCount > 0);
-
-    return null;
-}
 
 /**
  * Busca texto dentro del código de todos los Scripts (SSJS).

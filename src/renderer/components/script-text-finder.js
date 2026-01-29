@@ -11,6 +11,7 @@ export function init(dependencies) {
     if (elements.searchScriptsByTextBtn) {
         elements.searchScriptsByTextBtn.addEventListener('click', handleSearch);
     }
+    elements.scriptSearchResultsTbody.addEventListener('click', ui.handleExternalLink);
 }
 
 async function handleSearch() {
@@ -57,6 +58,12 @@ function renderTable(results) {
     results.forEach(item => {
         const row = document.createElement('tr');
         
+        // 1. Construir el enlace dinámico al Script
+        const stack = elements.stackKeyInput.value.toLowerCase().replace('s', '').replace('tack', '');
+
+        const scriptLink = `https://mc.s${stack}.exacttarget.com/cloud/#app/Automation%20Studio/AutomationStudioFuel3/%23ActivityModal/423/${item.objectID}`;
+
+        // 2. Formatear los nombres de automatizaciones y pasos (lo que ya tenías)
         const autoNames = (item.automations && item.automations.length > 0)
             ? item.automations.map(a => a.automationName).join('<br>')
             : '---';
@@ -65,8 +72,13 @@ function renderTable(results) {
             ? item.automations.map(a => a.step).join('<br>')
             : '---';
 
+        // 3. Pintar la fila con el nombre como enlace externo
         row.innerHTML = `
-            <td style="text-align: left; padding-left: 15px;">${item.name}</td>
+            <td style="text-align: left; padding-left: 15px;">
+                <a href="${scriptLink}" class="external-link" title="Abrir Script en Marketing Cloud">
+                    ${item.name}
+                </a>
+            </td>
             <td>${autoNames}</td>
             <td>${autoSteps}</td>
         `;
