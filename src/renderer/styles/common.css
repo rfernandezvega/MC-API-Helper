@@ -424,7 +424,7 @@ td a:hover { color: #003366; text-decoration: underline; }
     /* Truco de Flexbox para que el scroll funcione correctamente */
     min-height: 0;
 }
-
+.info-grid-container { display: flex; gap: 30px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd; }
 /* --- 3.6. Modales y Overlays --- */
 .loader-overlay, .modal-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;

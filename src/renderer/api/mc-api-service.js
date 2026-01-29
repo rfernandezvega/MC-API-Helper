@@ -1001,6 +1001,147 @@ async function findQueriesByFilter(filterXml, apiConfig) {
 }
 
 /**
+ * Busca una actividad específica basándose en el tipo seleccionado.
+ */
+export async function searchActivityTargeted(type, value, apiConfig) {
+    if (type === 'Script') {
+        return await findScriptActivityRest(value, apiConfig);
+    }
+
+    // Mapa de configuración por tipo de objeto SOAP
+    const typeConfig = {
+        'QueryDefinition': { label: 'SQL Query', keyProp: 'CustomerKey' },
+        'ImportDefinition': { label: 'Data Copy or Import', keyProp: 'CustomerKey' },
+        'EmailSendDefinition': { label: 'Send Email', keyProp: 'CustomerKey' },
+        'FileTransferActivity': { label: 'File Transfer', keyProp: 'ObjectID' }, // No tiene CustomerKey fiable
+        'DataExtractActivity': { label: 'Data Extract', keyProp: 'ObjectID' }, // No tiene CustomerKey
+        'FilterActivity': { label: 'Filter', keyProp: 'ObjectID' }             // No tiene CustomerKey
+    };
+
+    const config = typeConfig[type];
+    if (!config) throw new Error("Tipo de actividad no soportado.");
+
+    return await findActivityInSoap(type, config.label, config.keyProp, value, apiConfig);
+}
+
+/**
+ * Helper para buscar en SOAP usando las propiedades correctas.
+ */
+async function findActivityInSoap(soapType, label, keyPropertyName, value, apiConfig) {
+    try {
+        const soapPayload = `
+        <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <s:Header>
+                <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+                <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+                <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+            </s:Header>
+            <s:Body>
+                <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+                    <RetrieveRequest>
+                        <ObjectType>${soapType}</ObjectType>
+                        <Properties>ObjectID</Properties>
+                        <Properties>CustomerKey</Properties>
+                        <Properties>Name</Properties>
+                        <Filter xsi:type="ComplexFilterPart">
+                            <LeftOperand xsi:type="SimpleFilterPart">
+                                <Property>Name</Property>
+                                <SimpleOperator>equals</SimpleOperator>
+                                <Value><![CDATA[${value}]]></Value>
+                            </LeftOperand>
+                            <LogicalOperator>OR</LogicalOperator>
+                            <RightOperand xsi:type="SimpleFilterPart">
+                                <Property>${keyPropertyName}</Property>
+                                <SimpleOperator>equals</SimpleOperator>
+                                <Value><![CDATA[${value}]]></Value>
+                            </RightOperand>
+                        </Filter>
+                    </RetrieveRequest>
+                </RetrieveRequestMsg>
+            </s:Body>
+        </s:Envelope>`;
+
+        const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+        const xmlDoc = new DOMParser().parseFromString(responseText, "application/xml");
+        const result = xmlDoc.querySelector("Results");
+
+        if (result) {           
+            const objectID = result.querySelector("ObjectID")?.textContent;
+
+            return {
+                objectID: objectID,
+                customerKey: result.querySelector("CustomerKey")?.textContent || idNumeric,
+                name: result.querySelector("Name")?.textContent,
+                typeLabel: label,
+                soapType: soapType
+            };
+        }
+    } catch (e) { 
+        console.error(`Error buscando ${soapType}:`, e);
+        return null; 
+    }
+    return null;
+}
+/**
+ * Busca un Script Activity vía REST manejando paginación para asegurar 
+ * que revisa todos los registros.
+ */
+async function findScriptActivityRest(value, apiConfig) {
+    // 1. Intento rápido: ¿Es el ID del script (ssjsActivityId)?
+    try {
+        const urlId = `${apiConfig.restUri}automation/v1/scripts/${value}`;
+        const dataId = await executeRestRequest(urlId, { 
+            headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } 
+        });
+        if (dataId && dataId.ssjsActivityId) {
+            return { 
+                objectID: dataId.ssjsActivityId, 
+                customerKey: dataId.key, 
+                name: dataId.name, 
+                typeLabel: 'Script' 
+            };
+        }
+    } catch (e) { /* No es un ID o no existe por ID, seguimos */ }
+
+    // 2. Búsqueda por Nombre o Key con PAGINACIÓN
+    let page = 1;
+    let pageSize = 50; 
+    let totalCount = 0;
+    let allProcessed = 0;
+
+    do {
+        const url = `${apiConfig.restUri}automation/v1/scripts?$page=${page}&$pageSize=${pageSize}`;
+        const data = await executeRestRequest(url, { 
+            headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } 
+        });
+
+        const items = data.items || [];
+        totalCount = data.count || 0;
+        allProcessed += items.length;
+
+        // Buscamos en los items de esta página
+        const found = items.find(s => 
+            s.name.toLowerCase() === value.toLowerCase() || 
+            s.key.toLowerCase() === value.toLowerCase()
+        );
+
+        if (found) {
+            return { 
+                objectID: found.ssjsActivityId, 
+                customerKey: found.key, 
+                name: found.name, 
+                typeLabel: 'Script' 
+            };
+        }
+
+        page++;
+        // Seguimos mientras no hayamos encontrado nada y queden registros por leer
+    } while (allProcessed < totalCount && totalCount > 0);
+
+    return null;
+}
+
+/**
  * Busca carpetas por nombre y tipo de contenido.
  * @param {string} folderName - El nombre (o parte del nombre) a buscar.
  * @param {string} contentType - 'queryactivity' o 'dataextension'.

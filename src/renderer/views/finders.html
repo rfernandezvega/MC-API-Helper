@@ -223,35 +223,54 @@
             </div>
         </div>
     </div>
-    <!--  Actividades -->
+    <!-- Pestaña: Actividades (Mejorada) -->
     <div id="actividades-tab" class="tab-content config-section-container">
         <div class="config-block">
             <h3>Buscador de Actividades</h3>
-            <p>Busca una actividad por nombre o External Key para ver dónde se utiliza.</p>
+            <p>Busca cualquier actividad por nombre o External Key para ver dónde se usa.</p>
+            <div class="form-group">
+                <label for="activityTypeSelect">Tipo de Actividad:</label>
+                <select id="activityTypeSelect" class="filter-input">
+                    <option value="QueryDefinition">SQL Query</option>
+                    <option value="ImportDefinition">Data Copy or Import</option>
+                    <option value="FileTransferActivity">File Transfer</option>
+                    <option value="DataExtractActivity">Data Extract</option>
+                    <option value="EmailSendDefinition">Send Email</option>
+                    <option value="FilterActivity">Filter</option>
+                    <option value="Script">Script (SSJS)</option>
+                </select>
+            </div>
             <div class="form-group">
                 <label for="activitySearchValue">Nombre o Key de la Actividad:</label>
-                <input type="text" id="activitySearchValue" placeholder="Ej: SQL_Update_Main">
+                <input type="text" id="activitySearchValue" placeholder="Ej: SQL_Update_Main o 58ECCB53...">
             </div>
             <div class="header-actions" style="justify-content: center; margin-top: 20px;">
                 <button id="searchActivityBtn" class="action-button">Buscar Actividad</button>
             </div>
         </div>
-        <div class="config-block" style="flex-grow: 1;">
+
+        <!-- Bloque de Información General (Nuevo) -->
+        <div id="activity-info-block" class="config-block hidden">
+            <h3>Detalles de la Actividad</h3>
+            <div class="info-grid-container">
+                <div class="info-item"><strong>Nombre:</strong> <span id="info-activity-name">---</span></div>
+                <div class="info-item"><strong>Tipo:</strong> <span id="info-activity-type">---</span></div>
+                <div class="info-item"><strong>External Key:</strong> <span id="info-activity-key">---</span></div>
+            </div>
+        </div>
+
+        <!-- Tabla de Ubicación (Simplificada) -->
+        <div id="activity-results-block" class="config-block hidden">
             <h3>Ubicación en Automatismos</h3>
             <div class="table-container">
                 <table id="activity-usage-table">
                     <thead>
                         <tr>
-                            <th>Nombre Actividad</th>
-                            <th>Tipo</th>
-                            <th>External Key</th>
                             <th>Automatización</th>
                             <th>Paso</th>
                         </tr>
                     </thead>
-                    <tbody id="activity-usage-tbody">
-                        <tr><td colspan="5">Inicia una búsqueda...</td></tr>
-                    </tbody>
+                    <tbody id="activity-usage-tbody"></tbody>
                 </table>
             </div>
         </div>

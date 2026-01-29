@@ -129,6 +129,13 @@ export function init() {
     elements.searchActivityBtn = document.getElementById('searchActivityBtn'); 
     elements.activityUsageTbody = document.getElementById('activity-usage-tbody'); 
     elements.dataSourcesTable = document.getElementById('data-sources-table');
+    elements.activityInfoBlock = document.getElementById('activity-info-block');
+    elements.activityResultsBlock = document.getElementById('activity-results-block');
+    elements.infoActivityName = document.getElementById('info-activity-name');
+    elements.infoActivityType = document.getElementById('info-activity-type');
+    elements.infoActivityKey = document.getElementById('info-activity-key');
+    elements.activityTypeSelect = document.getElementById('activityTypeSelect');
+
 
     // --- 9. Sección: Validador de Email ---
     elements.emailToValidateInput = document.getElementById('emailToValidate');

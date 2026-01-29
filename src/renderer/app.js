@@ -561,6 +561,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		customerFinder.init({ getAuthenticatedConfig });
 		contentFinder.init({ getAuthenticatedConfig });
 		emailValidator.init({ getAuthenticatedConfig });
+		actividadesFinder.init({ getAuthenticatedConfig });
 		// El calendario necesita una función "puente" para poder navegar a otra vista (la de gestión de automatismos)
 		calendar.init({ getAuthenticatedConfig, showAutomationsView: showFilteredAutomations });
 		automationCloner.init({ getAuthenticatedConfig, goBack });
