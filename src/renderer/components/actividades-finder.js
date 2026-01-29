@@ -42,7 +42,7 @@ async function searchActivityUsage() {
         }
 
         // El resto sigue igual (buscar automatismos y pintar)
-        const autoInfo = await mcApiService.findAutomationForActivity(activity.objectID, apiConfig);
+        const autoInfo = await mcApiService.findAutomationForActivity(activity, apiConfig);
         renderResults(activity, autoInfo);
 
     } catch (error) {

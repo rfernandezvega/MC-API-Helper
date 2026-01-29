@@ -919,54 +919,51 @@ export async function searchQueriesBySimpleFilter({ property, simpleOperator, va
  * @param {object} apiConfig - Configuración de la API.
  * @returns {Promise<Array<{automationName: string, step: string}>>} Un array de objetos, cada uno representando una ocurrencia en un automatismo.
  */
-export async function findAutomationForActivity(activityObjectId, apiConfig) { // Renombramos para ser más genéricos
-    if (!activityObjectId) return [];
+export async function findAutomationForActivity(activityOrId, apiConfig) {
+    // Ajuste para que acepte tanto el ID de ayer (string) como el objeto de hoy
+    const activityObjectId = (typeof activityOrId === 'object') ? activityOrId.objectID : activityOrId;
+    
+    if (!activityObjectId || activityObjectId === 'undefined') return [];
 
     const result = [];
-
-    // Paso 1: Buscar todas las "Activities" que apuntan a nuestro activityObjectId
-    // Esto nos dará los ObjectID de los "Program" (Automatizaciones) a los que pertenece.
     const retrieveActivitiesPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>Activity</ObjectType><Properties>Program.ObjectID</Properties><Filter xsi:type="SimpleFilterPart"><Property>Definition.ObjectID</Property><SimpleOperator>equals</SimpleOperator><Value>${activityObjectId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-    const responseText = await executeSoapRequest(apiConfig.soapUri, retrieveActivitiesPayload);
-    const xmlDoc = new DOMParser().parseFromString(responseText, "application/xml");
     
-    const programIdNodes = xmlDoc.querySelectorAll("Results > Program > ObjectID");
+    try {
+        const responseText = await executeSoapRequest(apiConfig.soapUri, retrieveActivitiesPayload);
+        const xmlDoc = new DOMParser().parseFromString(responseText, "application/xml");
+        const programIdNodes = xmlDoc.querySelectorAll("Results > Program > ObjectID");
 
-    if (programIdNodes.length === 0) {
-        return []; // No se encontró en ninguna automatización
-    }
+        if (programIdNodes.length === 0) return [];
 
-    // Usaremos un Set para evitar duplicados si una actividad aparece más de una vez en la misma automatización
-    const uniqueAutomationIds = new Set();
-    programIdNodes.forEach(node => uniqueAutomationIds.add(node.textContent));
+        const uniqueAutomationIds = new Set();
+        programIdNodes.forEach(node => uniqueAutomationIds.add(node.textContent));
 
-    // Para cada automatización encontrada, obtenemos sus detalles REST
-    for (const automationId of uniqueAutomationIds) {
-        const url = `${apiConfig.restUri}automation/v1/automations/${automationId}`;
-        const options = { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } };
-
-        try {
-            const autoData = await executeRestRequest(url, options);
-            let stepName = 'N/A';
-            
-            // Buscar en qué paso específico está nuestra actividad
-            if (autoData.steps) {
-                for (const step of autoData.steps) {
-                    if (step.activities?.some(a => a.activityObjectId === activityObjectId)) {
-                        stepName = step.step || 'N/A';
-                        break; // Ya encontramos el paso en esta automatización
+        for (const automationId of uniqueAutomationIds) {
+            const url = `${apiConfig.restUri}automation/v1/automations/${automationId}`;
+            const options = { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } };
+            try {
+                const autoData = await executeRestRequest(url, options);
+                let stepName = 'N/A';
+                if (autoData.steps) {
+                    for (const step of autoData.steps) {
+                        // Usamos toLowerCase() para que el match sea seguro contra cambios de mayúsculas
+                        if (step.activities?.some(a => 
+                            (a.activityObjectId || "").toLowerCase() === activityObjectId.toLowerCase() || 
+                            (a.id || "").toLowerCase() === activityObjectId.toLowerCase() ||
+                            (a.ssjsActivityId || "").toLowerCase() === activityObjectId.toLowerCase()
+                        )) {
+                            stepName = step.step || 'N/A';
+                            break;
+                        }
                     }
                 }
+                result.push({ automationName: autoData.name || 'N/A', step: stepName });
+            } catch (error) {
+                result.push({ automationName: `Error (${automationId})`, step: '---' });
             }
-            
-            result.push({ automationName: autoData.name || 'N/A', step: stepName });
-
-        } catch (error) {
-            // Si executeRestRequest falla (ej. 404 para una automatización borrada),
-            // lo capturamos y devolvemos un estado de error para esa automatización.
-            console.warn(`Error recuperando detalles para Automation ID ${automationId}: ${error.message}`);
-            result.push({ automationName: `Error (${automationId})`, step: '---' });
         }
+    } catch (e) {
+        console.error("Error en findAutomationForActivity:", e);
     }
     return result;
 }
@@ -1027,6 +1024,9 @@ export async function searchActivityTargeted(type, value, apiConfig) {
 /**
  * Helper para buscar en SOAP usando las propiedades correctas.
  */
+/**
+ * BUSCADOR SOAP: Restaurado a la versión estable.
+ */
 async function findActivityInSoap(soapType, label, keyPropertyName, value, apiConfig) {
     try {
         const soapPayload = `
@@ -1067,10 +1067,9 @@ async function findActivityInSoap(soapType, label, keyPropertyName, value, apiCo
 
         if (result) {           
             const objectID = result.querySelector("ObjectID")?.textContent;
-
             return {
                 objectID: objectID,
-                customerKey: result.querySelector("CustomerKey")?.textContent || idNumeric,
+                customerKey: result.querySelector("CustomerKey")?.textContent || objectID,
                 name: result.querySelector("Name")?.textContent,
                 typeLabel: label,
                 soapType: soapType
@@ -1078,7 +1077,6 @@ async function findActivityInSoap(soapType, label, keyPropertyName, value, apiCo
         }
     } catch (e) { 
         console.error(`Error buscando ${soapType}:`, e);
-        return null; 
     }
     return null;
 }
@@ -1139,6 +1137,55 @@ async function findScriptActivityRest(value, apiConfig) {
     } while (allProcessed < totalCount && totalCount > 0);
 
     return null;
+}
+
+/**
+ * Busca texto dentro del código de todos los Scripts (SSJS).
+ * Reutiliza la misma lógica de IDs que findScriptActivityRest.
+ */
+export async function searchScriptsByText(searchText, apiConfig) {
+    let page = 1;
+    const pageSize = 50; 
+    let totalCount = 0;
+    let allProcessed = 0;
+    const results = [];
+    const term = searchText.toLowerCase();
+
+    try {
+        do {
+            const url = `${apiConfig.restUri}automation/v1/scripts?$page=${page}&$pageSize=${pageSize}`;
+            const data = await executeRestRequest(url, { 
+                headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } 
+            });
+
+            const items = data.items || [];
+            totalCount = data.count || 0;
+            allProcessed += items.length;
+
+            // Filtramos los que contienen el texto
+            const matches = items.filter(s => s.script && s.script.toLowerCase().includes(term));
+            
+            matches.forEach(m => {
+                // Solo añadimos si tiene ID, para evitar el error de conversión SOAP después
+                if (m.ssjsActivityId) {
+                    results.push({
+                        objectID: m.ssjsActivityId,
+                        customerKey: m.key,
+                        name: m.name,
+                        soapType: 'ScriptActivity', // Importante para la lógica inteligente
+                        typeLabel: 'Script'
+                    });
+                }
+            });
+
+            page++;
+        } while (allProcessed < totalCount && totalCount > 0);
+
+        return results;
+    } catch (error) {
+        console.error("Error buscando texto en scripts:", error);
+        throw error;
+    }
 }
 
 /**

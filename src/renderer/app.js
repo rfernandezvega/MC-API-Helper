@@ -36,6 +36,7 @@ import * as automationCloner from './components/automation-cloner.js'; // Lógic
 import * as folderCreator from './components/folder-creator.js'; // Lógica del creador de carpetas
 import * as contentManager from './components/content-manager.js'; // Lógica del gestor de contenidos.
 import * as actividadesFinder from './components/actividades-finder.js';
+import * as scriptTextFinder from './components/script-text-finder.js';
 
 
 
@@ -558,6 +559,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		deFinder.init({ getAuthenticatedConfig }); 
 		dataSourceFinder.init({ getAuthenticatedConfig });
 		queryTextFinder.init({ getAuthenticatedConfig });
+		scriptTextFinder.init({ getAuthenticatedConfig });
 		customerFinder.init({ getAuthenticatedConfig });
 		contentFinder.init({ getAuthenticatedConfig });
 		emailValidator.init({ getAuthenticatedConfig });

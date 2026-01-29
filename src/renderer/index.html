@@ -1126,6 +1126,7 @@
         <button class="tab-button" data-tab="origenes-tab">Origen de datos</button>
         <button class="tab-button" data-tab="clientes-tab">Clientes</button>
         <button class="tab-button" data-tab="queries-tab">Texto en Queries</button>
+        <button class="tab-button" data-tab="script-texto-tab">Texto en Scripts</button>
         <button class="tab-button" data-tab="contenido-tab">Contenidos</button>
         <button class="tab-button" data-tab="actividades-tab">Actividades</button>
     </div>
@@ -1307,6 +1308,36 @@
                         </tr>
                     </thead>
                     <tbody id="query-search-results-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <!-- Pestaña: Buscador de Texto en Scripts -->
+    <div id="script-texto-tab" class="tab-content config-section-container">
+        <div class="config-block">
+            <h3>Parámetros de Búsqueda</h3>
+            <div class="form-group">
+                <label for="scriptSearchText">Texto a buscar en el Script (SSJS):</label>
+                <input type="text" id="scriptSearchText" placeholder="Ej: Platform.Function o Nombre_DE">
+            </div>
+            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+                <button id="searchScriptsByTextBtn" class="action-button">Buscar en Scripts</button>
+            </div>
+        </div>
+        <div class="config-block" style="flex-grow: 1;">
+            <h3>Scripts Encontrados</h3>
+            <div class="table-container">
+                <table id="script-search-results-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre del Script</th>
+                            <th>Automatización</th>
+                            <th>Paso</th>
+                        </tr>
+                    </thead>
+                    <tbody id="script-search-results-tbody">
+                        <tr><td colspan="3">Inicia una búsqueda...</td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
