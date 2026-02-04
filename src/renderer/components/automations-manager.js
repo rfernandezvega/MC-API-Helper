@@ -38,7 +38,7 @@ function renderFilteredTable() {
     const nameFilter = elements.automationNameFilter.value.toLowerCase().trim();
     if (nameFilter) {
         // Soporta múltiples nombres separados por '|' para el filtro del calendario
-        const names = nameFilter.split('|').map(n => n.trim().toLowerCase());
+        const names = nameFilter.split(/[,;|]/).map(n => n.trim().toLowerCase()).filter(n => n !== '');
         filtered = filtered.filter(auto => names.some(n => auto.name.toLowerCase().includes(n)));
     }
 

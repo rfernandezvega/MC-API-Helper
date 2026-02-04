@@ -29,10 +29,15 @@ let getAuthenticatedConfig; // Dependencia que será inyectada por app.js
 function applyFiltersAndRender() {
     currentPage = 1;
 
-    let filtered = fullJourneyList; // Movemos la declaración aquí
-    
+    let filtered = fullJourneyList; 
+
     const nameFilter = elements.journeyNameFilter.value.toLowerCase().trim();
-    if (nameFilter) filtered = filtered.filter(j => j.name.toLowerCase().includes(nameFilter));
+    if (nameFilter) {
+        // Dividimos el filtro por el carácter "|" y limpiamos espacios
+        const names = nameFilter.split(/[,;|]/).map(n => n.trim().toLowerCase()).filter(n => n !== '');
+        // Filtramos si el nombre del journey contiene CUALQUIERA de los términos
+        filtered = filtered.filter(j => names.some(n => j.name.toLowerCase().includes(n)));
+    }
     
     const typeFilter = elements.journeyTypeFilter.value;
     if (typeFilter) filtered = filtered.filter(j => j.eventType === typeFilter);
