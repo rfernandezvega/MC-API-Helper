@@ -1911,7 +1911,24 @@
         </div>
     </div>
 </div>
+<!-- MODAL ESPECÍFICA PARA PARADA DE JOURNEYS -->
+<div id="journey-stop-modal" class="modal-overlay">
+    <div class="modal-content" style="min-width: 450px;">
+        <h3>Detener Journeys</h3>
+        <p id="journey-stop-message" style="margin-bottom: 25px; color: #666;"></p>
 
+        <!-- Bloque central de acciones -->
+        <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 40px;">
+            <button id="journey-stop-current-btn" class="action-button" style="background-color: #558ac7; min-width: 160px;">Solo versión actual</button>
+            <button id="journey-stop-all-btn" class="action-button activate-btn" style="min-width: 160px;">Todas las versiones</button>
+        </div>
+
+        <!-- Bloque inferior derecho para Cancelar -->
+        <div style="display: flex; justify-content: flex-end;">
+            <button id="journey-stop-cancel-btn" class="action-button delete-btn">Cancelar</button>
+        </div>
+    </div>
+</div>
 
 <div id="app-version"></div> 
 <script type="module" src="app.js"></script>

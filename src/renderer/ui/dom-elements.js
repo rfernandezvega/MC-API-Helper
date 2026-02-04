@@ -333,6 +333,13 @@ export function init() {
     elements.contentManagerPasteArea = document.getElementById('content-manager-paste-area');
     elements.contentManagerCancelBtn = document.getElementById('content-manager-cancel-btn');
     elements.contentManagerImportBtn = document.getElementById('content-manager-import-btn');
+
+    // --- 23. MODAL PARADA DE JOURNEYS ---
+    elements.journeyStopModal = document.getElementById('journey-stop-modal');
+    elements.journeyStopMessage = document.getElementById('journey-stop-message');
+    elements.journeyStopAllBtn = document.getElementById('journey-stop-all-btn');
+    elements.journeyStopCurrentBtn = document.getElementById('journey-stop-current-btn');
+    elements.journeyStopCancelBtn = document.getElementById('journey-stop-cancel-btn');
 }
 
 export default elements;

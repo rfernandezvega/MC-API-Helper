@@ -537,11 +537,17 @@ export async function getEventDefinitionById(eventDefId, apiConfig) {
  * @returns {Promise<object>} La respuesta de la API.
  */
 export async function stopJourney(journeyId, version, apiConfig) {
+    // El ID que recibe aquí debe ser el ID de la versión (journey.id)
     const url = `${apiConfig.restUri}interaction/v1/interactions/stop/${journeyId}?versionNumber=${version}`;
+    
     const options = {
         method: 'POST',
-        headers: { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({})
+        headers: { 
+            "Authorization": `Bearer ${apiConfig.accessToken}`,
+            "Content-Type": "application/json"
+        },
+        // IMPORTANTE: String vacío, no "{}"
+        body: '' 
     };
     return executeRestRequest(url, options);
 }
@@ -576,6 +582,18 @@ export async function createJourney(journeyPayload, apiConfig) {
         body: JSON.stringify(journeyPayload)
     };
     return executeRestRequest(url, options);
+}
+
+/**
+ * Recupera todas las versiones de un Journey basándose en su nameOrDescription.
+ * @param {string} definitionId - El ID común a todas las versiones.
+ * @param {object} apiConfig - Configuración de API.
+ */
+export async function fetchJourneyVersions(nameOrDescription, apiConfig) {
+    const url = `${apiConfig.restUri}interaction/v1/interactions?nameOrDescription=${nameOrDescription}&mostRecentVersionOnly=false`;
+    const options = { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } };
+    const data = await executeRestRequest(url, options);
+    return data.items || [];
 }
 
 /**

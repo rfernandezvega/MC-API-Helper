@@ -579,60 +579,120 @@ async function copyEmailAudienceJourney(journey) {
 }
 
 /**
- * Llama a la acción masiva para parar journeys.
+ * Helper interno para detener versiones (Evita error 403 al filtrar solo Published)
+ */
+async function processStopAction(journey, mode, apiConfig) {
+    let successCount = 0;
+    let errorCount = 0;
+
+    if (mode === 'all') {
+        // Usamos definitionId solo para obtener la lista de todas las versiones
+        const versions = await mcApiService.fetchJourneyVersions(journey.name, apiConfig);
+        console.log(versions);
+        // Filtramos por los estados que permite el script de la docu
+        const toStop = versions.filter(v => v.status === 'Published' || v.status === 'Unpublished');
+        
+        for (const ver of toStop) {
+            try {
+                // Usamos el ID de la versión encontrada (ver.id)
+                await mcApiService.stopJourney(journey.id, ver.version, apiConfig);
+                successCount++;
+            } catch (err) {
+                errorCount++;
+            }
+        }
+    } else {
+        // Modo 'single': usamos el journey.id directamente (el de la fila de la tabla)
+        if (journey.status === 'Published' || journey.status === 'Unpublished') {
+            try {
+                await mcApiService.stopJourney(journey.id, journey.version, apiConfig);
+                successCount++;
+            } catch (err) {
+                errorCount++;
+            }
+        }
+    }
+    return { success: successCount, error: errorCount };
+}
+
+/**
+ * BOTÓN PARAR: Lógica con la nueva modal
  */
 async function stopJourneys() {
-    await performMassAction('stopJourney', 'parar');
-}
-
-/**
- * Llama a la acción masiva para borrar journeys.
- */
-async function deleteJourneys() {
-    await performMassAction('deleteJourney', 'borrar permanentemente');
-}
-
-/**
- * Lógica genérica para ejecutar una acción (parar, borrar) sobre múltiples journeys.
- * @param {string} serviceMethod - El nombre del método en mc-api-service a llamar.
- * @param {string} actionVerb - El verbo que se mostrará al usuario (ej: 'parar').
- */
-async function performMassAction(serviceMethod, actionVerb) {
     const journeys = getSelectedJourneys();
     if (journeys.length === 0) return;
 
-    if (!await ui.showCustomConfirm(`¿Seguro que quieres ${actionVerb} ${journeys.length} journey(s)?`)) return;
+    // Llamada a la modal de 3 botones (Asegúrate de tenerla en ui-helpers)
+    const choice = await ui.showJourneyStopModal(`¿Cómo deseas detener los ${journeys.length} journeys seleccionados?`);
+    if (!choice) return;
 
-    ui.blockUI(`${actionVerb.charAt(0).toUpperCase() + actionVerb.slice(1)} journeys...`);
+    ui.blockUI("Procesando parada...");
     logger.startLogBuffering();
-    const successes = [];
-    const failures = [];
+
+    let totalSuccess = 0;
+    let totalError = 0;
 
     try {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
 
         for (const journey of journeys) {
-            try {
-                logger.logMessage(`Iniciando acción '${actionVerb}' para el journey: "${journey.name}"`);
-                if (serviceMethod === 'stopJourney') {
-                    await mcApiService[serviceMethod](journey.id, journey.version, apiConfig);
-                } else {
-                    await mcApiService[serviceMethod](journey.id, apiConfig);
-                }
-                successes.push(journey.name);
-            } catch (error) {
-                logger.logMessage(`FALLO al procesar "${journey.name}": ${error.message}`);
-                failures.push({ name: journey.name, reason: error.message });
-            }
+            const res = await processStopAction(journey, choice, apiConfig);
+            totalSuccess += res.success;
+            totalError += res.error;
         }
+        
+        ui.showCustomAlert(`Proceso finalizado.\n\n- Versiones paradas: ${totalSuccess}\n- Errores: ${totalError}`);
     } catch (error) {
-        logger.logMessage(`Error fatal durante la acción masiva: ${error.message}`);
+        ui.showCustomAlert(`Error: ${error.message}`);
     } finally {
-        ui.showCustomAlert(`Acción completada. Éxitos: ${successes.length}, Fallos: ${failures.length}.`);
         logger.endLogBuffering();
         ui.unblockUI();
         await refreshData();
+    }
+}
+
+/**
+ * BOTÓN BORRAR: Parada automática de todas las versiones si es Multistep
+ */
+async function deleteJourneys() {
+    const journeys = getSelectedJourneys();
+    if (journeys.length === 0) return;
+
+    const type = journeys[0].definitionType;
+    if (!await ui.showCustomConfirm(`¿Borrar permanentemente ${journeys.length} journey(s) de tipo ${type}?`)) return;
+
+    if (type === 'Multistep') {
+        const proceed = await ui.showCustomConfirm("Se detendrán automáticamente TODAS las versiones antes de borrar. ¿Continuar?");
+        if (!proceed) return;
+    }
+
+    ui.blockUI("Borrando journeys...");
+    logger.startLogBuffering();
+    
+    const successes = [];
+    const failures = [];
+
+    try {
+        const apiConfig = await getAuthenticatedConfig();
+        for (const journey of journeys) {
+            try {
+                if (type === 'Multistep') {
+                    await processStopAction(journey, 'all', apiConfig);
+                }
+                await mcApiService.deleteJourney(journey.id, apiConfig);
+                successes.push(journey.name);
+            } catch (error) {
+                failures.push({ name: journey.name, reason: error.message });
+            }
+        }
+        ui.showCustomAlert(`Borrado completado.\nÉxitos: ${successes.length}\nFallos: ${failures.length}`);
+    } catch (error) {
+        ui.showCustomAlert(`Error general: ${error.message}`);
+    } finally {
+        logger.endLogBuffering();
+        ui.unblockUI();
+        await refreshData(); 
     }
 }
 
@@ -713,8 +773,26 @@ function updateButtonsState() {
     const clonableTypes = ['EmailAudience', 'AutomationAudience'];
     elements.copyJourneyBtn.disabled = !(count === 1 && clonableTypes.includes(selected[0].eventType));
 
-    elements.stopJourneyBtn.disabled = !(count > 0 && selected.every(j => j.status === 'Published'));
-    elements.deleteJourneyBtn.disabled = !(count > 0 && selected.every(j => j.definitionType === 'Quicksend'));
+    elements.stopJourneyBtn.disabled = !(count > 0 && selected.every(j => j.definitionType === 'Multistep'));
+    // Lógica para DELETE
+    if (count > 0) {
+        const firstType = selected[0].definitionType;
+        const allSameType = selected.every(j => j.definitionType === firstType);
+        
+        if (allSameType) {
+            if (firstType === 'Quicksend') {
+                elements.deleteJourneyBtn.disabled = false; // Quicksend se borran siempre
+            } else if (firstType === 'Multistep') {
+                elements.deleteJourneyBtn.disabled = false; // Multistep se permite (validaremos parada en la función)
+            } else {
+                elements.deleteJourneyBtn.disabled = true;
+            }
+        } else {
+            elements.deleteJourneyBtn.disabled = true; // Tipos mezclados: Desactivar
+        }
+    } else {
+        elements.deleteJourneyBtn.disabled = true;
+    }
 }
 
 /**
