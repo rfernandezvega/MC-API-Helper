@@ -446,7 +446,7 @@ async function processPastedIds() {
         renderFilteredTable();
 
     } catch (error) {
-        logger.logError(`Error al procesar JSON de IDs: ${error.message}`);
+        logger.logMessage(`Error al procesar JSON de IDs: ${error.message}`);
         ui.showCustomAlert(`Error al procesar el JSON: ${error.message}.`);
     }
 }
@@ -591,7 +591,7 @@ async function processPastedContents() {
         renderFilteredTable();
 
     } catch (error) {
-        logger.logError(`Error al procesar JSON de contenidos: ${error.message}`);
+        logger.logMessage(`Error al procesar JSON de contenidos: ${error.message}`);
         ui.showCustomAlert(`Error al procesar el JSON: ${error.message}.`);
     }
 }

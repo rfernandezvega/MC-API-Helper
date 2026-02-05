@@ -5,6 +5,7 @@
 // =======================================================================================
 
 import elements from './dom-elements.js';
+import * as logger from '../ui/logger.js';
 
 let zIndexCounter = 10000; // Un valor inicial alto
 
@@ -193,7 +194,7 @@ export function showFolderSelectorModal(contentType, dependencies) {
                 const folders = await mcApiService.findDataFolders(searchTerm, contentType, apiConfig);
                 renderResults(folders);
             } catch (error) {
-                logger.logError(`Error buscando carpetas: ${error.message}`);
+                logger.logMessage(`Error buscando carpetas: ${error.message}`);
                 elements.folderSelectorResultsContainer.innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
             } finally {
                 // --- Ocultar el spinner ---

@@ -141,7 +141,7 @@ export async function view() {
             throw new Error(result.error);
         }
     } catch (error) {
-        logger.logError(`Error al cargar contenidos: ${error.message}`);
+        logger.logMessage(`Error al cargar contenidos: ${error.message}`);
         ui.showCustomAlert(`Error al cargar contenidos: ${error.message}`);
     } finally {
         ui.unblockUI();

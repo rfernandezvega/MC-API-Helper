@@ -230,11 +230,11 @@ async function exportDvConfig() {
             logger.logMessage(`Configuración exportada correctamente a: ${result.filePath}`);
             ui.showCustomAlert('Configuración exportada con éxito.');
         } else if (!result.canceled) {
-            logger.logError(`Error al exportar la configuración: ${result.error}`);
+            logger.logMessage(`Error al exportar la configuración: ${result.error}`);
             ui.showCustomAlert(`Error al exportar: ${result.error}`);
         }
     } catch (error) {
-        logger.logError(`Error inesperado durante la exportación: ${error.message}`);
+        logger.logMessage(`Error inesperado durante la exportación: ${error.message}`);
     } finally {
         logger.endLogBuffering();
     }
@@ -292,7 +292,7 @@ async function importDvConfig() {
         }
 
     } catch (error) {
-        logger.logError(`Error al importar el fichero CSV: ${error.message}`);
+        logger.logMessage(`Error al importar el fichero CSV: ${error.message}`);
         ui.showCustomAlert(`Error al procesar el fichero: ${error.message}`);
     } finally {
         logger.endLogBuffering();
