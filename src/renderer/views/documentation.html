@@ -86,7 +86,7 @@
 				</li>
 			</ol>
 		</div>
-		<!-- Pestaña 2: Guía Rápida (CON BUSCADOR FIJO) -->
+		<!-- Pestaña 2: Guía Rápida -->
 		<div id="guia-rapida" class="tab-content">
 			<!-- Buscador Sticky -->
 			<div class="docu-search-box">
@@ -101,6 +101,25 @@
 				<div class="docu-group" data-group-name="General">
 					<h3 class="docu-group-title">General</h3>
 					<ul class="docu-accordion">
+						<li class="docu-accordion-item"
+							data-keywords="configuracion cliente login tablas buscador">
+							<div class="docu-accordion-header">
+								<span>Buscador de texto en ventana</span>
+							</div>
+							<div class="docu-accordion-content">
+								<div class="docu-list">
+									<p>
+										La aplicación dispone de un buscador que permite buscar y navegador por los elementos encontrados en la vista que se está mostrando..
+									</p>									
+									<div class="docu-screenshot-row">
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/general/buscador/buscador.png" alt="">
+											<span class="docu-img-caption">Panel de DEs Búsqueda de Clientes</span>
+										</div>										
+									</div>									
+								</div>
+							</div>
+						</li>
 						<li class="docu-accordion-item"
 							data-keywords="logs descarga eventos errores historial api">
 							<div class="docu-accordion-header">
@@ -258,7 +277,7 @@
 									<div class="docu-screenshot-row">
 										<div class="docu-screenshot-item">
 											<img src="assets/documentation/dataExtensions/recuperacionCampos/recuperacionCampos.gif" alt="">
-											<span class="docu-img-caption">Recuperacion de campos</span>
+											<span class="docu-img-caption">Recuperación de campos</span>
 										</div>		
 										<div class="docu-screenshot-item">
 											<img src="assets/documentation/dataExtensions/recuperacionCampos/borradoCampos.gif" alt="">
@@ -289,115 +308,362 @@
 						</li>
 					</ul>
 				</div>
-				<!-- GRUPO: FUNCIONALIDADES -->
-				<div class="docu-group" data-group-name="Funcionalidades">
-					<h3 class="docu-group-title">Funcionalidades</h3>
+				<!-- GRUPO: BUSCADORES -->
+				<div class="docu-group" data-group-name="Buscadores">
+					<h3 class="docu-group-title">Buscadores</h3>
 					<ul class="docu-accordion">
 						<li class="docu-accordion-item"
-							data-keywords="buscadores buscar clientes de orígenes queries texto sql rutas externo key">
+							data-keywords="buscadores buscar rutas externo key clientes scripts contenidos actividades">
 							<div class="docu-accordion-header">
-								<span>Buscadores Avanzados</span>
+								<span>Buscador de Data Extensions</span>
 							</div>
 							<div class="docu-accordion-content">
 								<div class="docu-list">
-									<ul>
-										<li>
-											<b>Buscador de DEs:</b> Encuentra la ruta de una DE por Nombre/Key.
-										</li>
-										<li>
-											<b>Origen de Datos:</b> Qué Query o Import alimenta a una DE.
-										</li>
-										<li>
-											<b>Buscador de Clientes:</b> Localiza suscriptores en DEs configuradas y
-											Journeys.
-										</li>
-										<li>
-											<b>Texto en Queries:</b> Busca fragmentos de código SQL en toda la cuenta.
-										</li>
-									</ul>
+									<p>Este buscador permite buscar una Data Extension por su Nombre o External Key.</p>
+									<p>Devolverá todas aquellas Data Extension que contengan un nombre o external key similar.</p>
+									<div class="docu-screenshot-row">
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/buscadores/dataExtensions/buscarDE.gif" alt="">
+											<span class="docu-img-caption">Buscar Data Extension</span>
+										</div>								
+									</div>
+								</div>
+							</div>
+						</li>	
+						<li class="docu-accordion-item"
+							data-keywords="buscadores buscar rutas externo key clientes scripts contenidos actividades">
+							<div class="docu-accordion-header">
+								<span>Buscador de Origenes de datos</span>
+							</div>
+							<div class="docu-accordion-content">
+								<div class="docu-list">
+									<p>Este buscador permite buscar qué query o import inserta o actualiza datos en una Data Extension.</p>
+									<p>Devolverá todas las actividades de tipo query o import que apunten a la Data Extension. Se muestra además si se encuentra
+										en algún automatismo y en qué paso del mismo.</p>
+									<p>El check de <b>Mostrar Descripción / Query</b> permite ocultar la última columna que muestra la propia query o descripción del import.</p>
+									<div class="docu-screenshot-row">
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/buscadores/origenDatos/buscarOrigenes.gif" alt="">
+											<span class="docu-img-caption">Buscar Origen de datos</span>
+										</div>
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/buscadores/origenDatos/mostrarOcultarQueries.gif" alt="">
+											<span class="docu-img-caption">Mostrar u ocultar queries</span>
+										</div>								
+									</div>
+								</div>
+							</div>
+						</li>	
+						<li class="docu-accordion-item"
+							data-keywords="buscadores buscar cliente clientes journeys expulsar">
+							<div class="docu-accordion-header">
+								<span>Buscador de Clientes</span>
+							</div>
+							<div class="docu-accordion-content">
+								<div class="docu-list">
+									<p>El buscador de Clientes pretende tener una forma rápida de buscar la información relacionada con un cliente de forma rápida, 
+										por ejemplo, cuando se pregunta qué comunicaciones ha recibido, tracking relacionado, si está en una data extension de exclusión, etc. 
+										Esto sin necesidad de tener que ir a cada tabla o lanzar queries por separado</p>
+									<p>Además permite buscar en qué Journeys se encuentra en ese momento y permite expulsarlos de estos de forma masiva. Es decir, se puede seleccionar más de un 
+										journey del que expulsarlo a la vez.</p>
+									<p>Para usar la funcionalidad de búsqueda en tablas es necesario haber configurado las tablas donde buscar en 
+										<b>General > Configuración de APISs > DEs Búsquead de Clientes</b>. Estas se podrán seleccionar para buscar y mostrará todo los campos de la misma, 
+									filtrado por el campom de búsqueda.</p>									
+									<div class="docu-screenshot-row">
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/buscadores/clientes/buscarCliente.gif" alt="">
+											<span class="docu-img-caption">Buscar Cliente</span>
+										</div>
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/buscadores/clientes/buscarEnDEs.gif" alt="">
+											<span class="docu-img-caption">Buscar en Data Extensions</span>
+										</div>	
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/buscadores/clientes/buscarEnJourneys.gif" alt="">
+											<span class="docu-img-caption">Buscar en Journeys</span>
+										</div>		
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/buscadores/clientes/expulsarDeJourneys.gif" alt="">
+											<span class="docu-img-caption">Expulsar de Journeys</span>
+										</div>							
+									</div>
+								</div>
+							</div>
+						</li>	
+						<li class="docu-accordion-item"
+							data-keywords="buscadores buscar texto queries query">
+							<div class="docu-accordion-header">
+								<span>Buscador de Texto en Queries</span>
+							</div>
+							<div class="docu-accordion-content">
+								<div class="docu-list">
+									<p>Este buscador permite buscar cualquier cadena de texto en las queries. Si se encuentra alguna, mostrará qué query es 
+										(con el enlace a ella) y en qué automatismos y paso se encuentra</p>		
+									<p>Además, mostrará la query, pudiendo mostrar y ocultar esta columna</p>								
+									<div class="docu-screenshot-row">
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/buscadores/textoQueries/buscarQueries.gif" alt="">
+											<span class="docu-img-caption">Buscar Queries</span>
+										</div>
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/buscadores/textoQueries/mostrarOcultarQueries.gif" alt="">
+											<span class="docu-img-caption">Mostrar/Ocultar Queries</span>
+										</div>						
+									</div>
 								</div>
 							</div>
 						</li>
 						<li class="docu-accordion-item"
-							data-keywords="calendario automatizaciones programados schedule automations journeys">
+							data-keywords="buscadores buscar texto script scripts">
 							<div class="docu-accordion-header">
-								<span>Calendario de Automatizaciones</span>
+								<span>Buscador de Texto en Scripts</span>
 							</div>
 							<div class="docu-accordion-content">
 								<div class="docu-list">
-									<p>Visualiza gráficamente qué automatismos están programados para hoy o cualquier
-										fecha seleccionada.
+									<p>Este buscador permite buscar cualquier cadena de texto en los scripts. Si se encuentra alguno, mostrará qué script es 
+										(con el enlace a ella)</p>									
+									<div class="docu-screenshot-row">
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/buscadores/textScripts/buscarScripts.gif" alt="">
+											<span class="docu-img-caption">Buscar Scripts</span>
+										</div>					
+									</div>
+								</div>
+							</div>
+						</li>
+						<li class="docu-accordion-item"
+							data-keywords="buscadores buscar contenido contenidos">
+							<div class="docu-accordion-header">
+								<span>Buscador de Contenidos</span>
+							</div>
+							<div class="docu-accordion-content">
+								<div class="docu-list">
+									<p>Este buscador permite buscar cualquier contenido de content builder en base a su nombre o id. 
+										Mostrará todos los que tengan un mobre similar, la tipología y la ruta al contenido.</p>									
+									<div class="docu-screenshot-row">
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/buscadores/contenidos/buscarContenidos.gif" alt="">
+											<span class="docu-img-caption">Buscar Contenidos</span>
+										</div>					
+									</div>
+								</div>
+							</div>
+						</li>	
+						<li class="docu-accordion-item"
+							data-keywords="buscadores buscar actividad actividades automation query queries scripts extract file transfer import">
+							<div class="docu-accordion-header">
+								<span>Buscador de Actividades</span>
+							</div>
+							<div class="docu-accordion-content">
+								<div class="docu-list">
+									<p>Este buscador permite buscar cualquier actividad de la pestaña de actividades de Automation Studio.</p>	
+									<p>Es util para saber si se está utilizando la actividad en un automatismo o en varios por si se modifica o eliminar 
+										para ver a qué puede afectar.</p>				
+									<p>Permite buscar tanto por nombre como por clave externa, pero deben ser exactos.</p>					
+									<div class="docu-screenshot-row">
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/buscadores/actividades/buscarQueries.gif" alt="">
+											<span class="docu-img-caption">Buscar Queries</span>
+										</div>	
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/buscadores/actividades/buscarScripts.gif" alt="">
+											<span class="docu-img-caption">Buscar Scripts</span>
+										</div>	
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/buscadores/actividades/buscarExtracts.gif" alt="">
+											<span class="docu-img-caption">Buscar Extracts</span>
+										</div>				
+									</div>
+								</div>
+							</div>
+						</li>						
+					</ul>
+				</div>
+				<!-- GRUPO: CALENDARIO -->
+				<div class="docu-group" data-group-name="Calendario">
+					<h3 class="docu-group-title">Calendario</h3>
+					<ul class="docu-accordion">
+						<li class="docu-accordion-item"
+							data-keywords="calendario programado">
+							<div class="docu-accordion-header">
+								<span>Calendario</span>
+							</div>
+							<div class="docu-accordion-content">
+								<div class="docu-list">
+									<p>
+										Esta vista permite visualizar en un calendario todos los automatismos programados por la siguiente fecha de ejecución.
 									</p>
+									<p>
+										Es posible mostrar tanto todos los automatismos programados como aquellos que lanzan algun journey. En cualquier caso, si algún día
+										tiene algo programado, el día estará marcado en azul. 
+									</p>	
+									<p>
+										Clicando en el día, se mostrará en el panel derecho qué automatismos son y la hora a la que están programados. 
+									</p>
+									<p>
+										Pulsando en <b>Automatizaciones del Día</b> se acceder a la vista de <b>Automatismos</b> con los automatismos filtrados. 
+									</p>
+									<p>
+										<b>¡Importante!</b> La próxima vez que se acceda, se mostrará lo que ya había guardado, por lo que es importante darle a Refrescar. 
+									</p>																	
+									<div class="docu-screenshot-row">
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/calendario/automatismosProgramados.gif" alt="">
+											<span class="docu-img-caption">Automatismos programados</span>
+										</div>	
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/calendario/automatismosLanzanJourneys.gif" alt="">
+											<span class="docu-img-caption">Automatismos que lanzan Journeys</span>
+										</div>	
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/calendario/vistaFiltradaAutomatismos.gif" alt="">
+											<span class="docu-img-caption">Acceder a vista filtrada de automatismos</span>
+										</div>								
+									</div>									
 								</div>
 							</div>
 						</li>
+					</ul>
+				</div>
+				<!-- GRUPO: CONTENIDOS -->
+				<div class="docu-group" data-group-name="Contenidos">
+					<h3 class="docu-group-title">Contenidos</h3>
+					<ul class="docu-accordion">
 						<li class="docu-accordion-item"
-							data-keywords="gestion automatismos automations activar parar ejecutar clonar masivo bloque">
+							data-keywords="buscar contenidos texto">
 							<div class="docu-accordion-header">
-								<span>Gestión de Automatismos</span>
+								<span>Contenidos</span>
 							</div>
 							<div class="docu-accordion-content">
 								<div class="docu-list">
-									<p>Panel masivo para Activar, Parar o Ejecutar una vez múltiples automatismos.
-										Incluye herramienta de
-										clonación completa.</p>
+									<p>
+										Esta vista permite descargar todos los contenidos de la instancia para poder hacer búsquedas sobre ellos. 
+										En este caso Marketing Cloud no pone una forma fácil de obtenerlo así que es necesario hacer algun paso 
+										en el propio navegador para obtener lo contenidos.
+									</p>
+
+									<p>
+										Para importarlos, pulsa en el botón <b>Importar</b> que mostrará una ventana con las instrucciones a seguir. 
+										<b>¡Importante!</b> Si al acceder al enlace que se indica en las instrucciones ves un <b>UNAUTHORIZED</b>, 
+										abre <b>Content Builder</b> y vuelve a intentarlo.
+									</p>
+
+									<p>
+										Una vez pegado el código, pulsa <b>Enter</b> y espera a que se termine de ejecutar. Cuando termine, copia lo 
+										que ha generado y pégalo donde indica la app. Puede que le cuesta copiarse porque el texto es enorme. De la 
+										misma forma, al pegarlo en la app tardará asi qué <b>NO LE DES A PEGAR VARIAS VECES</b>.
+									</p>
+
+									<p>
+										Una vez importados, los contenidos se guardarán asociados al cliente al que se está conectado, por lo que solo será 
+										necesario volver a importar si se quiere buscar en contenidos nuevos. El buscador filtrará los contenidos 
+										que contengan la cadena de texto. Aunque no se muestre, también busca en el cuerpo de los emails y se puede 
+										utilizar por ejemplo para saber qué mails utilizan una plantilla (buscando por el nombre de la misma).
+									</p>
+									<div class="docu-screenshot-row">
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/contenidos/recuperarContenidos.gif" alt="">
+											<span class="docu-img-caption">Recuperar contenidos</span>
+										</div>	
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/crearCarpetas/pegarContenidos.gif" alt="">
+											<span class="docu-img-caption">Pegar contenidos</span>
+										</div>	
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/crearCarpetas/buscarContenidos.gif" alt="">
+											<span class="docu-img-caption">Buscar contenidos</span>
+										</div>					
+									</div>	
+									<p>Finalmente, cada pestaña permite exportar los contenidos de la misma en formato excel. Se exportarán los contendiso filtrados si se ha utilizado el buscador.</p>								
 								</div>
 							</div>
 						</li>
+					</ul>
+				</div>
+				<!-- GRUPO: CREAR CARPETAS -->
+				<div class="docu-group" data-group-name="Crear Carpetas">
+					<h3 class="docu-group-title">Crear Carpetas</h3>
+					<ul class="docu-accordion">
 						<li class="docu-accordion-item"
-							data-keywords="gestion journeys copiar clonar parar borrar comunicaciones dibujo texto">
+							data-keywords="crear carpetas carpeta">
 							<div class="docu-accordion-header">
-								<span>Gestión de Journeys</span>
+								<span>Crear Carpetas</span>
 							</div>
 							<div class="docu-accordion-content">
 								<div class="docu-list">
-									<p>Clonación de Journeys, parada masiva y generación de documentación visual
-										(dibujo) de la lógica del
-										Journey.</p>
+									<p>
+										Esta vista crear una estructura de carpetas de golpe para:
+										<ul>
+											<li>Data Extensions</li>
+											<li>Queries</li>
+											<li>Journeys</li>	
+											<li>Automatismos</li>
+											<li>Contenidos</li>				
+											<li>Scripts</li>								
+										</ul>
+									</p>	
+									<p>
+										Es útil en clientes con campañas repetitivas donde la estructura de carpetas bajo la campaña se compone de varias, de cara a no tener que crear una a una
+									</p>
+									<p>
+										Se debe indicar la carpeta principal bajo la que se crearán el resto. Con el nombre se lanzará el buscador de carpetas y se deberá seleccionar cual de todas las que pueden salir se quiere utilizar.
+										Una vez hecho esto, se debe indicar el nombre de cada carpeta en líneas distintas y, si deben ser hijas separarlas con doble espacio o tabulador.
+									</p>															
+									<div class="docu-screenshot-row">
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/crearCarpetas/crearCarpetasDataExtensions.gif" alt="">
+											<span class="docu-img-caption">Crear carpetas de Data Extensions</span>
+										</div>						
+									</div>									
 								</div>
 							</div>
 						</li>
+					</ul>
+				</div>
+				<!-- GRUPO: VALIDAR EMAILS -->
+				<div class="docu-group" data-group-name="Validar Emails">
+					<h3 class="docu-group-title">Validar Emails</h3>
+					<ul class="docu-accordion">
 						<li class="docu-accordion-item"
-							data-keywords="clonador queries copiar masivo sql de destino duplicar carpetas">
+							data-keywords="validar emails email">
 							<div class="docu-accordion-header">
-								<span>Clonador Masivo de Queries</span>
+								<span>Validar Emails</span>
 							</div>
 							<div class="docu-accordion-content">
 								<div class="docu-list">
-									<p>Herramienta para mover/duplicar múltiples Query Activities y sus DEs de destino
-										entre diferentes
-										carpetas.</p>
-								</div>
-							</div>
-						</li>
-						<li class="docu-accordion-item"
-							data-keywords="creacion carpetas estructura jerarquia masiva tabulado carpetas padre">
-							<div class="docu-accordion-header">
-								<span>Creación de Carpetas</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>Crea árboles de carpetas pegando un esquema de texto tabulado.</p>
-								</div>
-							</div>
-						</li>
-						<li class="docu-accordion-item"
-							data-keywords="validador email validar list detective mx sintaxis">
-							<div class="docu-accordion-header">
-								<span>Validador de Email</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>Verifica direcciones contra List Detective y registros MX de Marketing Cloud.</p>
+									<p>
+										Esta vista permite validar emails contra las opciones de validación que utiliza Marketing Cloud:
+										<ul>
+											<li>SyntaxValidator</li>
+											<li>MXValidator</li>
+											<li>ListDetectiveValidator</li>											
+										</ul>
+									</p>																
+									<div class="docu-screenshot-row">
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/validadorEmail/valido.gif" alt="">
+											<span class="docu-img-caption">Válido</span>
+										</div>
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/validadorEmail/SyntaxValidator.gif" alt="">
+											<span class="docu-img-caption">SyntaxValidator</span>
+										</div>
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/validadorEmail/MXValidator.gif" alt="">
+											<span class="docu-img-caption">MXValidator</span>
+										</div>
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/validadorEmail/ListDetectiveValidator.gif" alt="">
+											<span class="docu-img-caption">ListDetectiveValidator</span>
+										</div>										
+									</div>									
 								</div>
 							</div>
 						</li>
 					</ul>
 				</div>
 				<!-- Mensaje de no resultados -->
-				<div id="docu-no-results" class="error-text hidden"> No se han encontrado funcionalidades que coincidan
-					con la
-					búsqueda. </div>
+				<div id="docu-no-results" class="error-text hidden"> No se han encontrado funcionalidades que coincidan	con la búsqueda. </div>
 			</div>
 		</div>
 		<!-- Pestaña 3: Errores Comunes -->
@@ -408,17 +674,14 @@
 						<span class="docu-icon warning">⚠️</span>
 						<strong>Error de autenticación</strong>
 					</div>
-					<p>Si cambias permisos en MC, es necesario desloguearse y volver a loguearse en la app para
-						refrescar el
-						token.</p>
+					<p>Si cambias permisos en MC, es necesario desloguearse y volver a loguearse en la app para	refrescar el token.</p>
 				</li>
 				<li>
 					<div class="docu-item-header">
 						<span class="docu-icon warning">⚠️</span>
 						<strong>Carpetas no encontradas</strong>
 					</div>
-					<p>Para crear o documentar DEs, usa siempre el buscador de carpetas para obtener el ID numérico
-						correcto.</p>
+					<p>Para crear o documentar DEs, usa siempre el buscador de carpetas para obtener el ID numérico	correcto.</p>
 				</li>
 			</ul>
 		</div>
