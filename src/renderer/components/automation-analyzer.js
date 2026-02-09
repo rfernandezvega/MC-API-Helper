@@ -173,8 +173,19 @@ async function generatePDF() {
     doc.setFontSize(18).setTextColor(40, 116, 166).text(`${auto.name}`, 10, 20);
 
     doc.autoTable({
-        startY: 25, margin: { left: 10, right: 10 }, theme: 'plain', styles: { fontSize: 9, cellPadding: 1, font: 'helvetica' },
-        columnStyles: { 0: { fontStyle: 'bold', width: 35 } },
+        startY: 25, 
+        margin: { left: 10, right: 10 }, 
+        theme: 'plain', 
+        styles: { 
+            fontSize: 9, 
+            cellPadding: 1, 
+            font: 'helvetica',
+            overflow: 'linebreak' // Permite que la descripción crezca hacia abajo
+        },
+        columnStyles: { 
+            0: { fontStyle: 'bold', cellWidth: 'wrap' }, 
+            1: { width: 155 } // Forzamos a que use el resto del ancho (155 + 35 = 190mm útiles)
+        },
         body: [
             ["Estado:", auto.status],
             ["Descripción:", auto.description || "Sin descripción"]
@@ -209,7 +220,7 @@ async function generatePDF() {
                 body: [
                     ["Tipo", typeLabel],
                     ["Descripción", act.description || "Sin descripción"],
-                    ["Impacto", { content: impactText, styles: { textColor: impactColor, fontStyle: 'bold' } }]
+                    ["Impacto", { content: impactText, styles: { textColor: impactColor} }]
                 ],
                 columnStyles: { 0: { fontStyle: 'bold', width: 35 } }
             });
