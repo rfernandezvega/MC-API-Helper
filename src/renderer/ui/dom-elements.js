@@ -170,6 +170,7 @@ export function init() {
     elements.pageInputAutomations = document.getElementById('pageInputAutomations');
     elements.totalPagesAutomations = document.getElementById('totalPagesAutomations');
     elements.getNotificationsBtn = document.getElementById('getNotificationsBtn');
+    elements.analyzeAutomationBtn = document.getElementById('analyzeAutomationBtn');
 
     // --- 12. Sección: Gestión de Journeys ---
     elements.journeysTbody = document.getElementById('journeys-tbody');
@@ -340,6 +341,12 @@ export function init() {
     elements.journeyStopAllBtn = document.getElementById('journey-stop-all-btn');
     elements.journeyStopCurrentBtn = document.getElementById('journey-stop-current-btn');
     elements.journeyStopCancelBtn = document.getElementById('journey-stop-cancel-btn');
+
+    // --- 24. ANALIZADOR DE AUTOMATISMOS ---
+    elements.automationAnalyzerSection = document.getElementById('automation-analyzer-section');
+    elements.automationAnalyzerBackBtn = document.getElementById('automationAnalyzerBackBtn');
+    elements.analyzerAutomationNameTitle = document.getElementById('analyzerAutomationNameTitle');
+    elements.automationAnalyzerStepsContainer = document.getElementById('automationAnalyzerStepsContainer');
 }
 
 export default elements;

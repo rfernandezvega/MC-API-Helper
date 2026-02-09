@@ -181,6 +181,25 @@
     </div>
 </div>
 
+<!-- automation-analyzer.html -->
+<div id="automation-analyzer-section" class="section">
+    <div class="section-header">
+        <button id="automationAnalyzerBackBtn" class="back-button">← Volver a la lista</button>            
+    </div>
+    <h2>Análisis de Impacto: <span id="analyzerAutomationNameTitle" style="color: #558ac7;"></span></h2>
+
+    <div class="config-section-container">
+        <div class="config-block">
+            <h3>Estructura y Uso de Actividades</h3>
+            <p>A continuación se muestran las actividades de este automatismo y si se están reutilizando en otros automatismos.</p>
+            
+            <div id="automationAnalyzerStepsContainer">
+                <!-- Se rellena dinámicamente -->
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- 15. SECCIÓN: CLONADOR DE AUTOMATISMOS -->
 <div id="automation-cloner-section" class="section">
     <div class="section-header">
@@ -261,6 +280,7 @@
             <button id="runAutomationBtn" class="action-button" disabled>Ejecutar</button>
             <button id="stopAutomationBtn" class="action-button delete-btn" disabled>Parar</button>
             <button id="cloneAutomationBtn" class="action-button" disabled>Clonar</button>
+            <button id="analyzeAutomationBtn" class="action-button" disabled>Analizar</button>
         </div>
     </div>
     <h2>Gestión de Automatismos <span id="automationCount" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
@@ -993,6 +1013,52 @@
 								</div>
 							</div>
 						</li>						
+					</ul>
+				</div>
+				<!-- GRUPO: CALENDARIO -->
+				<div class="docu-group" data-group-name="Calendario">
+					<h3 class="docu-group-title">Calendario</h3>
+					<ul class="docu-accordion">
+						<li class="docu-accordion-item"
+							data-keywords="calendario programado">
+							<div class="docu-accordion-header">
+								<span>Calendario</span>
+							</div>
+							<div class="docu-accordion-content">
+								<div class="docu-list">
+									<p>
+										Esta vista permite visualizar en un calendario todos los automatismos programados por la siguiente fecha de ejecución.
+									</p>
+									<p>
+										Es posible mostrar tanto todos los automatismos programados como aquellos que lanzan algun journey. En cualquier caso, si algún día
+										tiene algo programado, el día estará marcado en azul. 
+									</p>	
+									<p>
+										Clicando en el día, se mostrará en el panel derecho qué automatismos son y la hora a la que están programados. 
+									</p>
+									<p>
+										Pulsando en <b>Automatizaciones del Día</b> se acceder a la vista de <b>Automatismos</b> con los automatismos filtrados. 
+									</p>
+									<p>
+										<b>¡Importante!</b> La próxima vez que se acceda, se mostrará lo que ya había guardado, por lo que es importante darle a Refrescar. 
+									</p>																	
+									<div class="docu-screenshot-row">
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/calendario/automatismosProgramados.gif" alt="">
+											<span class="docu-img-caption">Automatismos programados</span>
+										</div>	
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/calendario/automatismosLanzanJourneys.gif" alt="">
+											<span class="docu-img-caption">Automatismos que lanzan Journeys</span>
+										</div>	
+										<div class="docu-screenshot-item">
+											<img src="assets/documentation/calendario/vistaFiltradaAutomatismos.gif" alt="">
+											<span class="docu-img-caption">Acceder a vista filtrada de automatismos</span>
+										</div>								
+									</div>									
+								</div>
+							</div>
+						</li>
 					</ul>
 				</div>
 				<!-- GRUPO: CONTENIDOS -->

@@ -17,6 +17,7 @@ let currentFilteredList = [];
 
 let getAuthenticatedConfig;
 let showAutomationClonerView;
+let showAutomationAnalyzerView;
 
 // --- 2. LÓGICA DE RENDERIZADO Y FILTRADO ---
 
@@ -101,6 +102,7 @@ function renderTable(automations) {
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
     showAutomationClonerView = dependencies.showAutomationClonerView;
+    showAutomationAnalyzerView = dependencies.showAutomationAnalyzerView;
 
     elements.downloadAutomationsCsvBtn.addEventListener('click', downloadAutomationsCsv);
     elements.activateAutomationBtn.addEventListener('click', () => performAction('activate'));
@@ -109,6 +111,7 @@ export function init(dependencies) {
     elements.cloneAutomationBtn.addEventListener('click', () => inspectAndShowCloner());
     elements.refreshAutomationsTableBtn.addEventListener('click', refreshData);
     elements.getNotificationsBtn.addEventListener('click', loadNotificationsForVisibleRows);
+    elements.analyzeAutomationBtn.addEventListener('click', () => analyzeSelectedAutomation());
 
     elements.automationNameFilter.addEventListener('input', applyFiltersAndRender);
     elements.automationStatusFilter.addEventListener('change', applyFiltersAndRender);
@@ -302,6 +305,25 @@ async function inspectAndShowCloner() {
     } 
 }
 
+async function analyzeSelectedAutomation() {
+    const selectedRows = document.querySelectorAll('#automations-table tbody tr.selected');
+    const row = selectedRows[0];
+    const automationFromList = fullAutomationList.find(auto => auto.id === row.dataset.automationId);
+    
+    ui.blockUI(`Cargando análisis de "${automationFromList.name}"...`);
+    try {
+        const apiConfig = await getAuthenticatedConfig();
+        // Obtenemos los detalles v1 (pasos y actividades)
+        const details = await mcApiService.fetchAutomationDetailsById(automationFromList.id, apiConfig);
+        
+        // Llamamos a la nueva vista
+        showAutomationAnalyzerView(details);
+    } catch (error) {
+        ui.showCustomAlert(`Error al cargar el analizador: ${error.message}`);
+        ui.unblockUI();
+    }
+}
+
 // --- 5. GESTIÓN DE LA TABLA ---
 /**
  * Obtiene el valor de una propiedad anidada de un objeto a partir de una ruta de texto.
@@ -394,6 +416,9 @@ function updateButtonsState() {
     }
 
     elements.cloneAutomationBtn.disabled = true;
+
+    elements.analyzeAutomationBtn.disabled = (selectedRows.length !== 1);
+
     if (selectedRows.length === 1) {
         // Buscamos el automatismo completo en nuestra lista de datos
         const selectedAutomation = fullAutomationList.find(auto => auto.id === selectedRows[0].dataset.automationId);

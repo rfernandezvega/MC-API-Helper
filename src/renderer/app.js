@@ -37,6 +37,8 @@ import * as folderCreator from './components/folder-creator.js'; // Lógica del 
 import * as contentManager from './components/content-manager.js'; // Lógica del gestor de contenidos.
 import * as actividadesFinder from './components/actividades-finder.js';
 import * as scriptTextFinder from './components/script-text-finder.js';
+import * as automationAnalyzer from './components/automation-analyzer.js';
+
 
 
 
@@ -466,6 +468,11 @@ document.addEventListener('DOMContentLoaded', function () {
 		// Nota: Ya no necesitamos `await` aquí, porque la función `view` ahora maneja su propio ciclo de vida.
 		automationCloner.view(automationDetails);
 	}
+
+	function showAutomationAnalyzer(automationDetails) {
+		showSection('automation-analyzer-section');
+		automationAnalyzer.view(automationDetails);
+	}
 	
 	/** 
 	 * Restaura el estado (abierto/cerrado) de los menús colapsables al iniciar la app,
@@ -546,13 +553,14 @@ document.addEventListener('DOMContentLoaded', function () {
 			journeysManager,
 			cloudPagesManager,
 			automationCloner, 
+			automationAnalyzer,
 			contentManager 
 		});
 
         deCreator.init({ getAuthenticatedConfig });
         fieldManager.init({ getAuthenticatedConfig });
 		// El gestor de automatismos necesita una función "puente" para poder navegar a otra vista (la de clonado)
-		automationsManager.init({ getAuthenticatedConfig, showAutomationClonerView: showAutomationCloner });
+		automationsManager.init({ getAuthenticatedConfig, showAutomationClonerView: showAutomationCloner, showAutomationAnalyzerView: showAutomationAnalyzer });
 		journeysManager.init({ getAuthenticatedConfig });
 		cloudPagesManager.init({ getAuthenticatedConfig });
 		queryCloner.init({ getAuthenticatedConfig });
@@ -567,6 +575,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		// El calendario necesita una función "puente" para poder navegar a otra vista (la de gestión de automatismos)
 		calendar.init({ getAuthenticatedConfig, showAutomationsView: showFilteredAutomations });
 		automationCloner.init({ getAuthenticatedConfig, goBack });
+		automationAnalyzer.init({ getAuthenticatedConfig, goBack });
 		folderCreator.init({ getAuthenticatedConfig });
 		contentManager.init({ getAuthenticatedConfig });
 		

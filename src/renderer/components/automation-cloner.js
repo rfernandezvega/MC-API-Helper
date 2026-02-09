@@ -24,8 +24,11 @@ const CLONABLE_ACTIVITY_TYPES = new Set([300]); // 300 = Query Activity
 
 // Mapa para traducir IDs de actividad a nombres legibles para la UI.
 const activityTypeMap = {
-    300: 'Query Activity', 423: 'Script Activity', 73: 'Data Extract', 53: 'File Transfer', 303: 'Filter Activity'
-    // ...se pueden añadir más si se implementa su clonación...
+    42: 'Email', 43: 'Import', 45: 'Group', 53: 'File Transfer', 73: 'Data Extract', 84: 'Report',
+    300: 'SQL Query', 303: 'Filter', 423: 'SSJS Script', 425: 'ELT', 427: 'Build Audience', 467: 'Wait',
+    724: 'Mobile List Refresh', 725: 'MobileConnect', 726: 'Mobile Import', 733: 'InteractionStudio',
+    736: 'MobilePush', 749: 'IS Event', 756: 'IS Date Event', 771: 'SF Send', 783: 'GroupConnect',
+    1010: 'Thunderhead', 1101: 'IS Decision', 1701: 'Einstein Rec', 1000: 'Verification',
 };
 
 // --- 3. FUNCIONES PÚBLICAS (API del Módulo) ---
