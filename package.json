@@ -16,6 +16,8 @@
     "electron-log": "^5.4.3",
     "electron-updater": "^6.1.7",
     "googleapis": "^157.0.0",
+    "jspdf": "^4.1.0",
+    "jspdf-autotable": "^5.0.7",
     "keytar": "^7.9.0"
   },
   "devDependencies": {

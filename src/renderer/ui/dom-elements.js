@@ -347,6 +347,7 @@ export function init() {
     elements.automationAnalyzerBackBtn = document.getElementById('automationAnalyzerBackBtn');
     elements.analyzerAutomationNameTitle = document.getElementById('analyzerAutomationNameTitle');
     elements.automationAnalyzerStepsContainer = document.getElementById('automationAnalyzerStepsContainer');
+    elements.downloadAutomationPdfBtn = document.getElementById('downloadAutomationPdfBtn');
 }
 
 export default elements;
