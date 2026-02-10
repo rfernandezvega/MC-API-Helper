@@ -3,6 +3,7 @@ import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
+import { loadCustomFonts } from '../ui/fonts.js';
 
 let getAuthenticatedConfig;
 let goBackFunction;
@@ -214,128 +215,225 @@ async function renderAnalysis(automation) {
     }
 }
 
-// --- MOTOR DE COLORES PARA PDF ---
-function drawCodeWithColors(doc, code, type, startY) {
-    const isSql = type === 'sql';
-    const margin = 10;
-    const pageWidth = 190; 
-    const cleanCode = code.replace(/\t/g, '    ');
-    const lines = doc.splitTextToSize(cleanCode, pageWidth);
-    const lineHeight = 3.5;
-    doc.setFont("courier", "normal").setFontSize(6);
-    const colorMap = {
-        keyword: [40, 116, 166], string: [34, 153, 84], comment: [128, 128, 128], number: [211, 84, 0], default: [50, 50, 50]
-    };
-    const sqlKeywords = /\b(SELECT|FROM|WHERE|AND|OR|JOIN|INNER|LEFT|OUTER|ON|GROUP|BY|ORDER|UNION|ALL|AS|INSERT|INTO|UPDATE|SET|DELETE|DISTINCT|CASE|WHEN|THEN|ELSE|END|NOT|NULL|IS|TOP|DESC|ASC)\b/gi;
-    const jsKeywords = /\b(var|let|const|function|return|if|else|for|while|try|catch|Platform|Load|HTTP|Get|Post|Write|Stringify|ParseJSON|new|Date|getTime)\b/g;
-
-    let currentY = startY + 5;
-    lines.forEach((line) => {
-        if (currentY > 280) { doc.addPage(); currentY = 20; }
-        doc.setFillColor(248, 249, 249).rect(margin, currentY - 2.5, pageWidth + 2, lineHeight, 'F');
-        let xOffset = margin + 2;
-        const tokens = line.split(/(\s+|'[^']*'|"[^"]*"|--.*|\/\/.*)/g);
-        tokens.forEach(token => {
-            if (!token) return;
-            if (token.match(/^(--|\/\/)/)) doc.setTextColor(...colorMap.comment);
-            else if (token.match(/^['"]/)) doc.setTextColor(...colorMap.string);
-            else if (token.match(isSql ? sqlKeywords : jsKeywords)) doc.setTextColor(...colorMap.keyword);
-            else if (token.match(/^\b\d+\b$/)) doc.setTextColor(...colorMap.number);
-            else doc.setTextColor(...colorMap.default);
-            doc.text(token, xOffset, currentY);
-            xOffset += doc.getTextWidth(token);
-        });
-        currentY += lineHeight;
-    });
-    doc.setFont("helvetica", "normal"); 
-    return currentY + 5;
-}
-
 async function generatePDF() {
     if (!currentAutomationDetails) return;
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4');
+    
+    try {
+        loadCustomFonts(doc);
+        doc.setFont('NotoSans'); 
+    } catch (e) { console.error("Error fuentes:", e); }
+
     const auto = currentAutomationDetails;
+    let currentY = 20;
 
-    doc.setFont("helvetica");
-    doc.setFontSize(18).setTextColor(40, 116, 166).text(`${auto.name}`, 10, 20);
+    // --- TÍTULO PRINCIPAL ---
+    doc.setFontSize(16).setTextColor(40, 116, 166).setFont("helvetica", "bold");
+    doc.text(auto.name.trim(), 10, currentY);
+    currentY += 8;
 
+    // --- BLOQUE INFO GENERAL ---
     doc.autoTable({
-        startY: 25, 
-        margin: { left: 10, right: 10 }, 
-        theme: 'plain', 
-        styles: { 
-            fontSize: 9, 
-            cellPadding: 1, 
-            font: 'helvetica',
-            overflow: 'linebreak' // Permite que la descripción crezca hacia abajo
-        },
-        columnStyles: { 
-            0: { fontStyle: 'bold', cellWidth: 'wrap' }, 
-            1: { width: 155 } // Forzamos a que use el resto del ancho (155 + 35 = 190mm útiles)
-        },
+        startY: currentY,
+        margin: { left: 10, right: 10 },
+        theme: 'grid',
+        styles: { font: 'NotoSans', fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+        headStyles: { fillColor: [52, 73, 94], textColor: 255 },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 35 } }, 
+        head: [[{ content: 'INFORMACIÓN GENERAL DEL AUTOMATISMO', colSpan: 2 }]],
         body: [
             ["Estado:", auto.status],
-            ["Descripción:", auto.description || "Sin descripción"]
+            ["Última Ejecución:", formatDate(auto.lastRunTime)],
+            ["Próxima Ejecución:", formatDate(auto.scheduledTime)],
+            ["Descripción:", auto.description || 'Sin descripción']
         ]
     });
 
-    let finalY = doc.lastAutoTable.finalY + 10;
+    currentY = doc.lastAutoTable.finalY + 15;
 
+    // --- RECORRIDO DE PASOS ---
     for (const step of auto.steps || []) {
-        if (finalY > 260) { doc.addPage(); finalY = 20; }
-        doc.setFontSize(13).setTextColor(40, 116, 166).text(`Paso ${step.step}`, 10, finalY);
-        finalY += 6;
+        // Aumentamos el margen superior antes de escribir el PASO para que no se pegue
+        currentY += 5; 
+        if (currentY > 260) { doc.addPage(); currentY = 20; }
+
+        doc.setFontSize(14).setTextColor(40, 116, 166).setFont("helvetica", "bold");
+        doc.text(`PASO ${step.step}`, 10, currentY);
+        currentY += 2;
+        doc.setDrawColor(40, 116, 166).setLineWidth(0.5).line(10, currentY, 200, currentY);
+        currentY += 10; // Espacio después de la línea del paso
 
         for (const act of step.activities || []) {
             const typeLabel = activityTypeMap[act.objectTypeId] || act.objectTypeId;
             
-            // Texto de impacto para la tabla
-            let impactText = "Actividad exclusiva de este automatismo.";
-            let impactColor = [40, 167, 69]; // Verde
+            const isShared = act.otherUsages && act.otherUsages.length > 0;
+            let impactText = "EXCLUSIVA";
+            if (isShared) {
+                const list = act.otherUsages.map(u => `• ${u.automationName} (Paso: ${u.step})`).join('\n');
+                impactText = `COMPARTIDA:\n${list}`;
+            }
+            const impactColor = isShared ? [192, 57, 43] : [39, 174, 96];
 
-            if (act.otherUsages && act.otherUsages.length > 0) {
-                impactText = `Actividad reutilizada en ${act.otherUsages.length} procesos:\n` + 
-                             act.otherUsages.map(u => `- ${u.automationName} (Paso ${u.step})`).join('\n');
-                impactColor = [200, 0, 0]; // Rojo
+            const tableBody = [
+                ["Tipo:", typeLabel],
+                ["Descripción:", act.description || "---"],
+                ["Impacto:", { content: impactText, styles: { textColor: impactColor, fontStyle: 'bold' } }]
+            ];
+
+            if (act.specificData) {
+                const data = act.specificData;
+                tableBody.push([{ content: "CONFIGURACIÓN", colSpan: 2, styles: { fillColor: [240, 240, 240], halign: 'center', fontStyle: 'bold' } }]);
+                
+                if (act.objectTypeId === 300) {
+                    tableBody.push(["Destino:", `${data.targetDE.name}\n(Key: ${data.targetDE.key})`], ["Acción:", data.updateType]);
+                } 
+                // --- LÓGICA DE EXTRACT REFINADA ---
+                else if (act.objectTypeId === 73) {
+                    if (data.deName) {
+                        tableBody.push(["DE Origen:", data.deName]);
+                        tableBody.push(["Delimitador:", data.delimiter]);
+                    }
+                    if (data.convertTo) {
+                        tableBody.push(["Acción:", "Convert File"]);
+                        tableBody.push(["Codificación:", data.convertTo]);
+                    }
+                    tableBody.push(["Patrón Archivo:", data.fileSpec]);
+                } 
+                else if (act.objectTypeId === 53) {
+                    tableBody.push(["Archivo:", data.fileSpec], ["Ubicación:", data.destination]);
+                } else if (act.objectTypeId === 42) {
+                    tableBody.push(["Asunto:", data.subject], ["Remitente:", `${data.fromName} (${data.fromAddress})`]);
+                }
             }
 
             doc.autoTable({
-                startY: finalY, margin: { left: 10, right: 10 }, theme: 'grid',
-                headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
-                styles: { fontSize: 8, overflow: 'linebreak', font: 'helvetica' },
+                startY: currentY,
+                margin: { left: 10, right: 10 },
+                theme: 'grid',
+                styles: { font: 'NotoSans', fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+                headStyles: { fillColor: [84, 110, 122] },
+                columnStyles: { 0: { cellWidth: 35, fontStyle: 'bold' } },
                 head: [[{ content: act.name, colSpan: 2 }]],
-                body: [
-                    ["Tipo", typeLabel],
-                    ["Descripción", act.description || "Sin descripción"],
-                    ["Impacto", { content: impactText, styles: { textColor: impactColor} }]
-                ],
-                columnStyles: { 0: { fontStyle: 'bold', width: 35 } }
+                body: tableBody
             });
 
-            finalY = doc.lastAutoTable.finalY + 3;
+            currentY = doc.lastAutoTable.finalY + 8; // Más espacio entre actividades
 
-            if (act.detailedInfo?.["Data Fields"]) {
-                doc.autoTable({
-                    startY: finalY, margin: { left: 10, right: 10 }, theme: 'grid', styles: { fontSize: 7, font: 'helvetica' },
-                    headStyles: { fillColor: [230, 230, 230], textColor: 0 },
-                    head: [['Campo', 'Tipo', 'Valor']],
-                    body: act.detailedInfo["Data Fields"].map(f => [f.name, f.type, f.value])
-                });
-                finalY = doc.lastAutoTable.finalY + 4;
-            }
-
+            // --- CÓDIGO ---
             const code = act.queryText || act.scriptCode;
             if (code) {
-                const type = act.objectTypeId === 300 ? 'sql' : 'js';
-                finalY = drawCodeWithColors(doc, code, type, finalY);
+                if (currentY > 250) { doc.addPage(); currentY = 20; }
+                const codeLabel = act.objectTypeId === 300 ? "Query:" : "Script:";
+                doc.setFontSize(9).setTextColor(80).setFont("helvetica", "bold").text(codeLabel, 10, currentY);
+                currentY += 4;
+                currentY = drawHighlightedCode(doc, code, act.objectTypeId === 300 ? 'sql' : 'js', currentY);
+                currentY += 12; // Más margen después del bloque de código
             }
-            finalY += 5;
         }
-        finalY += 5;
     }
-    doc.save(`Docu_Automatismo_${auto.name.replace(/\s+/g, '_')}.pdf`);
+    doc.save(`Analisis_${auto.name.replace(/\s+/g, '_')}.pdf`);
 }
+
+/**
+ * Dibuja código con colores sobre fondo claro, soporta saltos de página y wrapping.
+ */
+function drawHighlightedCode(doc, code, type, startY) {
+    const margin = 10;
+    const width = 190;
+    const lineHeight = 3.5; // Un poco más de espacio para legibilidad
+    const fontSize = 7;
+    const pageBottomLimit = 275;
+    let currentY = startY;
+
+    // --- PALETA DE COLORES PARA FONDO CLARO ---
+    const p = {
+        sql: { 
+            kwd: [41, 128, 185],   // Azul fuerte (Keywords)
+            str: [39, 174, 96],    // Verde oscuro (Strings)
+            com: [128, 128, 128],  // Gris medio (Comentarios)
+            num: [211, 84, 0],     // Naranja/Marrón (Números)
+            plain: [50, 50, 50]    // Gris casi negro (Texto normal)
+        },
+        js: { 
+            kwd: [142, 68, 173],   // Morado (Keywords)
+            str: [39, 174, 96],    // Verde oscuro
+            com: [128, 128, 128],  
+            typ: [41, 128, 185],   // Azul (Built-ins/Platform)
+            plain: [50, 50, 50]
+        }
+    }[type];
+
+    const lines = code.replace(/\t/g, '    ').split('\n');
+    doc.setFont("courier", "normal").setFontSize(fontSize);
+
+    lines.forEach(line => {
+        // Control de salto de página
+        if (currentY > pageBottomLimit) {
+            doc.addPage();
+            currentY = 20;
+            doc.setFont("courier", "normal").setFontSize(fontSize);
+        }
+
+        // --- FONDO GRIS MUY CLARITO ---
+        doc.setFillColor(248, 249, 250); // Gris casi blanco
+        doc.rect(margin, currentY - 2.5, width, lineHeight, 'F');
+        
+        // Opcional: Una línea sutil a la izquierda estilo "border-left"
+        doc.setFillColor(200, 200, 200);
+        doc.rect(margin, currentY - 2.5, 0.5, lineHeight, 'F');
+
+        const tokens = line.split(/(\s+|'[^']*'|"[^"]*"|--.*|\/\/.*|[(),;=<>!])/g);
+        let currentX = margin + 2;
+
+        tokens.forEach(token => {
+            if (!token) return;
+
+            let color = p.plain;
+            if (type === 'sql') {
+                if (token.match(/^(SELECT|FROM|WHERE|AND|OR|JOIN|INNER|LEFT|ON|GROUP|BY|ORDER|INSERT|UPDATE|SET|DELETE|CASE|WHEN|THEN|ELSE|END|NULL|NOT|IN|TOP|DISTINCT|AS|UNION|ALL)$/i)) color = p.kwd;
+                else if (token.startsWith("'")) color = p.str;
+                else if (token.startsWith('--')) color = p.com;
+                else if (token.match(/^\d+$/)) color = p.num;
+            } else {
+                if (token.match(/^(var|let|const|function|return|if|else|for|while|try|catch|new|Platform|HTTP|Write|Stringify|ParseJSON)$/)) color = p.kwd;
+                else if (token.match(/^['"]|['"]$/)) color = p.str;
+                else if (token.startsWith('//')) color = p.com;
+                else if (token.match(/^(Platform|HTTP|Variable|Content|DataExtension)$/)) color = p.typ;
+            }
+
+            doc.setTextColor(...color);
+
+            const tokenWidth = doc.getTextWidth(token);
+            
+            // Wrapping si la línea es más ancha que el papel
+            if (currentX + tokenWidth > margin + width - 2) {
+                currentY += lineHeight;
+                currentX = margin + 2;
+                
+                if (currentY > pageBottomLimit) { 
+                    doc.addPage(); 
+                    currentY = 20; 
+                    doc.setFont("courier", "normal").setFontSize(fontSize); 
+                }
+                
+                doc.setFillColor(248, 249, 250);
+                doc.rect(margin, currentY - 2.5, width, lineHeight, 'F');
+                doc.setFillColor(200, 200, 200);
+                doc.rect(margin, currentY - 2.5, 0.5, lineHeight, 'F');
+            }
+
+            doc.text(token, currentX, currentY);
+            currentX += tokenWidth;
+        });
+
+        currentY += lineHeight;
+    });
+
+    return currentY;
+}
+
+
 
 function formatDate(date) {
     if (!date || date.startsWith('0001')) return 'N/A';

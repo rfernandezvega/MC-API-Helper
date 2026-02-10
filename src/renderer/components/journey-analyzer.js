@@ -3,6 +3,7 @@ import * as mcApiService from '../api/mc-api-service.js';
 import * as ui from '../ui/ui-helpers.js';
 import elements from '../ui/dom-elements.js';
 import * as logger from '../ui/logger.js';
+import { loadCustomFonts } from '../ui/fonts.js';
 
 let goBackFunction;
 let getAuthenticatedConfig;
@@ -303,42 +304,38 @@ async function enrichJourneyWithFieldNames(journey, apiConfig) {
         if (act.type === 'UPDATECONTACTDATA') {
             const fields = act.arguments?.activityData?.updateContactFields || [];
             
-            if (fields.length > 0) {
-                // 1. Traducir el nombre de la Data Extension (tomamos el ID del primer campo)
+            // Protección: Validamos que existan campos y que el primer campo tenga ID de DE
+            if (fields.length > 0 && fields[0].dataExtensionId) {
                 const deID = fields[0].dataExtensionId;
                 if (!deCache.has(deID)) {
                     ui.blockUI(`Traduciendo DE: ${deID.substring(0,8)}...`);
-                    const deName = await mcApiService.fetchDataExtensionName('ObjectID', valor, config);
+                    // Corregido: deID y apiConfig (antes valor/config)
+                    const deName = await mcApiService.fetchDataExtensionName('ObjectID', deID, apiConfig);
                     deCache.set(deID, deName);
                 }
                 act.resolvedDeName = deCache.get(deID);
 
-                // 2. Traducir cada campo de la tabla
                 for (const f of fields) {
-                    if (!fieldCache.has(f.field)) {
+                    if (f.field && !fieldCache.has(f.field)) {
                         const fieldName = await mcApiService.fetchFieldNameById(f.field, apiConfig);
                         fieldCache.set(f.field, fieldName);
                     }
                     f.resolvedFieldName = fieldCache.get(f.field);
                 }
             }
-        }else if (act.type === 'EMAILV2') {
+        } else if (act.type === 'EMAILV2') {
             const ts = act.configurationArguments?.triggeredSend || {};
             
-            // 1. Clasificación de envío
             if (ts.sendClassificationId) {
                 if (!sendClassificationCache.has(ts.sendClassificationId)) {
-                    ui.blockUI(`Traduciendo Clasificación: ${ts.sendClassificationId.substring(0,6)}...`);
                     const name = await mcApiService.fetchSendClassificationNameById(ts.sendClassificationId, apiConfig);
                     sendClassificationCache.set(ts.sendClassificationId, name);
                 }
                 act.resolvedSendClassification = sendClassificationCache.get(ts.sendClassificationId);
             }
 
-            // 2. Lista de publicación
-            if (ts.publicationListId) {
+            if (ts.publicationListId !== undefined) {
                 if (!listCache.has(ts.publicationListId)) {
-                    ui.blockUI(`Traduciendo Lista: ${ts.publicationListId}...`);
                     const name = await mcApiService.fetchListNameById(ts.publicationListId, apiConfig);
                     listCache.set(ts.publicationListId, name);
                 }
@@ -436,14 +433,10 @@ async function resolveEntrySource(journey, apiConfig) {
     const eventDefId = trigger.metaData?.eventDefinitionId;
     let eventDef = null;
 
-    // Si tenemos el ID de la definición (lo normal), lo recuperamos
     if (eventDefId) {
         try {
-            ui.blockUI("Consultando definición de entrada...");
             eventDef = await mcApiService.getEventDefinitionById(eventDefId, apiConfig);
-        } catch (e) {
-            console.error("Error al recuperar EventDefinition:", e);
-        }
+        } catch (e) { console.error("Error EventDefinition:", e); }
     }
 
     journey.entryDetails = {
@@ -451,20 +444,20 @@ async function resolveEntrySource(journey, apiConfig) {
         summary: "No definida"
     };
 
-    // Combinamos todas las fuentes posibles de IDs (del trigger y de la definición del evento)
     const config = {
         ...(trigger.configurationArguments || {}),
         ...(trigger.arguments || {}),
         ...(eventDef || {}),
-        ...(eventDef?.arguments || {}) // Aquí es donde suele vivir el automationId
+        ...(eventDef?.arguments || {})
     };
 
     if (trigger.type === 'EmailAudience') {
         const deId = config.dataExtensionId || config.dataExtensionObjectID;
         if (deId) {
             if (!deCache.has(deId)) {
-                const name = await mcApiService.fetchDataExtensionName('ObjectID', valor, config);
-                deCache.set(deId, name);
+                // Traducimos el ID en Nombre
+                const deName = await mcApiService.fetchDataExtensionName('ObjectID', deId, apiConfig);
+                deCache.set(deId, deName);
             }
             journey.entryDetails.summary = `<b>Data Extension:</b><br>${deCache.get(deId)}`;
         }
@@ -473,20 +466,17 @@ async function resolveEntrySource(journey, apiConfig) {
         const autoId = config.automationId;
         const deId = config.dataExtensionId;
 
-        // 1. Resolver nombre del Automatismo
-        if (autoId) {
-            if (!automationCache.has(autoId)) {
-                try {
-                    const autoDetails = await mcApiService.fetchAutomationDetailsById(autoId, apiConfig);
-                    automationCache.set(autoId, autoDetails.name);
-                } catch (e) { automationCache.set(autoId, "ID: " + autoId); }
-            }
+        if (autoId && !automationCache.has(autoId)) {
+            try {
+                const autoDetails = await mcApiService.fetchAutomationDetailsById(autoId, apiConfig);
+                automationCache.set(autoId, autoDetails.name);
+            } catch (e) { automationCache.set(autoId, "ID: " + autoId); }
         }
 
-        // 2. Resolver nombre de la DE
         if (deId && !deCache.has(deId)) {
             try {
-                const deName = await mcApiService.fetchDataExtensionName('ObjectID', valor, config);
+                // Traducimos el ID de la DE de entrada en Nombre
+                const deName = await mcApiService.fetchDataExtensionName('ObjectID', deId, apiConfig);
                 deCache.set(deId, deName);
             } catch (e) { deCache.set(deId, "ID: " + deId); }
         }
@@ -495,10 +485,8 @@ async function resolveEntrySource(journey, apiConfig) {
         const nameDe = deCache.get(deId) || "No detectada";
         
         journey.entryDetails.summary = `
-            <div style="display:flex; flex-direction:column; gap:4px;">
-                <span><b>Automatismo:</b> ${nameAuto}</span>
-                <span><b>DE Entrada:</b> ${nameDe}</span>
-            </div>
+            <div><b>Automatismo:</b> ${nameAuto}</div>
+            <div><b>DE Entrada:</b> ${nameDe}</div>
         `;
     }
     else if (trigger.type === 'APIEvent') {
@@ -551,560 +539,173 @@ function generatePDF() {
     const doc = new jsPDF('p', 'mm', 'a4');
     const j = currentJourneyDetails;
 
-    // --- CONSTANTES DE DISEÑO ---
-    const PAGE_WIDTH = 210;
-    const PAGE_HEIGHT = 297;
-    const MARGIN_LEFT = 10;
-    const MARGIN_RIGHT = 10;
-    const MARGIN_TOP = 10;
-    const MARGIN_BOTTOM = 20;
-    const MAX_Y = PAGE_HEIGHT - MARGIN_BOTTOM;
+    try {
+        loadCustomFonts(doc);
+        doc.setFont('NotoSans');
+    } catch (e) { console.error("Error fuentes:", e); }
 
-    // --- PALETA DE COLORES ---
-    const colors = {
-        appBlue: [85, 138, 199],
-        darkBlue: [27, 79, 114],
-        orangeText: [211, 84, 0],
-        greenText: [39, 174, 96],
-        redText: [192, 57, 43],
-        grayBg: [248, 249, 250],
-        lightGrayBg: [241, 243, 245],
-        white: [255, 255, 255],
-        black: [50, 50, 50]
-    };
+    let currentY = 20;
 
-    let currentY = MARGIN_TOP;
-
-    // --- FUNCIONES AUXILIARES ---
-    const checkPageBreak = (requiredSpace = 20) => {
-        if (currentY + requiredSpace > MAX_Y) {
-            doc.addPage();
-            currentY = MARGIN_TOP;
-            return true;
-        }
-        return false;
-    };
-
-    const cleanText = (text) => {
-        if (!text) return '---';
-        
-        let cleaned = String(text)
-            .replace(/<div[^>]*>/gi, '\n')
-            .replace(/<\/div>/gi, '')
-            .replace(/<span[^>]*>/gi, '')
-            .replace(/<\/span>/gi, '')
-            .replace(/<b>/gi, '')
-            .replace(/<\/b>/gi, '')
-            .replace(/<br\s*\/?>/gi, '\n')
-            .replace(/<[^>]*>/g, '')
-            .replace(/🔴/g, '[FIN]')
-            .replace(/➡️/g, '->')
-            .replace(/⬅️/g, '<-')
-            .replace(/✅/g, '[OK]')
-            .replace(/❌/g, '[NO]')
-            .replace(/⚠️/g, '[AVISO]')
-            .replace(/📧/g, '[EMAIL]')
-            .replace(/🎬/g, '')
-            .replace(/🔥/g, '')
-            .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
-            .replace(/\s+/g, ' ')
+    // --- HELPER: Limpiar texto de Flujo para PDF (ASCII puro para alineación) ---
+    const formatFlowForPdf = (text) => {
+        if (!text) return "No disponible";
+        return text
+            .replace(/└─/g,  '\\--')
+            .replace(/├─/g,  '|--')
+            .replace(/│/g,   '|  ')
+            .replace(/─/g,   '-')
+            .replace(/➡️/g,  '->')
+            .replace(/🔴/g,  '(Fin)')
+            .replace(/%/g,   '') 
+            .replace(/Ø=Ý4/g, '')
             .trim();
-        
-        return cleaned || '---';
     };
 
-    const convertTreeCharacters = (flowText) => {
-        return flowText
-            .replace(/├─/g, '|--')
-            .replace(/│/g, '|  ')
-            .replace(/└─/g, '\\--')
-            .replace(/►/g, '->')
-            .replace(/🔴/g, '[FIN]')
-            .replace(/➡️/g, '->')
-            .replace(/⬅️/g, '<-')
-            .replace(/[^\x20-\x7E\n]/g, '');
-    };
+    // --- TÍTULO PRINCIPAL ---
+    doc.setFontSize(14).setTextColor(40, 116, 166).setFont("helvetica", "bold");
+    const splitTitle = doc.splitTextToSize(`Análisis de Journey: ${j.name.trim()}`, 180);
+    doc.text(splitTitle, 10, currentY);
+    currentY += (splitTitle.length * 7);
 
-    // Mapear operadores a texto legible
-    const operatorMap = {
-        'Equal': 'Equal',
-        'NotEqual': 'NotEqual',
-        'IsNull': 'IsNull',
-        'IsNotNull': 'IsNotNull',
-        'GreaterThan': 'GreaterThan',
-        'LessThan': 'LessThan',
-        'Contains': 'Contains',
-        'Is': 'Is'
-    };
-
-    // ============================================================
-    // 1. TÍTULO PRINCIPAL
-    // ============================================================
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.setTextColor(colors.appBlue[0], colors.appBlue[1], colors.appBlue[2]);
-    doc.text(`Análisis de Journey: ${cleanText(j.name)}`, MARGIN_LEFT, currentY + 10);
-    currentY += 18;
-
-    // ============================================================
-    // 2. INFORMACIÓN GENERAL
-    // ============================================================
-    checkPageBreak(60);
+    // --- BLOQUE 1: IDENTIFICACIÓN Y ENTRADA ---
+    const entry = j.entryDetails || { type: 'Desconocido', summary: '' };
     
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(colors.darkBlue[0], colors.darkBlue[1], colors.darkBlue[2]);
-    doc.text("IDENTIFICACIÓN", MARGIN_LEFT, currentY);
-    currentY += 7;
-
-    const entry = j.entryDetails || {};
+    // Extraemos texto limpio del summary (sin HTML)
+    const entryLines = entry.summary
+    .replace(/<div[^>]*>/g, '')
+    .replace(/<\/div>/g, '\n')
+    .replace(/<br\s*\/?>/g, '\n')
+    .replace(/<b>|<\/b>/g, '')
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line !== '')
+    .join('\n');
 
     doc.autoTable({
         startY: currentY,
-        margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
+        margin: { left: 10, right: 10 },
         theme: 'grid',
-        styles: { 
-            fontSize: 8, 
-            cellPadding: 2, 
-            font: 'helvetica',
-            textColor: colors.black,
-            overflow: 'linebreak',
-            halign: 'left'
-        },
-        headStyles: {
-            fillColor: colors.lightGrayBg,
-            textColor: colors.darkBlue,
-            fontStyle: 'bold',
-            fontSize: 8
-        },
-        columnStyles: { 
-            0: { fontStyle: 'bold', cellWidth: 50 },
-            1: { cellWidth: 'auto' }
-        },
+        styles: { font: 'NotoSans', fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+        headStyles: { fillColor: [52, 73, 94], textColor: 255 },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 35 } },
+        head: [[{ content: 'INFORMACIÓN GENERAL Y FUENTE DE ENTRADA', colSpan: 2 }]],
         body: [
-            ["Versión:", String(j.version || '---')],
-            ["Estado:", cleanText(j.status) || '---'],
-            ["Definition Key:", cleanText(j.definitionKey || j.key) || '---'],
-            ["Creado:", j.createdDate ? new Date(j.createdDate).toLocaleString('es-ES') : '---'],
-            ["Modificado:", j.modifiedDate ? new Date(j.modifiedDate).toLocaleString('es-ES') : '---']
+            ["Versión / Estado:", `${j.version} - ${j.status}`],
+            ["Definition Key:", j.definitionKey || j.key || 'N/A'],
+            ["Tipo de Entrada:", entry.type],
+            ["Configuración:", entryLines] // Mostrará los nombres resueltos en líneas distintas
         ]
     });
 
-    currentY = doc.lastAutoTable.finalY + 3;
+    currentY = doc.lastAutoTable.finalY + 10;
 
-    // Información de Entrada
+    // --- BLOQUE 2: FLUJO LÓGICO ---
+    if (currentY > 240) { doc.addPage(); currentY = 20; }
+    doc.setFontSize(11).setTextColor(40, 116, 166).setFont("helvetica", "bold");
+    doc.text("Flujo Lógico del Journey", 10, currentY);
+    currentY += 4;
+
     doc.autoTable({
         startY: currentY,
-        margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
-        theme: 'grid',
-        styles: { 
-            fontSize: 8, 
-            cellPadding: 2, 
-            font: 'helvetica',
-            textColor: colors.black,
-            overflow: 'linebreak',
-            halign: 'left'
-        },
-        headStyles: {
-            fillColor: colors.lightGrayBg,
-            textColor: colors.darkBlue,
-            fontStyle: 'bold'
-        },
-        head: [["CONFIGURACIÓN DE ENTRADA"]],
-        body: [
-            ["Tipo:", cleanText(entry.type) || 'AutomationAudience'],
-            ["Automatismo:", cleanText(entry.automation) || cleanText(j.name)],
-            ["DE Entrada:", cleanText(entry.dataExtension) || cleanText(j.name)]
-        ],
-        columnStyles: { 
-            0: { fontStyle: 'bold', cellWidth: 50 }
+        margin: { left: 10, right: 10 },
+        theme: 'plain',
+        styles: { font: 'courier', fontSize: 7, cellPadding: 3, fillColor: [248, 249, 250] },
+        body: [[formatFlowForPdf(j.flowText)]],
+        didDrawCell: (data) => {
+            doc.setDrawColor(200, 200, 200);
+            doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height);
         }
     });
 
     currentY = doc.lastAutoTable.finalY + 10;
 
-    // ============================================================
-    // 3. FLUJO LÓGICO
-    // ============================================================
-    checkPageBreak(80);
-
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(colors.appBlue[0], colors.appBlue[1], colors.appBlue[2]);
-    doc.text("Flujo Lógico del Journey", MARGIN_LEFT, currentY);
-    currentY += 7;
-
-    const flowText = convertTreeCharacters(j.flowText || 'No disponible');
-    const flowLines = flowText.split('\n');
-    
-    const LINES_PER_CHUNK = 45;
-    
-    for (let i = 0; i < flowLines.length; i += LINES_PER_CHUNK) {
-        checkPageBreak(80);
-        
-        const chunk = flowLines.slice(i, i + LINES_PER_CHUNK).join('\n');
-        
-        doc.autoTable({
-            startY: currentY,
-            margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
-            body: [[chunk]],
-            theme: 'plain',
-            styles: { 
-                font: 'courier', 
-                fontSize: 6.5,
-                cellPadding: 3,
-                fillColor: colors.grayBg,
-                textColor: colors.black,
-                overflow: 'linebreak',
-                halign: 'left',
-                valign: 'top'
-            },
-            didDrawCell: (data) => {
-                doc.setDrawColor(200, 200, 200);
-                doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height);
-            }
-        });
-
-        currentY = doc.lastAutoTable.finalY + 3;
-    }
-
-    currentY += 7;
-
-    // ============================================================
-    // 4. DETALLE DE ACTIVIDADES
-    // ============================================================
-    checkPageBreak(30);
-
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(colors.appBlue[0], colors.appBlue[1], colors.appBlue[2]);
-    doc.text("Detalle de Configuración por Actividad", MARGIN_LEFT, currentY);
-    currentY += 7;
+    // --- BLOQUE 3: DETALLE DE ACTIVIDADES ---
+    doc.setFontSize(11).setTextColor(40, 116, 166).setFont("helvetica", "bold");
+    doc.text("Detalle de Configuración por Actividad", 10, currentY);
+    currentY += 5;
 
     const flowActivities = j.activities
         .filter(act => j.numberMap.has(act.key))
         .sort((a, b) => j.numberMap.get(a.key) - j.numberMap.get(b.key));
 
     for (const act of flowActivities) {
-        checkPageBreak(40);
+        if (currentY > 250) { doc.addPage(); currentY = 20; }
         
         const num = j.numberMap.get(act.key);
+        const tableBody = [["Tipo:", act.type]];
+
+        // 1. EMAIL V2
+        if (act.type === 'EMAILV2') {
+            const ts = act.configurationArguments?.triggeredSend || {};
+            tableBody.push([{ content: "DETALLES DEL ENVÍO", colSpan: 2, styles: { fillColor: [240, 240, 240], halign: 'center', fontStyle: 'bold' } }]);
+            tableBody.push(["Email ID:", String(ts.emailId || '---')]);
+            tableBody.push(["Asunto:", ts.emailSubject || '---']);
+            tableBody.push(["Preheader:", ts.preHeader || '---']);
+            tableBody.push(["Clasificación:", act.resolvedSendClassification || ts.sendClassificationId || '---']);
+            tableBody.push(["Lista Publicación:", act.resolvedListName || (ts.publicationListId === 0 ? 'All Subscribers' : ts.publicationListId)]);
+        }
         
-        // --- CABECERA DE ACTIVIDAD (SIN ID) ---
+        // 2. DECISION SPLIT
+        else if (act.type.includes('MULTICRITERIA')) {
+            const criteria = act.configurationArguments?.criteria || {};
+            tableBody.push([{ content: "CRITERIOS DE DECISIÓN", colSpan: 2, styles: { fillColor: [240, 240, 240], halign: 'center', fontStyle: 'bold' } }]);
+            
+            const parser = new DOMParser();
+            const criteriaKeys = Object.keys(criteria);
+
+            for (const [pathKey, xml] of Object.entries(criteria)) {
+                const outcome = act.outcomes.find(o => o.key === pathKey);
+                const label = outcome?.metaData?.label || pathKey;
+                try {
+                    const xmlDoc = parser.parseFromString(xml, "text/xml");
+                    const operator = xmlDoc.querySelector("ConditionSet")?.getAttribute("Operator") || "AND";
+                    const conditions = Array.from(xmlDoc.querySelectorAll("Condition")).map(c => {
+                        const val = c.querySelector("Value")?.textContent || "";
+                        return `• ${c.getAttribute("Key")} ${c.getAttribute("Operator")} "${val}"`;
+                    });
+                    tableBody.push([`Rama: ${label}`, `Lógica: ${operator}\n${conditions.join('\n')}`]);
+                } catch (e) { tableBody.push([`Rama: ${label}`, "Error parseando XML"]); }
+            }
+            // Rama por defecto (Remainder)
+            const remainder = act.outcomes.find(o => !criteriaKeys.includes(o.key) && o.key !== 'remainder_path');
+            const remainderLabel = act.outcomes.find(o => o.key === 'remainder_path')?.metaData?.label || 'Resto / Remainder';
+            tableBody.push([`Rama: ${remainderLabel}`, "Cualquier contacto que no cumpla los criterios anteriores."]);
+        }
+
+        // 3. ENGAGEMENT SPLIT
+        else if (act.type === 'ENGAGEMENTDECISION') {
+            const config = act.configurationArguments || {};
+            const stats = { 2: "Apertura de Email (Open)", 3: "Clic en Enlace (Click)", 6: "Rebote (Bounce)" };
+            const typeInfo = stats[config.statsTypeId] || `Tipo ${config.statsTypeId}`;
+            const refEmail = act.metaData?.refActivityName || config.refActivityCustomerKey || 'No identificado';
+
+            tableBody.push([{ content: "DETALLES DE INTERACCIÓN", colSpan: 2, styles: { fillColor: [240, 240, 240], halign: 'center', fontStyle: 'bold' } }]);
+            tableBody.push(["Evento esperado:", typeInfo]);
+            tableBody.push(["Email de referencia:", refEmail]);
+        }
+
+        // 4. UPDATE CONTACT
+        else if (act.type === 'UPDATECONTACTDATA') {
+            const fields = act.arguments?.activityData?.updateContactFields || [];
+            tableBody.push([{ content: `DESTINO: ${act.resolvedDeName || '---'}`, colSpan: 2, styles: { fillColor: [240, 240, 240], halign: 'center', fontStyle: 'bold' } }]);
+            fields.forEach(f => {
+                tableBody.push([f.resolvedFieldName || f.field, String(f.value === 0 ? "0" : (f.value || "vacío"))]);
+            });
+        }
+
         doc.autoTable({
             startY: currentY,
-            margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
+            margin: { left: 10, right: 10 },
             theme: 'grid',
-            headStyles: { 
-                fillColor: colors.appBlue, 
-                textColor: colors.white, 
-                fontStyle: 'bold',
-                fontSize: 9,
-                halign: 'left'
-            },
-            styles: { 
-                fontSize: 8, 
-                font: 'helvetica',
-                textColor: colors.black,
-                cellPadding: 2,
-                overflow: 'linebreak',
-                halign: 'left'
-            },
-            head: [[{ content: `#${num} - ${cleanText(act.name)}`, colSpan: 2 }]],
-            body: [
-                ["Tipo:", act.type]
-                // ID Actividad ELIMINADO
-            ],
-            columnStyles: { 
-                0: { fontStyle: 'bold', cellWidth: 35 }
-            }
+            styles: { font: 'NotoSans', fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+            headStyles: { fillColor: [85, 138, 199] },
+            columnStyles: { 0: { cellWidth: 35, fontStyle: 'bold' } },
+            head: [[{ content: `#${num} - ${act.name}`, colSpan: 2 }]],
+            body: tableBody
         });
 
-        currentY = doc.lastAutoTable.finalY + 2;
-
-        // --- RENDERIZADO ESPECÍFICO POR TIPO DE ACTIVIDAD ---
-
-        // *** DECISION SPLITS (MULTICRITERIADECISION) ***
-        if (act.type.includes('MULTICRITERIA')) {
-            const criteria = act.configurationArguments?.criteria || {};
-            const parser = new DOMParser();
-            
-            // ESPACIADO MEJORADO
-            doc.setFontSize(8);
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(colors.darkBlue[0], colors.darkBlue[1], colors.darkBlue[2]);
-            doc.text("Configuración de Decisiones:", MARGIN_LEFT, currentY + 3);
-            currentY += 7; // Más espacio
-            
-            // Obtener todas las ramas (outcomes)
-            const outcomes = act.outcomes || [];
-            
-            for (const outcome of outcomes) {
-                checkPageBreak(25);
-                
-                const key = outcome.key;
-                const label = cleanText(outcome.metaData?.label || outcome.metaData?.name || 'Sin nombre');
-                const xml = criteria[key];
-                
-                if (!xml) {
-                    // Rama por defecto (sin criterios)
-                    doc.autoTable({
-                        startY: currentY,
-                        margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
-                        theme: 'grid',
-                        styles: { 
-                            fontSize: 7.5, 
-                            font: 'helvetica',
-                            cellPadding: 3,
-                            textColor: [100, 100, 100],
-                            overflow: 'linebreak',
-                            halign: 'left',
-                            fontStyle: 'italic'
-                        },
-                        headStyles: { 
-                            fillColor: colors.lightGrayBg, 
-                            textColor: colors.darkBlue, 
-                            fontStyle: 'bold',
-                            fontSize: 8,
-                            halign: 'left'
-                        },
-                        head: [[`Rama: ${label}`]],
-                        body: [
-                            ['Cualquier contacto que no cumpla los criterios anteriores.']
-                        ]
-                    });
-                    currentY = doc.lastAutoTable.finalY + 2;
-                    continue;
-                }
-                
-                const xmlDoc = parser.parseFromString(xml, "text/xml");
-                const conditionSet = xmlDoc.querySelector("ConditionSet");
-                const logic = conditionSet ? conditionSet.getAttribute("Operator") : "AND";
-                
-                // Extraer condiciones con operadores legibles
-                const conditions = Array.from(xmlDoc.querySelectorAll("Condition")).map(c => {
-                    const field = c.getAttribute("Key");
-                    const op = c.getAttribute("Operator");
-                    const val = c.querySelector("Value")?.textContent || '';
-                    const opText = operatorMap[op] || op;
-                    return `${field} [${opText}] "${val}"`;
-                });
-
-                const bodyContent = conditions.map(c => [c]);
-
-                // TABLA SIN COLUMNA VACÍA
-                doc.autoTable({
-                    startY: currentY,
-                    margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
-                    theme: 'grid',
-                    styles: { 
-                        fontSize: 7.5, 
-                        font: 'helvetica',
-                        cellPadding: 3,
-                        textColor: colors.orangeText,
-                        overflow: 'linebreak',
-                        halign: 'left'
-                    },
-                    headStyles: { 
-                        fillColor: colors.lightGrayBg, 
-                        textColor: colors.darkBlue, 
-                        fontStyle: 'bold',
-                        fontSize: 8,
-                        halign: 'left'
-                    },
-                    head: [[`Rama: ${label}                                                           Lógica: ${logic}`]],
-                    body: bodyContent
-                });
-                currentY = doc.lastAutoTable.finalY + 2;
-            }
-        } 
-        
-        // *** RANDOM SPLIT ***
-        else if (act.type.includes('RANDOMSPLIT')) {
-            const outcomes = act.outcomes || [];
-            
-            doc.autoTable({
-                startY: currentY,
-                margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
-                theme: 'grid',
-                styles: { 
-                    fontSize: 8, 
-                    font: 'helvetica',
-                    cellPadding: 3,
-                    textColor: colors.black,
-                    overflow: 'linebreak',
-                    halign: 'left'
-                },
-                headStyles: { 
-                    fillColor: [254, 245, 231], 
-                    textColor: colors.darkBlue, 
-                    fontStyle: 'bold',
-                    halign: 'left'
-                },
-                head: [["Distribución de Probabilidad"]],
-                body: outcomes.map(o => [
-                    `${cleanText(o.metaData?.label || o.metaData?.name || o.key)}: ${o.arguments?.percentage || 0}%`
-                ]),
-                columnStyles: { 
-                    0: { fontStyle: 'bold' }
-                }
-            });
-            currentY = doc.lastAutoTable.finalY + 2;
-        }
-        
-        // *** UPDATE CONTACT ***
-        else if (act.type.includes('UPDATECONTACT')) {
-            const fields = act.arguments?.activityData?.updateContactFields || [];
-            
-            doc.autoTable({
-                startY: currentY,
-                margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
-                theme: 'grid',
-                styles: { 
-                    fontSize: 7.5, 
-                    font: 'helvetica',
-                    cellPadding: 2,
-                    textColor: colors.black,
-                    overflow: 'linebreak',
-                    halign: 'left'
-                },
-                headStyles: { 
-                    fillColor: colors.lightGrayBg, 
-                    textColor: colors.darkBlue,
-                    fontStyle: 'bold',
-                    halign: 'left'
-                },
-                head: [[{ 
-                    content: `Data Extension: ${cleanText(act.resolvedDeName) || '---'}`, 
-                    colSpan: 2 
-                }]],
-                body: fields.map(f => [
-                    cleanText(f.resolvedFieldName || f.field),
-                    cleanText(String(f.value === 0 ? '0' : (f.value || '')))
-                ]),
-                columnStyles: { 
-                    0: { fontStyle: 'bold', cellWidth: 60 },
-                    1: { textColor: [41, 128, 185] }
-                }
-            });
-            currentY = doc.lastAutoTable.finalY + 2;
-        }
-
-        // *** EMAIL (CORREGIDO: SIN EMOJIS, SIN VERDE, FORMATO TABLA) ***
-        else if (act.type === 'EMAILV2') {
-            const ts = act.configurationArguments?.triggeredSend || {};
-            
-            doc.autoTable({
-                startY: currentY,
-                margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
-                theme: 'grid',
-                styles: { 
-                    fontSize: 7.5, 
-                    font: 'helvetica',
-                    cellPadding: 2,
-                    textColor: colors.black, // SIN VERDE
-                    overflow: 'linebreak',
-                    halign: 'left'
-                },
-                body: [
-                    ["Email ID:", String(ts.emailId || '---')],
-                    ["Asunto:", cleanText(ts.emailSubject) || '---'], // SIN EMOJIS
-                    ["Preheader:", cleanText(ts.preHeader) || '---'], // SIN EMOJIS
-                    ["Clasificación:", cleanText(act.resolvedSendClassification) || String(ts.sendClassificationId) || '---'],
-                    ["Lista Publicación:", cleanText(act.resolvedListName) || (ts.publicationListId === 0 ? 'All Subscribers' : String(ts.publicationListId)) || '---']
-                ],
-                columnStyles: { 
-                    0: { fontStyle: 'bold', cellWidth: 40 }
-                }
-            });
-            currentY = doc.lastAutoTable.finalY + 2;
-        }
-
-        // *** ENGAGEMENT SPLIT (CORREGIDO: CON EMAIL DE REFERENCIA, SIN VERDE) ***
-        else if (act.type.includes('ENGAGEMENT')) {
-            const config = act.configurationArguments || {};
-            
-            const statsMap = {
-                2: { label: "Apertura de Email (Open)" },
-                3: { label: "Clic en Enlace (Click)" },
-                6: { label: "Rebote (Bounce)" }
-            };
-
-            const statsInfo = statsMap[config.statsTypeId] || { label: "Evento personalizado" };
-            const emailRef = cleanText(config.emailDependentActivity) || '---';
-
-            doc.autoTable({
-                startY: currentY,
-                margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
-                theme: 'grid',
-                styles: { 
-                    fontSize: 7.5, 
-                    font: 'helvetica',
-                    cellPadding: 2,
-                    textColor: colors.black, // SIN COLOR ESPECIAL
-                    overflow: 'linebreak',
-                    halign: 'left'
-                },
-                headStyles: { 
-                    fillColor: colors.lightGrayBg, // SIN VERDE
-                    textColor: colors.darkBlue,
-                    fontStyle: 'bold',
-                    halign: 'left'
-                },
-                head: [[{ content: "Configuración de Engagement", colSpan: 2 }]],
-                body: [
-                    ["Evento esperado:", statsInfo.label],
-                    ["Email de referencia:", emailRef] // AHORA SÍ APARECE
-                ],
-                columnStyles: { 
-                    0: { fontStyle: 'bold', cellWidth: 50 }
-                }
-            });
-            currentY = doc.lastAutoTable.finalY + 2;
-        }
-
-        // *** WAIT ***
-        else if (act.type.includes('WAIT')) {
-            const config = act.configurationArguments || {};
-            let waitInfo = '---';
-
-            if (config.waitDuration && config.waitUnit) {
-                waitInfo = `${config.waitDuration} ${config.waitUnit}`;
-            } else if (config.specificDate) {
-                waitInfo = `Hasta: ${cleanText(config.specificDate)}`;
-            } else if (config.waitForEventKey) {
-                waitInfo = `Evento: ${cleanText(config.waitForEventKey)}`;
-            }
-
-            doc.autoTable({
-                startY: currentY,
-                margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
-                theme: 'grid',
-                styles: { 
-                    fontSize: 7.5, 
-                    font: 'helvetica',
-                    cellPadding: 2,
-                    fillColor: [241, 241, 241],
-                    textColor: colors.black,
-                    overflow: 'linebreak',
-                    halign: 'left'
-                },
-                body: [
-                    ["Configuración Espera:", waitInfo]
-                ],
-                columnStyles: { 
-                    0: { fontStyle: 'bold', cellWidth: 50 }
-                }
-            });
-            currentY = doc.lastAutoTable.finalY + 2;
-        }
-
-        currentY += 4;
+        currentY = doc.lastAutoTable.finalY + 8;
     }
 
-    // ============================================================
-    // GUARDAR PDF
-    // ============================================================
-    const filename = `Analisis_Journey_${j.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-    doc.save(filename);
+    doc.save(`Analisis_Journey_${j.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
 }
