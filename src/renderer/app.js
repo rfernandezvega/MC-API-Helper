@@ -38,8 +38,7 @@ import * as contentManager from './components/content-manager.js'; // Lógica de
 import * as actividadesFinder from './components/actividades-finder.js';
 import * as scriptTextFinder from './components/script-text-finder.js';
 import * as automationAnalyzer from './components/automation-analyzer.js';
-
-
+import * as journeyAnalyzer from './components/journey-analyzer.js';
 
 
 
@@ -554,6 +553,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			cloudPagesManager,
 			automationCloner, 
 			automationAnalyzer,
+			journeyAnalyzer,
 			contentManager 
 		});
 
@@ -561,7 +561,13 @@ document.addEventListener('DOMContentLoaded', function () {
         fieldManager.init({ getAuthenticatedConfig });
 		// El gestor de automatismos necesita una función "puente" para poder navegar a otra vista (la de clonado)
 		automationsManager.init({ getAuthenticatedConfig, showAutomationClonerView: showAutomationCloner, showAutomationAnalyzerView: showAutomationAnalyzer });
-		journeysManager.init({ getAuthenticatedConfig });
+		journeysManager.init({ 
+			getAuthenticatedConfig,
+			showJourneyAnalyzerView: (details) => {
+				showSection('journey-analyzer-section');
+				journeyAnalyzer.view(details);
+			}
+		});
 		cloudPagesManager.init({ getAuthenticatedConfig });
 		queryCloner.init({ getAuthenticatedConfig });
 		deFinder.init({ getAuthenticatedConfig }); 
@@ -576,6 +582,10 @@ document.addEventListener('DOMContentLoaded', function () {
 		calendar.init({ getAuthenticatedConfig, showAutomationsView: showFilteredAutomations });
 		automationCloner.init({ getAuthenticatedConfig, goBack });
 		automationAnalyzer.init({ getAuthenticatedConfig, goBack });
+		journeyAnalyzer.init({
+			getAuthenticatedConfig,
+			goBack: () => showSection('gestion-journeys-section')
+		});
 		folderCreator.init({ getAuthenticatedConfig });
 		contentManager.init({ getAuthenticatedConfig });
 		

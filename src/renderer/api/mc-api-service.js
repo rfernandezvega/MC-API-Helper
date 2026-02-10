@@ -381,6 +381,72 @@ export async function cloneDataExtension(originalDeCustomerKey, newDeName, newDe
 
     return { objectID: newObjectID, customerKey: createdCustomerKey, name: newDeName };
 }
+/**
+ * Recupera el nombre de una Data Extension filtrando por la propiedad especificada
+ * @param {string} property - Propiedad de búsqueda ('ObjectID', 'CustomerKey', etc.)
+ * @param {string} value - Valor a buscar
+ */
+export async function fetchDataExtensionName(property, value, apiConfig) {
+    const soapPayload = `
+    <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+        <s:Header>
+            <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+            <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+            <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+        </s:Header>
+        <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+            <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+                <RetrieveRequest>
+                    <ObjectType>DataExtension</ObjectType>
+                    <Properties>Name</Properties>
+                    <Filter xsi:type="SimpleFilterPart">
+                        <Property>${property}</Property>
+                        <SimpleOperator>equals</SimpleOperator>
+                        <Value>${value}</Value>
+                    </Filter>
+                </RetrieveRequest>
+            </RetrieveRequestMsg>
+        </s:Body>
+    </s:Envelope>`;
+
+    const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+    const doc = new DOMParser().parseFromString(responseText, "application/xml");
+    const nameNode = doc.querySelector("Results > Name");
+
+    // Si no encuentra el nombre, devuelve el valor original como fallback
+    return nameNode ? nameNode.textContent : value;
+}
+
+/**
+ * Recupera el nombre de un campo de una Data Extension usando su ObjectID
+ */
+export async function fetchFieldNameById(fieldObjectId, apiConfig) {
+    const soapPayload = `
+    <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+        <s:Header>
+            <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+            <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+            <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+        </s:Header>
+        <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+            <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+                <RetrieveRequest>
+                    <ObjectType>DataExtensionField</ObjectType>
+                    <Properties>Name</Properties>
+                    <Filter xsi:type="SimpleFilterPart">
+                        <Property>ObjectID</Property>
+                        <SimpleOperator>equals</SimpleOperator>
+                        <Value>${fieldObjectId}</Value>
+                    </Filter>
+                </RetrieveRequest>
+            </RetrieveRequestMsg>
+        </s:Body>
+    </s:Envelope>`;
+
+    const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+    const doc = new DOMParser().parseFromString(responseText, "application/xml");
+    return doc.querySelector("Results > Name")?.textContent || "Campo Desconocido";
+}
 
 // ==========================================================
 // --- 3. JOURNEYS API ---
@@ -727,6 +793,67 @@ export async function ejectContactFromJourneys(contactKey, definitionKeys, apiCo
 // ==========================================================
 // --- 4. SUBSCRIBERS & CONTACTS API ---
 // ==========================================================
+/**
+ * Recupera el nombre de una Send Classification por su ID
+ */
+export async function fetchSendClassificationNameById(objectId, apiConfig) {
+    const soapPayload = `
+    <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+        <s:Header>
+            <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+            <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+            <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+        </s:Header>
+        <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+            <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+                <RetrieveRequest>
+                    <ObjectType>SendClassification</ObjectType>
+                    <Properties>Name</Properties>
+                    <Filter xsi:type="SimpleFilterPart">
+                        <Property>ObjectID</Property>
+                        <SimpleOperator>equals</SimpleOperator>
+                        <Value>${objectId}</Value>
+                    </Filter>
+                </RetrieveRequest>
+            </RetrieveRequestMsg>
+        </s:Body>
+    </s:Envelope>`;
+
+    const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+    const doc = new DOMParser().parseFromString(responseText, "application/xml");
+    return doc.querySelector("Results > Name")?.textContent || "Clasificación Desconocida";
+}
+
+/**
+ * Recupera el nombre de una Publication List (o All Subscribers) por su ID
+ */
+export async function fetchListNameById(listId, apiConfig) {
+    const soapPayload = `
+    <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+        <s:Header>
+            <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+            <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+            <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+        </s:Header>
+        <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+            <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+                <RetrieveRequest>
+                    <ObjectType>List</ObjectType>
+                    <Properties>ListName</Properties>
+                    <Filter xsi:type="SimpleFilterPart">
+                        <Property>ID</Property>
+                        <SimpleOperator>equals</SimpleOperator>
+                        <Value>${listId}</Value>
+                    </Filter>
+                </RetrieveRequest>
+            </RetrieveRequestMsg>
+        </s:Body>
+    </s:Envelope>`;
+
+    const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+    const doc = new DOMParser().parseFromString(responseText, "application/xml");
+    return doc.querySelector("Results > ListName")?.textContent || "Lista Desconocida";
+}
 
 /**
  * Busca un suscriptor por una propiedad específica usando la API SOAP.
@@ -1069,6 +1196,64 @@ export async function fetchImportDetails(id, apiConfig) {
     return await executeRestRequest(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
 }
 
+export async function fetchFileTransferDetails(id, apiConfig) {
+    const url = `${apiConfig.restUri}automation/v1/filetransfers/${id}`;
+    return await executeRestRequest(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
+}
+
+export async function fetchFileTransferLocation(locationId, apiConfig) {
+    const url = `${apiConfig.restUri}data/v1/filetransferlocation/${locationId}`;
+    return await executeRestRequest(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
+}
+/**
+ * Recupera los detalles de una definición de envío de Email por su ObjectID
+ */
+export async function fetchEmailSendDefinitionDetails(objectId, apiConfig) {
+    const soapPayload = `
+    <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+        <s:Header>
+            <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+            <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+            <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+        </s:Header>
+        <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+            <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+                <RetrieveRequest>
+                    <ObjectType>EmailSendDefinition</ObjectType>
+                    <Properties>Name</Properties>
+                    <Properties>CustomerKey</Properties>
+                    <Properties>Description</Properties>
+                    <Properties>EmailSubject</Properties>
+                    <Properties>CCEmail</Properties>
+                    <Properties>BccEmail</Properties>
+                    <Filter xsi:type="SimpleFilterPart">
+                        <Property>ObjectID</Property>
+                        <SimpleOperator>equals</SimpleOperator>
+                        <Value>${objectId}</Value>
+                    </Filter>
+                </RetrieveRequest>
+            </RetrieveRequestMsg>
+        </s:Body>
+    </s:Envelope>`;
+
+    try {
+        const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+        const doc = new DOMParser().parseFromString(responseText, "application/xml");
+        const result = doc.querySelector("Results");
+        if (!result) return null;
+
+        return {
+            name: result.querySelector("Name")?.textContent,
+            customerKey: result.querySelector("CustomerKey")?.textContent,
+            description: result.querySelector("Description")?.textContent,
+            subject: result.querySelector("EmailSubject")?.textContent,
+            cc: result.querySelector("CCEmail")?.textContent,
+            bcc: result.querySelector("BccEmail")?.textContent
+        };
+    } catch (e) {
+        return null;
+    }
+}
 /**
  * BUSCADOR REST GENÉRICO: Recorre cualquier endpoint paginado de Automation (Scripts, Transfers, etc.)
  * y busca por ID, Name o CustomerKey.
@@ -1379,11 +1564,11 @@ export async function fetchQueryDefinitionByCustomerKey(customerKey, apiConfig) 
  * @returns {Promise<object>} Un objeto con los detalles de la query.
  */
 export async function fetchQueryDefinitionDetails(queryObjectId, apiConfig) {
-    const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>QueryDefinition</ObjectType><Properties>Name</Properties><Properties>Description</Properties><Properties>CustomerKey</Properties><Properties>QueryText</Properties><Properties>TargetUpdateType</Properties><Properties>CategoryID</Properties><Filter xsi:type="SimpleFilterPart"><Property>ObjectID</Property><SimpleOperator>equals</SimpleOperator><Value>${queryObjectId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+    const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>QueryDefinition</ObjectType><Properties>Name</Properties><Properties>Description</Properties><Properties>CustomerKey</Properties><Properties>QueryText</Properties><Properties>TargetUpdateType</Properties><Properties>DataExtensionTarget.Name</Properties><Properties>DataExtensionTarget.CustomerKey</Properties><Filter xsi:type="SimpleFilterPart"><Property>ObjectID</Property><SimpleOperator>equals</SimpleOperator><Value>${queryObjectId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
 
     const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
     const resultNode = new DOMParser().parseFromString(responseText, "application/xml").querySelector("Results");
-    if (!resultNode) throw new Error(`No se encontró Query Definition con ObjectID: ${queryObjectId}`);
+    if (!resultNode) throw new Error(`No se encontró Query Definition`);
 
     return {
         name: resultNode.querySelector("Name")?.textContent,
@@ -1391,7 +1576,10 @@ export async function fetchQueryDefinitionDetails(queryObjectId, apiConfig) {
         description: resultNode.querySelector("Description")?.textContent,
         queryText: resultNode.querySelector("QueryText")?.textContent,
         updateType: resultNode.querySelector("TargetUpdateType")?.textContent,
-        categoryId: resultNode.querySelector("CategoryID")?.textContent
+        targetDE: {
+            name: resultNode.querySelector("DataExtensionTarget > Name")?.textContent,
+            key: resultNode.querySelector("DataExtensionTarget > CustomerKey")?.textContent
+        }
     };
 }
 

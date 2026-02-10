@@ -192,6 +192,7 @@ export function init() {
     elements.nextPageBtnJourneys = document.getElementById('nextPageBtnJourneys');
     elements.pageInputJourneys = document.getElementById('pageInputJourneys');
     elements.totalPagesJourneys = document.getElementById('totalPagesJourneys');
+    elements.analyzeJourneyBtn = document.getElementById('analyzeJourneyBtn');
 
     // --- 13. Sección: Clonador de Queries ---
     elements.queriesClonerStep1 = document.getElementById('queries-cloner-step1');
@@ -348,6 +349,15 @@ export function init() {
     elements.analyzerAutomationNameTitle = document.getElementById('analyzerAutomationNameTitle');
     elements.automationAnalyzerStepsContainer = document.getElementById('automationAnalyzerStepsContainer');
     elements.downloadAutomationPdfBtn = document.getElementById('downloadAutomationPdfBtn');
+
+    // --- 25. ANALIZADOR DE JOURNEYS ---
+    elements.journeyAnalyzerSection = document.getElementById('journey-analyzer-section');
+    elements.journeyAnalyzerBackBtn = document.getElementById('journeyAnalyzerBackBtn'); 
+    elements.analyzerJourneyNameTitle = document.getElementById('analyzerJourneyNameTitle');
+    elements.journeyAnalyzerHeader = document.getElementById('journeyAnalyzerHeader');
+    elements.journeyAnalyzerFlow = document.getElementById('journeyAnalyzerFlow');
+    elements.journeyAnalyzerActivitiesContainer = document.getElementById('journeyAnalyzerActivitiesContainer');
+    elements.downloadJourneyPdfBtn = document.getElementById('downloadJourneyPdfBtn');
 }
 
 export default elements;

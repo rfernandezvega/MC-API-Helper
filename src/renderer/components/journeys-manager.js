@@ -21,6 +21,8 @@ let currentFilteredList = [];
 
 let getAuthenticatedConfig; // Dependencia que será inyectada por app.js
 
+let showJourneyAnalyzerView;
+
 // --- 2. FUNCIONES DE RENDERIZADO Y LÓGICA DE TABLA ---
 
 /**
@@ -100,6 +102,7 @@ function renderTable(journeys) {
  */
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
+    showJourneyAnalyzerView = dependencies.showJourneyAnalyzerView;
 
     // Listeners de filtros
     elements.journeyNameFilter.addEventListener('input', applyFiltersAndRender);
@@ -117,10 +120,12 @@ export function init(dependencies) {
     elements.copyJourneyBtn.addEventListener('click', copyJourney);
     elements.stopJourneyBtn.addEventListener('click', stopJourneys);
     elements.deleteJourneyBtn.addEventListener('click', deleteJourneys);
+    elements.analyzeJourneyBtn.addEventListener('click', () => inspectAndShowAnalyzer());
 
     // Listeners de la tabla
     document.querySelector('#journeys-table thead').addEventListener('click', handleSort);
     elements.journeysTbody.addEventListener('click', handleRowSelection);
+
 
     // Listeners de paginación
     elements.prevPageBtnJourneys.addEventListener('click', () => {
@@ -793,6 +798,8 @@ function updateButtonsState() {
     } else {
         elements.deleteJourneyBtn.disabled = true;
     }
+
+    elements.analyzeJourneyBtn.disabled = (selected.length !== 1);
 }
 
 /**
@@ -883,6 +890,20 @@ function parseJourneyActivities(activities = []) {
         else if (activity.type === 'WHATSAPPACTIVITY') communications.whatsapps.push(activity.name);
     }
     return communications;
+}
+
+async function inspectAndShowAnalyzer() {
+    const selected = getSelectedJourneys();
+    const j = selected[0];
+    ui.blockUI(`Cargando análisis de "${j.name}"...`);
+    try {
+        const apiConfig = await getAuthenticatedConfig();
+        const details = await mcApiService.fetchJourneyDetailsById(j.id, apiConfig);
+        showJourneyAnalyzerView(details);
+    } catch (error) {
+        ui.showCustomAlert(error.message);
+        ui.unblockUI();
+    }
 }
 
 /**

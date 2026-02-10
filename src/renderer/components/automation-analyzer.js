@@ -29,7 +29,10 @@ export async function view(automationDetails) {
     ui.blockUI("Preparando análisis de impacto...");
     elements.analyzerAutomationNameTitle.textContent = automationDetails.name;
     elements.automationAnalyzerStepsContainer.innerHTML = '';
-    
+
+    logger.startLogBuffering();
+    mcApiService.setLogger(logger); 
+
     try {
         currentAutomationDetails = await enrichAutomationData(automationDetails);
         renderHeaderInfo(currentAutomationDetails);
@@ -38,6 +41,7 @@ export async function view(automationDetails) {
         ui.showCustomAlert(`Error en el análisis: ${error.message}`);
     } finally {
         ui.unblockUI();
+        logger.endLogBuffering(); 
     }
 }
 
@@ -57,31 +61,75 @@ function renderHeaderInfo(auto) {
 
 async function enrichAutomationData(details) {
     const apiConfig = await getAuthenticatedConfig();
+    mcApiService.setLogger(logger); 
+
     for (const step of details.steps || []) {
         for (const act of step.activities || []) {
             try {
                 ui.blockUI(`Analizando: ${act.name}...`);
                 
-                // 1. Buscamos impactos (Usos en otros procesos)
+                // Impactos en otros procesos
                 const usages = await mcApiService.findAutomationForActivity(act.activityObjectId, apiConfig);
                 act.otherUsages = usages.filter(u => u.automationName !== details.name);
 
-                // 2. Buscamos detalles según tipo
+                // --- ENRIQUECIMIENTO SEGÚN TIPO ---
+                
+                // 1. SQL Query (300)
                 if (act.objectTypeId === 300) {
                     const q = await mcApiService.fetchQueryDefinitionDetails(act.activityObjectId, apiConfig);
                     act.description = q.description;
                     act.queryText = q.queryText;
-                } else if (act.objectTypeId === 423) {
+                    act.specificData = {
+                        targetDE: q.targetDE,
+                        updateType: q.updateType
+                    };
+                } 
+                // 2. Data Extract (73)
+                else if (act.objectTypeId === 73) {
+                    const de = await mcApiService.fetchDataExtractDetails(act.activityObjectId, apiConfig);
+                    act.description = de.description;
+                    const fields = de.dataFields || [];
+                    act.specificData = { fileSpec: de.fileSpec || 'N/A' };
+
+                    const deKey = fields.find(f => f.name === 'DECustomerKey')?.value;
+                    if (deKey) {
+                        act.specificData.deKey = deKey;
+                        const delim = fields.find(f => f.name === 'ColumnDelimiter')?.value;
+                        act.specificData.delimiter = delim === ',' ? 'Coma (,)' : (delim === '|' ? 'Pipe (|)' : delim || 'N/A');
+                        act.specificData.deName = await mcApiService.fetchDataExtensionName('CustomerKey', deKey, apiConfig);
+                    }
+
+                    const convertTo = fields.find(f => f.name === 'ConvertTo')?.value;
+                    if (convertTo) act.specificData.convertTo = convertTo;
+                } 
+                // 3. File Transfer (53)
+                else if (act.objectTypeId === 53) {
+                    const ft = await mcApiService.fetchFileTransferDetails(act.activityObjectId, apiConfig);
+                    act.description = ft.description;
+                    let locationName = 'N/A';
+                    try {
+                        const loc = await mcApiService.fetchFileTransferLocation(ft.fileTransferLocationId, apiConfig);
+                        locationName = loc.fileTransferLocation?.name || ft.fileTransferLocationId;
+                    } catch (e) { locationName = "ID: " + ft.fileTransferLocationId; }
+                    act.specificData = { fileSpec: ft.fileSpec || 'N/A', destination: locationName };
+                }
+                // 4. Email Activity (42)
+                else if (act.objectTypeId === 42) { // Email Activity
+                    const e = await mcApiService.fetchEmailSendDefinitionDetails(act.activityObjectId, apiConfig);
+                    if (e) {
+                        act.description = e.description || 'Sin descripción';
+                        act.specificData = {
+                            subject: e.subject || 'N/A',
+                            cc: e.cc || '',
+                            bcc: e.bcc || ''
+                        };
+                    }
+                }
+                // 5. SSJS Script (423)
+                else if (act.objectTypeId === 423) {
                     const s = await mcApiService.fetchScriptDetails(act.activityObjectId, apiConfig);
                     act.description = s.description;
                     act.scriptCode = s.script;
-                } else if (act.objectTypeId === 73) {
-                    const de = await mcApiService.fetchDataExtractDetails(act.activityObjectId, apiConfig);
-                    act.description = de.description;
-                    act.detailedInfo = { "File Spec": de.fileSpec, "Data Fields": de.dataFields };
-                } else if (act.objectTypeId === 43) {
-                    const imp = await mcApiService.fetchImportDetails(act.activityObjectId, apiConfig);
-                    act.description = imp.description;
                 }
             } catch (e) { console.warn(`Error enriqueciendo ${act.name}`, e); }
         }
@@ -95,6 +143,7 @@ async function renderAnalysis(automation) {
         const stepBlock = document.createElement('div');
         stepBlock.className = 'step-block';
         let rowsHtml = '';
+        
         for (const act of step.activities || []) {
             const typeLabel = activityTypeMap[act.objectTypeId] || `Tipo: ${act.objectTypeId}`;
             
@@ -104,24 +153,63 @@ async function renderAnalysis(automation) {
                 impactHtml = `<span style="color: #dc3545; font-weight:bold;">⚠ Usado en ${act.otherUsages.length} más:</span><ul style="margin:5px 0; padding-left:0; font-size:0.85em; list-style:none;">${list}</ul>`;
             }
 
+            let detailsHtml = '';
+            if (act.specificData) {
+                detailsHtml = `<div style="margin-top: 8px; padding: 10px; background: #f0f7ff; border-radius: 4px; border-left: 4px solid #558ac7; font-size: 0.85em; line-height: 1.5;">`;
+                
+                if (act.objectTypeId === 300) { // Query
+                    detailsHtml += `
+                        <div><strong>Destino:</strong> ${act.specificData.targetDE.name}</div>
+                        <div style="color:#666; font-size:0.9em; margin-bottom:4px;">(Key: ${act.specificData.targetDE.key})</div>
+                        <div><strong>Tipo Acción:</strong> <span style="text-transform: capitalize; color:#2980b9; font-weight:bold;">${act.specificData.updateType}</span></div>`;
+                } 
+                else if (act.objectTypeId === 73) { // Extract
+                    if (act.specificData.deName) {
+                        detailsHtml += `<div><strong>DE Origen:</strong> ${act.specificData.deName}</div>
+                                        <div style="color:#666; font-size:0.9em; margin-bottom:4px;">(Key: ${act.specificData.deKey})</div>
+                                        <div><strong>Delimitador:</strong> <span style="color:#e67e22; font-weight:bold;">${act.specificData.delimiter}</span></div>`;
+                    }
+                    if (act.specificData.convertTo) {
+                        detailsHtml += `<div><strong>Acción:</strong> <span style="color:#2980b9; font-weight:bold;">Convert File</span></div>
+                                        <div style="margin-bottom:4px;"><strong>Codificación:</strong> <span style="color:#e67e22; font-weight:bold;">${act.specificData.convertTo}</span></div>`;
+                    }
+                    detailsHtml += `<div><strong>Patrón Archivo:</strong> <span style="color:#27ae60;">${act.specificData.fileSpec}</span></div>`;
+                } 
+                else if (act.objectTypeId === 53) { // Transfer
+                    detailsHtml += `<div><strong>Archivo:</strong> <span style="color:#27ae60;">${act.specificData.fileSpec}</span></div>
+                                    <div><strong>Destino:</strong> <span style="color:#8e44ad; font-weight:bold;">${act.specificData.destination}</span></div>`;
+                }
+                else if (act.objectTypeId === 42) { // Email Send
+                    detailsHtml += `
+                        <div style="margin-bottom:4px;">
+                            <strong>Asunto:</strong> <span style="color:#27ae60; font-weight:bold;">${act.specificData.subject}</span>
+                        </div>
+                    `;
+
+                    // Solo mostrar CC y BCC si no están vacíos
+                    if (act.specificData.cc) {
+                        detailsHtml += `<div style="font-size:0.9em; color:#555;"><strong>CC:</strong> ${act.specificData.cc}</div>`;
+                    }
+                    if (act.specificData.bcc) {
+                        detailsHtml += `<div style="font-size:0.9em; color:#555;"><strong>BCC:</strong> ${act.specificData.bcc}</div>`;
+                    }
+                }
+                detailsHtml += `</div>`;
+            }
+
             rowsHtml += `
                 <tr>
-                    <td style="width:15%">${typeLabel}</td>
-                    <td style="width:35%; text-align:left;">
+                    <td style="width:15%; vertical-align: top;">${typeLabel}</td>
+                    <td style="width:35%; text-align:left; vertical-align: top;">
                         <strong>${act.name}</strong><br>
-                        <small style="color: #666;">${act.description || 'Sin descripción'}</small>
+                        <small style="color: #666; display:block; margin-bottom:6px;">${act.description || 'Sin descripción'}</small>
+                        ${detailsHtml}
                     </td>
-                    <td style="width:50%; text-align:left;">${impactHtml}</td>
+                    <td style="width:50%; text-align:left; vertical-align: top;">${impactHtml}</td>
                 </tr>`;
         }
-        stepBlock.innerHTML = `
-            <h4>Paso ${step.step}</h4>
-            <div class="table-container">
-                <table class="folder-results-table">
-                    <thead><tr><th>Tipo</th><th>Actividad / Descripción</th><th>Impacto en otros procesos</th></tr></thead>
-                    <tbody>${rowsHtml}</tbody>
-                </table>
-            </div>`;
+        
+        stepBlock.innerHTML = `<h4>Paso ${step.step}</h4><div class="table-container"><table class="folder-results-table"><thead><tr><th>Tipo</th><th>Actividad / Configuración</th><th>Impacto en otros procesos</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
         container.appendChild(stepBlock);
     }
 }
@@ -246,7 +334,7 @@ async function generatePDF() {
         }
         finalY += 5;
     }
-    doc.save(`Docu_${auto.name.replace(/\s+/g, '_')}.pdf`);
+    doc.save(`Docu_Automatismo_${auto.name.replace(/\s+/g, '_')}.pdf`);
 }
 
 function formatDate(date) {

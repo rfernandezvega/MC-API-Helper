@@ -1,0 +1,31 @@
+<!-- views/journey-analyzer.html -->
+<div id="journey-analyzer-section" class="section">
+    <div class="section-header">
+        <button id="journeyAnalyzerBackBtn" class="back-button">← Volver a la lista</button>            
+        <div class="header-actions">
+            <button id="downloadJourneyPdfBtn" class="action-button activate-btn">Generar Documentación (PDF)</button>
+        </div>
+    </div>
+    <h2>Análisis de Journey: <span id="analyzerJourneyNameTitle" style="color: #558ac7;"></span></h2>
+
+    <div class="config-section-container">
+        <!-- Bloque de Información General -->
+        <div id="journeyAnalyzerHeader" class="config-block">
+            <!-- Se rellena con JS -->
+        </div>
+
+        <!-- Bloque del Dibujo (Flujo) -->
+        <div class="config-block">
+            <h3>Flujo Visual del Journey</h3>
+            <pre id="journeyAnalyzerFlow" style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-size: 0.9em; line-height: 1.4; overflow-x: auto;"></pre>
+        </div>
+
+        <!-- Detalle de Actividades -->
+        <div class="config-block">
+            <h3>Detalle de Configuración por Actividad</h3>
+            <div id="journeyAnalyzerActivitiesContainer">
+                <!-- Se rellenará dinámicamente -->
+            </div>
+        </div>
+    </div>
+</div>

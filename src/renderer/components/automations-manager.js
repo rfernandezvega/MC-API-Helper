@@ -65,7 +65,7 @@ function renderTable(automations) {
 
     elements.automationsTbody.innerHTML = '';
     if (paginatedItems.length === 0) {
-        elements.automationsTbody.innerHTML = '<tr><td colspan="4">No hay automatismos para mostrar.</td></tr>';
+        elements.automationsTbody.innerHTML = '<tr><td colspan="6">No hay automatismos para mostrar.</td></tr>';
     } else {
         paginatedItems.forEach(auto => {
             const row = document.createElement('tr');
