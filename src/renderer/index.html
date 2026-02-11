@@ -1721,30 +1721,30 @@
     <div class="section-header">
         <button id="journeyAnalyzerBackBtn" class="back-button">← Volver a la lista</button>            
         <div class="header-actions">
+            <button id="expandAllAnalyzerBtn" class="action-button">Expandir Todo</button>
+            <button id="collapseAllAnalyzerBtn" class="action-button">Colapsar Todo</button>
             <button id="downloadJourneyPdfBtn" class="action-button activate-btn">Generar Documentación (PDF)</button>
         </div>
     </div>
     <h2>Análisis de Journey: <span id="analyzerJourneyNameTitle" style="color: #558ac7;"></span></h2>
 
     <div class="config-section-container">
-        <!-- Bloque de Información General -->
-        <div id="journeyAnalyzerHeader" class="config-block">
-            <!-- Se rellena con JS -->
-        </div>
+        <!-- 1. Identificación y Entrada -->
+        <div id="journeyAnalyzerHeaderWrapper" style="margin-bottom: 20px;"></div>
 
-        <!-- Bloque del Dibujo (Flujo) -->
-        <div class="config-block">
-            <h3>Flujo Visual del Journey</h3>
-            <pre id="journeyAnalyzerFlow" style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-size: 0.9em; line-height: 1.4; overflow-x: auto;"></pre>
-        </div>
+        <!-- 2. Goals y Exits -->
+        <div id="journeyAnalyzerGlobalWrapper" style="margin-bottom: 20px;"></div>
 
-        <!-- Detalle de Actividades -->
-        <div class="config-block">
-            <h3>Detalle de Configuración por Actividad</h3>
-            <div id="journeyAnalyzerActivitiesContainer">
-                <!-- Se rellenará dinámicamente -->
-            </div>
+        <!-- 3. Flujo Lógico -->
+        <div id="journeyAnalyzerFlowWrapper" style="margin-bottom: 20px;"></div>
+        <div style="margin: 40px 0 15px 0; padding-bottom: 8px; border-bottom: 2px solid #558ac7; display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.2rem;">⚙️</span>
+            <h3 style="margin: 0; color: #558ac7; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">
+                Actividades del Journey
+            </h3>
         </div>
+        <!-- 4. Actividades -->
+        <div id="journeyAnalyzerActivitiesContainer"></div>
     </div>
 </div>
 

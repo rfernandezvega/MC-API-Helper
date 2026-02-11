@@ -692,3 +692,42 @@ td a:hover { color: #003366; text-decoration: underline; }
     background-color: #fff;
 }
 
+/* Estilos para el Journey Analyzer Colapsable */
+.analyzer-collapsible {
+    margin-bottom: 10px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.analyzer-collapsible-header {
+    background-color: #f1f5f9;
+    padding: 12px 15px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+    transition: background-color 0.2s;
+}
+
+.analyzer-collapsible-header:hover {
+    background-color: #e2e8f0;
+}
+
+.analyzer-collapsible.active .analyzer-collapsible-header {
+    background-color: #558ac7;
+    color: white;
+    border-color: #558ac7;
+}
+
+.analyzer-collapsible-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.analyzer-icon {
+    font-size: 0.8em;
+}

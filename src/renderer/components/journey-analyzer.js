@@ -53,6 +53,9 @@ export function init(dependencies) {
     if (elements.journeyAnalyzerBackBtn) elements.journeyAnalyzerBackBtn.addEventListener('click', goBackFunction);
     if (elements.downloadJourneyPdfBtn) elements.downloadJourneyPdfBtn.addEventListener('click', () => generatePDF());
 
+    if (elements.expandAllAnalyzerBtn) elements.expandAllAnalyzerBtn.addEventListener('click', () => bulkToggle(true));
+    if (elements.collapseAllAnalyzerBtn) elements.collapseAllAnalyzerBtn.addEventListener('click', () => bulkToggle(false));
+
     elements.journeyAnalyzerActivitiesContainer.addEventListener('click', ui.handleExternalLink);
 }
 
@@ -77,8 +80,15 @@ export async function view(journeyDetails) {
         
         // 3. Flujo y actividades
         const flowResult = generateFlow(journeyDetails); 
-        elements.journeyAnalyzerFlow.textContent = flowResult.text;
+        elements.journeyAnalyzerFlowWrapper.innerHTML = createCollapsibleHtml(
+            "Flujo Lógico del Journey", 
+            `<pre style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-size: 0.9em; line-height: 1.4; overflow-x: auto; margin:0; border: 1px solid #eee;">${flowResult.text}</pre>`,
+            "flow-logic",
+            false
+        );
         renderActivities(journeyDetails.activities, flowResult.numberMap);
+
+        initCollapsibleListeners();
 
         currentJourneyDetails.flowText = flowResult.text; 
         currentJourneyDetails.numberMap = flowResult.numberMap;
@@ -94,53 +104,37 @@ export async function view(journeyDetails) {
  * Renderiza Goals y Exit Criteria entre la cabecera y el flujo
  */
 function renderGlobalSettings(j) {
-    // Intentamos encontrar un contenedor existente o lo creamos dinámicamente tras la cabecera
-    let container = document.getElementById('journeyAnalyzerGlobalSettings');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'journeyAnalyzerGlobalSettings';
-        elements.journeyAnalyzerHeader.insertAdjacentElement('afterend', container);
-    }
-    
+    const container = elements.journeyAnalyzerGlobalWrapper;
     container.innerHTML = '';
-    let html = '';
+    
+    const hasGoals = j.goals && j.goals.length > 0 && j.goals[0].configurationArguments?.criteria;
+    const hasExits = j.exits && j.exits.length > 0 && j.exits[0].configurationArguments?.criteria;
 
-    // 1. Procesar Goal
-    if (j.goals && j.goals.length > 0 && j.goals[0].configurationArguments?.criteria) {
+    if (!hasGoals && !hasExits) return;
+
+    let innerHtml = '';
+    if (hasGoals) {
         const goal = j.goals[0];
         const unit = goal.metaData?.conversionUnit === 'percentage' ? '%' : goal.metaData?.conversionUnit || '';
-        
-        html += `
-            <div class="config-block" style="border: 2px solid #e67e22; background: #fffaf0; margin-bottom: 20px;">
-                <h4 style="margin-top:0; color:#e67e22; display:flex; align-items:center; gap:8px;">
-                    <span>🎯</span> GOAL: ${goal.name || 'Objetivo'}
-                </h4>
-                <div style="font-size:0.85rem; margin-bottom:10px; border-bottom: 1px solid #f3e5ab; padding-bottom:5px;">
-                    <strong>Meta:</strong> ${goal.metaData?.conversionValue || ''}${unit} | 
-                    <strong>¿Sale al cumplirlo?:</strong> ${goal.metaData?.isExitCriteria ? 'Sí ✅' : 'No'}
-                </div>
-                <div style="font-size:0.85rem; line-height:1.6; padding:10px; background:#fff; border:1px solid #f3e5ab; border-radius:4px;">
-                    ${parseXmlToLogic(goal.configurationArguments.criteria)}
-                </div>
+        innerHtml += `
+            <div style="border: 1px solid #f3e5ab; background: #fffaf0; padding:15px; border-radius:4px; margin-bottom:15px;">
+                <h5 style="margin:0 0 5px 0; color:#e67e22;">🎯 GOAL: ${goal.name || 'Objetivo'}</h5>
+                <p style="font-size:0.85rem; margin-bottom:8px;"><strong>Meta:</strong> ${goal.metaData?.conversionValue || ''}${unit} | <strong>¿Sale?:</strong> ${goal.metaData?.isExitCriteria ? 'Sí' : 'No'}</p>
+                <div style="font-size:0.85rem; background:#fff; padding:10px; border:1px solid #f3e5ab; border-radius:4px;">${parseXmlToLogic(goal.configurationArguments.criteria)}</div>
             </div>`;
     }
-
-    // 2. Procesar Exit Criteria
-    if (j.exits && j.exits.length > 0 && j.exits[0].configurationArguments?.criteria) {
+    if (hasExits) {
         const exit = j.exits[0];
-        html += `
-            <div class="config-block" style="border: 2px solid #c0392b; background: #fdf2f2; margin-bottom: 20px;">
-                <h4 style="margin-top:0; color:#c0392b; display:flex; align-items:center; gap:8px;">
-                    <span>🚪</span> EXIT CRITERIA
-                </h4>
-                <div style="font-size:0.85rem; line-height:1.6; padding:10px; background:#fff; border:1px solid #f5c6cb; border-radius:4px;">
-                    ${parseXmlToLogic(exit.configurationArguments.criteria)}
-                </div>
+        innerHtml += `
+            <div style="border: 1px solid #f5c6cb; background: #fdf2f2; padding:15px; border-radius:4px;">
+                <h5 style="margin:0 0 5px 0; color:#c0392b;">🚪 EXIT CRITERIA</h5>
+                <div style="font-size:0.85rem; background:#fff; padding:10px; border:1px solid #f5c6cb; border-radius:4px;">${parseXmlToLogic(exit.configurationArguments.criteria)}</div>
             </div>`;
     }
 
-    container.innerHTML = html;
+    container.innerHTML = createCollapsibleHtml("Configuraciones Globales (Goals / Exits)", innerHtml, "global-settings", false);
 }
+
 /**
  * Renderiza las actividades ORDENADAS por su aparición en el dibujo.
  */
@@ -627,14 +621,16 @@ function renderActivities(activities, numberMap) {
             `;
         }
 
-        div.innerHTML = `
-            <h4 style="margin-top:0; color:#558ac7;">#${logicNumber} - ${act.name}</h4>
+        const innerContent = `
             <p style="font-size: 0.8rem; color: #666; margin-bottom: 8px;">
                 <strong>Tipo:</strong> ${act.type} | <strong>ID:</strong> ${act.key}
             </p>
             ${extraConfig}
         `;
-        container.appendChild(div);
+
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = createCollapsibleHtml(`#${logicNumber} - ${act.name}`, innerContent, `act-${act.key}`, false);
+        container.appendChild(wrapper);
     });
 }
 
@@ -986,38 +982,23 @@ async function resolveEntrySource(journey, apiConfig) {
 }
 
 function renderHeader(j) {
-    const entry = j.entryDetails || { type: 'Desconocido', summary: '---' };
-    
-    // SFMC a veces usa .definitionKey y otras veces .key. Usamos ambos:
     const definitionKey = j.definitionKey || j.key || 'No disponible';
-
-    elements.journeyAnalyzerHeader.innerHTML = `
-        <div style="background-color: #fff; border: 1px solid #e0e6ed; border-top: 4px solid #558ac7; border-radius: 8px; padding: 20px; margin-bottom: 25px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <!-- Cambiado a 2 columnas: la segunda (1fr) toma todo el espacio restante -->
-            <div style="display: grid; grid-template-columns: 300px 1fr; gap: 30px; align-items: start;">
-                
-                <!-- Columna 1: Identificación (Ancho fijo de 300px para consistencia) -->
-                <div style="border-right: 1px solid #f0f3f7; padding-right: 10px;">
-                    <h5 style="margin:0 0 10px 0; color:#558ac7; text-transform: uppercase; font-size:0.75rem; letter-spacing: 0.5px;">Identificación</h5>
-                    <p style="margin:0 0 5px 0; font-size:0.9rem;"><strong>Versión:</strong> ${j.version}</p>
-                    <p style="margin:0 0 5px 0; font-size:0.9rem;"><strong>Estado:</strong> <span class="status-badge">${j.status}</span></p>
-                    <p style="margin:0 0 5px 0; font-size:0.85rem;"><strong>Creado:</strong> ${new Date(j.createdDate).toLocaleString()}</p>
-                    <p style="margin:0 0 5px 0; font-size:0.85rem;"><strong>Modificado:</strong> ${new Date(j.modifiedDate).toLocaleString()}</p>
-                    <p style="margin:0; font-size:0.8rem; color:#666; word-break: break-all;"><strong>Key:</strong> ${definitionKey}</p>
-                </div>
-
-                <!-- Columna 2: Configuración de Entrada (Flexible - Todo el ancho restante) -->
-                <div>
-                    <h5 style="margin:0 0 10px 0; color:#558ac7; text-transform: uppercase; font-size:0.75rem; letter-spacing: 0.5px;">Configuración de Entrada</h5>
-                    <p style="margin:0 0 8px 0; font-size:0.9rem;"><strong>Tipo:</strong> ${entry.type}</p>
-                    <div style="margin:0; font-size:0.85rem; color:#444; line-height:1.6; display: flex; flex-direction: column; gap: 4px;">
-                        ${entry.summary}
-                    </div>
-                </div>
-
+    const innerHtml = `
+        <div style="display: grid; grid-template-columns: 300px 1fr; gap: 30px; align-items: start;">
+            <div style="border-right: 1px solid #f0f3f7; padding-right: 10px;">
+                <p style="margin:0 0 5px 0;"><strong>Versión:</strong> ${j.version}</p>
+                <p style="margin:0 0 5px 0;"><strong>Estado:</strong> <span class="status-badge">${j.status}</span></p>
+                <p style="margin:0 0 5px 0;"><strong>Creado:</strong> ${new Date(j.createdDate).toLocaleString()}</p>
+                <p style="margin:0 0 5px 0;"><strong>Modificado:</strong> ${new Date(j.modifiedDate).toLocaleString()}</p>
+                <p style="margin:0; font-size:0.8rem; color:#666; word-break: break-all;"><strong>Key:</strong> ${definitionKey}</p>
+            </div>
+            <div>
+                <p style="margin:0 0 8px 0; font-size:0.9rem;"><strong>Tipo:</strong> ${j.entryDetails.type}</p>
+                <div style="margin:0; font-size:0.85rem; color:#444; line-height:1.6;">${j.entryDetails.summary}</div>
             </div>
         </div>
     `;
+    elements.journeyAnalyzerHeaderWrapper.innerHTML = createCollapsibleHtml("Identificación y Configuración de Entrada", innerHtml, "header", true);
 }
 
 function generatePDF() {
@@ -1473,4 +1454,61 @@ function generatePDF() {
     }
 
     doc.save(`Docu_Journey_${j.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+}
+
+
+function bulkToggle(expand) {
+    const collapsibles = document.querySelectorAll('.analyzer-collapsible');
+    collapsibles.forEach(container => {
+        const content = container.querySelector('.analyzer-collapsible-content');
+        const icon = container.querySelector('.analyzer-icon');
+        
+        if (expand) {
+            container.classList.add('active');
+            content.style.maxHeight = "none";
+            icon.textContent = '▼';
+        } else {
+            container.classList.remove('active');
+            content.style.maxHeight = "0";
+            icon.textContent = '▶';
+        }
+    });
+}
+
+function createCollapsibleHtml(title, content, id, isExpanded = false) {
+    return `
+        <div class="analyzer-collapsible ${isExpanded ? 'active' : ''}" id="container-${id}">
+            <div class="analyzer-collapsible-header">
+                <span>${title}</span>
+                <span class="analyzer-icon">${isExpanded ? '▼' : '▶'}</span>
+            </div>
+            <div class="analyzer-collapsible-content" style="max-height: ${isExpanded ? 'none' : '0'};">
+                <div style="padding: 15px; background: #fff; border: 1px solid #e2e8f0; border-top: none;">
+                    ${content}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function initCollapsibleListeners() {
+    const headers = document.querySelectorAll('.analyzer-collapsible-header');
+    headers.forEach(header => {
+        header.onclick = function() {
+            const parent = this.parentElement;
+            const content = this.nextElementSibling;
+            const icon = this.querySelector('.analyzer-icon');
+            const isOpen = parent.classList.contains('active');
+            
+            if (isOpen) {
+                parent.classList.remove('active');
+                content.style.maxHeight = "0";
+                icon.textContent = '▶';
+            } else {
+                parent.classList.add('active');
+                content.style.maxHeight = "none";
+                icon.textContent = '▼';
+            }
+        };
+    });
 }

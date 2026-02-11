@@ -353,10 +353,13 @@ export function init() {
     elements.journeyAnalyzerSection = document.getElementById('journey-analyzer-section');
     elements.journeyAnalyzerBackBtn = document.getElementById('journeyAnalyzerBackBtn'); 
     elements.analyzerJourneyNameTitle = document.getElementById('analyzerJourneyNameTitle');
-    elements.journeyAnalyzerHeader = document.getElementById('journeyAnalyzerHeader');
-    elements.journeyAnalyzerFlow = document.getElementById('journeyAnalyzerFlow');
+    elements.journeyAnalyzerHeaderWrapper = document.getElementById('journeyAnalyzerHeaderWrapper');
+    elements.journeyAnalyzerGlobalWrapper = document.getElementById('journeyAnalyzerGlobalWrapper');
+    elements.journeyAnalyzerFlowWrapper = document.getElementById('journeyAnalyzerFlowWrapper');
     elements.journeyAnalyzerActivitiesContainer = document.getElementById('journeyAnalyzerActivitiesContainer');
     elements.downloadJourneyPdfBtn = document.getElementById('downloadJourneyPdfBtn');
+    elements.expandAllAnalyzerBtn = document.getElementById('expandAllAnalyzerBtn');
+    elements.collapseAllAnalyzerBtn = document.getElementById('collapseAllAnalyzerBtn');
 }
 
 export default elements;
