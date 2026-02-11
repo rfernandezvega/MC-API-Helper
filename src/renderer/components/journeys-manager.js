@@ -116,7 +116,7 @@ export function init(dependencies) {
     elements.refreshJourneysTableBtn.addEventListener('click', refreshData);
     elements.getCommunicationsBtn.addEventListener('click', getCommunications);
     elements.getAllCommunicationsBtn.addEventListener('click', getAllCommunications);
-    elements.drawJourneyBtn.addEventListener('click', drawJourney);
+
     elements.copyJourneyBtn.addEventListener('click', copyJourney);
     elements.stopJourneyBtn.addEventListener('click', stopJourneys);
     elements.deleteJourneyBtn.addEventListener('click', deleteJourneys);
@@ -425,18 +425,6 @@ async function getAllCommunications() {
     }
 }
 
-/**
- * Genera y muestra una representación textual del flujo del journey seleccionado.
- */
-function drawJourney() {
-    const selected = getSelectedJourneys();
-    if (selected.length !== 1) return;
-    const journey = selected[0];
-    if (journey.hasCommunications) {
-        const flowText = generateJourneyFlowText(journey);
-        showJourneyFlowModal(flowText);
-    }
-}
 
 /**
  * Orquesta el proceso de clonación de un journey seleccionado.
@@ -773,7 +761,6 @@ function updateButtonsState() {
     const count = selected.length;
     elements.getAllCommunicationsBtn.disabled = fullJourneyList.length === 0;
     elements.getCommunicationsBtn.disabled = count === 0;
-    elements.drawJourneyBtn.disabled = !(count === 1 && selected[0].hasCommunications);
 
     const clonableTypes = ['EmailAudience', 'AutomationAudience'];
     elements.copyJourneyBtn.disabled = !(count === 1 && clonableTypes.includes(selected[0].eventType));
@@ -845,15 +832,6 @@ function updateSortIndicators() {
 }
 
 /**
- * Muestra el modal con el flujo del journey en formato de texto.
- * @param {string} flowText - El texto preformateado.
- */
-function showJourneyFlowModal(flowText) {
-    elements.journeyFlowContent.textContent = flowText;
-    elements.journeyFlowModal.style.display = 'flex';
-}
-
-/**
  * Cierra el modal de visualización del flujo.
  */
 function closeJourneyFlowModal() {
@@ -896,6 +874,11 @@ async function inspectAndShowAnalyzer() {
     const selected = getSelectedJourneys();
     const j = selected[0];
     ui.blockUI(`Cargando análisis de "${j.name}"...`);
+
+    logger.startLogBuffering(); 
+    mcApiService.setLogger(logger);
+    logger.logMessage(`Iniciando inspección técnica de: ${j.name}`);
+
     try {
         const apiConfig = await getAuthenticatedConfig();
         const details = await mcApiService.fetchJourneyDetailsById(j.id, apiConfig);
@@ -903,6 +886,7 @@ async function inspectAndShowAnalyzer() {
     } catch (error) {
         ui.showCustomAlert(error.message);
         ui.unblockUI();
+        logger.endLogBuffering(); 
     }
 }
 
@@ -966,121 +950,6 @@ function formatDate(dateString) {
     } catch {
         return 'Fecha inválida';
     }
-}
-
-/**
- * Parsea la estructura de un journey y la convierte en una representación textual.
- * @param {object} journey - El objeto de journey completo con sus actividades.
- * @returns {string} El flujo del journey formateado como texto.
- */
-function generateJourneyFlowText(journey) {
-    if (!journey || !journey.activities || journey.activities.length === 0) {
-        return "No se han cargado los detalles de las actividades para este journey.";
-    }
-
-    const ACTIVITY_TYPE_MAP = {
-        'EMAILV2': '[EMAIL]', 'SMS': '[SMS]', 'MOBILEPUSH': '[PUSH]', 'PUSHNOTIFICATIONACTIVITY': '[PUSH]',
-        'WHATSAPPACTIVITY': '[WHATSAPP]', 'INBOX': '[INBOX MSG]', 'INAPP': '[IN-APP MSG]', 'WAIT': '[ESPERA]',
-        'WAITBYDURATION': '[ESPERA]', 'WAITBYATTRIBUTE': '[ESPERA POR ATRIBUTO]', 'WAITBYEVENT': '[ESPERA HASTA EVENTO]',
-        'WAITUNTILDATE': '[ESPERA HASTA FECHA]', 'STOWAIT': '[ESPERA EINSTEIN STO]', 'MULTICRITERIARDECISION': '[SPLIT]',
-        'MULTICRITERIADECISIONV2': '[SPLIT]', 'RANDOMSPLIT': '[RANDOM SPLIT]', 'RANDOMSPLITV2': '[RANDOM SPLIT]',
-        'ENGAGEMENTDECISION': '[ENGAGEMENT SPLIT]', 'ENGAGEMENTSPLITV2': '[ENGAGEMENT SPLIT]',
-        'PATHOPTIMIZER': '[OPTIMIZADOR DE RUTA]', 'UPDATECONTACTDATA': '[UPDATE CONTACT]',
-        'UPDATECONTACTDATAV2': '[UPDATE CONTACT]', 'ADDAUDIENCE': '[AUDIENCIA]',
-        'CONTACTUPDATE': '[UPDATE CONTACT]', 'EINSTEINSPLIT': '[DIVISIÓN EINSTEIN SCORE]',
-        'EINSTEINMESSAGINGSPLIT': '[EINSTEIN INSIGHTS SPLIT]', 'EINSTEIN_EMAIL_OPEN': '[EINSTEIN SPLIT OPEN]',
-        'EINSTEIN_MC_EMAIL_CLICK': '[EINSTEIN SPLIT CLICK]', 'SALESFORCESALESCLOUDACTIVITY': '[ACCIÓN SALESFORCE]',
-        'OBJECTACTIVITY': '[ACCIÓN OBJETO SALESFORCE]', 'LEAD': '[ACCIÓN LEAD SALESFORCE]',
-        'CAMPAIGNMEMBER': '[ACCIÓN MIEMBRO DE CAMPAÑA]', 'REST': '[API REST (CUSTOM)]', 'SETCONTACTKEY': '[ESTABLECER CONTACT KEY]',
-        'EVENT': '[EVENTO]', 'SMSSYNC': '[SMS]', 'WAITUNTILCHATRESPONSE': '[WAIT UNTIL CHAT RESPONSE]'
-    };
-
-    const activitiesMap = new Map(journey.activities.map(act => [act.key, act]));
-    const activityKeyToLineNum = new Map();
-    const output = [];
-    let lineCounter = 1;
-
-    function processActivity(activityKey, prefix) {
-        if (!activityKey || activityKeyToLineNum.has(activityKey)) return;
-
-        const activity = activitiesMap.get(activityKey);
-        if (!activity) {
-            output.push(`${prefix}Error: Actividad con key '${activityKey}' no encontrada.`);
-            return;
-        }
-
-        const lineNum = lineCounter++;
-        activityKeyToLineNum.set(activityKey, lineNum);
-
-        const type = ACTIVITY_TYPE_MAP[activity.type] || `[${activity.type}]`;
-        const name = activity.name || '*Actividad sin nombre*';
-        let details = '';
-
-        if (activity.type.startsWith('WAIT')) {
-            const config = activity.configurationArguments;
-            if (config.waitDuration) details = ` (${config.waitDuration} ${config.waitUnit || ''})`;
-            else if (config.waitEndDateAttributeExpression) details = ` (hasta ${config.waitEndDateAttributeExpression.replace(/{{|}}/g, '')})`;
-        } else if (activity.type.includes('ENGAGEMENT')) {
-            const config = activity.configurationArguments;
-            const activityName = config.refActivityName || '';
-            if (config.statsTypeId === 2) details = ` (Open: ${activityName})`;
-            else if (config.statsTypeId === 3) details = ` (Click: ${activityName})`;
-        }
-
-        output.push(`${prefix}${lineNum}. ${type} ${name}${details}`);
-
-        const outcomes = activity.outcomes || [];
-        
-        if (outcomes.length === 1) {
-            const nextKey = outcomes[0].next;
-            if (nextKey) {
-                if (activityKeyToLineNum.has(nextKey)) {
-                    output.push(`${prefix}   └─> [UNIÓN] ➡️ ${activityKeyToLineNum.get(nextKey)}`);
-                } else {
-                    processActivity(nextKey, `${prefix}   `);
-                }
-            } else {
-                output.push(`${prefix}   └─> 🔴`);
-            }
-        } else if (outcomes.length > 1) {
-            outcomes.forEach((outcome, index) => {
-                const isLastBranch = index === outcomes.length - 1;
-                const branchPrefix = isLastBranch ? '└─' : '├─';
-                const nextPrefix = isLastBranch ? '   ' : '│  ';
-                
-                let branchLabel = `[RAMA ${index + 1}]`;
-                if (outcome.metaData && outcome.metaData.label) {
-                    branchLabel = `[RAMA: ${outcome.metaData.label}]`;
-                } else if (activity.type.includes('RANDOMSPLIT') && outcome.arguments?.percentage) {
-                    branchLabel = `[RAMA: ${outcome.arguments.percentage}%]`;
-                }
-
-                output.push(`${prefix}${branchPrefix} ${branchLabel}`);
-                
-                const nextKey = outcome.next;
-                if (nextKey) {
-                    if (activityKeyToLineNum.has(nextKey)) {
-                        output.push(`${prefix}${nextPrefix}  └─> [UNIÓN] ➡️ ${activityKeyToLineNum.get(nextKey)}`);
-                    } else {
-                        processActivity(nextKey, `${prefix}${nextPrefix}`);
-                    }
-                } else {
-                    output.push(`${prefix}${nextPrefix}  └─> 🔴`);
-                }
-            });
-        }
-    }
-
-    const trigger = journey.triggers?.[0];
-    if (trigger?.outcomes?.[0]?.next) {
-        output.push(`[INICIO] Fuente: ${trigger.type || 'Desconocida'}`);
-        processActivity(trigger.outcomes[0].next, '');
-    } else if (journey.activities.length > 0) {
-        output.push(`[INICIO] Fuente: No definida en Trigger (usando primera actividad)`);
-        processActivity(journey.activities[0].key, '');
-    }
-    
-    return output.join('\n');
 }
 
 /**

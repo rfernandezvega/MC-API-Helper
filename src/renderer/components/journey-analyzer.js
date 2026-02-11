@@ -44,7 +44,6 @@ export function init(dependencies) {
 export async function view(journeyDetails) {
     ui.blockUI("Analizando fuente de entrada y mapeos...");
 
-    logger.startLogBuffering();
     mcApiService.setLogger(logger);
     
     try {
@@ -309,7 +308,7 @@ async function enrichJourneyWithFieldNames(journey, apiConfig) {
                 const deID = fields[0].dataExtensionId;
                 if (!deCache.has(deID)) {
                     ui.blockUI(`Traduciendo DE: ${deID.substring(0,8)}...`);
-                    // Corregido: deID y apiConfig (antes valor/config)
+                    logger.logMessage(`Traduciendo nombre de Data Extension destino: ${deID}...`);
                     const deName = await mcApiService.fetchDataExtensionName('ObjectID', deID, apiConfig);
                     deCache.set(deID, deName);
                 }
@@ -429,6 +428,8 @@ function parseDecisionCriteria(act) {
 async function resolveEntrySource(journey, apiConfig) {
     const trigger = journey.triggers?.[0];
     if (!trigger) return;
+
+    logger.logMessage(`Resolviendo fuente de entrada: ${trigger.type}...`);
 
     const eventDefId = trigger.metaData?.eventDefinitionId;
     let eventDef = null;
@@ -563,7 +564,7 @@ function generatePDF() {
 
     // --- TÍTULO PRINCIPAL ---
     doc.setFontSize(14).setTextColor(40, 116, 166).setFont("helvetica", "bold");
-    const splitTitle = doc.splitTextToSize(`Análisis de Journey: ${j.name.trim()}`, 180);
+    const splitTitle = doc.splitTextToSize(`Journey: ${j.name.trim()}`, 180);
     doc.text(splitTitle, 10, currentY);
     currentY += (splitTitle.length * 7);
 
@@ -707,5 +708,5 @@ function generatePDF() {
         currentY = doc.lastAutoTable.finalY + 8;
     }
 
-    doc.save(`Analisis_Journey_${j.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+    doc.save(`Docu_Journey_${j.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
 }

@@ -230,7 +230,7 @@ async function generatePDF() {
 
     // --- TÍTULO PRINCIPAL ---
     doc.setFontSize(16).setTextColor(40, 116, 166).setFont("helvetica", "bold");
-    doc.text(auto.name.trim(), 10, currentY);
+    doc.text('Automatismo:\n'+auto.name.trim()+'\n', 10, currentY); 
     currentY += 8;
 
     // --- BLOQUE INFO GENERAL ---
@@ -302,8 +302,12 @@ async function generatePDF() {
                 } 
                 else if (act.objectTypeId === 53) {
                     tableBody.push(["Archivo:", data.fileSpec], ["Ubicación:", data.destination]);
-                } else if (act.objectTypeId === 42) {
+                } 
+                else if (act.objectTypeId === 42) {
                     tableBody.push(["Asunto:", data.subject], ["Remitente:", `${data.fromName} (${data.fromAddress})`]);
+                }
+                else if (act.objectTypeId === 952) {
+                    //No devuelve la API el Journey
                 }
             }
 
@@ -332,7 +336,7 @@ async function generatePDF() {
             }
         }
     }
-    doc.save(`Analisis_${auto.name.replace(/\s+/g, '_')}.pdf`);
+    doc.save(`Docu_Automatismo_${auto.name.replace(/\s+/g, '_')}.pdf`);
 }
 
 /**

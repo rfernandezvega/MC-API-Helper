@@ -182,7 +182,6 @@ export function init() {
     elements.refreshJourneysTableBtn = document.getElementById('refreshJourneysTableBtn');
     elements.getCommunicationsBtn = document.getElementById('getCommunicationsBtn');
     elements.getAllCommunicationsBtn = document.getElementById('getAllCommunicationsBtn');
-    elements.drawJourneyBtn = document.getElementById('drawJourneyBtn');
     elements.copyJourneyBtn = document.getElementById('copyJourneyBtn');
     elements.stopJourneyBtn = document.getElementById('stopJourneyBtn');
     elements.deleteJourneyBtn = document.getElementById('deleteJourneyBtn');

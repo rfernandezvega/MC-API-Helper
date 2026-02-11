@@ -406,7 +406,6 @@ export function showAutomationDESelectorModal(dependencies) {
     modal.style.display = 'flex';
 
     return new Promise(resolve => {
-        // ... (el resto de la lógica interna de la función que te pasé anteriormente es correcta) ...
         const searchAutomations = async () => {
             const name = elements.automationSearchInput.value.trim();
             if (!name) return;
