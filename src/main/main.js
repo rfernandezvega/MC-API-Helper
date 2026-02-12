@@ -91,7 +91,7 @@ app.whenReady().then(() => {
             autoUpdater.quitAndInstall(false, true);
         });
     });
-    //autoUpdater.checkForUpdates();
+    autoUpdater.checkForUpdates();
 });
 
 app.on('window-all-closed', () => {

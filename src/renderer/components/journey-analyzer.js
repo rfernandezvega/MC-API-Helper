@@ -52,6 +52,7 @@ export function init(dependencies) {
     
     if (elements.journeyAnalyzerBackBtn) elements.journeyAnalyzerBackBtn.addEventListener('click', goBackFunction);
     if (elements.downloadJourneyPdfBtn) elements.downloadJourneyPdfBtn.addEventListener('click', () => generatePDF());
+    if (elements.downloadJourneyWordBtn) elements.downloadJourneyWordBtn.addEventListener('click', () => generateWord());
 
     if (elements.expandAllAnalyzerBtn) elements.expandAllAnalyzerBtn.addEventListener('click', () => bulkToggle(true));
     if (elements.collapseAllAnalyzerBtn) elements.collapseAllAnalyzerBtn.addEventListener('click', () => bulkToggle(false));
@@ -1147,7 +1148,7 @@ function generatePDF() {
         // 2. DECISION SPLIT
         else if (act.type.includes('MULTICRITERIA')) {
             const criteria = act.configurationArguments?.criteria || {};
-            tableBody.push([{ content: "CRITERIOS DE DECISIÓN (JOURNEY vs CONTACT DATA)", colSpan: 2, styles: { fillColor: [240, 240, 240], halign: 'center', fontStyle: 'bold' } }]);
+            tableBody.push([{ content: "CRITERIOS DE DECISIÓN", colSpan: 2, styles: { fillColor: [240, 240, 240], halign: 'center', fontStyle: 'bold' } }]);
             
             const parser = new DOMParser();
 
@@ -1511,4 +1512,238 @@ function initCollapsibleListeners() {
             }
         };
     });
+}
+
+
+async function generateWord() {
+    if (!currentJourneyDetails) return;
+
+    const docxLib = window.docx;
+    if (!docxLib) {
+        ui.showCustomAlert("La librería de Word no se ha cargado. Verifica la conexión.");
+        return;
+    }
+
+    ui.blockUI("Generando documento Word completo...");
+
+    const { 
+        Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, 
+        WidthType, AlignmentType, HeadingLevel, ShadingType, BorderStyle, VerticalAlign
+    } = docxLib;
+    
+    const j = currentJourneyDetails;
+
+    // --- HELPERS DE FORMATO Y ESTILO ---
+    const clean = (text) => {
+        if (!text) return "";
+        return String(text)
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<\/div>/gi, '\n')
+            .replace(/<[^>]+>/g, '')
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line !== '')
+            .join('\n');
+    };
+
+    // Celda fusionada para Títulos de Actividad y Sub-encabezados
+    const createMergedHeaderCell = (text, color = "558AC7", fontSize = 20) => new TableCell({
+        children: [new Paragraph({ 
+            children: [new TextRun({ text, color: "000000", bold: true, size: fontSize })],
+            alignment: AlignmentType.CENTER
+        })],
+        columnSpan: 2,
+        shading: { fill: color, type: ShadingType.CLEAR },
+        verticalAlign: VerticalAlign.CENTER,
+        padding: { top: 80, bottom: 80 }
+    });
+
+    // Celda para etiquetas (Gris - Izquierda)
+    const createLabelCell = (text) => new TableCell({
+        children: [new Paragraph({ children: [new TextRun({ text, bold: true, size: 18 })] })],
+        width: { size: 35, type: WidthType.PERCENTAGE },
+        shading: { fill: "F2F2F2" },
+        padding: { left: 100, top: 50, bottom: 50 }
+    });
+
+    // Celda para valores (Blanco - Derecha)
+    const createValueCell = (text) => {
+        const safeText = String(text !== null && text !== undefined ? text : "");
+        return new TableCell({
+            children: safeText.split('\n').map(line => new Paragraph({ 
+                children: [new TextRun({ text: line, size: 18 })] 
+            })),
+            width: { size: 65, type: WidthType.PERCENTAGE },
+            padding: { left: 100, top: 50, bottom: 50 }
+        });
+    };
+
+    const children = [];
+
+    // 1. TÍTULO PRINCIPAL
+    children.push(new Paragraph({
+        text: `Análisis de Journey: ${j.name.trim()}`,
+        heading: HeadingLevel.HEADING_1,
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 400 }
+    }));
+
+    // 2. IDENTIFICACIÓN Y ENTRADA
+    children.push(new Paragraph({ text: "IDENTIFICACIÓN Y FUENTE DE ENTRADA", heading: HeadingLevel.HEADING_2, spacing: { before: 400, after: 200 } }));
+    children.push(new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+            new TableRow({ children: [createMergedHeaderCell("DATOS GENERALES", "34495E", 18)] }),
+            new TableRow({ children: [createLabelCell("Versión / Estado"), createValueCell(`${j.version} - ${j.status}`)] }),
+            new TableRow({ children: [createLabelCell("Definition Key"), createValueCell(j.definitionKey || j.key)] }),
+            new TableRow({ children: [createLabelCell("Tipo Entrada"), createValueCell(j.entryDetails.type)] }),
+            new TableRow({ children: [createLabelCell("Configuración"), createValueCell(clean(j.entryDetails.summary))] }),
+        ]
+    }));
+
+    // 3. CONFIGURACIONES GLOBALES (GOALS / EXITS)
+    if ((j.goals && j.goals.length > 0) || (j.exits && j.exits.length > 0)) {
+        const globalRows = [];
+        if (j.goals?.[0]?.configurationArguments?.criteria) {
+            const g = j.goals[0];
+            const unit = g.metaData?.conversionUnit === 'percentage' ? '%' : g.metaData?.conversionUnit || '';
+            globalRows.push(new TableRow({ children: [createMergedHeaderCell(`🎯 GOAL: ${g.name}`, "E67E22", 18)] }));
+            globalRows.push(new TableRow({ children: [createLabelCell("Meta"), createValueCell(`${g.metaData?.conversionValue || ''}${unit}`)] }));
+            globalRows.push(new TableRow({ children: [createLabelCell("Lógica"), createValueCell(clean(parseXmlToLogic(g.configurationArguments.criteria)))] }));
+        }
+        if (j.exits?.[0]?.configurationArguments?.criteria) {
+            globalRows.push(new TableRow({ children: [createMergedHeaderCell("🚪 EXIT CRITERIA", "C0392B", 18)] }));
+            globalRows.push(new TableRow({ children: [createLabelCell("Lógica"), createValueCell(clean(parseXmlToLogic(j.exits[0].configurationArguments.criteria)))] }));
+        }
+        if (globalRows.length > 0) {
+            children.push(new Paragraph({ text: "CONFIGURACIONES GLOBALES", heading: HeadingLevel.HEADING_2, spacing: { before: 400, after: 200 } }));
+            children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: globalRows }));
+        }
+    }
+
+    // 4. FLUJO LÓGICO
+    children.push(new Paragraph({ text: "FLUJO LÓGICO", heading: HeadingLevel.HEADING_2, spacing: { before: 400, after: 200 } }));
+    const flowTextFormatted = j.flowText.replace(/└─/g, '\\--').replace(/├─/g, '|--').replace(/│/g, '|  ').replace(/➡️/g, '->').replace(/🔴/g, '(Fin)');
+    children.push(new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [new TableRow({ children: [new TableCell({ 
+            children: flowTextFormatted.split('\n').map(l => new Paragraph({ children: [new TextRun({ text: l, font: "Courier New", size: 14 })], spacing: { before: 0, after: 0 } })),
+            shading: { fill: "F8F9FA" }, padding: { top: 200, bottom: 200, left: 200 } 
+        })] })]
+    }));
+
+    // 5. ACTIVIDADES
+    children.push(new Paragraph({ text: "DETALLE DE ACTIVIDADES", heading: HeadingLevel.HEADING_2, spacing: { before: 600, after: 200 } }));
+
+    const flowActivities = j.activities.filter(act => j.numberMap.has(act.key)).sort((a, b) => j.numberMap.get(a.key) - j.numberMap.get(b.key));
+
+    for (const act of flowActivities) {
+        const num = j.numberMap.get(act.key);
+        const rows = [
+            new TableRow({ children: [createMergedHeaderCell(`#${num} - ${act.name}`, "558AC7", 20)] }),
+            new TableRow({ children: [createLabelCell("Tipo"), createValueCell(act.type)] }),
+        ];
+
+        // --- IMPACTO (COMPARTIDA) ---
+        const isShared = act.otherUsages && act.otherUsages.length > 0;
+        if (isShared) {
+            const list = act.otherUsages.map(u => `• ${u.automationName} (Paso: ${u.step})`).join('\n');
+            rows.push(new TableRow({ children: [createLabelCell("Impacto"), createValueCell(`COMPARTIDA en:\n${list}`)] }));
+        }
+
+        // --- LÓGICA POR ACTIVIDAD ---
+        if (act.type === 'EMAILV2') {
+            const ts = act.configurationArguments?.triggeredSend || {};
+            rows.push(new TableRow({ children: [createMergedHeaderCell("DETALLES DEL ENVÍO", "E9ECEF", 18)] }));
+            rows.push(new TableRow({ children: [createLabelCell("Email ID"), createValueCell(ts.emailId)] }));
+            rows.push(new TableRow({ children: [createLabelCell("Asunto"), createValueCell(ts.emailSubject)] }));
+            rows.push(new TableRow({ children: [createLabelCell("Preheader"), createValueCell(ts.preHeader || '---')] }));
+            rows.push(new TableRow({ children: [createLabelCell("Clasificación"), createValueCell(act.resolvedSendClassification || ts.sendClassificationId)] }));
+            rows.push(new TableRow({ children: [createLabelCell("Lista"), createValueCell(act.resolvedListName || (ts.publicationListId === 0 ? "All Subscribers" : ts.publicationListId))] }));
+        }
+        else if (act.type.includes('MULTICRITERIA')) {
+            rows.push(new TableRow({ children: [createMergedHeaderCell("CRITERIOS DE DECISIÓN", "E9ECEF", 18)] }));
+            const criteria = act.configurationArguments?.criteria || {};
+            for (const [key, xml] of Object.entries(criteria)) {
+                const outcome = act.outcomes.find(o => o.key === key);
+                const label = outcome?.metaData?.label || key;
+                rows.push(new TableRow({ children: [createLabelCell(`Rama: ${label}`), createValueCell(clean(outcome?.metaData?.criteriaDescription || parseXmlToLogic(xml)))] }));
+            }
+            const remainder = act.outcomes.find(o => o.key === 'remainder_path');
+            if (remainder) rows.push(new TableRow({ children: [createLabelCell("Rama: Resto"), createValueCell("Cualquier contacto que no cumpla los criterios anteriores.")] }));
+        }
+        else if (act.type === 'ENGAGEMENTDECISION') {
+            const config = act.configurationArguments || {};
+            const stats = { 2: "Apertura (Open)", 3: "Clic (Click)", 6: "Rebote (Bounce)" };
+            rows.push(new TableRow({ children: [createMergedHeaderCell("DETALLES DE INTERACCIÓN", "E9ECEF", 18)] }));
+            rows.push(new TableRow({ children: [createLabelCell("Evento esperado"), createValueCell(stats[config.statsTypeId] || config.statsTypeId)] }));
+            rows.push(new TableRow({ children: [createLabelCell("Email Ref."), createValueCell(act.metaData?.refActivityName || '---')] }));
+            if (config.engagementUrls?.urls?.length > 0) {
+                const urlList = config.engagementUrls.urls.map(u => typeof u === 'string' ? u : (u.alias || u.url)).join('\n');
+                rows.push(new TableRow({ children: [createLabelCell("URLs monitoreadas"), createValueCell(urlList)] }));
+            }
+        }
+        else if (act.type === 'UPDATECONTACTDATA') {
+            const fields = act.arguments?.activityData?.updateContactFields || [];
+            rows.push(new TableRow({ children: [createLabelCell("Data Extension"), createValueCell(act.resolvedDeName || '---')] }));
+            const mapping = fields.map(f => `${f.resolvedFieldName || f.field}: ${f.value === 0 ? "0" : (f.value || "vacío")}`).join('\n');
+            rows.push(new TableRow({ children: [createLabelCell("Mapeo Atributos"), createValueCell(mapping)] }));
+        }
+        else if (act.type === 'WHATSAPPACTIVITY') {
+            const config = act.configurationArguments || {};
+            rows.push(new TableRow({ children: [createMergedHeaderCell("CONFIGURACIÓN WHATSAPP", "E9ECEF", 18)] }));
+            rows.push(new TableRow({ children: [createLabelCell("Plantilla"), createValueCell(`${act.resolvedTemplateName || ''} (${config.assetId})`)] }));
+            rows.push(new TableRow({ children: [createLabelCell("Canal"), createValueCell(config.channelId)] }));
+            rows.push(new TableRow({ children: [createLabelCell("Timing"), createValueCell(config.messagePriority)] }));
+        }
+        else if (act.type === 'SALESCLOUDACTIVITY' || act.type === 'OBJECTACTIVITY') {
+            const objects = act.arguments?.objectMap?.objects || [];
+            objects.forEach(obj => {
+                rows.push(new TableRow({ children: [createMergedHeaderCell(`SALESFORCE: ${obj.action} ${obj.type}`, "E9ECEF", 18)] }));
+                if (obj.lookup?.steps) {
+                    const lookup = obj.lookup.steps.flatMap(s => s.criteria).map(c => `${c.FieldName} == ${c.FieldValueLabel || c.FieldValue}`).join('\n');
+                    rows.push(new TableRow({ children: [createLabelCell("Lookup (Iden.)"), createValueCell(lookup)] }));
+                }
+                const mapping = (obj.fields || []).map(f => `${f.FieldLabel} (${f.FieldName}): ${f.FieldValueLabel || f.FieldValue}`).join('\n');
+                rows.push(new TableRow({ children: [createLabelCell("Mapeo Campos"), createValueCell(mapping)] }));
+            });
+        }
+        else if (act.type === 'RANDOMSPLIT') {
+            rows.push(new TableRow({ children: [createMergedHeaderCell("DISTRIBUCIÓN PROBABILÍSTICA", "E9ECEF", 18)] }));
+            const dist = act.outcomes.map(o => `${o.metaData?.label || o.key}: ${o.arguments?.percentage}%`).join('\n');
+            rows.push(new TableRow({ children: [createLabelCell("Porcentajes"), createValueCell(dist)] }));
+        }
+        else if (act.type === 'STOWAIT') {
+            const p = act.configurationArguments?.params || {};
+            rows.push(new TableRow({ children: [createLabelCell("Einstein STO"), createValueCell(`Ventana: ${p.slidingWindowHours} horas\nAleatorio: ${p.enableRandomTime ? 'Sí' : 'No'}`)] }));
+        }
+        else if (act.type.startsWith('WAIT')) {
+            const c = act.configurationArguments || {};
+            let info = '---';
+            if (c.specificDate) info = `Hasta fecha: ${c.specificDate} ${c.specifiedTime || ''}`;
+            else if (c.waitDuration) info = `${c.waitDuration} ${c.waitUnit}`;
+            else if (c.waitEndDateAttributeExpression) info = `Atributo: ${c.waitEndDateAttributeExpression}`;
+            rows.push(new TableRow({ children: [createLabelCell("Config. Espera"), createValueCell(info)] }));
+        }
+        else if (act.type === 'SMSSYNC') {
+            const config = act.configurationArguments || {};
+            const store = act.metaData?.store || {};
+            rows.push(new TableRow({ children: [createMergedHeaderCell("CONFIGURACIÓN SMS", "E9ECEF", 18)] }));
+            rows.push(new TableRow({ children: [createLabelCell("Mensaje"), createValueCell(`${act.resolvedTemplateName || ''} (${config.assetId})`)] }));
+            rows.push(new TableRow({ children: [createLabelCell("Código"), createValueCell(store.messageConfiguration?.selectedCode?.code || '---')] }));
+            rows.push(new TableRow({ children: [createLabelCell("Keyword ID"), createValueCell(config.keywordId)] }));
+        }
+
+        children.push(new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: rows,
+            margin: { bottom: 400 } 
+        }));
+        children.push(new Paragraph({ text: "" })); 
+    }
+
+    const docObj = new Document({ sections: [{ children }] });
+    const blob = await Packer.toBlob(docObj);
+    window.saveAs(blob, `Auditoria_Journey_${j.name.replace(/[^a-zA-Z0-9]/g, '_')}.docx`);
+    ui.unblockUI();
 }

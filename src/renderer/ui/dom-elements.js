@@ -360,6 +360,7 @@ export function init() {
     elements.downloadJourneyPdfBtn = document.getElementById('downloadJourneyPdfBtn');
     elements.expandAllAnalyzerBtn = document.getElementById('expandAllAnalyzerBtn');
     elements.collapseAllAnalyzerBtn = document.getElementById('collapseAllAnalyzerBtn');
+    elements.downloadJourneyWordBtn = document.getElementById('downloadJourneyWordBtn');
 }
 
 export default elements;
