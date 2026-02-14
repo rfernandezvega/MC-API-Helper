@@ -6,7 +6,7 @@ MC API Helper es una aplicación de escritorio construida con **Electron**, dise
 
 ## ➤ Arquitectura y Estructura de Ficheros
 
-La aplicación sigue una arquitectura modular que separa claramente las responsabilidades entre el proceso principal (backend) y el proceso de renderizado (frontend).
+La aplicación sigue una arquitectura modular que separa las responsabilidades entre el proceso principal (backend) y el proceso de renderizado (frontend).
 
 ```
 .
@@ -22,9 +22,14 @@ La aplicación sigue una arquitectura modular que separa claramente las responsa
 │       │   └── mc-api-service.js # Módulo que centraliza todas las llamadas a la API de SFMC.
 │       ├── assets/             # Recursos estáticos como imágenes y GIFs.
 │       ├── components/         # Módulos de JavaScript para cada funcionalidad específica.
+│       │   ├── actividades-finder.js
+│       │   ├── automations-analyzer.js
+│       │   ├── automations-cloner.js
 │       │   ├── automations-manager.js
 │       │   ├── calendar.js
 │       │   ├── cloud-pages-manager.js
+│       │   ├── content-finder.js
+│       │   ├── content-manager.js
 │       │   ├── customer-finder.js
 │       │   ├── data-source-finder.js
 │       │   ├── de-creator.js
@@ -33,16 +38,20 @@ La aplicación sigue una arquitectura modular que separa claramente las responsa
 │       │   ├── email-validator.js
 │       │   ├── field-manager.js
 │       │   ├── fields-table.js
+│       │   ├── folder-creator.js
+│       │   ├── journeys-analyzer.js
 │       │   ├── journeys-manager.js
 │       │   ├── org-manager.js
 │       │   ├── query-cloner.js
-│       │   └── query-text-finder.js
+│       │   ├── query-text-finder.js
+│       │   └── script-text-finder.js
 │       ├── styles/             # Ficheros de estilo CSS.
 │       │   ├── components/     # CSS específico para cada componente.
 │       │   ├── common.css      # Estilos globales y reutilizables.
 │       │   └── style.css       # Fichero principal que importa todos los demás CSS.
 │       ├── ui/                 # Módulos de ayuda para la interfaz de usuario.
 │       │   ├── dom-elements.js # Centraliza todas las referencias a los elementos del DOM.
+│       │   ├── fonts.js        # Gestiona la fuente para los pdf.
 │       │   ├── logger.js       # Gestiona el panel de logs.
 │       │   └── ui-helpers.js   # Funciones para modales, loaders, etc.
 │       ├── views/              # Fragmentos de HTML para cada vista de la aplicación.
@@ -82,46 +91,28 @@ La aplicación sigue una arquitectura modular que separa claramente las responsa
 
 ---
 
-## ➤ Funcionalidades Principales
-
-### 🏛️ General
--   **Gestión de Organizaciones:** Guarda y gestiona múltiples configuraciones de API para diferentes BUs o entornos (Sandbox/Producción).
--   **Documentación Integrada:** Una guía de uso completa accesible desde la propia aplicación.
-
-### 🗂️ Data Extensions
--   **Asistente de Creación:** Crea Data Extensions, define sus campos, carpeta y propiedades "Sendable" de forma visual.
--   **Gestión de Campos:** Recupera, añade, actualiza ("upsert") y elimina campos de DEs existentes. Incluye un importador desde portapapeles.
--   **Documentador de Carpetas:** Genera un CSV con la estructura completa de todas las Data Extensions de una carpeta específica.
-
-### ⚙️ Herramientas Avanzadas
--   **Gestión de Automatismos:** Visualiza, filtra y ejecuta acciones masivas (Activar, Ejecutar, Parar) sobre múltiples automatismos.
--   **Gestión de Journeys:**
-    -   Panel de control completo para visualizar, filtrar y analizar todos los Journeys.
-    -   **Clonado Inteligente:** Clona un Journey con un solo clic, recreando automáticamente su DE de entrada y su Event Definition.
-    -   **Visualizador de Flujo:** Genera una representación textual del flujo de un Journey para facilitar su documentación y análisis.
--   **Gestión de Cloud Pages:** Lista y filtra todas las Cloud Pages, mostrando su ubicación y URL.
--   **Calendario de Automatismos:** Visualiza en un calendario anual las ejecuciones programadas.
--   **Buscadores Avanzados:**
-    -   **DE Finder:** Encuentra la ruta de carpeta de cualquier Data Extension.
-    -   **Data Source Finder:** Descubre qué Queries o Imports están poblando una Data Extension.
-    -   **Customer Finder:** Busca un suscriptor por Key o Email y rastrea su presencia en Journeys y DEs.
-    -   **Query Text Finder:** Busca texto libre dentro del código de todas las Query Activities.
--   **Clonador de Queries:** Herramienta para clonar masivamente Query Activities y sus DEs de destino entre carpetas.
--   **Validador de Email:** Verifica la validez de un email usando la API de Marketing Cloud.
-
----
-
 ## ➤ Configuración y Requisitos
 
 ### 1. Paquete de API en Marketing Cloud
 Es necesario crear un paquete de tipo **Web App** con los siguientes permisos y configuración:
 -   **Redirect URI:** `https://127.0.0.1:8443/callback`
 -   **Permisos (Scope):**
-    -   **Data:** `Data Extensions (Read, Write)`, `List and Subscribers (Read, Write)`
-    -   **Journeys:** `Read`, `Write`, `Execute`
-    -   **Automations:** `Read`, `Write`, `Execute`
-    -   **Assets:** `Saved Content (Read)`, `Documents and Images (Read)`
-    -   **Marketing Cloud Services:** `Email (Read, Write)`
+    - **Data**
+        - `Data Extensions`: Read, Write
+        - `List and Subscribers`: Read, Write
+    - **Journeys**
+        - `Journeys`: Read, Write, Execute, Activate/Stop/Pause/Resume/Send/Schedule, Delete
+    - **Automations**
+        - `Automations`: Read, Write, Execute
+    - **Assets**
+        - `Documents and Images`: Read
+        - `Saved Content`: Read
+    - **Marketing Cloud Services**
+        - `Email`: Read, Write
+    - **Audiences**
+        - `Audiences`: Read, Write
+    - **File Locations**
+        - `File Locations`: Read
 
 > **Nota:** Tras crear o modificar el paquete, espera hasta 10 minutos para que los cambios se propaguen en la plataforma.
 
