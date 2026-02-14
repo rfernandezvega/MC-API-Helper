@@ -1191,9 +1191,55 @@ export async function fetchDataExtractDetails(id, apiConfig) {
     return await executeRestRequest(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
 }
 
-export async function fetchImportDetails(id, apiConfig) {
-    const url = `${apiConfig.restUri}automation/v1/imports/${id}`;
-    return await executeRestRequest(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
+/**
+ * Recupera los detalles técnicos de un Import Definition vía SOAP (Sin FieldMaps)
+ */
+export async function fetchImportDefinitionDetails(importObjectId, apiConfig) {
+    const soapPayload = `
+    <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+        <s:Header>
+            <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+            <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+            <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+        </s:Header>
+        <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+            <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+                <RetrieveRequest>
+                    <ObjectType>ImportDefinition</ObjectType>
+                    <Properties>Name</Properties>
+                    <Properties>FieldMappingType</Properties>
+                    <Properties>UpdateType</Properties>
+                    <Properties>AllowErrors</Properties>
+                    <Properties>Delimiter</Properties>
+                    <Properties>FileSpec</Properties>
+                    <Properties>FileType</Properties>
+                    <Properties>HeaderLines</Properties>
+                    <Filter xsi:type="SimpleFilterPart">
+                        <Property>ObjectID</Property>
+                        <SimpleOperator>equals</SimpleOperator>
+                        <Value>${importObjectId}</Value>
+                    </Filter>
+                </RetrieveRequest>
+            </RetrieveRequestMsg>
+        </s:Body>
+    </s:Envelope>`;
+
+    const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+    const doc = new DOMParser().parseFromString(responseText, "application/xml");
+    const result = doc.querySelector("Results");
+
+    if (!result) return null;
+
+    return {
+        name: result.querySelector("Name")?.textContent,
+        fieldMappingType: result.querySelector("FieldMappingType")?.textContent,
+        updateType: result.querySelector("UpdateType")?.textContent,
+        allowErrors: result.querySelector("AllowErrors")?.textContent === 'true',
+        delimiter: result.querySelector("Delimiter")?.textContent,
+        fileSpec: result.querySelector("FileSpec")?.textContent,
+        fileType: result.querySelector("FileType")?.textContent,
+        headerLines: result.querySelector("HeaderLines")?.textContent
+    };
 }
 
 export async function fetchFileTransferDetails(id, apiConfig) {

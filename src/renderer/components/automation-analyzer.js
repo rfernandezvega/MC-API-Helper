@@ -131,6 +131,16 @@ async function enrichAutomationData(details) {
                     const s = await mcApiService.fetchScriptDetails(act.activityObjectId, apiConfig);
                     act.description = s.description;
                     act.scriptCode = s.script;
+                    act.specificData = {
+                        hasScript: true
+                    };
+                }
+                else if (act.objectTypeId === 43) { // Import Activity
+                    const imp = await mcApiService.fetchImportDefinitionDetails(act.activityObjectId, apiConfig);
+                    
+                    if (imp) {
+                        act.specificData = imp;
+                    }
                 }
             } catch (e) { console.warn(`Error enriqueciendo ${act.name}`, e); }
         }
@@ -148,31 +158,48 @@ async function renderAnalysis(automation) {
         for (const act of step.activities || []) {
             const typeLabel = activityTypeMap[act.objectTypeId] || `Tipo: ${act.objectTypeId}`;
             
-            let impactHtml = '<span style="color: #28a745; font-weight: bold;">✓ Exclusiva</span>';
+            // --- Lógica de Impacto ---
+            let impactBoxHtml = '';
             if (act.otherUsages && act.otherUsages.length > 0) {
                 const list = act.otherUsages.map(u => `<li>${u.automationName} (Paso: ${u.step})</li>`).join('');
-                impactHtml = `<span style="color: #dc3545; font-weight:bold;">⚠ Usado en ${act.otherUsages.length} más:</span><ul style="margin:5px 0; padding-left:0; font-size:0.85em; list-style:none;">${list}</ul>`;
+                impactBoxHtml = `
+                    <div class="impact-box impact-shared">
+                        <strong>⚠ Utilizado en ${act.otherUsages.length} procesos más:</strong>
+                        <ul>${list}</ul>
+                    </div>`;
+            } else {
+                impactBoxHtml = `
+                    <div class="impact-box impact-exclusive">
+                        <strong>✓ Actividad Exclusiva</strong>
+                    </div>`;
             }
 
+            // --- Lógica de Detalles (Derecha) ---
             let detailsHtml = '';
             if (act.specificData) {
-                detailsHtml = `<div style="margin-top: 8px; padding: 10px; background: #f0f7ff; border-radius: 4px; border-left: 4px solid #558ac7; font-size: 0.85em; line-height: 1.5;">`;
+                detailsHtml = `<div style="padding: 10px; background: #f0f7ff; border-radius: 4px; border-left: 4px solid #558ac7; font-size: 0.85em; line-height: 1.5;">`;
                 
                 if (act.objectTypeId === 300) { // Query
                     detailsHtml += `
                         <div><strong>Destino:</strong> ${act.specificData.targetDE.name}</div>
                         <div style="color:#666; font-size:0.9em; margin-bottom:4px;">(Key: ${act.specificData.targetDE.key})</div>
                         <div><strong>Tipo Acción:</strong> <span style="text-transform: capitalize; color:#2980b9; font-weight:bold;">${act.specificData.updateType}</span></div>`;
+                    
+                    // Añadir el bloque SQL colapsable
+                    if (act.queryText) {
+                        detailsHtml += `
+                            <div class="sql-wrapper" style="margin-top:10px;">
+                                <div class="sql-toggle-btn">VER QUERY<span>▼</span></div>
+                                <div class="sql-content"> <!-- Usará los nuevos estilos del CSS -->
+                                    <pre><code>${highlightSQLHtml(act.queryText)}</code></pre>
+                                </div>
+                            </div>`;
+                    }
                 } 
-                else if (act.objectTypeId === 73) { // Extract
+                else if (act.objectTypeId === 73) { // Extract (mantenemos lógica actual)
                     if (act.specificData.deName) {
                         detailsHtml += `<div><strong>DE Origen:</strong> ${act.specificData.deName}</div>
-                                        <div style="color:#666; font-size:0.9em; margin-bottom:4px;">(Key: ${act.specificData.deKey})</div>
                                         <div><strong>Delimitador:</strong> <span style="color:#e67e22; font-weight:bold;">${act.specificData.delimiter}</span></div>`;
-                    }
-                    if (act.specificData.convertTo) {
-                        detailsHtml += `<div><strong>Acción:</strong> <span style="color:#2980b9; font-weight:bold;">Convert File</span></div>
-                                        <div style="margin-bottom:4px;"><strong>Codificación:</strong> <span style="color:#e67e22; font-weight:bold;">${act.specificData.convertTo}</span></div>`;
                     }
                     detailsHtml += `<div><strong>Patrón Archivo:</strong> <span style="color:#27ae60;">${act.specificData.fileSpec}</span></div>`;
                 } 
@@ -180,39 +207,99 @@ async function renderAnalysis(automation) {
                     detailsHtml += `<div><strong>Archivo:</strong> <span style="color:#27ae60;">${act.specificData.fileSpec}</span></div>
                                     <div><strong>Destino:</strong> <span style="color:#8e44ad; font-weight:bold;">${act.specificData.destination}</span></div>`;
                 }
-                else if (act.objectTypeId === 42) { // Email Send
+                else if (act.objectTypeId === 42) { // Email
+                    detailsHtml += `<div><strong>Asunto:</strong> <span style="color:#27ae60; font-weight:bold;">${act.specificData.subject}</span></div>`;
+                }
+                else if (act.objectTypeId === 423) { // SSJS Script                   
+                    // Verificamos si realmente hay contenido (quitando espacios)
+                    const hasContent = act.scriptCode && act.scriptCode.trim().length > 0;
+
+                    if (hasContent) {
+                        detailsHtml += `
+                            <div class="sql-wrapper" style="margin-top:10px;">
+                                <div class="sql-toggle-btn">VER CÓDIGO SCRIPT <span>▼</span></div>
+                                <div class="sql-content" style="display:none;"> 
+                                    <pre style="margin:0; min-height: 1.5em; overflow: auto;"><code>${highlightJSHtml(act.scriptCode)}</code></pre>
+                                </div>
+                            </div>`;
+                    } else {
+                        detailsHtml += `<div style="color:#999; margin-top:5px; font-style:italic;">(Script vacío o sin código disponible)</div>`;
+                    }
+                }
+                else if (act.objectTypeId === 43) { // Import
+                    // 1. Sacamos la DE del JSON (igual que en las Queries)
+                    const targetDE = act.targetDataExtensions && act.targetDataExtensions[0] 
+                        ? act.targetDataExtensions[0] 
+                        : { name: 'N/A', key: 'N/A' };
+
+                    // 2. Sacamos los datos técnicos de la específica
+                    const tech = act.specificData || {};
+                    
+                    const delimLabel = tech.delimiter === ',' ? 'Coma (,)' : (tech.delimiter === '|' ? 'Pipe (|)' : (tech.delimiter || 'N/A'));
+
                     detailsHtml += `
-                        <div style="margin-bottom:4px;">
-                            <strong>Asunto:</strong> <span style="color:#27ae60; font-weight:bold;">${act.specificData.subject}</span>
+                        <div style="margin-bottom: 8px;">
+                            <strong>Destino:</strong> ${targetDE.name} 
+                            <br><small style="color:#666;">(Key: ${targetDE.key})</small>
+                            <!-- Acción colocada debajo de la Key, igual que en SQL Query -->
+                            <div style="margin-top:4px;"><strong>Tipo Acción:</strong> <span style="text-transform: capitalize; color:#2980b9; font-weight:bold;">${tech.updateType || 'N/A'}</span></div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.9em; border-top: 1px solid #d1d9e0; margin-top:5px; padding-top:8px;">
+                            <div style="grid-column: span 2;">
+                                <strong>Archivo:</strong> <span style="color:#27ae60; font-weight:bold; word-break: break-all;">${tech.fileSpec || 'N/A'}</span>
+                            </div>
+                            <div><strong>Tipo:</strong> ${tech.fileType || 'N/A'}</div>
+                            <div><strong>Separador:</strong> ${delimLabel}</div>
+                            <div><strong>Cabecera:</strong> ${tech.headerLines === '1' ? 'Sí' : 'No'}</div>
+                            <div><strong>Ignorar Errores:</strong> ${tech.allowErrors ? 'Sí' : 'No'}</div>
                         </div>
                     `;
-
-                    // Solo mostrar CC y BCC si no están vacíos
-                    if (act.specificData.cc) {
-                        detailsHtml += `<div style="font-size:0.9em; color:#555;"><strong>CC:</strong> ${act.specificData.cc}</div>`;
-                    }
-                    if (act.specificData.bcc) {
-                        detailsHtml += `<div style="font-size:0.9em; color:#555;"><strong>BCC:</strong> ${act.specificData.bcc}</div>`;
-                    }
                 }
                 detailsHtml += `</div>`;
             }
 
+            // --- Estructura de la Fila (2 Columnas) ---
             rowsHtml += `
                 <tr>
-                    <td style="width:15%; vertical-align: top;">${typeLabel}</td>
-                    <td style="width:35%; text-align:left; vertical-align: top;">
-                        <strong>${act.name}</strong><br>
-                        <small style="color: #666; display:block; margin-bottom:6px;">${act.description || 'Sin descripción'}</small>
+                    <td style="width:40%; text-align:left; vertical-align: top;">
+                        <small style="color: #558ac7; font-weight: bold; text-transform: uppercase;">${typeLabel}</small>
+                        <strong style="display:block; font-size: 1.1em; margin: 4px 0;">${act.name}</strong>
+                        <small style="color: #666; display:block; margin-bottom:10px;">${act.description || 'Sin descripción'}</small>
+                        ${impactBoxHtml}
+                    </td>
+                    <td style="width:60%; text-align:left; vertical-align: top;">
+                        <div style="margin-bottom: 5px; font-weight: bold; font-size: 0.8em; color: #555;"></div>
                         ${detailsHtml}
                     </td>
-                    <td style="width:50%; text-align:left; vertical-align: top;">${impactHtml}</td>
                 </tr>`;
         }
         
-        stepBlock.innerHTML = `<h4>Paso ${step.step}</h4><div class="table-container"><table class="folder-results-table"><thead><tr><th>Tipo</th><th>Actividad / Configuración</th><th>Impacto en otros procesos</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
+        stepBlock.innerHTML = `
+            <h4>Paso ${step.step}</h4>
+            <div class="table-container">
+                <table class="folder-results-table">
+                    <thead>
+                        <tr>
+                            <th>Actividad e Impacto</th>
+                            <th>Configuración Detallada</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            </div>`;
         container.appendChild(stepBlock);
     }
+
+    // Añadir funcionalidad de click a los botones SQL (Delegación de eventos)
+    container.querySelectorAll('.sql-toggle-btn').forEach(btn => {
+        btn.onclick = function() {
+            const content = this.nextElementSibling;
+            const isVisible = content.style.display === 'block';
+            content.style.display = isVisible ? 'none' : 'block';
+            this.querySelector('span').textContent = isVisible ? '▼' : '▲';
+        };
+    });
 }
 
 async function generatePDF() {
@@ -288,7 +375,6 @@ async function generatePDF() {
                 if (act.objectTypeId === 300) {
                     tableBody.push(["Destino:", `${data.targetDE.name}\n(Key: ${data.targetDE.key})`], ["Acción:", data.updateType]);
                 } 
-                // --- LÓGICA DE EXTRACT REFINADA ---
                 else if (act.objectTypeId === 73) {
                     if (data.deName) {
                         tableBody.push(["DE Origen:", data.deName]);
@@ -308,6 +394,23 @@ async function generatePDF() {
                 }
                 else if (act.objectTypeId === 952) {
                     //No devuelve la API el Journey
+                }
+                else if (act.objectTypeId === 43) { // IMPORT
+                    // Sacamos la DE del array de la actividad
+                    const targetDE = act.targetDataExtensions && act.targetDataExtensions[0] 
+                        ? act.targetDataExtensions[0] 
+                        : { name: 'N/A', key: 'N/A' };
+                    
+                    const delimLabel = data.delimiter === ',' ? 'Coma (,)' : (data.delimiter === '|' ? 'Pipe (|)' : (data.delimiter || 'N/A'));
+
+                    tableBody.push(
+                        ["Destino:", `${targetDE.name}\n(Key: ${targetDE.key})`],
+                        ["Acción:", data.updateType || 'N/A'],
+                        ["Archivo:", data.fileSpec || 'N/A'],
+                        ["Tipo/Sep:", `${data.fileType || 'N/A'} (${delimLabel})`],
+                        ["Cabecera:", data.headerLines === '1' ? 'Sí' : 'No'],
+                        ["Ignorar Errores:", data.allowErrors ? 'Sí' : 'No']
+                    );
                 }
             }
 
@@ -442,4 +545,41 @@ function drawHighlightedCode(doc, code, type, startY) {
 function formatDate(date) {
     if (!date || date.startsWith('0001')) return 'N/A';
     return new Date(date).toLocaleString();
+}
+
+function highlightSQLHtml(query) {
+    if (!query) return '';
+
+    let escaped = query.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    // Patrones: 1. Comentarios, 2. Strings, 3. Keywords, 4. Funciones, 5. Números
+    const pattern = /(--[^\n]*|\/\*[\s\S]*?\*\/)|('[^']*')|\b(SELECT|FROM|WHERE|AND|OR|JOIN|INNER|LEFT|ON|GROUP|BY|ORDER|INSERT|UPDATE|SET|DELETE|CASE|WHEN|THEN|ELSE|END|NULL|NOT|IN|TOP|DISTINCT|AS|UNION|ALL|LIKE)\b|\b(CONVERT|DATE|DATEADD|GETUTCDATE|GETDATE|DATEDIFF|SUM|COUNT|AVG|MIN|MAX|CAST|ISNULL|COALESCE)\b|(\b\d+\b)/gi;
+
+    return escaped.replace(pattern, (match, com, str, kwd, fn, num) => {
+        if (com) return `<span class="sql-comment">${match}</span>`;
+        if (str) return `<span class="sql-string">${match}</span>`;
+        if (kwd) return `<span class="sql-keyword">${match.toUpperCase()}</span>`;
+        if (fn) return `<span class="sql-function">${match.toUpperCase()}</span>`;
+        if (num) return `<span class="sql-number">${match}</span>`;
+        return match;
+    });
+}
+
+function highlightJSHtml(code) {
+    if (!code) return '';
+    
+    // Escapamos HTML primero
+    let escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    // Definimos los patrones: 1. Comentarios, 2. Strings, 3. Keywords, 4. Builtins, 5. Números
+    const pattern = /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|('[^']*'|"[^"]*")|\b(var|let|const|function|return|if|else|for|while|try|catch|new|async|await|switch|case|break)\b|\b(Platform|HTTP|Variable|Content|DataExtension|Stringify|ParseJSON|Write)\b|(\b\d+\b)/g;
+
+    return escaped.replace(pattern, (match, com, str, kwd, bilt, num) => {
+        if (com) return `<span class="js-comment">${match}</span>`;
+        if (str) return `<span class="js-string">${match}</span>`;
+        if (kwd) return `<span class="js-keyword">${match}</span>`;
+        if (bilt) return `<span class="js-builtin">${match}</span>`;
+        if (num) return `<span class="js-number">${match}</span>`;
+        return match;
+    });
 }

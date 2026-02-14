@@ -999,7 +999,7 @@ function renderHeader(j) {
             </div>
         </div>
     `;
-    elements.journeyAnalyzerHeaderWrapper.innerHTML = createCollapsibleHtml("Identificación y Configuración de Entrada", innerHtml, "header", true);
+    elements.journeyAnalyzerHeaderWrapper.innerHTML = createCollapsibleHtml("Auditoría y Configuración de Entrada", innerHtml, "header", true);
 }
 
 function generatePDF() {
