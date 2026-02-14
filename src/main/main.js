@@ -347,6 +347,7 @@ ipcMain.handle('load-cloud-pages-cache', (event, clientName) => {
     }
 });
 
+
 // --- 5. GESTIÓN DE CREDENCIALES Y TOKENS ---
 async function refreshAccessToken(clientName) {
     const refreshToken = await keytar.getPassword(KEYTAR_SERVICE_NAME, `${clientName}-refreshToken`);

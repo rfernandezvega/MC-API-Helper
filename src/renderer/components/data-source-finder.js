@@ -20,6 +20,20 @@ export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
 
     elements.findDataSourcesBtn.addEventListener('click', findDataSources);
+
+    // --- Listener para el checkbox de mostrar/ocultar descripción ---
+    elements.showSourceQueryCheckbox.addEventListener('change', () => {
+        const isChecked = elements.showSourceQueryCheckbox.checked;
+        const displayStyle = isChecked ? '' : 'none';
+        
+        // Buscamos la tabla y aplicamos el estilo a la columna 6 (Descripción / Query)
+        const table = document.getElementById('data-sources-table');
+        if (table) {
+            table.querySelectorAll('thead th:nth-child(6), tbody td:nth-child(6)').forEach(cell => {
+                cell.style.display = displayStyle;
+            });
+        }
+    });
 }
 
 // --- 3. LÓGICA PRINCIPAL ---
@@ -30,6 +44,7 @@ export function init(dependencies) {
 async function findDataSources() {
     ui.blockUI("Buscando orígenes de datos...");
     logger.startLogBuffering();
+    
     elements.dataSourcesTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
     try {
         const apiConfig = await getAuthenticatedConfig();
@@ -80,20 +95,63 @@ async function findDataSources() {
  */
 function renderTable(sources) {
     elements.dataSourcesTbody.innerHTML = '';
+    
+    // --- Obtener estado actual del checkbox para el renderizado ---
+    const isChecked = elements.showSourceQueryCheckbox.checked;
+    const displayStyle = isChecked ? '' : 'none';
+
+    // Ajustar la cabecera de la tabla (th de la columna 6)
+    const tableHeader = document.querySelector('#data-sources-table thead th:nth-child(6)');
+    if (tableHeader) tableHeader.style.display = displayStyle;
+
     if (sources.length === 0) {
         elements.dataSourcesTbody.innerHTML = '<tr><td colspan="6">No se encontraron orígenes de datos para esta Data Extension.</td></tr>';
         return;
     }
+
     sources.forEach(source => {
         const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${source.name || '---'}</td>
-            <td>${source.type || '---'}</td>
-            <td>${source.automationName || '---'}</td>
-            <td>${source.step || '---'}</td>
-            <td>${source.action || '---'}</td>
-            <td style="white-space: pre-wrap; word-break: break-all;">${source.description || '---'}</td>
-        `;
+        
+        // Columna: Actividad
+        const activityNameCell = document.createElement('td');
+        activityNameCell.textContent = source.name || '---';
+        row.appendChild(activityNameCell);
+
+        // Columna: Tipo
+        const typeCell = document.createElement('td');
+        typeCell.textContent = source.type || '---';
+        row.appendChild(typeCell);
+
+        // Columna: Automatización
+        const automationCell = document.createElement('td');
+        automationCell.innerHTML = (source.automations && source.automations.length > 0)
+            ? source.automations.map(auto => auto.automationName || 'N/A').join('<br>')
+            : '---';
+        row.appendChild(automationCell);
+
+        // Columna: Paso
+        const stepCell = document.createElement('td');
+        stepCell.innerHTML = (source.automations && source.automations.length > 0)
+            ? source.automations.map(auto => auto.step ? `${auto.step}` : '---').join('<br>')
+            : '---';
+        row.appendChild(stepCell);
+
+        // Columna: Acción
+        const actionCell = document.createElement('td');
+        actionCell.textContent = source.action || '---';
+        row.appendChild(actionCell);
+
+        // Columna: Descripción / Query (COLUMNA 6)
+        const descriptionQueryCell = document.createElement('td');
+        descriptionQueryCell.style.whiteSpace = 'pre-wrap';
+        descriptionQueryCell.style.wordBreak = 'break-all';
+        descriptionQueryCell.textContent = source.description || '---';
+        
+        // --- APLICAR VISIBILIDAD SEGÚN CHECKBOX ---
+        descriptionQueryCell.style.display = displayStyle;
+        
+        row.appendChild(descriptionQueryCell);
+
         elements.dataSourcesTbody.appendChild(row);
     });
 }

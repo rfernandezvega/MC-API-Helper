@@ -1,28 +1,23 @@
 /* ===================================================================
    styles/components/documentation.css
-   Estilos específicos para la sección de Documentación.
    =================================================================== */
 
-/* Hace que las pestañas de la documentación sean fijas al hacer scroll */
+/* Pestañas fijas */
 .docu-container .tab-buttons {
   position: -webkit-sticky;
   position: sticky;
   top: 0;
   background-color: #fff;
-  z-index: 10;
+  z-index: 100;
+  border-bottom: 2px solid #e0e7ef;
 }
 
-/* Estilos generales para el contenido de las pestañas */
 .docu-container .tab-content {
   padding: 10px 5px;
   line-height: 1.6;
 }
-.docu-container .tab-content ul, .docu-container .tab-content ol { 
-    padding-left: 20px; 
-}
-.docu-container .tab-content li { 
-    margin-bottom: 10px; 
-}
+.docu-container .tab-content ul, .docu-container .tab-content ol { padding-left: 20px; }
+.docu-container .tab-content li { margin-bottom: 10px; }
 .docu-container code {
   background-color: #e9ecef;
   padding: 2px 5px;
@@ -30,18 +25,10 @@
   font-family: monospace;
 }
 
-/* --- ESTILOS RESTAURADOS PARA PANELES/TARJETAS --- */
-
-/* Contenedor principal de listas en la documentación */
-.docu-list {
-    padding: 0;
-    margin: 0;
-    list-style: none;
-}
-
-/* Estilo de "tarjeta" para cada item principal de la lista */
+/* Listas y Tarjetas */
+.docu-list { padding: 0; margin: 0; list-style: none; }
 .docu-list > li {
-  list-style-type: none; /* Quitamos los puntos de la lista principal */
+  list-style-type: none;
   background-color: #f8f9fa;
   border: 1px solid #e9ecef;
   border-radius: 8px;
@@ -49,42 +36,17 @@
   margin-bottom: 20px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.04);
 }
+.docu-item-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.docu-item-header strong { font-size: 1.1em; color: #333; }
+.docu-icon { display: inline-flex; align-items: center; justify-content: center; color: #558ac7; }
+.docu-icon.warning { color: #f39c12; }
 
-/* Cabecera dentro de una tarjeta de documentación */
-.docu-item-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-}
-.docu-item-header strong {
-    font-size: 1.1em;
-    color: #333;
-}
+/* Acordeón */
+.docu-accordion { list-style: none; padding: 0; margin: 0; }
+.docu-accordion-item { border-bottom: 1px solid #e9ecef; }
+.docu-accordion-item:last-child { border-bottom: none; }
+.docu-accordion-item.hidden, .docu-group.hidden { display: none !important; }
 
-/* Iconos dentro de las cabeceras */
-.docu-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #558ac7;
-}
-.docu-icon.warning {
-    color: #f39c12; /* Naranja/ámbar para advertencias */
-}
-
-/* --- ESTILOS PARA EL ACORDEÓN --- */
-.docu-accordion {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.docu-accordion-item {
-  border-bottom: 1px solid #e9ecef;
-}
-.docu-accordion-item:last-child {
-  border-bottom: none;
-}
 .docu-accordion-header {
   padding: 18px 10px;
   cursor: pointer;
@@ -97,25 +59,93 @@
   transition: background-color 0.2s;
   user-select: none;
 }
-.docu-accordion-header:hover {
-  background-color: #f8f9fa;
-}
+.docu-accordion-header:hover { background-color: #f8f9fa; }
 .docu-accordion-header::after {
   content: '▶';
   font-size: 0.6em;
   color: #558ac7;
   transition: transform 0.3s ease;
 }
-.docu-accordion-header.active::after {
-  transform: rotate(90deg);
-}
+.docu-accordion-header.active::after { transform: rotate(90deg); }
+
 .docu-accordion-content {
   max-height: 0;
   overflow: hidden;
   transition: max-height 0.4s ease-in-out;
-  padding: 0 15px; /* Añade un poco de padding al contenido desplegado */
+  padding: 0 15px; 
 }
 .docu-accordion-header.active + .docu-accordion-content {
-    padding-top: 10px;
-    padding-bottom: 20px;
+    padding-top: 15px;
+    padding-bottom: 60px; /* Margen de seguridad para imágenes */
 }
+
+/* Buscador */
+.docu-search-box {
+    position: sticky;
+    top: -10px;
+    z-index: 50;
+    background: #fff;
+    padding: 15px 5px;
+    border-bottom: 1px solid #e9ecef;
+    margin-bottom: 10px;
+}
+.search-input-wrapper { position: relative; display: flex; align-items: center; }
+.search-input-wrapper .search-icon {
+    position: absolute; left: 12px; color: #69a3db; font-size: 1.1em; pointer-events: none;
+}
+#docu-search-input {
+    width: 100%; padding: 12px 12px 12px 40px; border: 2px solid #e9ecef;
+    border-radius: 8px; font-size: 0.95em; outline: none; transition: all 0.2s;
+}
+#docu-search-input:focus { border-color: #69a3db; box-shadow: 0 2px 8px rgba(105, 163, 219, 0.15); }
+
+/* Títulos de Grupos */
+.docu-group-title {
+    background-color: #f0f6fc; color: #333; padding: 10px 15px; border-radius: 6px;
+    margin: 30px 0 15px 0; font-size: 1.15em; border-left: 5px solid #69a3db; font-weight: bold;
+}
+.docu-scrollable-content { padding-bottom: 40px; }
+
+/* IMÁGENES Y FILAS (Miniaturas) */
+.docu-screenshot, .docu-screenshot-item {
+    margin: 20px 0; display: flex; flex-direction: column; align-items: center;
+    background-color: #f8f9fa; border-radius: 8px; padding: 12px; border: 1px solid #e9ecef;
+}
+.docu-screenshot-row { display: flex; gap: 15px; margin: 20px 0; justify-content: center; align-items: flex-start; }
+.docu-screenshot-item { flex: 1; min-width: 0; }
+
+.docu-screenshot img, .docu-screenshot-item img {
+    max-width: 100%;
+    max-height: 180px !important; /* Miniaturas más pequeñas */
+    width: auto; height: auto; display: block; border-radius: 4px;
+    border: 1px solid #ccc; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    object-fit: contain; cursor: zoom-in; transition: transform 0.2s, box-shadow 0.2s;
+    /* GPU Rendering */
+    transform: translateZ(0); backface-visibility: hidden; will-change: transform;
+}
+.docu-screenshot img:hover, .docu-screenshot-item img:hover {
+    transform: scale(1.03); box-shadow: 0 6px 15px rgba(105, 163, 219, 0.3);
+}
+.docu-img-caption { margin-top: 10px; font-size: 0.85em; color: #555; font-style: italic; text-align: center; }
+
+/* LIGHTBOX (Ampliación) */
+.docu-lightbox {
+    position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.9); display: flex; flex-direction: column;
+    justify-content: center; align-items: center; animation: fadeIn 0.3s;
+}
+.docu-lightbox.hidden { display: none !important; }
+.lightbox-img {
+    max-width: 90%; max-height: 80%; border: 3px solid white; border-radius: 4px;
+    box-shadow: 0 0 30px rgba(0,0,0,0.6); object-fit: contain;
+}
+.lightbox-caption { color: white; margin-top: 15px; font-size: 1.2em; text-align: center; }
+.lightbox-close {
+    position: absolute; top: 20px; right: 35px; color: #fff; font-size: 40px;
+    font-weight: bold; cursor: pointer; transition: color 0.2s;
+}
+.lightbox-close:hover { color: #69a3db; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+@media (max-width: 800px) { .docu-screenshot-row { flex-direction: column; } }

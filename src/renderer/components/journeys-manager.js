@@ -21,6 +21,8 @@ let currentFilteredList = [];
 
 let getAuthenticatedConfig; // Dependencia que será inyectada por app.js
 
+let showJourneyAnalyzerView;
+
 // --- 2. FUNCIONES DE RENDERIZADO Y LÓGICA DE TABLA ---
 
 /**
@@ -29,10 +31,15 @@ let getAuthenticatedConfig; // Dependencia que será inyectada por app.js
 function applyFiltersAndRender() {
     currentPage = 1;
 
-    let filtered = fullJourneyList; // Movemos la declaración aquí
-    
+    let filtered = fullJourneyList; 
+
     const nameFilter = elements.journeyNameFilter.value.toLowerCase().trim();
-    if (nameFilter) filtered = filtered.filter(j => j.name.toLowerCase().includes(nameFilter));
+    if (nameFilter) {
+        // Dividimos el filtro por el carácter "|" y limpiamos espacios
+        const names = nameFilter.split(/[,;|]/).map(n => n.trim().toLowerCase()).filter(n => n !== '');
+        // Filtramos si el nombre del journey contiene CUALQUIERA de los términos
+        filtered = filtered.filter(j => names.some(n => j.name.toLowerCase().includes(n)));
+    }
     
     const typeFilter = elements.journeyTypeFilter.value;
     if (typeFilter) filtered = filtered.filter(j => j.eventType === typeFilter);
@@ -95,6 +102,7 @@ function renderTable(journeys) {
  */
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
+    showJourneyAnalyzerView = dependencies.showJourneyAnalyzerView;
 
     // Listeners de filtros
     elements.journeyNameFilter.addEventListener('input', applyFiltersAndRender);
@@ -107,14 +115,17 @@ export function init(dependencies) {
     elements.downloadJourneysCsvBtn.addEventListener('click', downloadJourneysCsv);
     elements.refreshJourneysTableBtn.addEventListener('click', refreshData);
     elements.getCommunicationsBtn.addEventListener('click', getCommunications);
-    elements.drawJourneyBtn.addEventListener('click', drawJourney);
+    elements.getAllCommunicationsBtn.addEventListener('click', getAllCommunications);
+
     elements.copyJourneyBtn.addEventListener('click', copyJourney);
     elements.stopJourneyBtn.addEventListener('click', stopJourneys);
     elements.deleteJourneyBtn.addEventListener('click', deleteJourneys);
+    elements.analyzeJourneyBtn.addEventListener('click', () => inspectAndShowAnalyzer());
 
     // Listeners de la tabla
     document.querySelector('#journeys-table thead').addEventListener('click', handleSort);
     elements.journeysTbody.addEventListener('click', handleRowSelection);
+
 
     // Listeners de paginación
     elements.prevPageBtnJourneys.addEventListener('click', () => {
@@ -221,7 +232,7 @@ async function fetchData() {
         // Pasamos la lista de journeys y el array completo de eventos para el enriquecimiento.
         fullJourneyList = enrichJourneys(allJourneys, allEventDefs);
 
-        /* DESCOMENTAR PARA DESCARGAR TODAS LAS COMUNICACIONES DE TODOS LOS JOURNEYS
+        /*DESCOMENTAR PARA DESCARGAR TODAS LAS COMUNICACIONES DE TODOS LOS JOURNEYS
         // Ahora, iteramos sobre CADA journey para obtener sus comunicaciones antes de pintar la tabla.
         logger.logMessage(`Iniciando obtención de detalles de comunicación para los ${fullJourneyList.length} journeys...`);
 
@@ -357,17 +368,63 @@ async function getCommunications() {
 }
 
 /**
- * Genera y muestra una representación textual del flujo del journey seleccionado.
+ * Obtiene los detalles de las comunicaciones para TODOS los journeys cargados.
  */
-function drawJourney() {
-    const selected = getSelectedJourneys();
-    if (selected.length !== 1) return;
-    const journey = selected[0];
-    if (journey.hasCommunications) {
-        const flowText = generateJourneyFlowText(journey);
-        showJourneyFlowModal(flowText);
+async function getAllCommunications() {
+    const totalJourneys = fullJourneyList.length;
+    if (totalJourneys === 0) return;
+
+    // 1. Aviso de confirmación
+    const msg = `Vas a obtener las comunicaciones de los ${totalJourneys} journeys cargados. 
+                 Este proceso realiza muchas peticiones a la API y puede tardar varios minutos dependiendo del tamaño de los journeys. 
+                 ¿Deseas continuar?`;
+    
+    if (!await ui.showCustomConfirm(msg)) return;
+
+    ui.blockUI(`Procesando ${totalJourneys} Journeys...`);
+    logger.startLogBuffering();
+
+    try {
+        const apiConfig = await getAuthenticatedConfig();
+        mcApiService.setLogger(logger);
+
+        logger.logMessage(`Iniciando descarga masiva de comunicaciones para ${totalJourneys} journeys...`);
+
+        // Usamos Promise.all para ejecutar en paralelo (igual que el código que tenías comentado)
+        const communicationPromises = fullJourneyList.map(async (journey) => {
+            try {
+                // Solo descargamos si no las tiene ya
+                if (!journey.hasCommunications) {
+                    logger.logMessage(`Obteniendo actividades para: "${journey.name}"`);
+                    const details = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
+                    const comms = parseJourneyActivities(details.activities);
+                    Object.assign(journey, { 
+                        ...comms, 
+                        activities: details.activities || [], 
+                        hasCommunications: true 
+                    });
+                }
+            } catch (error) {
+                logger.logMessage(` -> ERROR en "${journey.name}": ${error.message}`);
+                journey.hasCommunications = false; 
+            }
+        });
+
+        await Promise.all(communicationPromises);
+        
+        logger.logMessage("Descarga masiva completada.");
+        ui.showCustomAlert("Se han procesado todas las comunicaciones.");
+
+    } catch (error) {
+        logger.logMessage(`Error general: ${error.message}`);
+        ui.showCustomAlert(`Error: ${error.message}`);
+    } finally {
+        applyFiltersAndRender(); // Refrescar la tabla para ver los cambios
+        ui.unblockUI();
+        logger.endLogBuffering();
     }
 }
+
 
 /**
  * Orquesta el proceso de clonación de un journey seleccionado.
@@ -515,60 +572,120 @@ async function copyEmailAudienceJourney(journey) {
 }
 
 /**
- * Llama a la acción masiva para parar journeys.
+ * Helper interno para detener versiones (Evita error 403 al filtrar solo Published)
+ */
+async function processStopAction(journey, mode, apiConfig) {
+    let successCount = 0;
+    let errorCount = 0;
+
+    if (mode === 'all') {
+        // Usamos definitionId solo para obtener la lista de todas las versiones
+        const versions = await mcApiService.fetchJourneyVersions(journey.name, apiConfig);
+        console.log(versions);
+        // Filtramos por los estados que permite el script de la docu
+        const toStop = versions.filter(v => v.status === 'Published' || v.status === 'Unpublished');
+        
+        for (const ver of toStop) {
+            try {
+                // Usamos el ID de la versión encontrada (ver.id)
+                await mcApiService.stopJourney(journey.id, ver.version, apiConfig);
+                successCount++;
+            } catch (err) {
+                errorCount++;
+            }
+        }
+    } else {
+        // Modo 'single': usamos el journey.id directamente (el de la fila de la tabla)
+        if (journey.status === 'Published' || journey.status === 'Unpublished') {
+            try {
+                await mcApiService.stopJourney(journey.id, journey.version, apiConfig);
+                successCount++;
+            } catch (err) {
+                errorCount++;
+            }
+        }
+    }
+    return { success: successCount, error: errorCount };
+}
+
+/**
+ * BOTÓN PARAR: Lógica con la nueva modal
  */
 async function stopJourneys() {
-    await performMassAction('stopJourney', 'parar');
-}
-
-/**
- * Llama a la acción masiva para borrar journeys.
- */
-async function deleteJourneys() {
-    await performMassAction('deleteJourney', 'borrar permanentemente');
-}
-
-/**
- * Lógica genérica para ejecutar una acción (parar, borrar) sobre múltiples journeys.
- * @param {string} serviceMethod - El nombre del método en mc-api-service a llamar.
- * @param {string} actionVerb - El verbo que se mostrará al usuario (ej: 'parar').
- */
-async function performMassAction(serviceMethod, actionVerb) {
     const journeys = getSelectedJourneys();
     if (journeys.length === 0) return;
 
-    if (!await ui.showCustomConfirm(`¿Seguro que quieres ${actionVerb} ${journeys.length} journey(s)?`)) return;
+    // Llamada a la modal de 3 botones (Asegúrate de tenerla en ui-helpers)
+    const choice = await ui.showJourneyStopModal(`¿Cómo deseas detener los ${journeys.length} journeys seleccionados?`);
+    if (!choice) return;
 
-    ui.blockUI(`${actionVerb.charAt(0).toUpperCase() + actionVerb.slice(1)} journeys...`);
+    ui.blockUI("Procesando parada...");
     logger.startLogBuffering();
-    const successes = [];
-    const failures = [];
+
+    let totalSuccess = 0;
+    let totalError = 0;
 
     try {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
 
         for (const journey of journeys) {
-            try {
-                logger.logMessage(`Iniciando acción '${actionVerb}' para el journey: "${journey.name}"`);
-                if (serviceMethod === 'stopJourney') {
-                    await mcApiService[serviceMethod](journey.id, journey.version, apiConfig);
-                } else {
-                    await mcApiService[serviceMethod](journey.id, apiConfig);
-                }
-                successes.push(journey.name);
-            } catch (error) {
-                logger.logMessage(`FALLO al procesar "${journey.name}": ${error.message}`);
-                failures.push({ name: journey.name, reason: error.message });
-            }
+            const res = await processStopAction(journey, choice, apiConfig);
+            totalSuccess += res.success;
+            totalError += res.error;
         }
+        
+        ui.showCustomAlert(`Proceso finalizado.\n\n- Versiones paradas: ${totalSuccess}\n- Errores: ${totalError}`);
     } catch (error) {
-        logger.logMessage(`Error fatal durante la acción masiva: ${error.message}`);
+        ui.showCustomAlert(`Error: ${error.message}`);
     } finally {
-        ui.showCustomAlert(`Acción completada. Éxitos: ${successes.length}, Fallos: ${failures.length}.`);
         logger.endLogBuffering();
         ui.unblockUI();
         await refreshData();
+    }
+}
+
+/**
+ * BOTÓN BORRAR: Parada automática de todas las versiones si es Multistep
+ */
+async function deleteJourneys() {
+    const journeys = getSelectedJourneys();
+    if (journeys.length === 0) return;
+
+    const type = journeys[0].definitionType;
+    if (!await ui.showCustomConfirm(`¿Borrar permanentemente ${journeys.length} journey(s) de tipo ${type}?`)) return;
+
+    if (type === 'Multistep') {
+        const proceed = await ui.showCustomConfirm("Se detendrán automáticamente TODAS las versiones antes de borrar. ¿Continuar?");
+        if (!proceed) return;
+    }
+
+    ui.blockUI("Borrando journeys...");
+    logger.startLogBuffering();
+    
+    const successes = [];
+    const failures = [];
+
+    try {
+        const apiConfig = await getAuthenticatedConfig();
+        for (const journey of journeys) {
+            try {
+                if (type === 'Multistep') {
+                    await processStopAction(journey, 'all', apiConfig);
+                }
+                await mcApiService.deleteJourney(journey.id, apiConfig);
+                successes.push(journey.name);
+            } catch (error) {
+                failures.push({ name: journey.name, reason: error.message });
+            }
+        }
+        ui.showCustomAlert(`Borrado completado.\nÉxitos: ${successes.length}\nFallos: ${failures.length}`);
+    } catch (error) {
+        ui.showCustomAlert(`Error general: ${error.message}`);
+    } finally {
+        logger.endLogBuffering();
+        ui.unblockUI();
+        await refreshData(); 
     }
 }
 
@@ -642,14 +759,34 @@ function getSelectedJourneys() {
 function updateButtonsState() {
     const selected = getSelectedJourneys();
     const count = selected.length;
+    elements.getAllCommunicationsBtn.disabled = fullJourneyList.length === 0;
     elements.getCommunicationsBtn.disabled = count === 0;
-    elements.drawJourneyBtn.disabled = !(count === 1 && selected[0].hasCommunications);
 
     const clonableTypes = ['EmailAudience', 'AutomationAudience'];
     elements.copyJourneyBtn.disabled = !(count === 1 && clonableTypes.includes(selected[0].eventType));
 
-    elements.stopJourneyBtn.disabled = !(count > 0 && selected.every(j => j.status === 'Published'));
-    elements.deleteJourneyBtn.disabled = !(count > 0 && selected.every(j => j.definitionType === 'Quicksend'));
+    elements.stopJourneyBtn.disabled = !(count > 0 && selected.every(j => j.definitionType === 'Multistep'));
+    // Lógica para DELETE
+    if (count > 0) {
+        const firstType = selected[0].definitionType;
+        const allSameType = selected.every(j => j.definitionType === firstType);
+        
+        if (allSameType) {
+            if (firstType === 'Quicksend') {
+                elements.deleteJourneyBtn.disabled = false; // Quicksend se borran siempre
+            } else if (firstType === 'Multistep') {
+                elements.deleteJourneyBtn.disabled = false; // Multistep se permite (validaremos parada en la función)
+            } else {
+                elements.deleteJourneyBtn.disabled = true;
+            }
+        } else {
+            elements.deleteJourneyBtn.disabled = true; // Tipos mezclados: Desactivar
+        }
+    } else {
+        elements.deleteJourneyBtn.disabled = true;
+    }
+
+    elements.analyzeJourneyBtn.disabled = (selected.length !== 1);
 }
 
 /**
@@ -695,15 +832,6 @@ function updateSortIndicators() {
 }
 
 /**
- * Muestra el modal con el flujo del journey en formato de texto.
- * @param {string} flowText - El texto preformateado.
- */
-function showJourneyFlowModal(flowText) {
-    elements.journeyFlowContent.textContent = flowText;
-    elements.journeyFlowModal.style.display = 'flex';
-}
-
-/**
  * Cierra el modal de visualización del flujo.
  */
 function closeJourneyFlowModal() {
@@ -740,6 +868,26 @@ function parseJourneyActivities(activities = []) {
         else if (activity.type === 'WHATSAPPACTIVITY') communications.whatsapps.push(activity.name);
     }
     return communications;
+}
+
+async function inspectAndShowAnalyzer() {
+    const selected = getSelectedJourneys();
+    const j = selected[0];
+    ui.blockUI(`Cargando análisis de "${j.name}"...`);
+
+    logger.startLogBuffering(); 
+    mcApiService.setLogger(logger);
+    logger.logMessage(`Iniciando inspección técnica de: ${j.name}`);
+
+    try {
+        const apiConfig = await getAuthenticatedConfig();
+        const details = await mcApiService.fetchJourneyDetailsById(j.id, apiConfig);
+        showJourneyAnalyzerView(details);
+    } catch (error) {
+        ui.showCustomAlert(error.message);
+        ui.unblockUI();
+        logger.endLogBuffering(); 
+    }
 }
 
 /**
@@ -805,121 +953,6 @@ function formatDate(dateString) {
 }
 
 /**
- * Parsea la estructura de un journey y la convierte en una representación textual.
- * @param {object} journey - El objeto de journey completo con sus actividades.
- * @returns {string} El flujo del journey formateado como texto.
- */
-function generateJourneyFlowText(journey) {
-    if (!journey || !journey.activities || journey.activities.length === 0) {
-        return "No se han cargado los detalles de las actividades para este journey.";
-    }
-
-    const ACTIVITY_TYPE_MAP = {
-        'EMAILV2': '[EMAIL]', 'SMS': '[SMS]', 'MOBILEPUSH': '[PUSH]', 'PUSHNOTIFICATIONACTIVITY': '[PUSH]',
-        'WHATSAPPACTIVITY': '[WHATSAPP]', 'INBOX': '[INBOX MSG]', 'INAPP': '[IN-APP MSG]', 'WAIT': '[ESPERA]',
-        'WAITBYDURATION': '[ESPERA]', 'WAITBYATTRIBUTE': '[ESPERA POR ATRIBUTO]', 'WAITBYEVENT': '[ESPERA HASTA EVENTO]',
-        'WAITUNTILDATE': '[ESPERA HASTA FECHA]', 'STOWAIT': '[ESPERA EINSTEIN STO]', 'MULTICRITERIARDECISION': '[SPLIT]',
-        'MULTICRITERIADECISIONV2': '[SPLIT]', 'RANDOMSPLIT': '[RANDOM SPLIT]', 'RANDOMSPLITV2': '[RANDOM SPLIT]',
-        'ENGAGEMENTDECISION': '[ENGAGEMENT SPLIT]', 'ENGAGEMENTSPLITV2': '[ENGAGEMENT SPLIT]',
-        'PATHOPTIMIZER': '[OPTIMIZADOR DE RUTA]', 'UPDATECONTACTDATA': '[UPDATE CONTACT]',
-        'UPDATECONTACTDATAV2': '[UPDATE CONTACT]', 'ADDAUDIENCE': '[AUDIENCIA]',
-        'CONTACTUPDATE': '[UPDATE CONTACT]', 'EINSTEINSPLIT': '[DIVISIÓN EINSTEIN SCORE]',
-        'EINSTEINMESSAGINGSPLIT': '[EINSTEIN INSIGHTS SPLIT]', 'EINSTEIN_EMAIL_OPEN': '[EINSTEIN SPLIT OPEN]',
-        'EINSTEIN_MC_EMAIL_CLICK': '[EINSTEIN SPLIT CLICK]', 'SALESFORCESALESCLOUDACTIVITY': '[ACCIÓN SALESFORCE]',
-        'OBJECTACTIVITY': '[ACCIÓN OBJETO SALESFORCE]', 'LEAD': '[ACCIÓN LEAD SALESFORCE]',
-        'CAMPAIGNMEMBER': '[ACCIÓN MIEMBRO DE CAMPAÑA]', 'REST': '[API REST (CUSTOM)]', 'SETCONTACTKEY': '[ESTABLECER CONTACT KEY]',
-        'EVENT': '[EVENTO]', 'SMSSYNC': '[SMS]', 'WAITUNTILCHATRESPONSE': '[WAIT UNTIL CHAT RESPONSE]'
-    };
-
-    const activitiesMap = new Map(journey.activities.map(act => [act.key, act]));
-    const activityKeyToLineNum = new Map();
-    const output = [];
-    let lineCounter = 1;
-
-    function processActivity(activityKey, prefix) {
-        if (!activityKey || activityKeyToLineNum.has(activityKey)) return;
-
-        const activity = activitiesMap.get(activityKey);
-        if (!activity) {
-            output.push(`${prefix}Error: Actividad con key '${activityKey}' no encontrada.`);
-            return;
-        }
-
-        const lineNum = lineCounter++;
-        activityKeyToLineNum.set(activityKey, lineNum);
-
-        const type = ACTIVITY_TYPE_MAP[activity.type] || `[${activity.type}]`;
-        const name = activity.name || '*Actividad sin nombre*';
-        let details = '';
-
-        if (activity.type.startsWith('WAIT')) {
-            const config = activity.configurationArguments;
-            if (config.waitDuration) details = ` (${config.waitDuration} ${config.waitUnit || ''})`;
-            else if (config.waitEndDateAttributeExpression) details = ` (hasta ${config.waitEndDateAttributeExpression.replace(/{{|}}/g, '')})`;
-        } else if (activity.type.includes('ENGAGEMENT')) {
-            const config = activity.configurationArguments;
-            const activityName = config.refActivityName || '';
-            if (config.statsTypeId === 2) details = ` (Open: ${activityName})`;
-            else if (config.statsTypeId === 3) details = ` (Click: ${activityName})`;
-        }
-
-        output.push(`${prefix}${lineNum}. ${type} ${name}${details}`);
-
-        const outcomes = activity.outcomes || [];
-        
-        if (outcomes.length === 1) {
-            const nextKey = outcomes[0].next;
-            if (nextKey) {
-                if (activityKeyToLineNum.has(nextKey)) {
-                    output.push(`${prefix}   └─> [UNIÓN] ➡️ ${activityKeyToLineNum.get(nextKey)}`);
-                } else {
-                    processActivity(nextKey, `${prefix}   `);
-                }
-            } else {
-                output.push(`${prefix}   └─> 🔴`);
-            }
-        } else if (outcomes.length > 1) {
-            outcomes.forEach((outcome, index) => {
-                const isLastBranch = index === outcomes.length - 1;
-                const branchPrefix = isLastBranch ? '└─' : '├─';
-                const nextPrefix = isLastBranch ? '   ' : '│  ';
-                
-                let branchLabel = `[RAMA ${index + 1}]`;
-                if (outcome.metaData && outcome.metaData.label) {
-                    branchLabel = `[RAMA: ${outcome.metaData.label}]`;
-                } else if (activity.type.includes('RANDOMSPLIT') && outcome.arguments?.percentage) {
-                    branchLabel = `[RAMA: ${outcome.arguments.percentage}%]`;
-                }
-
-                output.push(`${prefix}${branchPrefix} ${branchLabel}`);
-                
-                const nextKey = outcome.next;
-                if (nextKey) {
-                    if (activityKeyToLineNum.has(nextKey)) {
-                        output.push(`${prefix}${nextPrefix}  └─> [UNIÓN] ➡️ ${activityKeyToLineNum.get(nextKey)}`);
-                    } else {
-                        processActivity(nextKey, `${prefix}${nextPrefix}`);
-                    }
-                } else {
-                    output.push(`${prefix}${nextPrefix}  └─> 🔴`);
-                }
-            });
-        }
-    }
-
-    const trigger = journey.triggers?.[0];
-    if (trigger?.outcomes?.[0]?.next) {
-        output.push(`[INICIO] Fuente: ${trigger.type || 'Desconocida'}`);
-        processActivity(trigger.outcomes[0].next, '');
-    } else if (journey.activities.length > 0) {
-        output.push(`[INICIO] Fuente: No definida en Trigger (usando primera actividad)`);
-        processActivity(journey.activities[0].key, '');
-    }
-    
-    return output.join('\n');
-}
-
-/**
  * Actualiza el contador de journeys.
  */
 function updateJourneyCount() {
@@ -951,10 +984,10 @@ function downloadJourneysCsv() {
         `"${j.status || ''}"`,
         `"${j.dataExtensionName || ''}"`,
         `"${j.hasCommunications ? 'Sí' : 'No'}"`,
-        `"${j.emails.join('; ')}"`, // Usamos ; para listas dentro de una celda
-        `"${j.sms.join('; ')}"`,
-        `"${j.pushes.join('; ')}"`,
-        `"${j.whatsapps.join('; ')}"`
+        `"${j.emails.join(' | ')}"`, // Usamos ; para listas dentro de una celda
+        `"${j.sms.join(' | ')}"`,
+        `"${j.pushes.join(' | ')}"`,
+        `"${j.whatsapps.join(' | ')}"`
     ].join(','));
 
     const csvContent = [headers.join(','), ...rows].join('\n');

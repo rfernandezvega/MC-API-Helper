@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Marketing Cloud API Helper</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://*.marketingcloudapis.com https://*.exacttarget.com https://www.googleapis.com">
-  <!-- Enlaza la hoja de estilos principal -->
-  <link rel="stylesheet" href="styles/style.css">
+    <meta charset="UTF-8">
+    <title>Marketing Cloud API Helper</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://cdnjs.cloudflare.com https://unpkg.com https://*.marketingcloudapis.com https://*.exacttarget.com https://www.googleapis.com">    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/docx@8.2.2/build/index.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <!-- Enlaza la hoja de estilos principal -->
+    <link rel="stylesheet" href="styles/style.css">
 </head>
 <body>
 
@@ -348,7 +351,24 @@
         </div>
     </div>
 </div>
+<!-- MODAL ESPECÍFICA PARA PARADA DE JOURNEYS -->
+<div id="journey-stop-modal" class="modal-overlay">
+    <div class="modal-content" style="min-width: 450px;">
+        <h3>Detener Journeys</h3>
+        <p id="journey-stop-message" style="margin-bottom: 25px; color: #666;"></p>
 
+        <!-- Bloque central de acciones -->
+        <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 40px;">
+            <button id="journey-stop-current-btn" class="action-button" style="background-color: #558ac7; min-width: 160px;">Solo última versión</button>
+            <button id="journey-stop-all-btn" class="action-button activate-btn" style="min-width: 160px;">Todas las versiones</button>
+        </div>
+
+        <!-- Bloque inferior derecho para Cancelar -->
+        <div style="display: flex; justify-content: flex-end;">
+            <button id="journey-stop-cancel-btn" class="action-button delete-btn">Cancelar</button>
+        </div>
+    </div>
+</div>
 
 <div id="app-version"></div> 
 <script type="module" src="app.js"></script>

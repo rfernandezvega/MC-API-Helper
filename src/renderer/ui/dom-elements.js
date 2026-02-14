@@ -124,6 +124,21 @@ export function init() {
     elements.deSelectionTable = document.getElementById('de-selection-table');
     elements.selectAllDEsCheckbox = document.getElementById('selectAllDEsCheckbox');
     elements.searchSelectedDEsBtn = document.getElementById('searchSelectedDEsBtn');
+    elements.showSourceQueryCheckbox = document.getElementById('showSourceQueryCheckbox'); 
+    elements.activitySearchValue = document.getElementById('activitySearchValue');
+    elements.searchActivityBtn = document.getElementById('searchActivityBtn'); 
+    elements.activityUsageTbody = document.getElementById('activity-usage-tbody'); 
+    elements.dataSourcesTable = document.getElementById('data-sources-table');
+    elements.activityInfoBlock = document.getElementById('activity-info-block');
+    elements.activityResultsBlock = document.getElementById('activity-results-block');
+    elements.infoActivityName = document.getElementById('info-activity-name');
+    elements.infoActivityType = document.getElementById('info-activity-type');
+    elements.infoActivityKey = document.getElementById('info-activity-key');
+    elements.activityTypeSelect = document.getElementById('activityTypeSelect');
+    elements.scriptSearchText = document.getElementById('scriptSearchText');
+    elements.searchScriptsByTextBtn = document.getElementById('searchScriptsByTextBtn');
+    elements.scriptSearchResultsTbody = document.getElementById('script-search-results-tbody');
+    elements.scriptSearchResultsTable = document.getElementById('script-search-results-table');
 
     // --- 9. Sección: Validador de Email ---
     elements.emailToValidateInput = document.getElementById('emailToValidate');
@@ -155,6 +170,7 @@ export function init() {
     elements.pageInputAutomations = document.getElementById('pageInputAutomations');
     elements.totalPagesAutomations = document.getElementById('totalPagesAutomations');
     elements.getNotificationsBtn = document.getElementById('getNotificationsBtn');
+    elements.analyzeAutomationBtn = document.getElementById('analyzeAutomationBtn');
 
     // --- 12. Sección: Gestión de Journeys ---
     elements.journeysTbody = document.getElementById('journeys-tbody');
@@ -165,7 +181,7 @@ export function init() {
     elements.journeyDEFilter = document.getElementById('journeyDEFilter');
     elements.refreshJourneysTableBtn = document.getElementById('refreshJourneysTableBtn');
     elements.getCommunicationsBtn = document.getElementById('getCommunicationsBtn');
-    elements.drawJourneyBtn = document.getElementById('drawJourneyBtn');
+    elements.getAllCommunicationsBtn = document.getElementById('getAllCommunicationsBtn');
     elements.copyJourneyBtn = document.getElementById('copyJourneyBtn');
     elements.stopJourneyBtn = document.getElementById('stopJourneyBtn');
     elements.deleteJourneyBtn = document.getElementById('deleteJourneyBtn');
@@ -175,6 +191,7 @@ export function init() {
     elements.nextPageBtnJourneys = document.getElementById('nextPageBtnJourneys');
     elements.pageInputJourneys = document.getElementById('pageInputJourneys');
     elements.totalPagesJourneys = document.getElementById('totalPagesJourneys');
+    elements.analyzeJourneyBtn = document.getElementById('analyzeJourneyBtn');
 
     // --- 13. Sección: Clonador de Queries ---
     elements.queriesClonerStep1 = document.getElementById('queries-cloner-step1');
@@ -317,6 +334,33 @@ export function init() {
     elements.contentManagerPasteArea = document.getElementById('content-manager-paste-area');
     elements.contentManagerCancelBtn = document.getElementById('content-manager-cancel-btn');
     elements.contentManagerImportBtn = document.getElementById('content-manager-import-btn');
+
+    // --- 23. MODAL PARADA DE JOURNEYS ---
+    elements.journeyStopModal = document.getElementById('journey-stop-modal');
+    elements.journeyStopMessage = document.getElementById('journey-stop-message');
+    elements.journeyStopAllBtn = document.getElementById('journey-stop-all-btn');
+    elements.journeyStopCurrentBtn = document.getElementById('journey-stop-current-btn');
+    elements.journeyStopCancelBtn = document.getElementById('journey-stop-cancel-btn');
+
+    // --- 24. ANALIZADOR DE AUTOMATISMOS ---
+    elements.automationAnalyzerSection = document.getElementById('automation-analyzer-section');
+    elements.automationAnalyzerBackBtn = document.getElementById('automationAnalyzerBackBtn');
+    elements.analyzerAutomationNameTitle = document.getElementById('analyzerAutomationNameTitle');
+    elements.automationAnalyzerStepsContainer = document.getElementById('automationAnalyzerStepsContainer');
+    elements.downloadAutomationPdfBtn = document.getElementById('downloadAutomationPdfBtn');
+
+    // --- 25. ANALIZADOR DE JOURNEYS ---
+    elements.journeyAnalyzerSection = document.getElementById('journey-analyzer-section');
+    elements.journeyAnalyzerBackBtn = document.getElementById('journeyAnalyzerBackBtn'); 
+    elements.analyzerJourneyNameTitle = document.getElementById('analyzerJourneyNameTitle');
+    elements.journeyAnalyzerHeaderWrapper = document.getElementById('journeyAnalyzerHeaderWrapper');
+    elements.journeyAnalyzerGlobalWrapper = document.getElementById('journeyAnalyzerGlobalWrapper');
+    elements.journeyAnalyzerFlowWrapper = document.getElementById('journeyAnalyzerFlowWrapper');
+    elements.journeyAnalyzerActivitiesContainer = document.getElementById('journeyAnalyzerActivitiesContainer');
+    elements.downloadJourneyPdfBtn = document.getElementById('downloadJourneyPdfBtn');
+    elements.expandAllAnalyzerBtn = document.getElementById('expandAllAnalyzerBtn');
+    elements.collapseAllAnalyzerBtn = document.getElementById('collapseAllAnalyzerBtn');
+    elements.downloadJourneyWordBtn = document.getElementById('downloadJourneyWordBtn');
 }
 
 export default elements;

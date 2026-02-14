@@ -5,6 +5,7 @@
 // =======================================================================================
 
 import elements from './dom-elements.js';
+import * as logger from '../ui/logger.js';
 
 let zIndexCounter = 10000; // Un valor inicial alto
 
@@ -45,6 +46,66 @@ export function showCustomConfirm(message) {
         elements.customConfirmModal.addEventListener('click', (e) => {
             if (e.target === elements.customConfirmModal) closeAndResolve(false);
         }, { once: true });
+    });
+}
+
+/**
+ * Muestra la modal específica para elegir el modo de parada de Journeys.
+ * @param {string} message - Mensaje descriptivo.
+ * @returns {Promise<string|null>} - 'all', 'single' o null (cancelar).
+ */
+export function showJourneyStopModal(message) {
+    return new Promise(resolve => {
+        elements.journeyStopMessage.textContent = message;
+        
+        manageModalZIndex(elements.journeyStopModal);
+        elements.journeyStopModal.style.display = 'flex';
+
+        const cleanup = (value) => {
+            elements.journeyStopModal.style.display = 'none';
+            resolve(value);
+        };
+
+        // Asignamos clics únicos
+        elements.journeyStopAllBtn.onclick = () => cleanup('all');
+        elements.journeyStopCurrentBtn.onclick = () => cleanup('single');
+        elements.journeyStopCancelBtn.onclick = () => cleanup(null);
+        
+        // Cerrar si hace clic fuera del contenido
+        elements.journeyStopModal.onclick = (e) => {
+            if (e.target === elements.journeyStopModal) cleanup(null);
+        };
+    });
+}
+
+/**
+ * Muestra un modal de confirmación con textos de botones personalizados.
+ * @param {string} message - El mensaje.
+ * @param {string} okText - Texto para el botón de confirmar.
+ * @param {string} cancelText - Texto para el botón de cancelar.
+ * @returns {Promise<boolean>}
+ */
+export function showCustomConfirmComplex(message, okText, cancelText) {
+    return new Promise(resolve => {
+        const originalOk = elements.customConfirmOkBtn.textContent;
+        const originalCancel = elements.customConfirmCancelBtn.textContent;
+
+        elements.customConfirmMessage.textContent = message;
+        elements.customConfirmOkBtn.textContent = okText;
+        elements.customConfirmCancelBtn.textContent = cancelText;
+        
+        manageModalZIndex(elements.customConfirmModal);
+        elements.customConfirmModal.style.display = 'flex';
+
+        const cleanup = (value) => {
+            elements.customConfirmModal.style.display = 'none';
+            elements.customConfirmOkBtn.textContent = originalOk;
+            elements.customConfirmCancelBtn.textContent = originalCancel;
+            resolve(value);
+        };
+
+        elements.customConfirmOkBtn.onclick = () => cleanup(true);
+        elements.customConfirmCancelBtn.onclick = () => cleanup(false);
     });
 }
 
@@ -133,7 +194,7 @@ export function showFolderSelectorModal(contentType, dependencies) {
                 const folders = await mcApiService.findDataFolders(searchTerm, contentType, apiConfig);
                 renderResults(folders);
             } catch (error) {
-                logger.logError(`Error buscando carpetas: ${error.message}`);
+                logger.logMessage(`Error buscando carpetas: ${error.message}`);
                 elements.folderSelectorResultsContainer.innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
             } finally {
                 // --- Ocultar el spinner ---
@@ -345,7 +406,6 @@ export function showAutomationDESelectorModal(dependencies) {
     modal.style.display = 'flex';
 
     return new Promise(resolve => {
-        // ... (el resto de la lógica interna de la función que te pasé anteriormente es correcta) ...
         const searchAutomations = async () => {
             const name = elements.automationSearchInput.value.trim();
             if (!name) return;
