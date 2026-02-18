@@ -64,28 +64,52 @@ async function enrichAutomationData(details) {
     const apiConfig = await getAuthenticatedConfig();
     mcApiService.setLogger(logger); 
 
+    // Función interna para buscar quién más escribe en una DE (Reverse Impact)
+    const getReverseImpactSources = async (deName, deObjectId, currentActName) => {
+        const [imports, queries] = await Promise.all([
+            mcApiService.findImportsTargetingDE(deObjectId, apiConfig),
+            mcApiService.searchQueriesBySimpleFilter({
+                property: 'DataExtensionTarget.Name',
+                simpleOperator: 'equals',
+                value: deName
+            }, apiConfig)
+        ]);
+        // Unimos y filtramos: que no sea la actividad actual y que tenga al menos una automatización vinculada
+        return [...imports, ...queries].filter(src => 
+            src.name !== currentActName && 
+            src.automations && 
+            src.automations.length > 0
+        );
+    };
+
     for (const step of details.steps || []) {
         for (const act of step.activities || []) {
             try {
                 ui.blockUI(`Analizando: ${act.name}...`);
                 
-                // Impactos en otros procesos
+                // 1. Impacto de ejecución: ¿Dónde se usa esta actividad?
                 const usages = await mcApiService.findAutomationForActivity(act.activityObjectId, apiConfig);
                 act.otherUsages = usages.filter(u => u.automationName !== details.name);
 
                 // --- ENRIQUECIMIENTO SEGÚN TIPO ---
                 
-                // 1. SQL Query (300)
+                // SQL Query (300)
                 if (act.objectTypeId === 300) {
                     const q = await mcApiService.fetchQueryDefinitionDetails(act.activityObjectId, apiConfig);
                     act.description = q.description;
                     act.queryText = q.queryText;
+                    
+                    // Obtener Ruta y Orígenes de la DE destino
+                    const deInfo = await mcApiService.getDataExtensionDetailsByName(q.targetDE.name, apiConfig);
+                    const path = await mcApiService.getFolderPath(deInfo.categoryId, apiConfig);
+                    
                     act.specificData = {
-                        targetDE: q.targetDE,
-                        updateType: q.updateType
+                        targetDE: { ...q.targetDE, fullPath: path || 'Data Extensions' },
+                        updateType: q.updateType,
+                        dataSources: await getReverseImpactSources(q.targetDE.name, deInfo.objectID, act.name)
                     };
                 } 
-                // 2. Data Extract (73)
+                // Data Extract (73)
                 else if (act.objectTypeId === 73) {
                     const de = await mcApiService.fetchDataExtractDetails(act.activityObjectId, apiConfig);
                     act.description = de.description;
@@ -94,16 +118,35 @@ async function enrichAutomationData(details) {
 
                     const deKey = fields.find(f => f.name === 'DECustomerKey')?.value;
                     if (deKey) {
-                        act.specificData.deKey = deKey;
+                        const soapDE = await mcApiService.searchDataExtensions('CustomerKey', deKey, apiConfig);
+                        if (soapDE.length > 0) {
+                            const path = await mcApiService.getFolderPath(soapDE[0].categoryId, apiConfig);
+                            act.specificData.deName = soapDE[0].deName;
+                            act.specificData.fullPath = path || 'Data Extensions';
+                        }
                         const delim = fields.find(f => f.name === 'ColumnDelimiter')?.value;
                         act.specificData.delimiter = delim === ',' ? 'Coma (,)' : (delim === '|' ? 'Pipe (|)' : delim || 'N/A');
-                        act.specificData.deName = await mcApiService.fetchDataExtensionName('CustomerKey', deKey, apiConfig);
                     }
-
                     const convertTo = fields.find(f => f.name === 'ConvertTo')?.value;
                     if (convertTo) act.specificData.convertTo = convertTo;
                 } 
-                // 3. File Transfer (53)
+                // Import Activity (43)
+                else if (act.objectTypeId === 43) {
+                    const imp = await mcApiService.fetchImportDefinitionDetails(act.activityObjectId, apiConfig);
+                    const targetDE = act.targetDataExtensions && act.targetDataExtensions[0] ? act.targetDataExtensions[0] : null;
+                    
+                    if (targetDE) {
+                        const deInfo = await mcApiService.getDataExtensionDetailsByName(targetDE.name, apiConfig);
+                        const path = await mcApiService.getFolderPath(deInfo.categoryId, apiConfig);
+                        targetDE.fullPath = path || 'Data Extensions';
+                        
+                        act.specificData = {
+                            ...imp,
+                            dataSources: await getReverseImpactSources(targetDE.name, deInfo.objectID, act.name)
+                        };
+                    }
+                }
+                // File Transfer (53)
                 else if (act.objectTypeId === 53) {
                     const ft = await mcApiService.fetchFileTransferDetails(act.activityObjectId, apiConfig);
                     act.description = ft.description;
@@ -114,33 +157,20 @@ async function enrichAutomationData(details) {
                     } catch (e) { locationName = "ID: " + ft.fileTransferLocationId; }
                     act.specificData = { fileSpec: ft.fileSpec || 'N/A', destination: locationName };
                 }
-                // 4. Email Activity (42)
-                else if (act.objectTypeId === 42) { // Email Activity
+                // Email Activity (42)
+                else if (act.objectTypeId === 42) {
                     const e = await mcApiService.fetchEmailSendDefinitionDetails(act.activityObjectId, apiConfig);
                     if (e) {
                         act.description = e.description || 'Sin descripción';
-                        act.specificData = {
-                            subject: e.subject || 'N/A',
-                            cc: e.cc || '',
-                            bcc: e.bcc || ''
-                        };
+                        act.specificData = { subject: e.subject || 'N/A', cc: e.cc || '', bcc: e.bcc || '' };
                     }
                 }
-                // 5. SSJS Script (423)
+                // SSJS Script (423)
                 else if (act.objectTypeId === 423) {
                     const s = await mcApiService.fetchScriptDetails(act.activityObjectId, apiConfig);
                     act.description = s.description;
                     act.scriptCode = s.script;
-                    act.specificData = {
-                        hasScript: true
-                    };
-                }
-                else if (act.objectTypeId === 43) { // Import Activity
-                    const imp = await mcApiService.fetchImportDefinitionDetails(act.activityObjectId, apiConfig);
-                    
-                    if (imp) {
-                        act.specificData = imp;
-                    }
+                    act.specificData = { hasScript: true };
                 }
             } catch (e) { console.warn(`Error enriqueciendo ${act.name}`, e); }
         }
@@ -158,48 +188,56 @@ async function renderAnalysis(automation) {
         for (const act of step.activities || []) {
             const typeLabel = activityTypeMap[act.objectTypeId] || `Tipo: ${act.objectTypeId}`;
             
-            // --- Lógica de Impacto ---
+            // --- 1. Lógica de Impacto (Izquierda) ---
             let impactBoxHtml = '';
             if (act.otherUsages && act.otherUsages.length > 0) {
                 const list = act.otherUsages.map(u => `<li>${u.automationName} (Paso: ${u.step})</li>`).join('');
                 impactBoxHtml = `
-                    <div class="impact-box impact-shared">
-                        <strong>⚠ Utilizado en ${act.otherUsages.length} procesos más:</strong>
-                        <ul>${list}</ul>
+                    <div class="sql-wrapper" style="margin-top:10px;">
+                        <div class="sql-toggle-btn" style="background:#fff5f5 !important; color:#b03a2e !important; border:1px solid #fadbd8 !important; font-size:0.85em;">
+                            ⚠ Utilizado en ${act.otherUsages.length} automatismos <span>▼</span>
+                        </div>
+                        <div class="sql-content impact-shared" style="display:none; border-color:#fadbd8 !important; padding: 10px; background:#f8f9fa !important;"> 
+                            <ul style="margin:0; padding-left:20px; font-size:0.85em; color:#333333 !important;">${list}</ul>
+                        </div>
                     </div>`;
             } else {
-                impactBoxHtml = `
-                    <div class="impact-box impact-exclusive">
-                        <strong>✓ Actividad Exclusiva</strong>
-                    </div>`;
+                impactBoxHtml = `<div class="impact-box impact-exclusive" style="margin-top:10px; background:#f0fff4 !important; color:#1e8449 !important; border:1px solid #d4efdf !important; padding: 8px 12px; border-radius: 4px; font-size: 0.85em;">✓ Actividad Exclusiva</div>`;
             }
 
-            // --- Lógica de Detalles (Derecha) ---
+            // --- 2. Lógica de Detalles (Derecha) ---
             let detailsHtml = '';
             if (act.specificData) {
                 detailsHtml = `<div style="padding: 10px; background: #f0f7ff; border-radius: 4px; border-left: 4px solid #558ac7; font-size: 0.85em; line-height: 1.5;">`;
                 
+                // Orden solicitado: Nombre -> Key -> Ruta
+                const renderDeBlock = (name, key, path) => `
+                <div style="margin-bottom:12px; padding-bottom:8px; border-bottom: 1px solid #d1e3f5;">
+                    <div style="font-weight:bold; color:#2c3e50; font-size:1.1em;">Data Extension: ${name}</div>
+                    <div style="color:#666; font-size:0.85em; margin-bottom:4px;">(Key: ${key})</div>
+                    <div style="color: #444; font-size: 0.9em; display: flex; align-items: center; gap: 5px; margin-top:5px;">
+                        <span style="opacity:0.7;">📁</span> ${path}
+                    </div>
+                </div>`;
+
                 if (act.objectTypeId === 300) { // Query
-                    detailsHtml += `
-                        <div><strong>Destino:</strong> ${act.specificData.targetDE.name}</div>
-                        <div style="color:#666; font-size:0.9em; margin-bottom:4px;">(Key: ${act.specificData.targetDE.key})</div>
-                        <div><strong>Tipo Acción:</strong> <span style="text-transform: capitalize; color:#2980b9; font-weight:bold;">${act.specificData.updateType}</span></div>`;
+                    detailsHtml += renderDeBlock(act.specificData.targetDE.name, act.specificData.targetDE.key, act.specificData.targetDE.fullPath);
+                    detailsHtml += `<div><strong>Tipo Acción:</strong> <span style="text-transform: capitalize; color:#2980b9; font-weight:bold;">${act.specificData.updateType}</span></div>`;
                     
-                    // Añadir el bloque SQL colapsable
                     if (act.queryText) {
                         detailsHtml += `
                             <div class="sql-wrapper" style="margin-top:10px;">
                                 <div class="sql-toggle-btn">VER QUERY<span>▼</span></div>
-                                <div class="sql-content"> <!-- Usará los nuevos estilos del CSS -->
+                                <div class="sql-content" style="display:none;"> <!-- Mantiene fondo oscuro original -->
                                     <pre><code>${highlightSQLHtml(act.queryText)}</code></pre>
                                 </div>
                             </div>`;
                     }
                 } 
-                else if (act.objectTypeId === 73) { // Extract (mantenemos lógica actual)
+                else if (act.objectTypeId === 73) { // Extract
                     if (act.specificData.deName) {
-                        detailsHtml += `<div><strong>DE Origen:</strong> ${act.specificData.deName}</div>
-                                        <div><strong>Delimitador:</strong> <span style="color:#e67e22; font-weight:bold;">${act.specificData.delimiter}</span></div>`;
+                        detailsHtml += renderDeBlock(act.specificData.deName, act.specificData.deKey, act.specificData.fullPath);
+                        detailsHtml += `<div><strong>Delimitador:</strong> <span style="color:#e67e22; font-weight:bold;">${act.specificData.delimiter}</span></div>`;
                     }
                     detailsHtml += `<div><strong>Patrón Archivo:</strong> <span style="color:#27ae60;">${act.specificData.fileSpec}</span></div>`;
                 } 
@@ -211,14 +249,12 @@ async function renderAnalysis(automation) {
                     detailsHtml += `<div><strong>Asunto:</strong> <span style="color:#27ae60; font-weight:bold;">${act.specificData.subject}</span></div>`;
                 }
                 else if (act.objectTypeId === 423) { // SSJS Script                   
-                    // Verificamos si realmente hay contenido (quitando espacios)
                     const hasContent = act.scriptCode && act.scriptCode.trim().length > 0;
-
                     if (hasContent) {
                         detailsHtml += `
                             <div class="sql-wrapper" style="margin-top:10px;">
                                 <div class="sql-toggle-btn">VER CÓDIGO SCRIPT <span>▼</span></div>
-                                <div class="sql-content" style="display:none;"> 
+                                <div class="sql-content" style="display:none;"> <!-- Mantiene fondo oscuro original -->
                                     <pre style="margin:0; min-height: 1.5em; overflow: auto;"><code>${highlightJSHtml(act.scriptCode)}</code></pre>
                                 </div>
                             </div>`;
@@ -227,39 +263,52 @@ async function renderAnalysis(automation) {
                     }
                 }
                 else if (act.objectTypeId === 43) { // Import
-                    // 1. Sacamos la DE del JSON (igual que en las Queries)
-                    const targetDE = act.targetDataExtensions && act.targetDataExtensions[0] 
-                        ? act.targetDataExtensions[0] 
-                        : { name: 'N/A', key: 'N/A' };
-
-                    // 2. Sacamos los datos técnicos de la específica
+                    const targetDE = act.targetDataExtensions?.[0] || { name: 'N/A', key: 'N/A' };
                     const tech = act.specificData || {};
-                    
                     const delimLabel = tech.delimiter === ',' ? 'Coma (,)' : (tech.delimiter === '|' ? 'Pipe (|)' : (tech.delimiter || 'N/A'));
-
+                    
+                    detailsHtml += renderDeBlock(targetDE.name, targetDE.key, targetDE.fullPath);
                     detailsHtml += `
                         <div style="margin-bottom: 8px;">
-                            <strong>Destino:</strong> ${targetDE.name} 
-                            <br><small style="color:#666;">(Key: ${targetDE.key})</small>
-                            <!-- Acción colocada debajo de la Key, igual que en SQL Query -->
                             <div style="margin-top:4px;"><strong>Tipo Acción:</strong> <span style="text-transform: capitalize; color:#2980b9; font-weight:bold;">${tech.updateType || 'N/A'}</span></div>
                         </div>
-                        
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.9em; border-top: 1px solid #d1d9e0; margin-top:5px; padding-top:8px;">
-                            <div style="grid-column: span 2;">
-                                <strong>Archivo:</strong> <span style="color:#27ae60; font-weight:bold; word-break: break-all;">${tech.fileSpec || 'N/A'}</span>
-                            </div>
+                            <div style="grid-column: span 2;"><strong>Archivo:</strong> <span style="color:#27ae60; font-weight:bold; word-break: break-all;">${tech.fileSpec || 'N/A'}</span></div>
                             <div><strong>Tipo:</strong> ${tech.fileType || 'N/A'}</div>
                             <div><strong>Separador:</strong> ${delimLabel}</div>
                             <div><strong>Cabecera:</strong> ${tech.headerLines === '1' ? 'Sí' : 'No'}</div>
                             <div><strong>Ignorar Errores:</strong> ${tech.allowErrors ? 'Sí' : 'No'}</div>
-                        </div>
-                    `;
+                        </div>`;
                 }
+
+                // --- 3. BLOQUE REVERSE IMPACT (Derecha) - ROJO Y FONDO GRIS CLARO ---
+                if (act.specificData.dataSources && act.specificData.dataSources.length > 0) {
+                    const dsItems = act.specificData.dataSources.map(ds => {
+                        const autos = ds.automations.map(a => `<li>${a.automationName} (Paso: ${a.step})</li>`).join('');
+                        return `
+                            <li style="margin-bottom:10px; padding-bottom:8px; border-bottom:1px dashed #ddd;">
+                                <div style="font-weight:bold; color:#b03a2e;">${ds.name} <small style="color:#666; font-weight:normal;">[${ds.type}]</small></div>
+                                <ul style="margin:4px 0 0 0; padding-left:15px; font-size:0.9em; color:#333333 !important;">${autos}</ul>
+                            </li>`;
+                    }).join('');
+
+                    detailsHtml += `
+                        <div class="sql-wrapper" style="margin-top:15px;">
+                            <div class="sql-toggle-btn" style="background:#fff5f5 !important; color:#b03a2e !important; border:1px solid #fadbd8 !important; font-size:0.85em;">
+                                ⚠ Hay (${act.specificData.dataSources.length}) actividades que impactan en la DE<span>▼</span>
+                            </div>
+                            <div class="sql-content" style="display:none; border-color:#fadbd8 !important; background:#f8f9fa !important;">
+                                <ul style="margin:0; padding:10px; list-style:none; color:#333333 !important;">${dsItems}</ul>
+                            </div>
+                        </div>`;
+                } else if (act.objectTypeId === 300 || act.objectTypeId === 43) {
+                    detailsHtml += `<div class="impact-box impact-exclusive" style="margin-top:12px; background:#f0fff4 !important; color:#1e8449 !important; border:1px solid #d4efdf !important; font-size:0.85em; padding: 8px 12px; border-radius: 4px;">✓ Exclusiva</div>`;
+                }
+
                 detailsHtml += `</div>`;
             }
 
-            // --- Estructura de la Fila (2 Columnas) ---
+            // --- Estructura de la Fila ---
             rowsHtml += `
                 <tr>
                     <td style="width:40%; text-align:left; vertical-align: top;">
@@ -269,7 +318,6 @@ async function renderAnalysis(automation) {
                         ${impactBoxHtml}
                     </td>
                     <td style="width:60%; text-align:left; vertical-align: top;">
-                        <div style="margin-bottom: 5px; font-weight: bold; font-size: 0.8em; color: #555;"></div>
                         ${detailsHtml}
                     </td>
                 </tr>`;
@@ -291,7 +339,7 @@ async function renderAnalysis(automation) {
         container.appendChild(stepBlock);
     }
 
-    // Añadir funcionalidad de click a los botones SQL (Delegación de eventos)
+    // Funcionalidad de click para todos los botones colapsables
     container.querySelectorAll('.sql-toggle-btn').forEach(btn => {
         btn.onclick = function() {
             const content = this.nextElementSibling;
@@ -341,7 +389,6 @@ async function generatePDF() {
 
     // --- RECORRIDO DE PASOS ---
     for (const step of auto.steps || []) {
-        // Aumentamos el margen superior antes de escribir el PASO para que no se pegue
         currentY += 5; 
         if (currentY > 260) { doc.addPage(); currentY = 20; }
 
@@ -349,68 +396,88 @@ async function generatePDF() {
         doc.text(`PASO ${step.step}`, 10, currentY);
         currentY += 2;
         doc.setDrawColor(40, 116, 166).setLineWidth(0.5).line(10, currentY, 200, currentY);
-        currentY += 10; // Espacio después de la línea del paso
+        currentY += 10;
 
         for (const act of step.activities || []) {
             const typeLabel = activityTypeMap[act.objectTypeId] || act.objectTypeId;
             
+            // 1. Impacto de Actividad (Donde se usa)
             const isShared = act.otherUsages && act.otherUsages.length > 0;
             let impactText = "EXCLUSIVA";
             if (isShared) {
                 const list = act.otherUsages.map(u => `• ${u.automationName} (Paso: ${u.step})`).join('\n');
-                impactText = `COMPARTIDA:\n${list}`;
+                impactText = `COMPARTIDA EN:\n${list}`;
             }
-            const impactColor = isShared ? [192, 57, 43] : [39, 174, 96];
+            const impactColor = isShared ? [176, 58, 46] : [30, 132, 73];
 
             const tableBody = [
                 ["Tipo:", typeLabel],
                 ["Descripción:", act.description || "---"],
-                ["Impacto:", { content: impactText, styles: { textColor: impactColor, fontStyle: 'bold' } }]
+                ["Impacto Actividad:", { content: impactText, styles: { textColor: impactColor, fontStyle: 'bold' } }]
             ];
 
+            // 2. Configuración Específica
             if (act.specificData) {
                 const data = act.specificData;
-                tableBody.push([{ content: "CONFIGURACIÓN", colSpan: 2, styles: { fillColor: [240, 240, 240], halign: 'center', fontStyle: 'bold' } }]);
+                tableBody.push([{ content: "CONFIGURACIÓN DETALLADA", colSpan: 2, styles: { fillColor: [240, 240, 240], halign: 'center', fontStyle: 'bold' } }]);
                 
-                if (act.objectTypeId === 300) {
-                    tableBody.push(["Destino:", `${data.targetDE.name}\n(Key: ${data.targetDE.key})`], ["Acción:", data.updateType]);
+                if (act.objectTypeId === 300) { // SQL QUERY
+                    tableBody.push(
+                        ["Destino:", `${data.targetDE.name}\n(Key: ${data.targetDE.key})`],
+                        ["Ruta:", data.targetDE.fullPath || "---"],
+                        ["Acción:", data.updateType]
+                    );
                 } 
-                else if (act.objectTypeId === 73) {
+                else if (act.objectTypeId === 73) { // DATA EXTRACT
                     if (data.deName) {
-                        tableBody.push(["DE Origen:", data.deName]);
-                        tableBody.push(["Delimitador:", data.delimiter]);
-                    }
-                    if (data.convertTo) {
-                        tableBody.push(["Acción:", "Convert File"]);
-                        tableBody.push(["Codificación:", data.convertTo]);
+                        tableBody.push(
+                            ["DE Origen:", data.deName],
+                            ["Ruta:", data.fullPath || "---"],
+                            ["Delimitador:", data.delimiter]
+                        );
                     }
                     tableBody.push(["Patrón Archivo:", data.fileSpec]);
                 } 
-                else if (act.objectTypeId === 53) {
-                    tableBody.push(["Archivo:", data.fileSpec], ["Ubicación:", data.destination]);
-                } 
-                else if (act.objectTypeId === 42) {
-                    tableBody.push(["Asunto:", data.subject], ["Remitente:", `${data.fromName} (${data.fromAddress})`]);
-                }
-                else if (act.objectTypeId === 952) {
-                    //No devuelve la API el Journey
-                }
                 else if (act.objectTypeId === 43) { // IMPORT
-                    // Sacamos la DE del array de la actividad
                     const targetDE = act.targetDataExtensions && act.targetDataExtensions[0] 
-                        ? act.targetDataExtensions[0] 
-                        : { name: 'N/A', key: 'N/A' };
+                        ? act.targetDataExtensions[0] : { name: 'N/A', key: 'N/A' };
                     
-                    const delimLabel = data.delimiter === ',' ? 'Coma (,)' : (data.delimiter === '|' ? 'Pipe (|)' : (data.delimiter || 'N/A'));
-
                     tableBody.push(
                         ["Destino:", `${targetDE.name}\n(Key: ${targetDE.key})`],
+                        ["Ruta:", targetDE.fullPath || "---"],
                         ["Acción:", data.updateType || 'N/A'],
-                        ["Archivo:", data.fileSpec || 'N/A'],
-                        ["Tipo/Sep:", `${data.fileType || 'N/A'} (${delimLabel})`],
-                        ["Cabecera:", data.headerLines === '1' ? 'Sí' : 'No'],
-                        ["Ignorar Errores:", data.allowErrors ? 'Sí' : 'No']
+                        ["Archivo:", data.fileSpec || 'N/A']
                     );
+                }
+                else if (act.objectTypeId === 53) { // TRANSFER
+                    tableBody.push(["Archivo:", data.fileSpec], ["Ubicación:", data.destination]);
+                } 
+                else if (act.objectTypeId === 42) { // EMAIL
+                    tableBody.push(["Asunto:", data.subject]);
+                }
+
+                // 3. Reverse Impact (Orígenes de datos externos)
+                if (data.dataSources && data.dataSources.length > 0) {
+                    const dsText = data.dataSources.map(ds => {
+                        const autos = ds.automations.map(a => `  - ${a.automationName} (Paso: ${a.step})`).join('\n');
+                        return `• ${ds.name} [${ds.type}]\n${autos}`;
+                    }).join('\n');
+
+                    tableBody.push([
+                        { 
+                            content: `⚠ Hay (${data.dataSources.length}) actividades que impactan en la DE:\n${dsText}`, 
+                            colSpan: 2, 
+                            styles: { textColor: [176, 58, 46], fontStyle: 'bold', fillColor: [255, 245, 245] } 
+                        }
+                    ]);
+                } else if (act.objectTypeId === 300 || act.objectTypeId === 43) {
+                    tableBody.push([
+                        { 
+                            content: "✓ Exclusiva.", 
+                            colSpan: 2, 
+                            styles: { textColor: [30, 132, 73], fontSize: 7 } 
+                        }
+                    ]);
                 }
             }
 
@@ -425,17 +492,17 @@ async function generatePDF() {
                 body: tableBody
             });
 
-            currentY = doc.lastAutoTable.finalY + 8; // Más espacio entre actividades
+            currentY = doc.lastAutoTable.finalY + 8;
 
-            // --- CÓDIGO ---
+            // --- BLOQUE DE CÓDIGO (SQL / SCRIPT) ---
             const code = act.queryText || act.scriptCode;
             if (code) {
                 if (currentY > 250) { doc.addPage(); currentY = 20; }
-                const codeLabel = act.objectTypeId === 300 ? "Query:" : "Script:";
+                const codeLabel = act.objectTypeId === 300 ? "Query SQL:" : "Script SSJS:";
                 doc.setFontSize(9).setTextColor(80).setFont("helvetica", "bold").text(codeLabel, 10, currentY);
                 currentY += 4;
                 currentY = drawHighlightedCode(doc, code, act.objectTypeId === 300 ? 'sql' : 'js', currentY);
-                currentY += 12; // Más margen después del bloque de código
+                currentY += 12;
             }
         }
     }
