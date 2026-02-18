@@ -354,256 +354,102 @@ async function generatePDF() {
     if (!currentAutomationDetails) return;
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4');
-    
-    try {
-        loadCustomFonts(doc);
-        doc.setFont('NotoSans'); 
-    } catch (e) { console.error("Error fuentes:", e); }
+    try { loadCustomFonts(doc); doc.setFont('NotoSans'); } catch (e) { console.error(e); }
 
     const auto = currentAutomationDetails;
     let currentY = 20;
 
-    // --- TÍTULO PRINCIPAL ---
     doc.setFontSize(16).setTextColor(40, 116, 166).setFont("helvetica", "bold");
-    doc.text('Automatismo:\n'+auto.name.trim()+'\n', 10, currentY); 
-    currentY += 8;
+    doc.text('Automatismo: ' + auto.name.trim(), 10, currentY); 
+    currentY += 10;
 
-    // --- BLOQUE INFO GENERAL ---
     doc.autoTable({
-        startY: currentY,
-        margin: { left: 10, right: 10 },
-        theme: 'grid',
-        styles: { font: 'NotoSans', fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
-        headStyles: { fillColor: [52, 73, 94], textColor: 255 },
-        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 35 } }, 
-        head: [[{ content: 'INFORMACIÓN GENERAL DEL AUTOMATISMO', colSpan: 2 }]],
-        body: [
-            ["Estado:", auto.status],
-            ["Última Ejecución:", formatDate(auto.lastRunTime)],
-            ["Próxima Ejecución:", formatDate(auto.scheduledTime)],
-            ["Descripción:", auto.description || 'Sin descripción']
-        ]
+        startY: currentY, margin: { left: 10, right: 10 }, theme: 'grid', styles: { font: 'NotoSans', fontSize: 8 },
+        headStyles: { fillColor: [52, 73, 94] }, head: [[{ content: 'INFORMACIÓN GENERAL', colSpan: 2 }]],
+        body: [["Estado:", auto.status], ["Última Ejecución:", formatDate(auto.lastRunTime)], ["Descripción:", auto.description || 'Sin descripción']]
     });
-
     currentY = doc.lastAutoTable.finalY + 15;
 
-    // --- RECORRIDO DE PASOS ---
     for (const step of auto.steps || []) {
-        currentY += 5; 
-        if (currentY > 260) { doc.addPage(); currentY = 20; }
-
+        if (currentY > 240) { doc.addPage(); currentY = 20; }
         doc.setFontSize(14).setTextColor(40, 116, 166).setFont("helvetica", "bold");
         doc.text(`PASO ${step.step}`, 10, currentY);
         currentY += 2;
         doc.setDrawColor(40, 116, 166).setLineWidth(0.5).line(10, currentY, 200, currentY);
-        currentY += 10;
+        currentY += 8;
 
         for (const act of step.activities || []) {
-            const typeLabel = activityTypeMap[act.objectTypeId] || act.objectTypeId;
-            
-            // 1. Impacto de Actividad (Donde se usa)
             const isShared = act.otherUsages && act.otherUsages.length > 0;
-            let impactText = "EXCLUSIVA";
-            if (isShared) {
-                const list = act.otherUsages.map(u => `• ${u.automationName} (Paso: ${u.step})`).join('\n');
-                impactText = `COMPARTIDA EN:\n${list}`;
-            }
-            const impactColor = isShared ? [176, 58, 46] : [30, 132, 73];
+            let impactText = isShared ? `⚠ COMPARTIDA EN:\n${act.otherUsages.map(u => `• ${u.automationName}`).join('\n')}` : "✓ ACTIVIDAD EXCLUSIVA";
+            const tableBody = [["Tipo:", activityTypeMap[act.objectTypeId] || act.objectTypeId], ["Impacto:", { content: impactText, styles: { textColor: isShared ? [176, 58, 46] : [30, 132, 73], fontStyle: 'bold' } }]];
 
-            const tableBody = [
-                ["Tipo:", typeLabel],
-                ["Descripción:", act.description || "---"],
-                ["Impacto Actividad:", { content: impactText, styles: { textColor: impactColor, fontStyle: 'bold' } }]
-            ];
-
-            // 2. Configuración Específica
             if (act.specificData) {
                 const data = act.specificData;
                 tableBody.push([{ content: "CONFIGURACIÓN DETALLADA", colSpan: 2, styles: { fillColor: [240, 240, 240], halign: 'center', fontStyle: 'bold' } }]);
-                
-                if (act.objectTypeId === 300) { // SQL QUERY
-                    tableBody.push(
-                        ["Destino:", `${data.targetDE.name}\n(Key: ${data.targetDE.key})`],
-                        ["Ruta:", data.targetDE.fullPath || "---"],
-                        ["Acción:", data.updateType]
-                    );
-                } 
-                else if (act.objectTypeId === 73) { // DATA EXTRACT
-                    if (data.deName) {
-                        tableBody.push(
-                            ["DE Origen:", data.deName],
-                            ["Ruta:", data.fullPath || "---"],
-                            ["Delimitador:", data.delimiter]
-                        );
-                    }
-                    tableBody.push(["Patrón Archivo:", data.fileSpec]);
-                } 
-                else if (act.objectTypeId === 43) { // IMPORT
-                    const targetDE = act.targetDataExtensions && act.targetDataExtensions[0] 
-                        ? act.targetDataExtensions[0] : { name: 'N/A', key: 'N/A' };
-                    
-                    tableBody.push(
-                        ["Destino:", `${targetDE.name}\n(Key: ${targetDE.key})`],
-                        ["Ruta:", targetDE.fullPath || "---"],
-                        ["Acción:", data.updateType || 'N/A'],
-                        ["Archivo:", data.fileSpec || 'N/A']
-                    );
+                if (act.objectTypeId === 300) {
+                    tableBody.push(["Destino:", `${data.targetDE.name}\n(Key: ${data.targetDE.key})`], ["Ruta:", data.targetDE.fullPath || "---"], ["Acción:", data.updateType]);
+                } else if (act.objectTypeId === 43) {
+                    const targetDE = act.targetDataExtensions?.[0] || { name: 'N/A', key: 'N/A' };
+                    tableBody.push(["Destino:", `${targetDE.name}\n(Key: ${targetDE.key})`], ["Ruta:", targetDE.fullPath || "---"], ["Acción:", data.updateType || 'N/A']);
                 }
-                else if (act.objectTypeId === 53) { // TRANSFER
-                    tableBody.push(["Archivo:", data.fileSpec], ["Ubicación:", data.destination]);
-                } 
-                else if (act.objectTypeId === 42) { // EMAIL
-                    tableBody.push(["Asunto:", data.subject]);
-                }
-
-                // 3. Reverse Impact (Orígenes de datos externos)
                 if (data.dataSources && data.dataSources.length > 0) {
-                    const dsText = data.dataSources.map(ds => {
-                        const autos = ds.automations.map(a => `  - ${a.automationName} (Paso: ${a.step})`).join('\n');
-                        return `• ${ds.name} [${ds.type}]\n${autos}`;
-                    }).join('\n');
-
-                    tableBody.push([
-                        { 
-                            content: `⚠ Hay (${data.dataSources.length}) actividades que impactan en la DE:\n${dsText}`, 
-                            colSpan: 2, 
-                            styles: { textColor: [176, 58, 46], fontStyle: 'bold', fillColor: [255, 245, 245] } 
-                        }
-                    ]);
-                } else if (act.objectTypeId === 300 || act.objectTypeId === 43) {
-                    tableBody.push([
-                        { 
-                            content: "✓ Exclusiva.", 
-                            colSpan: 2, 
-                            styles: { textColor: [30, 132, 73], fontSize: 7 } 
-                        }
-                    ]);
+                    const dsText = data.dataSources.map(ds => `• ${ds.name} [${ds.type}]\n${ds.automations.map(a => `  - ${a.automationName} (Paso: ${a.step})`).join('\n')}`).join('\n');
+                    tableBody.push([{ content: `⚠ Hay (${data.dataSources.length}) actividades que impactan en la DE:\n${dsText}`, colSpan: 2, styles: { textColor: [176, 58, 46], fontStyle: 'bold', fillColor: [255, 245, 245] } }]);
                 }
             }
 
-            doc.autoTable({
-                startY: currentY,
-                margin: { left: 10, right: 10 },
-                theme: 'grid',
-                styles: { font: 'NotoSans', fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
-                headStyles: { fillColor: [84, 110, 122] },
-                columnStyles: { 0: { cellWidth: 35, fontStyle: 'bold' } },
-                head: [[{ content: act.name, colSpan: 2 }]],
-                body: tableBody
-            });
+            doc.autoTable({ startY: currentY, margin: { left: 10, right: 10 }, theme: 'grid', styles: { font: 'NotoSans', fontSize: 8 }, headStyles: { fillColor: [84, 110, 122] }, head: [[{ content: act.name, colSpan: 2 }]], body: tableBody });
+            currentY = doc.lastAutoTable.finalY + 5;
 
-            currentY = doc.lastAutoTable.finalY + 8;
-
-            // --- BLOQUE DE CÓDIGO (SQL / SCRIPT) ---
             const code = act.queryText || act.scriptCode;
-            if (code) {
-                if (currentY > 250) { doc.addPage(); currentY = 20; }
-                const codeLabel = act.objectTypeId === 300 ? "Query SQL:" : "Script SSJS:";
-                doc.setFontSize(9).setTextColor(80).setFont("helvetica", "bold").text(codeLabel, 10, currentY);
-                currentY += 4;
+            if (code && code.trim().length > 0) {
+                if (currentY > 260) { doc.addPage(); currentY = 20; }
+                doc.setFontSize(9).setTextColor(80).setFont("helvetica", "bold").text(act.objectTypeId === 300 ? "Query SQL:" : "Script SSJS:", 10, currentY);
+                currentY += 5;
                 currentY = drawHighlightedCode(doc, code, act.objectTypeId === 300 ? 'sql' : 'js', currentY);
-                currentY += 12;
+                currentY += 10;
             }
         }
     }
-    doc.save(`Docu_Automatismo_${auto.name.replace(/\s+/g, '_')}.pdf`);
+    doc.save(`Docu_${auto.name.replace(/\s+/g, '_')}.pdf`);
 }
 
 /**
  * Dibuja código con colores sobre fondo claro, soporta saltos de página y wrapping.
  */
 function drawHighlightedCode(doc, code, type, startY) {
-    const margin = 10;
-    const width = 190;
-    const lineHeight = 3.5; // Un poco más de espacio para legibilidad
-    const fontSize = 7;
-    const pageBottomLimit = 275;
+    const margin = 10, width = 190, lineHeight = 4, fontSize = 7, pageBottomLimit = 270;
     let currentY = startY;
-
-    // --- PALETA DE COLORES PARA FONDO CLARO ---
-    const p = {
-        sql: { 
-            kwd: [41, 128, 185],   // Azul fuerte (Keywords)
-            str: [39, 174, 96],    // Verde oscuro (Strings)
-            com: [128, 128, 128],  // Gris medio (Comentarios)
-            num: [211, 84, 0],     // Naranja/Marrón (Números)
-            plain: [50, 50, 50]    // Gris casi negro (Texto normal)
-        },
-        js: { 
-            kwd: [142, 68, 173],   // Morado (Keywords)
-            str: [39, 174, 96],    // Verde oscuro
-            com: [128, 128, 128],  
-            typ: [41, 128, 185],   // Azul (Built-ins/Platform)
-            plain: [50, 50, 50]
-        }
-    }[type];
-
-    const lines = code.replace(/\t/g, '    ').split('\n');
+    const p = type === 'sql' ? { kwd: [41, 128, 185], str: [39, 174, 96], com: [128, 128, 128], plain: [50, 50, 50] } : { kwd: [142, 68, 173], str: [39, 174, 96], com: [128, 128, 128], plain: [50, 50, 50] };
+    const lines = code.replace(/\t/g, '    ').split(/\r?\n/);
     doc.setFont("courier", "normal").setFontSize(fontSize);
 
     lines.forEach(line => {
-        // Control de salto de página
-        if (currentY > pageBottomLimit) {
-            doc.addPage();
-            currentY = 20;
-            doc.setFont("courier", "normal").setFontSize(fontSize);
-        }
-
-        // --- FONDO GRIS MUY CLARITO ---
-        doc.setFillColor(248, 249, 250); // Gris casi blanco
-        doc.rect(margin, currentY - 2.5, width, lineHeight, 'F');
-        
-        // Opcional: Una línea sutil a la izquierda estilo "border-left"
-        doc.setFillColor(200, 200, 200);
-        doc.rect(margin, currentY - 2.5, 0.5, lineHeight, 'F');
-
+        if (currentY > pageBottomLimit) { doc.addPage(); currentY = 20; doc.setFont("courier", "normal").setFontSize(fontSize); }
+        doc.setFillColor(248, 249, 250); doc.rect(margin, currentY - 3, width, lineHeight, 'F');
+        doc.setFillColor(200, 200, 200); doc.rect(margin, currentY - 3, 0.5, lineHeight, 'F');
         const tokens = line.split(/(\s+|'[^']*'|"[^"]*"|--.*|\/\/.*|[(),;=<>!])/g);
         let currentX = margin + 2;
-
         tokens.forEach(token => {
             if (!token) return;
-
             let color = p.plain;
             if (type === 'sql') {
-                if (token.match(/^(SELECT|FROM|WHERE|AND|OR|JOIN|INNER|LEFT|ON|GROUP|BY|ORDER|INSERT|UPDATE|SET|DELETE|CASE|WHEN|THEN|ELSE|END|NULL|NOT|IN|TOP|DISTINCT|AS|UNION|ALL)$/i)) color = p.kwd;
+                if (token.match(/^(SELECT|FROM|WHERE|AND|OR|JOIN|ON|GROUP|BY|INSERT|UPDATE|DELETE|CASE|WHEN|THEN|ELSE|END|AS)$/i)) color = p.kwd;
                 else if (token.startsWith("'")) color = p.str;
                 else if (token.startsWith('--')) color = p.com;
-                else if (token.match(/^\d+$/)) color = p.num;
             } else {
-                if (token.match(/^(var|let|const|function|return|if|else|for|while|try|catch|new|Platform|HTTP|Write|Stringify|ParseJSON)$/)) color = p.kwd;
-                else if (token.match(/^['"]|['"]$/)) color = p.str;
+                if (token.match(/^(var|let|const|function|return|if|else|for|Platform|HTTP)$/)) color = p.kwd;
+                else if (token.match(/^['"]/)) color = p.str;
                 else if (token.startsWith('//')) color = p.com;
-                else if (token.match(/^(Platform|HTTP|Variable|Content|DataExtension)$/)) color = p.typ;
             }
-
             doc.setTextColor(...color);
-
             const tokenWidth = doc.getTextWidth(token);
-            
-            // Wrapping si la línea es más ancha que el papel
-            if (currentX + tokenWidth > margin + width - 2) {
-                currentY += lineHeight;
-                currentX = margin + 2;
-                
-                if (currentY > pageBottomLimit) { 
-                    doc.addPage(); 
-                    currentY = 20; 
-                    doc.setFont("courier", "normal").setFontSize(fontSize); 
-                }
-                
-                doc.setFillColor(248, 249, 250);
-                doc.rect(margin, currentY - 2.5, width, lineHeight, 'F');
-                doc.setFillColor(200, 200, 200);
-                doc.rect(margin, currentY - 2.5, 0.5, lineHeight, 'F');
-            }
-
+            if (currentX + tokenWidth > margin + width - 2) { currentY += lineHeight; currentX = margin + 2; doc.setFillColor(248, 249, 250); doc.rect(margin, currentY - 3, width, lineHeight, 'F'); }
             doc.text(token, currentX, currentY);
             currentX += tokenWidth;
         });
-
         currentY += lineHeight;
     });
-
     return currentY;
 }
 
