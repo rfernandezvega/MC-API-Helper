@@ -223,6 +223,7 @@ export function init() {
     elements.nextPageBtnCloudPages = document.getElementById('nextPageBtnCloudPages');
     elements.pageInputCloudPages = document.getElementById('pageInputCloudPages');
     elements.totalPagesCloudPages = document.getElementById('totalPagesCloudPages');
+    elements.cloudPageCountSpan = document.getElementById('cloudpage-count');
 
     // --- 15. Sección: Clonador de Automatismos ---
     elements.automationClonerSection = document.getElementById('automation-cloner-section');

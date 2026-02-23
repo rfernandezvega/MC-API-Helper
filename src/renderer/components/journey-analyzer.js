@@ -449,17 +449,11 @@ function renderActivities(activities, numberMap) {
             const config = act.configurationArguments || {};
             
             // 1. Parseo de Keywords
-            let keywordsHtml = '<i>No configuradas</i>';
-            try {
-                if (config.keywords) {
-                    const kwList = JSON.parse(config.keywords);
-                    if (kwList.length > 0) {
-                        keywordsHtml = kwList.map((k, idx) => 
-                            `<div style="margin-bottom:4px;">${idx + 1}. <b>${k.operator}</b>: "${k.keyword}"</div>`
-                        ).join('');
-                    }
-                }
-            } catch (e) { console.error("Error parseando Keywords", e); }
+            let keywordsHtml = act.outcomes
+                .filter(o => !o.metaData?.defaultOutcome) // Filtramos las ramas de error/timeout
+                .map((o, idx) => 
+                    `<div style="margin-bottom:4px;">${idx + 1}. <b>${o.metaData?.operator || 'contains'}</b>: "${o.metaData?.label || o.key}"</div>`
+                ).join('') || '<i>No configuradas</i>';
 
             extraConfig = `
                 <div style="background:#fffcf5; border:1px solid #f3e5ab; padding:12px; border-radius:4px; margin-top:10px; border-left: 5px solid #f39c12;">
@@ -490,7 +484,7 @@ function renderActivities(activities, numberMap) {
                         </div>
                     </div>
                 </div>
-            `;
+            `  + parseDecisionCriteria(act);
         }
         else if (act.type === 'WHATSAPPSESSIONTRANSFERACTIVITY') {
             const config = act.configurationArguments || {};
@@ -1134,7 +1128,6 @@ function generatePDF() {
         const num = j.numberMap.get(act.key);
         const tableBody = [["Tipo:", act.type]];
 
-        // 1. EMAIL V2
         if (act.type === 'EMAILV2') {
             const ts = act.configurationArguments?.triggeredSend || {};
             tableBody.push([{ content: "DETALLES DEL ENVÍO", colSpan: 2, styles: { fillColor: [240, 240, 240], halign: 'center', fontStyle: 'bold' } }]);
@@ -1143,9 +1136,7 @@ function generatePDF() {
             tableBody.push(["Preheader:", ts.preHeader || '---']);
             tableBody.push(["Clasificación:", act.resolvedSendClassification || ts.sendClassificationId || '---']);
             tableBody.push(["Lista Publicación:", act.resolvedListName || (ts.publicationListId === 0 ? 'All Subscribers' : ts.publicationListId)]);
-        }
-        
-        // 2. DECISION SPLIT
+        }      
         else if (act.type.includes('MULTICRITERIA')) {
             const criteria = act.configurationArguments?.criteria || {};
             tableBody.push([{ content: "CRITERIOS DE DECISIÓN", colSpan: 2, styles: { fillColor: [240, 240, 240], halign: 'center', fontStyle: 'bold' } }]);
@@ -1185,8 +1176,6 @@ function generatePDF() {
                 tableBody.push([`Rama: ${remainder.metaData?.label || 'Resto'}`, "Cualquier contacto que no cumpla los criterios anteriores."]);
             }
         }
-
-        // 3. ENGAGEMENT SPLIT
         else if (act.type === 'ENGAGEMENTDECISION') {
             const config = act.configurationArguments || {};
             const stats = { 2: "Apertura (Open)", 3: "Clic (Click)", 6: "Rebote (Bounce)" };
@@ -1205,8 +1194,6 @@ function generatePDF() {
                 tableBody.push(["URLs monitoreadas:", urlsFormatted]);
             }
         }
-
-        // 4. UPDATE CONTACT
         else if (act.type === 'UPDATECONTACTDATA') {
             const fields = act.arguments?.activityData?.updateContactFields || [];
             tableBody.push([{ content: `DESTINO: ${act.resolvedDeName || '---'}`, colSpan: 2, styles: { fillColor: [240, 240, 240], halign: 'center', fontStyle: 'bold' } }]);
@@ -1214,7 +1201,6 @@ function generatePDF() {
                 tableBody.push([f.resolvedFieldName || f.field, String(f.value === 0 ? "0" : (f.value || "vacío"))]);
             });
         }
-        // 5. EISNTEIN SPLIT
         else if (act.type === 'MULTICRITERIADECISIONEXTENSION') {
             const meta = act.metaData || {};
             
@@ -1251,7 +1237,6 @@ function generatePDF() {
             const remainderLabel = EINSTEIN_PROBABILITY_MAP[remainderOutcome?.metaData?.i18nLabel] || 'Resto / Remainder';
             tableBody.push([`Rama: ${remainderLabel}`, "Contactos que no cumplen las probabilidades anteriores."]);
         }
-        // 6. PATH OPTIMIZER
         else if (act.type === 'ABNTEST' || act.type === 'ABNTESTSTOP') {
             const config = act.configurationArguments || {};
             const metricMap = { 'Clicks': 'Click Rate', 'Opens': 'Open Rate', 'Unsubscribes': 'Unsubscribe Rate' };
@@ -1345,26 +1330,36 @@ function generatePDF() {
         }
         else if (act.type === 'WAITUNTILCHATRESPONSE') {
             const config = act.configurationArguments || {};
-            
-            tableBody.push([{ 
-                content: "ESPERA DE RESPUESTA (CHAT ENGAGEMENT)", 
-                colSpan: 2, 
-                styles: { fillColor: [240, 240, 240], halign: 'center', fontStyle: 'bold' } 
-            }]);
+            const displayTitle = act.name || 'Engagement: Espera de Respuesta'; // Fallback para el título
 
-            // Keywords para el PDF
-            let keywordsText = 'No configuradas';
-            try {
-                if (config.keywords) {
-                    const kwList = JSON.parse(config.keywords);
-                    keywordsText = kwList.map(k => `• ${k.operator}: "${k.keyword}"`).join('\n');
-                }
-            } catch (e) { }
+            // Extraemos keywords directamente de los outcomes (más fiable)
+            const keywordsHtml = act.outcomes
+                .filter(o => !o.metaData?.defaultOutcome)
+                .map((o, idx) => 
+                    `<div style="margin-bottom:4px;">${idx + 1}. <b>${o.metaData?.operator || 'contains'}</b>: "${o.metaData?.label || o.key}"</div>`
+                ).join('') || '<i>No configuradas</i>';
 
-            tableBody.push(["Keywords configuradas:", keywordsText]);
-            tableBody.push(["Duración Máxima:", `${config.waitDuration} ${config.waitUnit}`]);
-            tableBody.push(["Canal:", config.channelType || 'WhatsApp']);
-            tableBody.push(["Ramas por defecto:", "Invalid Response (No match)\nNo Response (Timeout)"]);
+            extraConfig = `
+                <div style="background:#fffcf5; border:1px solid #f3e5ab; padding:12px; border-radius:4px; margin-top:10px; border-left: 5px solid #f39c12;">
+                    <h5 style="margin:0 0 10px 0; color:#d35400; font-size:0.9em;">Wait Until Chat Response</h5>
+                    <div style="font-size:0.85em;">
+                        <div style="margin-bottom:10px; padding:8px; background:#fff; border:1px solid #eee; border-radius:4px;">
+                            <strong>Palabras Clave configuradas:</strong><br>
+                            <div style="margin-top:5px; color:#2c3e50;">${keywordsHtml}</div>
+                        </div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                            <div style="padding:8px; background:#fdfefe; border:1px solid #eee;">
+                                <strong>Espera Máxima:</strong><br>
+                                <span style="color:#2980b9; font-weight:bold;">${config.waitDuration} ${config.waitUnit}</span>
+                            </div>
+                            <div style="padding:8px; background:#fdfefe; border:1px solid #eee;">
+                                <strong>Canal:</strong><br>
+                                <span>${config.channelType || 'WhatsApp'}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ` + parseDecisionCriteria(act);            
         }
         else if (act.type === 'WHATSAPPSESSIONTRANSFERACTIVITY') {
             const config = act.configurationArguments || {};
@@ -1732,6 +1727,25 @@ async function generateWord() {
             rows.push(new TableRow({ children: [createLabelCell("Mensaje"), createValueCell(`${act.resolvedTemplateName || ''} (${config.assetId})`)] }));
             rows.push(new TableRow({ children: [createLabelCell("Código"), createValueCell(store.messageConfiguration?.selectedCode?.code || '---')] }));
             rows.push(new TableRow({ children: [createLabelCell("Keyword ID"), createValueCell(config.keywordId)] }));
+        }
+        else if (act.type === 'WAITUNTILCHATRESPONSE') {
+            const config = act.configurationArguments || {};
+            rows.push(new TableRow({ children: [createMergedHeaderCell("ESPERA RESPUESTA CHAT", "E9ECEF", 18)] }));
+            
+            const kwText = act.outcomes
+                .filter(o => !o.metaData?.defaultOutcome)
+                .map(o => `• ${o.metaData?.operator || 'contains'}: "${o.metaData?.label || o.key}"`)
+                .join('\n') || 'No configuradas';
+            
+            rows.push(new TableRow({ children: [createLabelCell("Keywords"), createValueCell(kwText)] }));
+            rows.push(new TableRow({ children: [createLabelCell("Espera Máx."), createValueCell(`${config.waitDuration} ${config.waitUnit}`)] }));
+            
+            // Añadir lógica de ramas
+            const criteria = config.criteria || {};
+            for (const [key, xml] of Object.entries(criteria)) {
+                const outcome = act.outcomes.find(o => o.key === key);
+                rows.push(new TableRow({ children: [createLabelCell(`Rama: ${outcome?.metaData?.label || key}`), createValueCell(clean(parseXmlToLogic(xml)))] }));
+            }
         }
 
         children.push(new Table({
