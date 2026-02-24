@@ -95,11 +95,11 @@ async function getFields() {
 
         if (fields.length > 0) {
             fieldsTable.populate(fields); 
-            fieldsTable.populateDeletionPicklist(fields);
+            populateDeletionPicklist(fields);
             logger.logMessage(`${fields.length} campos recuperados y cargados en la tabla.`);
         } else {
             fieldsTable.clear();
-            fieldsTable.populateDeletionPicklist([]);
+            populateDeletionPicklist([]);
             logger.logMessage('Llamada exitosa pero no se encontraron campos para esta DE.');
         }
     } catch (error) {
@@ -254,4 +254,18 @@ export function init(dependencies) {
     elements.getFieldsBtn.addEventListener('click', getFields);
     elements.deleteFieldBtn.addEventListener('click', deleteField);
     elements.documentDEsBtn.addEventListener('click', documentDataExtensions);
+}
+
+/**
+ * Rellena el desplegable de campos a eliminar.
+ * @param {Array<object>} fields - Array de campos con 'id' y 'name'.
+ */
+export function populateDeletionPicklist(fields) {
+    elements.targetFieldSelect.innerHTML = '<option value="">-- Seleccione un campo --</option>';
+    if (fields.length > 0) {
+        fields.forEach(f => elements.targetFieldSelect.appendChild(new Option(f.name, f.objectId)));
+        elements.targetFieldSelect.disabled = false;
+    } else {
+        elements.targetFieldSelect.disabled = true;
+    }
 }

@@ -241,10 +241,34 @@ export async function createOrUpdateFields(externalKey, fields, apiConfig) {
  * @returns {Promise<boolean>} Resuelve a true si el borrado fue exitoso.
  */
 export async function deleteDataExtensionField(deExternalKey, fieldObjectId, apiConfig) {
-  const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth><a:Action s:mustUnderstand="1">Delete</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To></s:Header><s:Body xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><DeleteRequest xmlns="http://exacttarget.com/wsdl/partnerAPI"><Objects xsi:type="DataExtension"><CustomerKey>${deExternalKey}</CustomerKey><Fields><Field><ObjectID>${fieldObjectId}</ObjectID></Field></Fields></Objects></DeleteRequest></s:Body></s:Envelope>`;
+  // 1. Construimos el bloque Client solo si tenemos el Business Unit (MID)
+  const clientBlock = apiConfig.businessUnit 
+    ? `<Client><ID>${apiConfig.businessUnit}</ID></Client>` 
+    : '';
 
-  await executeSoapRequest(apiConfig.soapUri, soapPayload.trim());
-  return true;
+  const soapPayload = `
+    <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+      <s:Header>
+        <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+        <a:Action s:mustUnderstand="1">Delete</a:Action>
+        <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+      </s:Header>
+      <s:Body xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <DeleteRequest xmlns="http://exacttarget.com/wsdl/partnerAPI">
+          <Objects xsi:type="DataExtension">
+            ${clientBlock}
+            <CustomerKey>${deExternalKey}</CustomerKey>
+            <Fields>
+              <Field>
+                <ObjectID>${fieldObjectId}</ObjectID>
+              </Field>
+            </Fields>
+          </Objects>
+        </DeleteRequest>
+      </s:Body>
+    </s:Envelope>`;
+
+  return await executeSoapRequest(apiConfig.soapUri, soapPayload.trim());
 }
 
 /**

@@ -190,20 +190,6 @@ export function populate(fieldsData) {
 }
 
 /**
- * Rellena el desplegable de campos a eliminar.
- * @param {Array<object>} fields - Array de campos con 'id' y 'name'.
- */
-export function populateDeletionPicklist(fields) {
-    elements.targetFieldSelect.innerHTML = '<option value="">-- Seleccione un campo --</option>';
-    if (fields.length > 0) {
-        fields.forEach(f => elements.targetFieldSelect.appendChild(new Option(f.name, f.id)));
-        elements.targetFieldSelect.disabled = false;
-    } else {
-        elements.targetFieldSelect.disabled = true;
-    }
-}
-
-/**
  * Recoge los datos de la tabla y los devuelve como un array de objetos.
  * @returns {Array<object>}
  */

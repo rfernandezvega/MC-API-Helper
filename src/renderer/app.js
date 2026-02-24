@@ -77,10 +77,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		// Mapeo inverso para encontrar el 'data-macro' que corresponde a la sección activa.
 		const sectionToMacroMap = {
 			'documentacion-section': 'docu',
-			'configuracion-apis-section': 'configuracionAPIs',
-			'configuracion-de-section': 'configuracionDE',
-			'campos-section': 'campos',
-			'configuracion-campos-section': 'gestionCampos',
+			'configuracion-apis-section': 'configuracionAPIs',			
 			'buscadores-section': 'buscadores',
 			'clonador-queries-section': 'clonadorQueries',
 			'calendario-section': 'calendario',
@@ -89,7 +86,8 @@ document.addEventListener('DOMContentLoaded', function () {
 			'gestion-cloudpages-section': 'gestionCloudPages',
 			'gestion-contenidos-section': 'gestionContenidos',
 			'carpetas-section':'gestionCarpetas',
-			'email-validator-section':'validadorEmail'
+			'email-validator-section':'validadorEmail',
+			'gestion-de-unificada-section': 'gestionDEs'
 		};
 
 		const activeMacro = sectionToMacroMap[activeSectionId];
@@ -414,6 +412,11 @@ document.addEventListener('DOMContentLoaded', function () {
 				else if (macroToActionMap[macro]) { 
 					showSection(macroToActionMap[macro]);
 				}
+				else if (macro === 'gestionDEs') {
+					showSection('gestion-de-unificada-section');
+					// Forzamos a que fieldsTable prepare la vista por si la tabla está vacía
+					fieldsTable.prepareView(); 
+				}
 			});
 		});
 
@@ -430,6 +433,19 @@ document.addEventListener('DOMContentLoaded', function () {
 			parent.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 			button.classList.add('active');
 			parent.querySelector(`#${tabId}`).classList.add('active');
+
+			// --- LÓGICA ESPECÍFICA PARA GESTIÓN DEs ---
+			if (button.closest('#gestion-de-unificada-section')) {
+				// Ocultamos todos primero usando las referencias de dom-elements.js
+				elements.headerActionsCreacion.classList.add('hidden');
+				elements.headerActionsConfigCampos.classList.add('hidden');
+				elements.headerActionsGestionCampos.classList.add('hidden');
+
+				// Mostramos el que toca según el data-tab del botón pulsado
+				if (tabId === 'tab-creacion') elements.headerActionsCreacion.classList.remove('hidden');
+				if (tabId === 'tab-config') elements.headerActionsConfigCampos.classList.remove('hidden');
+				if (tabId === 'tab-gestion') elements.headerActionsGestionCampos.classList.remove('hidden');
+			}
 		}));
 
 		// Este listener gestiona TODOS los menús colapsables.

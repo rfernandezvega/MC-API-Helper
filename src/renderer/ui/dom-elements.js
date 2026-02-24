@@ -64,6 +64,12 @@ export function init() {
     elements.importDvConfigBtn = document.getElementById('importDvConfigBtn');
     elements.exportDvConfigBtn = document.getElementById('exportDvConfigBtn');
 
+    // --- 5.0 Sección: Data Extensions ---
+    elements.gestionDeUnificadaSection = document.getElementById('gestion-de-unificada-section');
+    elements.headerActionsCreacion = document.getElementById('header-actions-creacion');
+    elements.headerActionsConfigCampos = document.getElementById('header-actions-config-campos');
+    elements.headerActionsGestionCampos = document.getElementById('header-actions-gestion-campos');
+
     // --- 5. Sección: Creación de Data Extension ---
     elements.deNameInput = document.getElementById('deName');
     elements.deDescriptionInput = document.getElementById('deDescription');

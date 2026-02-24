@@ -70,17 +70,10 @@
 				</ul>
 			</div>
 			<div class="collapsible-group">
-				<h3 class="collapsible-header">Data Extensions</h3>
-				<ul class="collapsible-content">
-					<li><a class="macro-item" data-macro="configuracionDE">Creación de Data Extension</a></li>
-					<li><a class="macro-item" data-macro="campos">Configuración de Campos</a></li>
-					<li><a class="macro-item" data-macro="gestionCampos">Recuperación y Borrado de Campos</a></li>
-				</ul>
-			</div>
-			<div class="collapsible-group">
 				<h3 class="collapsible-header">Funcionalidades</h3>
 				<ul class="collapsible-content">
 					<li><a class="macro-item" data-macro="buscadores">Buscadores</a></li>
+                    <li><a class="macro-item" data-macro="gestionDEs">Data Extensions</a></li>
 					<li><a class="macro-item" data-macro="calendario">Calendario</a></li>         
 					<li><a class="macro-item" data-macro="gestionAutomatismos">Automatismos</a></li> 
 					<li><a class="macro-item" data-macro="clonadorQueries">Clonar Queries</a></li>

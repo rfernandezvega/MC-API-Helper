@@ -70,17 +70,10 @@
 				</ul>
 			</div>
 			<div class="collapsible-group">
-				<h3 class="collapsible-header">Data Extensions</h3>
-				<ul class="collapsible-content">
-					<li><a class="macro-item" data-macro="configuracionDE">Creación de Data Extension</a></li>
-					<li><a class="macro-item" data-macro="campos">Configuración de Campos</a></li>
-					<li><a class="macro-item" data-macro="gestionCampos">Recuperación y Borrado de Campos</a></li>
-				</ul>
-			</div>
-			<div class="collapsible-group">
 				<h3 class="collapsible-header">Funcionalidades</h3>
 				<ul class="collapsible-content">
 					<li><a class="macro-item" data-macro="buscadores">Buscadores</a></li>
+                    <li><a class="macro-item" data-macro="gestionDEs">Data Extensions</a></li>
 					<li><a class="macro-item" data-macro="calendario">Calendario</a></li>         
 					<li><a class="macro-item" data-macro="gestionAutomatismos">Automatismos</a></li> 
 					<li><a class="macro-item" data-macro="clonadorQueries">Clonar Queries</a></li>
@@ -501,42 +494,6 @@
             <button id="content-manager-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="content-manager-import-btn" class="action-button activate-btn">Importar</button>
         </div>
-    </div>
-</div>
-
-<!-- 4. SECCIÓN: CONFIGURACIÓN DE DATA EXTENSION (Creación) -->
-<div id="configuracion-de-section" class="section config-section-container">
-    <div class="section-header">
-        <button class="back-button">← Atrás</button>
-        <div class="header-actions"><button id="createDE" class="action-button">Crear Data Extension</button></div>
-    </div>
-    <h2>Configuración de Data Extension</h2>
-    <!-- Configuración Base de la DE -->
-    <div class="config-block">
-        <h3>Configuración Base</h3>
-        <div class="form-group"><label for="deName">Nombre Data Extension</label><input type="text" id="deName"></div>
-        <div class="form-group"><label for="deDescription">Descripción</label><input type="text" id="deDescription"></div>
-        <div class="form-group"><label for="deExternalKey">External Key</label><input type="text" id="deExternalKey" disabled></div>
-        <div class="form-group">
-            <label for="deFolder">Carpeta de Destino (Opcional)</label>
-            <div class="folder-input-group">
-                <input type="text" id="deFolder" placeholder="Se creará en la raíz por defecto" disabled>
-                <!-- Este botón abrirá el modal de selección de carpetas -->
-                <button id="selectDEFolderBtn" class="action-button">Seleccionar</button>
-            </div>
-        </div>
-    </div>
-    <!-- Configuración Sendable -->
-    <div class="config-block">
-        <h3>Configuración Sendable</h3>
-        <div class="form-group checkbox-group">
-            <label for="isSendable">Es Sendable:</label><input type="checkbox" id="isSendable">
-        </div>
-        <div class="form-group">
-            <label for="subscriberKeyField">Campo SubscriberKey</label>
-            <select id="subscriberKeyField" disabled><option value="">-- Defina campos en la sección 'Campos' --</option></select>
-        </div>
-        <div class="form-group"><label for="subscriberKeyType">Tipo Campo SubscriberKey</label><input type="text" id="subscriberKeyType" disabled></div>
     </div>
 </div>
 
@@ -1276,81 +1233,6 @@
     </div>
 </div>
 
-<!-- 5. SECCIÓN: CAMPOS DE LA DATA EXTENSION -->
-<div id="campos-section" class="section">
-    <div class="section-header">
-        <button class="back-button">← Atrás</button>
-        <div class="header-actions">
-            <button id="importFieldsBtn" class="action-button">Importar</button>                
-            <button id="createFieldsBtn" class="action-button activate-btn">Crear/Actualizar Campos</button>
-            <button id="createDummyFieldsBtn" class="action-button">Campos de Ejemplo</button>                
-            <button id="clearFieldsBtn" class="action-button delete-btn">Limpiar Tabla</button>
-        </div>
-    </div>
-    <h2>Campos de la Data Extension</h2>
-    <div class="table-container">
-        <div class="table-scroll-wrapper">
-            <table id="myTable" class="editable-row-table">
-                <thead>
-                    <tr><th>Campo MC</th><th>Tipo Campo</th><th>Longitud</th><th>Default</th><th>PK</th><th>Requerido</th></tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-        <!-- Botones para mover filas seleccionadas -->
-        <div class="control-buttons">
-            <button id="addFieldBtn" class="action-button">Añadir Fila</button>
-            <button id="moveUp" title="Mover fila seleccionada hacia arriba">▲</button>
-            <button id="moveDown" title="Mover fila seleccionada hacia abajo">▼</button>
-        </div>
-    </div>
-</div>
-
-<!-- 6. SECCIÓN: GESTIÓN DE CAMPOS (Recuperar/Borrar) -->
-<div id="configuracion-campos-section" class="section config-section-container">
-    <div class="section-header">
-        <button class="back-button">← Atrás</button>
-        <div class="header-actions">
-            <button id="getFields" class="action-button">Recuperar Campos</button>
-            <button id="documentDEsBtn" class="action-button" disabled>Documentar DEs</button>
-            <button id="deleteField" class="action-button delete-btn">Borrar Campo</button>
-        </div>
-    </div>
-    <h2>Gestión de Campos de Data Extension</h2>
-    
-    <!-- Bloque para Recuperar/Actualizar/Borrar campos de UNA DE -->
-    <div class="config-block">
-        <h3>Campos de una Data Extension Específica</h3>
-        <p class="info-text" style="text-align: left; margin: 0 0 15px;">
-            Introduce la External Key de la DE sobre la que quieres operar y pulsa en <em>Recuperar Campos</em>. Su estructura se cargará en la sección "Campos" y en la lista desplegable de abajo.
-        </p>
-        <div class="form-group">
-            <label for="recExternalKey">External Key de la DE</label>
-            <input type="text" id="recExternalKey" placeholder="Pega aquí la External Key de la Data Extension">
-        </div>
-        <div class="form-group">
-            <label for="targetFieldSelect">Campo a eliminar</label>
-            <select id="targetFieldSelect" disabled><option value="">-- Primero recupera los campos --</option></select>
-        </div>
-    </div>
-    
-    <!-- Bloque para Documentar TODAS las DEs de una carpeta -->
-    <div class="config-block">
-        <h3>Documentación de Carpetas</h3>
-        <p class="info-text" style="text-align: left; margin: 0 0 15px;">
-            Selecciona una carpeta para generar y descargar un CSV con la estructura de todas las Data Extensions que contiene.
-        </p>
-        <!-- Mantenemos la mejora del modal aquí -->
-        <div class="form-group">
-            <label for="recCategoryId">Carpeta de Data Extensions a documentar</label>
-            <div class="folder-input-group">
-                <input type="text" id="recCategoryId" placeholder="Usa el botón para buscar y seleccionar una carpeta" disabled>
-                <button id="selectDEFolderForDocBtn" class="action-button">Seleccionar Carpeta</button>
-            </div>
-        </div>
-    </div>
-</div>
-
  <!-- 9. SECCIÓN: BUSCADORES -->
 <div id="buscadores-section" class="section">
     <div class="section-header"><button class="back-button">← Atrás</button></div>
@@ -1714,6 +1596,122 @@
             Usa la sangría (dos espacios o un tabulador) para indicar las subcarpetas.
         </p>
         <textarea id="folderStructureInput" rows="8" placeholder="Carpeta_A&#10;  Carpeta_AA&#10;  Carpeta_AB&#10;Carpeta_B&#10;  Carpeta_BA&#10;    Carpeta_BAA&#10;    Carpeta_BAB&#10;  Carpeta_BB&#10;"></textarea>
+    </div>
+</div>
+
+<!-- 18. SECCIÓN: GESTIÓN UNIFICADA DE DATA EXTENSIONS -->
+<div id="gestion-de-unificada-section" class="section">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>
+        
+        <!-- Grupo 1: Acciones de Creación -->
+        <div id="header-actions-creacion" class="header-actions de-tab-actions">
+            <button id="createDE" class="action-button activate-btn">Crear Data Extension</button>
+        </div>
+
+        <!-- Grupo 2: Acciones de Configuración de Campos -->
+        <div id="header-actions-config-campos" class="header-actions de-tab-actions hidden">
+            <button id="importFieldsBtn" class="action-button">Importar</button>                
+            <button id="createFieldsBtn" class="action-button activate-btn">Crear/Actualizar Campos</button>
+            <button id="createDummyFieldsBtn" class="action-button">Campos de Ejemplo</button>                
+            <button id="clearFieldsBtn" class="action-button delete-btn">Limpiar Tabla</button>
+        </div>
+
+        <!-- Grupo 3: Acciones de Gestión/Borrado -->
+        <div id="header-actions-gestion-campos" class="header-actions de-tab-actions hidden">
+            <button id="getFields" class="action-button">Recuperar Campos</button>
+            <button id="documentDEsBtn" class="action-button" disabled>Documentar DEs</button>
+            <button id="deleteField" class="action-button delete-btn">Borrar Campo</button>
+        </div>
+    </div>
+
+    <h2 style="text-align: center; color: #558ac7; margin-bottom: 10px;">Gestión de Data Extensions</h2>
+
+    <div class="tabs-container">
+        <div class="tab-buttons de-main-tabs">
+            <button class="tab-button active" data-tab="tab-creacion">Creación</button>
+            <button class="tab-button" data-tab="tab-config">Configuración de Campos</button>
+            <button class="tab-button" data-tab="tab-gestion">Gestión de Campos</button>
+        </div>
+
+        <!-- 1. CREACIÓN -->
+        <div id="tab-creacion" class="tab-content active config-section-container">
+            <div class="config-block">
+                <h3>Configuración Base</h3>
+                <div class="form-group"><label for="deName">Nombre Data Extension</label><input type="text" id="deName"></div>
+                <div class="form-group"><label for="deDescription">Descripción</label><input type="text" id="deDescription"></div>
+                <div class="form-group"><label for="deExternalKey">External Key</label><input type="text" id="deExternalKey" disabled></div>
+                <div class="form-group">
+                    <label for="deFolder">Carpeta de Destino (Opcional)</label>
+                    <div class="folder-input-group">
+                        <input type="text" id="deFolder" placeholder="Se creará en la raíz por defecto" disabled>
+                        <button id="selectDEFolderBtn" class="action-button">Seleccionar</button>
+                    </div>
+                </div>
+            </div>
+            <div class="config-block">
+                <h3>Configuración Sendable</h3>
+                <div class="form-group checkbox-group">
+                    <label for="isSendable">Es Sendable:</label><input type="checkbox" id="isSendable">
+                </div>
+                <div class="form-group">
+                    <label for="subscriberKeyField">Campo SubscriberKey</label>
+                    <select id="subscriberKeyField" disabled><option value="">-- Defina campos en la sección 'Campos' --</option></select>
+                </div>
+                <div class="form-group"><label for="subscriberKeyType">Tipo Campo SubscriberKey</label><input type="text" id="subscriberKeyType" disabled></div>
+            </div>
+        </div>
+
+        <!-- 2. CONFIGURACIÓN DE CAMPOS -->
+        <div id="tab-config" class="tab-content">
+            <div class="table-container" style="display: flex; gap: 20px; align-items: flex-start;">
+                <div class="table-scroll-wrapper" style="flex: 1;">
+                    <table id="myTable" class="editable-row-table">
+                        <thead>
+                            <tr><th>Campo MC</th><th>Tipo Campo</th><th>Longitud</th><th>Default</th><th>PK</th><th>Requerido</th></tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="control-buttons" style="display: flex; flex-direction: column; gap: 10px;">
+                    <button id="addFieldBtn" class="action-button">Añadir Fila</button>
+                    <button id="moveUp" class="action-button secondary-btn" title="Mover arriba">▲</button>
+                    <button id="moveDown" class="action-button secondary-btn" title="Mover abajo">▼</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. GESTIÓN DE CAMPOS (TEXTOS ORIGINALES) -->
+        <div id="tab-gestion" class="tab-content config-section-container">
+            <div class="config-block">
+                <h3>Campos de una Data Extension Específica</h3>
+                <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+                    Introduce la External Key de la DE sobre la que quieres operar y pulsa en <em>Recuperar Campos</em>. Su estructura se cargará en la sección "Campos" y en la lista desplegable de abajo.
+                </p>
+                <div class="form-group">
+                    <label for="recExternalKey">External Key de la DE</label>
+                    <input type="text" id="recExternalKey" placeholder="Pega aquí la External Key de la Data Extension">
+                </div>
+                <div class="form-group">
+                    <label for="targetFieldSelect">Campo a eliminar</label>
+                    <select id="targetFieldSelect" disabled><option value="">-- Primero recupera los campos --</option></select>
+                </div>
+            </div>
+            
+            <div class="config-block">
+                <h3>Documentación de Carpetas</h3>
+                <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+                    Selecciona una carpeta para generar y descargar un CSV con la estructura de todas las Data Extensions que contiene.
+                </p>
+                <div class="form-group">
+                    <label for="recCategoryId">Carpeta de Data Extensions a documentar</label>
+                    <div class="folder-input-group">
+                        <input type="text" id="recCategoryId" placeholder="Usa el botón para buscar y seleccionar una carpeta" disabled>
+                        <button id="selectDEFolderForDocBtn" class="action-button">Seleccionar Carpeta</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
