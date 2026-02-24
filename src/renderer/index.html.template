@@ -369,6 +369,22 @@
         </div>
     </div>
 </div>
+<!-- MODAL ESPECÍFICA PARA COMUNICACIONES -->
+<div id="journey-comm-modal" class="modal-overlay">
+    <div class="modal-content" style="min-width: 450px;">
+        <h3>Recuperar Comunicaciones</h3>
+        <p id="journey-comm-message" style="margin-bottom: 25px; color: #666;"></p>
+
+        <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 40px;">
+            <button id="journey-comm-selected-btn" class="action-button" style="background-color: #558ac7; min-width: 160px;">Solo seleccionados</button>
+            <button id="journey-comm-all-btn" class="action-button activate-btn" style="min-width: 160px;">Todos los cargados</button>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end;">
+            <button id="journey-comm-cancel-btn" class="action-button delete-btn">Cancelar</button>
+        </div>
+    </div>
+</div>
 
 <div id="app-version"></div> 
 <script type="module" src="app.js"></script>

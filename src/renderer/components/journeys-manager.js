@@ -114,8 +114,7 @@ export function init(dependencies) {
     // Listeners de botones de acción
     elements.downloadJourneysCsvBtn.addEventListener('click', downloadJourneysCsv);
     elements.refreshJourneysTableBtn.addEventListener('click', refreshData);
-    elements.getCommunicationsBtn.addEventListener('click', getCommunications);
-    elements.getAllCommunicationsBtn.addEventListener('click', getAllCommunications);
+    elements.getCommunicationsBtn.addEventListener('click', handleCommunicationsAction);
 
     elements.copyJourneyBtn.addEventListener('click', copyJourney);
     elements.stopJourneyBtn.addEventListener('click', stopJourneys);
@@ -759,8 +758,8 @@ function getSelectedJourneys() {
 function updateButtonsState() {
     const selected = getSelectedJourneys();
     const count = selected.length;
-    elements.getAllCommunicationsBtn.disabled = fullJourneyList.length === 0;
-    elements.getCommunicationsBtn.disabled = count === 0;
+
+    elements.getCommunicationsBtn.disabled = fullJourneyList.length === 0;
 
     const clonableTypes = ['EmailAudience', 'AutomationAudience'];
     elements.copyJourneyBtn.disabled = !(count === 1 && clonableTypes.includes(selected[0].eventType));
@@ -1004,4 +1003,22 @@ function downloadJourneysCsv() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+
+async function handleCommunicationsAction() {
+    const selectedCount = getSelectedJourneys().length;
+    const totalCount = fullJourneyList.length;
+
+    const choice = await ui.showJourneyCommModal(`¿De qué journeys quieres obtener el detalle de comunicaciones?`);
+    if (!choice) return;
+
+    if (choice === 'selected') {
+        if (selectedCount === 0) {
+            ui.showCustomAlert("No has seleccionado ningún journey de la tabla.");
+            return;
+        }
+        await getCommunications(); // Llama a la lógica existente de seleccionados
+    } else if (choice === 'all') {
+        await getAllCommunications(); // Llama a la lógica existente de todos
+    }
 }

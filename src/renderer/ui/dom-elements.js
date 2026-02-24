@@ -181,7 +181,6 @@ export function init() {
     elements.journeyDEFilter = document.getElementById('journeyDEFilter');
     elements.refreshJourneysTableBtn = document.getElementById('refreshJourneysTableBtn');
     elements.getCommunicationsBtn = document.getElementById('getCommunicationsBtn');
-    elements.getAllCommunicationsBtn = document.getElementById('getAllCommunicationsBtn');
     elements.copyJourneyBtn = document.getElementById('copyJourneyBtn');
     elements.stopJourneyBtn = document.getElementById('stopJourneyBtn');
     elements.deleteJourneyBtn = document.getElementById('deleteJourneyBtn');
@@ -192,6 +191,11 @@ export function init() {
     elements.pageInputJourneys = document.getElementById('pageInputJourneys');
     elements.totalPagesJourneys = document.getElementById('totalPagesJourneys');
     elements.analyzeJourneyBtn = document.getElementById('analyzeJourneyBtn');
+    elements.journeyCommModal = document.getElementById('journey-comm-modal');
+    elements.journeyCommMessage = document.getElementById('journey-comm-message');
+    elements.journeyCommSelectedBtn = document.getElementById('journey-comm-selected-btn');
+    elements.journeyCommAllBtn = document.getElementById('journey-comm-all-btn');
+    elements.journeyCommCancelBtn = document.getElementById('journey-comm-cancel-btn');
 
     // --- 13. Sección: Clonador de Queries ---
     elements.queriesClonerStep1 = document.getElementById('queries-cloner-step1');

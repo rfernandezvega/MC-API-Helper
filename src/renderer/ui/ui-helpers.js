@@ -786,3 +786,24 @@ export function handleExternalLink(e) {
         window.electronAPI.openExternalLink(link.href); 
     }
 }
+
+export function showJourneyCommModal(message) {
+    return new Promise(resolve => {
+        elements.journeyCommMessage.textContent = message;
+        manageModalZIndex(elements.journeyCommModal);
+        elements.journeyCommModal.style.display = 'flex';
+
+        const cleanup = (value) => {
+            elements.journeyCommModal.style.display = 'none';
+            resolve(value);
+        };
+
+        elements.journeyCommSelectedBtn.onclick = () => cleanup('selected');
+        elements.journeyCommAllBtn.onclick = () => cleanup('all');
+        elements.journeyCommCancelBtn.onclick = () => cleanup(null);
+        
+        elements.journeyCommModal.onclick = (e) => {
+            if (e.target === elements.journeyCommModal) cleanup(null);
+        };
+    });
+}
