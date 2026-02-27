@@ -23,6 +23,8 @@ let getAuthenticatedConfig; // Dependencia que será inyectada por app.js
 
 let showJourneyAnalyzerView;
 
+let lastSelectedIndex = -1;
+
 // --- 2. FUNCIONES DE RENDERIZADO Y LÓGICA DE TABLA ---
 
 /**
@@ -737,7 +739,25 @@ function sortData(data) {
 function handleRowSelection(e) {
     const row = e.target.closest('tr');
     if (!row || !row.dataset.journeyId) return;
-    row.classList.toggle('selected');
+
+    const rows = Array.from(elements.journeysTbody.querySelectorAll('tr'));
+    const currentIndex = rows.indexOf(row);
+
+    if (e.shiftKey && lastSelectedIndex !== -1) {
+        // Si pulsa shift, calculamos el rango
+        const start = Math.min(currentIndex, lastSelectedIndex);
+        const end = Math.max(currentIndex, lastSelectedIndex);
+        
+        // Seleccionamos todos en el rango (puedes decidir si añadir o toggle)
+        for (let i = start; i <= end; i++) {
+            rows[i].classList.add('selected');
+        }
+    } else {
+        // Comportamiento normal (toggle)
+        row.classList.toggle('selected');
+    }
+
+    lastSelectedIndex = currentIndex; // Actualizamos el último índice pulsado
     updateButtonsState();
 }
 

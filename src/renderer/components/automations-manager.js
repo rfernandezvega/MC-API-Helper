@@ -19,6 +19,8 @@ let getAuthenticatedConfig;
 let showAutomationClonerView;
 let showAutomationAnalyzerView;
 
+let lastSelectedIndex = -1;
+
 // --- 2. LÓGICA DE RENDERIZADO Y FILTRADO ---
 
 /**
@@ -146,11 +148,25 @@ export function init(dependencies) {
         }
     });
     elements.automationsTbody.addEventListener('click', (e) => {
-        const clickedRow = e.target.closest('tr');
-        if (!clickedRow || !clickedRow.dataset.automationId) return;
-        clickedRow.classList.toggle('selected');
-        updateButtonsState();
-    });
+    const row = e.target.closest('tr');
+    if (!row || !row.dataset.automationId) return;
+
+    const rows = Array.from(elements.automationsTbody.querySelectorAll('tr'));
+    const currentIndex = rows.indexOf(row);
+
+    if (e.shiftKey && lastSelectedIndex !== -1) {
+        const start = Math.min(currentIndex, lastSelectedIndex);
+        const end = Math.max(currentIndex, lastSelectedIndex);
+        for (let i = start; i <= end; i++) {
+            rows[i].classList.add('selected');
+        }
+    } else {
+        row.classList.toggle('selected');
+    }
+
+    lastSelectedIndex = currentIndex;
+    updateButtonsState();
+});
 }
 
 /**
