@@ -1758,6 +1758,6 @@ async function generateWord() {
 
     const docObj = new Document({ sections: [{ children }] });
     const blob = await Packer.toBlob(docObj);
-    window.saveAs(blob, `Auditoria_Journey_${j.name.replace(/[^a-zA-Z0-9]/g, '_')}.docx`);
+    window.saveAs(blob, `Docu_Journey_${j.name.replace(/[^a-zA-Z0-9]/g, '_')}.docx`);
     ui.unblockUI();
 }

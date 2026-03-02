@@ -99,16 +99,25 @@ async function enrichAutomationData(details) {
                     act.description = q.description;
                     act.queryText = q.queryText;
                     
-                    // Obtener Ruta y Orígenes de la DE destino
-                    const deInfo = await mcApiService.getDataExtensionDetailsByName(q.targetDE.name, apiConfig);
-                    const path = await mcApiService.getFolderPath(deInfo.categoryId, apiConfig);
-                    
+                    // Inicializamos specificData con lo que ya tenemos
                     act.specificData = {
-                        targetDE: { ...q.targetDE, fullPath: path || 'Data Extensions' },
+                        targetDE: { ...q.targetDE, fullPath: 'Data Extensions (No encontrada)' },
                         updateType: q.updateType,
-                        dataSources: await getReverseImpactSources(q.targetDE.name, deInfo.objectID, act.name)
+                        dataSources: []
                     };
-                } 
+
+                    try {
+                        // Intentamos enriquecer con la ruta, pero si falla, no matamos el proceso
+                        const deInfo = await mcApiService.getDataExtensionDetailsByName(q.targetDE.name, apiConfig);
+                        if (deInfo) {
+                            const path = await mcApiService.getFolderPath(deInfo.categoryId, apiConfig);
+                            act.specificData.targetDE.fullPath = path || 'Data Extensions';
+                            act.specificData.dataSources = await getReverseImpactSources(q.targetDE.name, deInfo.objectID, act.name);
+                        }
+                    } catch (deError) {
+                        console.warn(`No se pudo obtener metadatos de la DE para ${act.name}`, deError);
+                    }
+                }
                 // Data Extract (73)
                 else if (act.objectTypeId === 73) {
                     const de = await mcApiService.fetchDataExtractDetails(act.activityObjectId, apiConfig);
@@ -411,7 +420,7 @@ async function generatePDF() {
             }
         }
     }
-    doc.save(`Docu_${auto.name.replace(/\s+/g, '_')}.pdf`);
+    doc.save(`Docu_Automatismo_${auto.name.replace(/\s+/g, '_')}.pdf`);
 }
 
 /**
