@@ -1493,7 +1493,7 @@
     <div id="actividades-tab" class="tab-content config-section-container">
         <div class="config-block">
             <h3>Buscador de Actividades</h3>
-            <p>Busca cualquier actividad por nombre o External Key para ver dónde se usa.</p>
+            <p>Busca varias actividades por nombre o External Key (separadas por , ; o |).</p>
             <div class="form-group">
                 <label for="activityTypeSelect">Tipo de Actividad:</label>
                 <select id="activityTypeSelect" class="filter-input">
@@ -1507,31 +1507,45 @@
                 </select>
             </div>
             <div class="form-group">
-                <label for="activitySearchValue">Nombre o Key de la Actividad:</label>
-                <input type="text" id="activitySearchValue" placeholder="Ej: SQL_Update_Main o 58ECCB53...">
+                <label for="activitySearchValue">Nombre(s) o Key(s):</label>
+                <input type="text" id="activitySearchValue" placeholder="Ej: Query1; Query2; Key_3">
             </div>
             <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-                <button id="searchActivityBtn" class="action-button">Buscar Actividad</button>
+                <button id="searchActivityBtn" class="action-button">Buscar Actividades</button>
             </div>
         </div>
 
-        <!-- Bloque de Información General (Nuevo) -->
+        <!-- Bloque de Actividades Encontradas (Tabla de selección) -->
         <div id="activity-info-block" class="config-block hidden">
-            <h3>Detalles de la Actividad</h3>
-            <div class="info-grid-container">
-                <div class="info-item"><strong>Nombre:</strong> <span id="info-activity-name">---</span></div>
-                <div class="info-item"><strong>Tipo:</strong> <span id="info-activity-type">---</span></div>
-                <div class="info-item"><strong>External Key:</strong> <span id="info-activity-key">---</span></div>
+            <div class="config-block-header">
+                <h3>Actividades Encontradas</h3>
+                <div class="header-actions">
+                    <button id="deleteActivityBtn" class="action-button delete-btn">Borrar Seleccionadas</button>
+                </div>
             </div>
+            <div class="table-container">
+                <table id="activity-list-table" class="editable-row-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>External Key</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activity-list-tbody"></tbody>
+                </table>
+            </div>
+            <p class="info-text">Usa Ctrl/Cmd + Clic o Shift + Clic para seleccionar varias.</p>
         </div>
 
-        <!-- Tabla de Ubicación (Simplificada) -->
+        <!-- Tabla de Ubicación (Actualizada con nombre de actividad) -->
         <div id="activity-results-block" class="config-block hidden">
             <h3>Ubicación en Automatismos</h3>
             <div class="table-container">
                 <table id="activity-usage-table">
                     <thead>
                         <tr>
+                            <th>Actividad</th>
+                            <th>External Key</th>
                             <th>Automatización</th>
                             <th>Paso</th>
                         </tr>

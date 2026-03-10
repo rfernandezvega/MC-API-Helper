@@ -145,6 +145,8 @@ export function init() {
     elements.searchScriptsByTextBtn = document.getElementById('searchScriptsByTextBtn');
     elements.scriptSearchResultsTbody = document.getElementById('script-search-results-tbody');
     elements.scriptSearchResultsTable = document.getElementById('script-search-results-table');
+    elements.activityListTbody = document.getElementById('activity-list-tbody');
+    elements.deleteActivityBtn = document.getElementById('deleteActivityBtn');
 
     // --- 9. Sección: Validador de Email ---
     elements.emailToValidateInput = document.getElementById('emailToValidate');

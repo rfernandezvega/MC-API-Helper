@@ -1137,6 +1137,20 @@ export async function findAutomationForActivity(activityOrId, apiConfig) {
     return result;
 }
 
+/**
+ * Borra una Query Definition por su ObjectID usando el endpoint de Automation V1.
+ */
+export async function deleteQuery(queryObjectId, apiConfig) {
+    const url = `${apiConfig.restUri}automation/v1/queries/${queryObjectId}`;
+    const options = {
+        method: 'DELETE',
+        headers: { 
+            "Authorization": `Bearer ${apiConfig.accessToken}`,
+            "Content-Type": "application/json"
+        }
+    };
+    return executeRestRequest(url, options);
+}
 
 /**
  * Busca Query Definitions usando un fragmento de filtro SOAP genérico.
@@ -1375,6 +1389,48 @@ async function findActivityViaRest(config, searchTerm, apiConfig) {
  */
 async function findActivityInSoap(soapType, label, keyPropertyName, value, apiConfig) {
     try {
+        // 1. Construimos el filtro base (OR entre Name y Key)
+        let filterXml = `
+            <Filter xsi:type="ComplexFilterPart">
+                <LeftOperand xsi:type="SimpleFilterPart">
+                    <Property>Name</Property>
+                    <SimpleOperator>equals</SimpleOperator>
+                    <Value><![CDATA[${value}]]></Value>
+                </LeftOperand>
+                <LogicalOperator>OR</LogicalOperator>
+                <RightOperand xsi:type="SimpleFilterPart">
+                    <Property>${keyPropertyName}</Property>
+                    <SimpleOperator>equals</SimpleOperator>
+                    <Value><![CDATA[${value}]]></Value>
+                </RightOperand>
+            </Filter>`;
+
+        // 2. Si es QueryDefinition, envolvemos el filtro anterior en un AND con Status = Active
+        if (soapType === 'QueryDefinition') {
+            filterXml = `
+            <Filter xsi:type="ComplexFilterPart">
+                <LeftOperand xsi:type="ComplexFilterPart">
+                    <LeftOperand xsi:type="SimpleFilterPart">
+                        <Property>Name</Property>
+                        <SimpleOperator>equals</SimpleOperator>
+                        <Value><![CDATA[${value}]]></Value>
+                    </LeftOperand>
+                    <LogicalOperator>OR</LogicalOperator>
+                    <RightOperand xsi:type="SimpleFilterPart">
+                        <Property>${keyPropertyName}</Property>
+                        <SimpleOperator>equals</SimpleOperator>
+                        <Value><![CDATA[${value}]]></Value>
+                    </RightOperand>
+                </LeftOperand>
+                <LogicalOperator>AND</LogicalOperator>
+                <RightOperand xsi:type="SimpleFilterPart">
+                    <Property>Status</Property>
+                    <SimpleOperator>equals</SimpleOperator>
+                    <Value>Active</Value>
+                </RightOperand>
+            </Filter>`;
+        }
+
         const soapPayload = `
         <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <s:Header>
@@ -1389,19 +1445,7 @@ async function findActivityInSoap(soapType, label, keyPropertyName, value, apiCo
                         <Properties>ObjectID</Properties>
                         <Properties>CustomerKey</Properties>
                         <Properties>Name</Properties>
-                        <Filter xsi:type="ComplexFilterPart">
-                            <LeftOperand xsi:type="SimpleFilterPart">
-                                <Property>Name</Property>
-                                <SimpleOperator>equals</SimpleOperator>
-                                <Value><![CDATA[${value}]]></Value>
-                            </LeftOperand>
-                            <LogicalOperator>OR</LogicalOperator>
-                            <RightOperand xsi:type="SimpleFilterPart">
-                                <Property>${keyPropertyName}</Property>
-                                <SimpleOperator>equals</SimpleOperator>
-                                <Value><![CDATA[${value}]]></Value>
-                            </RightOperand>
-                        </Filter>
+                        ${filterXml}
                     </RetrieveRequest>
                 </RetrieveRequestMsg>
             </s:Body>
@@ -1409,18 +1453,18 @@ async function findActivityInSoap(soapType, label, keyPropertyName, value, apiCo
 
         const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
         const xmlDoc = new DOMParser().parseFromString(responseText, "application/xml");
-        const result = xmlDoc.querySelector("Results");
+        const results = xmlDoc.querySelectorAll("Results"); // Cambiar selector a All
 
-        if (result) {           
-            const objectID = result.querySelector("ObjectID")?.textContent;
-            return {
-                objectID: objectID,
-                customerKey: result.querySelector("CustomerKey")?.textContent || objectID,
+        if (results.length > 0) {
+            return Array.from(results).map(result => ({
+                objectID: result.querySelector("ObjectID")?.textContent,
+                customerKey: result.querySelector("CustomerKey")?.textContent,
                 name: result.querySelector("Name")?.textContent,
                 typeLabel: label,
                 soapType: soapType
-            };
+            }));
         }
+        return [];
     } catch (e) { 
         console.error(`Error buscando ${soapType}:`, e);
     }
@@ -1634,7 +1678,42 @@ export async function fetchQueryDefinitionByCustomerKey(customerKey, apiConfig) 
  * @returns {Promise<object>} Un objeto con los detalles de la query.
  */
 export async function fetchQueryDefinitionDetails(queryObjectId, apiConfig) {
-    const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>QueryDefinition</ObjectType><Properties>Name</Properties><Properties>Description</Properties><Properties>CustomerKey</Properties><Properties>QueryText</Properties><Properties>TargetUpdateType</Properties><Properties>DataExtensionTarget.Name</Properties><Properties>DataExtensionTarget.CustomerKey</Properties><Filter xsi:type="SimpleFilterPart"><Property>ObjectID</Property><SimpleOperator>equals</SimpleOperator><Value>${queryObjectId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+    const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+    <s:Header>
+        <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+        <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+        <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+    </s:Header>
+    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+        <RetrieveRequest>
+            <ObjectType>QueryDefinition</ObjectType>
+            <Properties>Name</Properties>
+            <Properties>Description</Properties>
+            <Properties>CustomerKey</Properties>
+            <Properties>QueryText</Properties>
+            <Properties>TargetUpdateType</Properties>
+            <Properties>DataExtensionTarget.Name</Properties>
+            <Properties>DataExtensionTarget.CustomerKey</Properties>
+            
+            <Filter xsi:type="ComplexFilterPart">
+            <LeftOperand xsi:type="SimpleFilterPart">
+                <Property>ObjectID</Property>
+                <SimpleOperator>equals</SimpleOperator>
+                <Value>${queryObjectId}</Value>
+            </LeftOperand>
+            <LogicalOperator>AND</LogicalOperator>
+            <RightOperand xsi:type="SimpleFilterPart">
+                <Property>Status</Property>
+                <SimpleOperator>equals</SimpleOperator>
+                <Value>Active</Value>
+            </RightOperand>
+            </Filter>
+
+        </RetrieveRequest>
+        </RetrieveRequestMsg>
+    </s:Body>
+    </s:Envelope>`;
 
     const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
     const resultNode = new DOMParser().parseFromString(responseText, "application/xml").querySelector("Results");
@@ -2047,9 +2126,20 @@ async function executeRestRequest(url, options = {}) {
     const responseText = await response.text();
     logger.logApiResponse({ status: response.status, body: responseText });
 
-    const responseData = responseText ? JSON.parse(responseText) : {};
     if (!response.ok) {
-        throw new Error(responseData.message || `Error ${response.status}: ${responseText.substring(0, 200)}`);
+        let errorMsg = responseText;
+        try { 
+            const errJson = JSON.parse(responseText);
+            errorMsg = errJson.message || responseText;
+        } catch(e) {}
+        throw new Error(`Error ${response.status}: ${errorMsg}`);
     }
+
+    // Si la respuesta es "OK" (con o sin comillas), la devolvemos como objeto
+    if (responseText.trim() === 'OK' || responseText.trim() === '"OK"') {
+        return { success: true, message: 'OK' };
+    }
+
+    const responseData = responseText ? JSON.parse(responseText) : {};
     return responseData;
 }
