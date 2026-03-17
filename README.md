@@ -22,29 +22,6 @@ La aplicación sigue una arquitectura modular que separa las responsabilidades e
 │       │   └── mc-api-service.js # Módulo que centraliza todas las llamadas a la API de SFMC.
 │       ├── assets/             # Recursos estáticos como imágenes y GIFs.
 │       ├── components/         # Módulos de JavaScript para cada funcionalidad específica.
-│       │   ├── actividades-finder.js
-│       │   ├── automations-analyzer.js
-│       │   ├── automations-cloner.js
-│       │   ├── automations-manager.js
-│       │   ├── calendar.js
-│       │   ├── cloud-pages-manager.js
-│       │   ├── content-finder.js
-│       │   ├── content-manager.js
-│       │   ├── customer-finder.js
-│       │   ├── data-source-finder.js
-│       │   ├── de-creator.js
-│       │   ├── de-finder.js
-│       │   ├── documentation-manager.js
-│       │   ├── email-validator.js
-│       │   ├── field-manager.js
-│       │   ├── fields-table.js
-│       │   ├── folder-creator.js
-│       │   ├── journeys-analyzer.js
-│       │   ├── journeys-manager.js
-│       │   ├── org-manager.js
-│       │   ├── query-cloner.js
-│       │   ├── query-text-finder.js
-│       │   └── script-text-finder.js
 │       ├── styles/             # Ficheros de estilo CSS.
 │       │   ├── components/     # CSS específico para cada componente.
 │       │   ├── common.css      # Estilos globales y reutilizables.
@@ -97,22 +74,16 @@ La aplicación sigue una arquitectura modular que separa las responsabilidades e
 Es necesario crear un paquete de tipo **Web App** con los siguientes permisos y configuración:
 -   **Redirect URI:** `https://127.0.0.1:8443/callback`
 -   **Permisos (Scope):**
-    - **Data**
-        - `Data Extensions`: Read, Write
-        - `List and Subscribers`: Read, Write
-    - **Journeys**
-        - `Journeys`: Read, Write, Execute, Activate/Stop/Pause/Resume/Send/Schedule, Delete
-    - **Automations**
-        - `Automations`: Read, Write, Execute
-    - **Assets**
-        - `Documents and Images`: Read
-        - `Saved Content`: Read
-    - **Marketing Cloud Services**
-        - `Email`: Read, Write
-    - **Audiences**
-        - `Audiences`: Read, Write
-    - **File Locations**
-        - `File Locations`: Read
+    - **Email:** Read, Write
+    - **Automations:** Read, Write, Execute
+    - **Journeys:** Read, Write, Activate/Stop/Pause/Resume/Send/Schedule, Delete
+    - **Audiences:** Read, Write
+    - **List and Subscribers:** Read, Write
+    - **Data Extensions:** Read, Write
+    - **Documents and Images:** Read
+    - **Saved Content:** Read
+    - **File Locations:** Read
+    - **Users:** Read
 
 > **Nota:** Tras crear o modificar el paquete, espera hasta 10 minutos para que los cambios se propaguen en la plataforma.
 
@@ -156,3 +127,12 @@ Para crear el instalador para Windows (`.exe`), el script también se encarga de
     npm run dist
     ```
     El instalador se generará en la carpeta `/dist`.
+
+---
+
+## ⚖️ Licencia
+
+MC API Helper es software propietario desarrollado por **Rubén Fernández Vega**.  
+Todos los derechos reservados.  
+
+Consulte el archivo [`LICENSE`](LICENSE) para los términos completos sobre uso, copia, modificación o distribución.
