@@ -79,7 +79,8 @@
 					<li><a class="macro-item" data-macro="clonadorQueries">Clonar Queries</a></li>
 					<li><a class="macro-item" data-macro="gestionJourneys">Journeys</a></li>   
 					<li><a class="macro-item" data-macro="gestionCloudPages">Cloud Pages</a></li>
-                    <li><a class="macro-item" data-macro="gestionContenidos">Contenidos</a></li>      
+                    <li><a class="macro-item" data-macro="gestionContenidos">Contenidos</a></li>
+                    <li><a class="macro-item" data-macro="usuarios">Usuarios</a></li>      
 					<li><a class="macro-item" data-macro="carpetas">Crear Carpetas</a></li>   
 					<li><a class="macro-item" data-macro="validadorEmail">Validar Emails</a></li>          
 				</ul>
@@ -531,7 +532,7 @@
 					<div class="docu-accordion-content">
 						<div class="docu-list">
 							<ul>
-								<li>Se deberá crear siempre la app en la <b>BU PADRE</b> y dar permisos a los usuarios.
+								<li>Se deberá crear siempre la app en la <b>BU PADRE</b> y dar permisos a los usuarios. Los permisos se dan en el propio paquete que se ha creado en la pestaña ACCESS
 								</li>
 								<li>Si se quiere usar en otras BUs, se debe dar permiso a cada BU y establecer una
 									conexción por cada BU.</li>
@@ -551,6 +552,7 @@
 										<li><b>Documents and Images:</b> Read</li>
 										<li><b>Saved Content:</b> Read</li>
 										<li><b>File Locations:</b> Read</li>
+										<li><b>Users:</b> Read</li>
 									</ul>
 								</li>
 							</ul>
@@ -1943,6 +1945,93 @@
                 </table>
             </div>
         </div>
+    </div>
+</div>
+
+<div id="gestion-usuarios-section" class="section">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>
+        <div class="header-actions">
+            <button id="downloadUsersCsvBtn" class="action-button activate-btn">Descargar Usuarios</button>
+            <button id="prepareCapturBtn" class="action-button" disabled>Preparar Captura</button>
+        </div>
+    </div>
+
+    <h2>Gestión de Usuarios y Permisos</h2>
+
+    <!-- Cabecera de pestañas — usa um-tab-button para no interferir con el listener global de app.js -->
+    <div class="tabs-header-container">
+        <div class="um-tab-buttons">
+            <button class="um-tab-button um-tab-active" data-um-tab="tab-user-list">Lista de Usuarios</button>
+            <button class="um-tab-button" id="tab-perms-detail-btn" data-um-tab="tab-user-detail" disabled>Detalle / Comparativa</button>
+        </div>
+        <div id="users-expand-controls" style="display:none; gap:8px; padding-bottom:4px; align-items:center;">
+            <button id="btn-toggle-diffs" class="um-mini-btn">Solo Diferencias</button>
+            <button id="btn-expand-perms" class="um-mini-btn">Colapsar Todo</button>
+        </div>
+    </div>
+
+    <!-- PESTAÑA 1: LISTA -->
+    <div id="tab-user-list" class="um-tab-content um-tab-content-active">
+        <div class="um-filter-bar">
+            <div class="um-filter-group">
+                <label class="um-filter-label">Nombre</label>
+                <input type="text" id="userSearchInput" class="filter-input" placeholder="Filtrar por nombre..." style="width:220px; height:34px;">
+            </div>
+            <div class="um-filter-group">
+                <label class="um-filter-label">Estado</label>
+                <select id="users-filter-status" class="um-filter-select">
+                    <option value="all">Todos</option>
+                    <option value="active">Activos</option>
+                    <option value="inactive">Inactivos</option>
+                </select>
+            </div>
+            <div class="um-filter-group" style="position:relative;">
+                <label class="um-filter-label">Roles</label>
+                <div id="users-role-dropdown-trigger" class="um-dropdown-trigger">
+                    <span id="users-role-dropdown-label">Todos los roles</span>
+                    <span style="font-size:10px; color:#888;">▼</span>
+                </div>
+                <div id="users-role-dropdown-menu" class="um-dropdown-menu" style="display:none; position:fixed;">
+                    <div id="users-role-checkbox-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="um-table-wrapper">
+            <table id="users-table" class="um-table">
+                <thead>
+                    <tr>
+                        <th class="um-sortable" data-sort-by="name">Nombre (ID) ↕</th>
+                        <th class="um-sortable" data-sort-by="userName">UserName ↕</th>
+                        <th class="um-sortable" data-sort-by="isApi">API User ↕</th>
+                        <th class="um-sortable" data-sort-by="lastLogin">Último Login ↕</th>
+                        <th class="um-sortable" data-sort-by="isActive">Estado ↕</th>
+                        <th>Roles</th>
+                    </tr>
+                </thead>
+                <tbody id="users-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- PESTAÑA 2: DETALLE / COMPARATIVA -->
+    <div id="tab-user-detail" class="um-tab-content">
+        <div id="users-import-ui" class="um-import-area">
+            <div style="text-align:left; max-width:900px; margin:0 auto;">
+                <h3 style="color:#69a3db;">1. Abrir SFMC</h3>
+                <a id="users-sfmc-link" href="#" style="color:#69a3db; font-weight:bold; cursor:pointer;">IR A ADMINISTRACIÓN DE USUARIOS</a>
+
+                <h3 style="color:#69a3db;">2. Ejecutar Script</h3>
+                <p>Copia este código y pégalo en la consola (F12) de SFMC:</p>
+                <div id="users-script-to-copy" class="um-code-block"></div>
+                <button id="users-copy-script-btn" class="action-button" style="margin-top:8px;">COPIAR CÓDIGO</button>
+
+                <h3 style="color:#69a3db;">3. Pegar Resultado</h3>
+                <textarea id="users-json-input" class="um-data-input" placeholder="Pega aquí el resultado del script..."></textarea>
+            </div>
+        </div>
+        <div id="users-permissions-container" class="um-perm-grid" style="display:none;"></div>
     </div>
 </div>
 

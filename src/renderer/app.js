@@ -39,6 +39,7 @@ import * as actividadesFinder from './components/actividades-finder.js';
 import * as scriptTextFinder from './components/script-text-finder.js';
 import * as automationAnalyzer from './components/automation-analyzer.js';
 import * as journeyAnalyzer from './components/journey-analyzer.js';
+import * as usersManager from './components/users-manager.js';
 
 
 
@@ -417,6 +418,10 @@ document.addEventListener('DOMContentLoaded', function () {
 					// Forzamos a que fieldsTable prepare la vista por si la tabla está vacía
 					fieldsTable.prepareView(); 
 				}
+				else if (macro === 'usuarios') {
+					showSection('gestion-usuarios-section');
+					usersManager.view();
+				}
 			});
 		});
 
@@ -570,7 +575,8 @@ document.addEventListener('DOMContentLoaded', function () {
 			automationCloner, 
 			automationAnalyzer,
 			journeyAnalyzer,
-			contentManager 
+			contentManager,
+			usersManager  
 		});
 
         deCreator.init({ getAuthenticatedConfig });
@@ -604,6 +610,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 		folderCreator.init({ getAuthenticatedConfig });
 		contentManager.init({ getAuthenticatedConfig });
+		usersManager.init({ getAuthenticatedConfig });
 		
 		// Carga las configuraciones de cliente guardadas y arranca sin ninguna seleccionada.
 		orgManager.loadConfigsIntoSelect();
