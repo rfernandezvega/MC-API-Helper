@@ -64,6 +64,12 @@ export function init() {
     elements.importDvConfigBtn = document.getElementById('importDvConfigBtn');
     elements.exportDvConfigBtn = document.getElementById('exportDvConfigBtn');
 
+    // --- 5.0 Sección: Data Extensions ---
+    elements.gestionDeUnificadaSection = document.getElementById('gestion-de-unificada-section');
+    elements.headerActionsCreacion = document.getElementById('header-actions-creacion');
+    elements.headerActionsConfigCampos = document.getElementById('header-actions-config-campos');
+    elements.headerActionsGestionCampos = document.getElementById('header-actions-gestion-campos');
+
     // --- 5. Sección: Creación de Data Extension ---
     elements.deNameInput = document.getElementById('deName');
     elements.deDescriptionInput = document.getElementById('deDescription');
@@ -139,6 +145,8 @@ export function init() {
     elements.searchScriptsByTextBtn = document.getElementById('searchScriptsByTextBtn');
     elements.scriptSearchResultsTbody = document.getElementById('script-search-results-tbody');
     elements.scriptSearchResultsTable = document.getElementById('script-search-results-table');
+    elements.activityListTbody = document.getElementById('activity-list-tbody');
+    elements.deleteActivityBtn = document.getElementById('deleteActivityBtn');
 
     // --- 9. Sección: Validador de Email ---
     elements.emailToValidateInput = document.getElementById('emailToValidate');
@@ -181,7 +189,6 @@ export function init() {
     elements.journeyDEFilter = document.getElementById('journeyDEFilter');
     elements.refreshJourneysTableBtn = document.getElementById('refreshJourneysTableBtn');
     elements.getCommunicationsBtn = document.getElementById('getCommunicationsBtn');
-    elements.getAllCommunicationsBtn = document.getElementById('getAllCommunicationsBtn');
     elements.copyJourneyBtn = document.getElementById('copyJourneyBtn');
     elements.stopJourneyBtn = document.getElementById('stopJourneyBtn');
     elements.deleteJourneyBtn = document.getElementById('deleteJourneyBtn');
@@ -192,6 +199,11 @@ export function init() {
     elements.pageInputJourneys = document.getElementById('pageInputJourneys');
     elements.totalPagesJourneys = document.getElementById('totalPagesJourneys');
     elements.analyzeJourneyBtn = document.getElementById('analyzeJourneyBtn');
+    elements.journeyCommModal = document.getElementById('journey-comm-modal');
+    elements.journeyCommMessage = document.getElementById('journey-comm-message');
+    elements.journeyCommSelectedBtn = document.getElementById('journey-comm-selected-btn');
+    elements.journeyCommAllBtn = document.getElementById('journey-comm-all-btn');
+    elements.journeyCommCancelBtn = document.getElementById('journey-comm-cancel-btn');
 
     // --- 13. Sección: Clonador de Queries ---
     elements.queriesClonerStep1 = document.getElementById('queries-cloner-step1');
@@ -223,6 +235,7 @@ export function init() {
     elements.nextPageBtnCloudPages = document.getElementById('nextPageBtnCloudPages');
     elements.pageInputCloudPages = document.getElementById('pageInputCloudPages');
     elements.totalPagesCloudPages = document.getElementById('totalPagesCloudPages');
+    elements.cloudPageCountSpan = document.getElementById('cloudpage-count');
 
     // --- 15. Sección: Clonador de Automatismos ---
     elements.automationClonerSection = document.getElementById('automation-cloner-section');
@@ -361,6 +374,16 @@ export function init() {
     elements.expandAllAnalyzerBtn = document.getElementById('expandAllAnalyzerBtn');
     elements.collapseAllAnalyzerBtn = document.getElementById('collapseAllAnalyzerBtn');
     elements.downloadJourneyWordBtn = document.getElementById('downloadJourneyWordBtn');
+
+    // --- 26. USUARIOS Y PERMISOS ---
+    elements.usersTbody = document.getElementById('users-tbody');
+    elements.userSearchInput = document.getElementById('userSearchInput');
+    elements.refreshUsersBtn = document.getElementById('refreshUsersBtn');
+    elements.downloadUsersCsvBtn = document.getElementById('downloadUsersCsvBtn');
+    elements.prepareCapturBtn = document.getElementById('prepareCapturBtn');
+    elements.tabPermsDetailBtn = document.getElementById('tab-perms-detail-btn');
+    elements.btnToggleDiffs = document.getElementById('btn-toggle-diffs');
+    elements.btnExpandPerms = document.getElementById('btn-expand-perms');
 }
 
 export default elements;

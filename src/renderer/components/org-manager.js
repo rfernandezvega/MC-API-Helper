@@ -19,6 +19,7 @@ let automationsManager;
 let journeysManager;
 let cloudPagesManager;
 let contentManager;
+let usersManager;
 
 /**
  * Recoge los valores del formulario que son seguros para guardar en localStorage.
@@ -155,7 +156,6 @@ export function loadConfigsIntoSelect() {
 export function loadAndSyncClientConfig(clientName) {
     logger.startLogBuffering();
 
-    // --- LÓGICA DE CAMBIO AÑADIDA ---
     // Si el cliente seleccionado es el mismo que ya está activo, no hacemos nada.
     if (clientName === currentActiveClient) {
         logger.logMessage(`Cliente "${clientName}" ya está activo.`);
@@ -171,6 +171,7 @@ export function loadAndSyncClientConfig(clientName) {
         journeysManager.clearCache();
         cloudPagesManager.clearCache();
         if (contentManager) contentManager.clearCache();
+        if (usersManager) usersManager.clearCache();
 
         // Actualizamos el cliente activo
         currentActiveClient = clientName; 
@@ -340,6 +341,7 @@ export function init(dependencies) {
     journeysManager = dependencies.journeysManager;
     cloudPagesManager = dependencies.cloudPagesManager;
     contentManager = dependencies.contentManager;
+    usersManager = dependencies.usersManager;
 
     elements.saveConfigBtn.addEventListener('click', saveClientConfig);
     elements.loginBtn.addEventListener('click', startLogin);

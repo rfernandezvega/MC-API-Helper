@@ -107,6 +107,10 @@ export function clearCache() {
     elements.cloudPageContentFilter.value = '';
     elements.cloudPageTypeFilter.innerHTML = '<option value="">Todos los tipos</option>';
     elements.cloudPagesTbody.innerHTML = '';
+
+    if (elements.cloudPageCountSpan) {
+        elements.cloudPageCountSpan.textContent = '';
+    }
 }
 
 // --- 3. LÓGICA DE DATOS Y API ---
@@ -123,7 +127,7 @@ async function refreshData() {
  * Orquesta la obtención de todos los datos de Cloud Pages.
  */
 async function fetchData() {
-    ui.blockUI("Recuperando y fusionando datos de Cloud Pages...");
+    ui.blockUI("Recuperando datos de Cloud Pages...");
     logger.startLogBuffering();
     try {
         const apiConfig = await getAuthenticatedConfig();
@@ -226,6 +230,7 @@ function renderFilteredTable() {
     }
     
     currentFilteredList = filtered;
+    updateCloudPageCount(); 
 
     renderTable(currentFilteredList);
 }
@@ -634,4 +639,16 @@ function downloadCloudPagesCsv() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+
+
+/**
+ * Actualiza el contador de Cloud Pages en la UI.
+ */
+function updateCloudPageCount() {
+    const total = fullCloudPageList.length;
+    const filtered = currentFilteredList.length;
+    if (elements.cloudPageCountSpan) {
+        elements.cloudPageCountSpan.textContent = `(${filtered} de ${total})`;
+    }
 }

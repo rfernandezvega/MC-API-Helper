@@ -23,6 +23,8 @@ let getAuthenticatedConfig; // Dependencia que será inyectada por app.js
 
 let showJourneyAnalyzerView;
 
+let lastSelectedIndex = -1;
+
 // --- 2. FUNCIONES DE RENDERIZADO Y LÓGICA DE TABLA ---
 
 /**
@@ -80,11 +82,20 @@ function renderTable(journeys) {
         const row = document.createElement('tr');
         row.dataset.journeyId = j.id;
         row.innerHTML = `
-            <td>${j.name || '---'}</td> <td>${j.version || '---'}</td> <td>${formatDate(j.createdDate)}</td>
-            <td>${formatDate(j.modifiedDate)}</td> <td>${j.eventType || '---'}</td> <td>${j.definitionType || '---'}</td>
-            <td>${j.status || '---'}</td> <td>${j.dataExtensionName || '---'}</td>
-            <td>${j.hasCommunications ? 'Sí' : 'No'}</td> <td>${j.emails.join(', ')}</td>
-            <td>${j.sms.join(', ')}</td> <td>${j.pushes.join(', ')}</td> <td>${j.whatsapps.join(', ')}</td>
+            <td>${j.name || '---'}</td> 
+            <td>${j.version || '---'}</td> 
+            <td>${formatDate(j.createdDate)}</td>
+            <td>${formatDate(j.modifiedDate)}</td>
+            <td>${formatDate(j.activity?.lastContactProcessed) || '---'}</td>
+            <td>${j.eventType || '---'}</td> 
+            <td>${j.definitionType || '---'}</td>
+            <td>${j.status || '---'}</td> 
+            <td>${j.dataExtensionName || '---'}</td>
+            <td>${j.hasCommunications ? 'Sí' : 'No'}</td> 
+            <td>${j.emails.join(', ')}</td>
+            <td>${j.sms.join(', ')}</td> 
+            <td>${j.pushes.join(', ')}</td> 
+            <td>${j.whatsapps.join(', ')}</td>
         `;
         elements.journeysTbody.appendChild(row);
     });
@@ -114,8 +125,7 @@ export function init(dependencies) {
     // Listeners de botones de acción
     elements.downloadJourneysCsvBtn.addEventListener('click', downloadJourneysCsv);
     elements.refreshJourneysTableBtn.addEventListener('click', refreshData);
-    elements.getCommunicationsBtn.addEventListener('click', getCommunications);
-    elements.getAllCommunicationsBtn.addEventListener('click', getAllCommunications);
+    elements.getCommunicationsBtn.addEventListener('click', handleCommunicationsAction);
 
     elements.copyJourneyBtn.addEventListener('click', copyJourney);
     elements.stopJourneyBtn.addEventListener('click', stopJourneys);
@@ -738,7 +748,25 @@ function sortData(data) {
 function handleRowSelection(e) {
     const row = e.target.closest('tr');
     if (!row || !row.dataset.journeyId) return;
-    row.classList.toggle('selected');
+
+    const rows = Array.from(elements.journeysTbody.querySelectorAll('tr'));
+    const currentIndex = rows.indexOf(row);
+
+    if (e.shiftKey && lastSelectedIndex !== -1) {
+        // Si pulsa shift, calculamos el rango
+        const start = Math.min(currentIndex, lastSelectedIndex);
+        const end = Math.max(currentIndex, lastSelectedIndex);
+        
+        // Seleccionamos todos en el rango (puedes decidir si añadir o toggle)
+        for (let i = start; i <= end; i++) {
+            rows[i].classList.add('selected');
+        }
+    } else {
+        // Comportamiento normal (toggle)
+        row.classList.toggle('selected');
+    }
+
+    lastSelectedIndex = currentIndex; // Actualizamos el último índice pulsado
     updateButtonsState();
 }
 
@@ -759,8 +787,8 @@ function getSelectedJourneys() {
 function updateButtonsState() {
     const selected = getSelectedJourneys();
     const count = selected.length;
-    elements.getAllCommunicationsBtn.disabled = fullJourneyList.length === 0;
-    elements.getCommunicationsBtn.disabled = count === 0;
+
+    elements.getCommunicationsBtn.disabled = fullJourneyList.length === 0;
 
     const clonableTypes = ['EmailAudience', 'AutomationAudience'];
     elements.copyJourneyBtn.disabled = !(count === 1 && clonableTypes.includes(selected[0].eventType));
@@ -970,7 +998,7 @@ function downloadJourneysCsv() {
         return;
     }
 
-    const headers = ['Nombre Journey', 'Versión', 'Fecha modificación', 'Tipo', 'Subtipo', 'Estado', 'Data Extension', 'Descargado', 'Emails', 'SMSs', 'Pushes', 'Whatsapps'];
+    const headers = ['Nombre Journey', 'Versión', 'Fecha creación', 'Fecha modificación', 'Fecha actividad', 'Tipo', 'Subtipo', 'Estado', 'Data Extension', 'Descargado', 'Emails', 'SMSs', 'Pushes', 'Whatsapps'];
     
     const sortedData = [...currentFilteredList]; // Copiamos para no modificar la original
     sortData(sortedData); // Usamos la función de ordenación existente
@@ -978,13 +1006,15 @@ function downloadJourneysCsv() {
     const rows = sortedData.map(j => [
         `"${j.name || ''}"`,
         `"${j.version || ''}"`,
+        `"${formatDate(j.createdDate)}"`,
         `"${formatDate(j.modifiedDate)}"`,
+        `"${formatDate(j.activity?.lastContactProcessed) || '---'}"`,
         `"${j.eventType || ''}"`,
         `"${j.definitionType || ''}"`,
         `"${j.status || ''}"`,
         `"${j.dataExtensionName || ''}"`,
         `"${j.hasCommunications ? 'Sí' : 'No'}"`,
-        `"${j.emails.join(' | ')}"`, // Usamos ; para listas dentro de una celda
+        `"${j.emails.join(' | ')}"`,
         `"${j.sms.join(' | ')}"`,
         `"${j.pushes.join(' | ')}"`,
         `"${j.whatsapps.join(' | ')}"`
@@ -1004,4 +1034,22 @@ function downloadJourneysCsv() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+
+async function handleCommunicationsAction() {
+    const selectedCount = getSelectedJourneys().length;
+    const totalCount = fullJourneyList.length;
+
+    const choice = await ui.showJourneyCommModal(`¿De qué journeys quieres obtener el detalle de comunicaciones?`);
+    if (!choice) return;
+
+    if (choice === 'selected') {
+        if (selectedCount === 0) {
+            ui.showCustomAlert("No has seleccionado ningún journey de la tabla.");
+            return;
+        }
+        await getCommunications(); // Llama a la lógica existente de seleccionados
+    } else if (choice === 'all') {
+        await getAllCommunications(); // Llama a la lógica existente de todos
+    }
 }

@@ -731,3 +731,91 @@ td a:hover { color: #003366; text-decoration: underline; }
 .analyzer-icon {
     font-size: 0.8em;
 }
+
+/* Estilos para las cajas de impacto en el Analyzer */
+.impact-box {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    line-height: 1.4;
+    border-left: 4px solid;
+}
+
+.impact-exclusive {
+    background-color: #e6f4ea; /* Verde muy claro */
+    border-left-color: #28a745;
+    color: #1e7e34;
+}
+
+.impact-shared {
+    background-color: #fce8e6; /* Rojo muy claro */
+    border-left-color: #dc3545;
+    color: #a50e0e;
+}
+
+.impact-box ul {
+    margin: 5px 0 0 0;
+    padding-left: 15px;
+    list-style-type: disc;
+}
+
+/* Contenedor SQL Colapsable */
+.sql-wrapper {
+    margin-top: 10px;
+    border: 1px solid #d1d9e0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.sql-toggle-btn {
+    background-color: #f6f8fa;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 0.8em;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #d1d9e0;
+    user-select: none;
+}
+
+.sql-toggle-btn:hover {
+    background-color: #ebeff2;
+}
+
+/* Contenedor unificado para SQL y JS */
+.sql-content, .js-content {
+    display: none; 
+    background-color: #282c34 !important; /* Gris oscuro azulado */
+    color: #abb2bf;
+    padding: 16px;
+    border-radius: 0 0 4px 4px;
+    overflow-x: auto;
+    border: 1px solid #181a1f;
+    border-top: none;
+}
+
+.sql-content pre, .js-content pre {
+    margin: 0;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre !important;
+    word-wrap: normal;
+}
+
+/* Resaltado SQL Mejorado */
+.sql-keyword { color: #78b0dd; font-weight: bold; } /* Púrpura */
+.sql-function { color: #61afef; }                 /* Azul cielo (CONVERT, DATEADD...) */
+.sql-string { color: #98c379; }                   /* Verde */
+.sql-number { color: #d19a66; }                   /* Naranja */
+.sql-comment { color: #5c6370; font-style: italic; } /* Gris */
+
+/* Resaltado JS Mejorado (Para que coincida) */
+.js-keyword { color: #c678dd; font-weight: bold; }
+.js-builtin { color: #e5c07b; }                   /* Amarillo (Platform, Write...) */
+.js-string { color: #98c379; }
+.js-comment { color: #5c6370; font-style: italic; }
+.js-number { color: #d19a66; }

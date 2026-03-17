@@ -241,10 +241,34 @@ export async function createOrUpdateFields(externalKey, fields, apiConfig) {
  * @returns {Promise<boolean>} Resuelve a true si el borrado fue exitoso.
  */
 export async function deleteDataExtensionField(deExternalKey, fieldObjectId, apiConfig) {
-  const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth><a:Action s:mustUnderstand="1">Delete</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To></s:Header><s:Body xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><DeleteRequest xmlns="http://exacttarget.com/wsdl/partnerAPI"><Objects xsi:type="DataExtension"><CustomerKey>${deExternalKey}</CustomerKey><Fields><Field><ObjectID>${fieldObjectId}</ObjectID></Field></Fields></Objects></DeleteRequest></s:Body></s:Envelope>`;
+  // 1. Construimos el bloque Client solo si tenemos el Business Unit (MID)
+  const clientBlock = apiConfig.businessUnit 
+    ? `<Client><ID>${apiConfig.businessUnit}</ID></Client>` 
+    : '';
 
-  await executeSoapRequest(apiConfig.soapUri, soapPayload.trim());
-  return true;
+  const soapPayload = `
+    <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+      <s:Header>
+        <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+        <a:Action s:mustUnderstand="1">Delete</a:Action>
+        <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+      </s:Header>
+      <s:Body xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <DeleteRequest xmlns="http://exacttarget.com/wsdl/partnerAPI">
+          <Objects xsi:type="DataExtension">
+            ${clientBlock}
+            <CustomerKey>${deExternalKey}</CustomerKey>
+            <Fields>
+              <Field>
+                <ObjectID>${fieldObjectId}</ObjectID>
+              </Field>
+            </Fields>
+          </Objects>
+        </DeleteRequest>
+      </s:Body>
+    </s:Envelope>`;
+
+  return await executeSoapRequest(apiConfig.soapUri, soapPayload.trim());
 }
 
 /**
@@ -507,7 +531,7 @@ export async function fetchAllJourneys(apiConfig) {
     let totalPages = 1;
 
     do {
-        const url = `${apiConfig.restUri}interaction/v1/interactions?$page=${page}&$pageSize=500`;
+        const url = `${apiConfig.restUri}interaction/v1/interactions?$page=${page}&$pageSize=500&extras=activity`;
         const options = { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } };
         
         const data = await executeRestRequest(url, options);
@@ -1113,6 +1137,20 @@ export async function findAutomationForActivity(activityOrId, apiConfig) {
     return result;
 }
 
+/**
+ * Borra una Query Definition por su ObjectID usando el endpoint de Automation V1.
+ */
+export async function deleteQuery(queryObjectId, apiConfig) {
+    const url = `${apiConfig.restUri}automation/v1/queries/${queryObjectId}`;
+    const options = {
+        method: 'DELETE',
+        headers: { 
+            "Authorization": `Bearer ${apiConfig.accessToken}`,
+            "Content-Type": "application/json"
+        }
+    };
+    return executeRestRequest(url, options);
+}
 
 /**
  * Busca Query Definitions usando un fragmento de filtro SOAP genérico.
@@ -1191,9 +1229,55 @@ export async function fetchDataExtractDetails(id, apiConfig) {
     return await executeRestRequest(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
 }
 
-export async function fetchImportDetails(id, apiConfig) {
-    const url = `${apiConfig.restUri}automation/v1/imports/${id}`;
-    return await executeRestRequest(url, { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } });
+/**
+ * Recupera los detalles técnicos de un Import Definition vía SOAP (Sin FieldMaps)
+ */
+export async function fetchImportDefinitionDetails(importObjectId, apiConfig) {
+    const soapPayload = `
+    <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+        <s:Header>
+            <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+            <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+            <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+        </s:Header>
+        <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+            <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+                <RetrieveRequest>
+                    <ObjectType>ImportDefinition</ObjectType>
+                    <Properties>Name</Properties>
+                    <Properties>FieldMappingType</Properties>
+                    <Properties>UpdateType</Properties>
+                    <Properties>AllowErrors</Properties>
+                    <Properties>Delimiter</Properties>
+                    <Properties>FileSpec</Properties>
+                    <Properties>FileType</Properties>
+                    <Properties>HeaderLines</Properties>
+                    <Filter xsi:type="SimpleFilterPart">
+                        <Property>ObjectID</Property>
+                        <SimpleOperator>equals</SimpleOperator>
+                        <Value>${importObjectId}</Value>
+                    </Filter>
+                </RetrieveRequest>
+            </RetrieveRequestMsg>
+        </s:Body>
+    </s:Envelope>`;
+
+    const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+    const doc = new DOMParser().parseFromString(responseText, "application/xml");
+    const result = doc.querySelector("Results");
+
+    if (!result) return null;
+
+    return {
+        name: result.querySelector("Name")?.textContent,
+        fieldMappingType: result.querySelector("FieldMappingType")?.textContent,
+        updateType: result.querySelector("UpdateType")?.textContent,
+        allowErrors: result.querySelector("AllowErrors")?.textContent === 'true',
+        delimiter: result.querySelector("Delimiter")?.textContent,
+        fileSpec: result.querySelector("FileSpec")?.textContent,
+        fileType: result.querySelector("FileType")?.textContent,
+        headerLines: result.querySelector("HeaderLines")?.textContent
+    };
 }
 
 export async function fetchFileTransferDetails(id, apiConfig) {
@@ -1305,6 +1389,48 @@ async function findActivityViaRest(config, searchTerm, apiConfig) {
  */
 async function findActivityInSoap(soapType, label, keyPropertyName, value, apiConfig) {
     try {
+        // 1. Construimos el filtro base (OR entre Name y Key)
+        let filterXml = `
+            <Filter xsi:type="ComplexFilterPart">
+                <LeftOperand xsi:type="SimpleFilterPart">
+                    <Property>Name</Property>
+                    <SimpleOperator>equals</SimpleOperator>
+                    <Value><![CDATA[${value}]]></Value>
+                </LeftOperand>
+                <LogicalOperator>OR</LogicalOperator>
+                <RightOperand xsi:type="SimpleFilterPart">
+                    <Property>${keyPropertyName}</Property>
+                    <SimpleOperator>equals</SimpleOperator>
+                    <Value><![CDATA[${value}]]></Value>
+                </RightOperand>
+            </Filter>`;
+
+        // 2. Si es QueryDefinition, envolvemos el filtro anterior en un AND con Status = Active
+        if (soapType === 'QueryDefinition') {
+            filterXml = `
+            <Filter xsi:type="ComplexFilterPart">
+                <LeftOperand xsi:type="ComplexFilterPart">
+                    <LeftOperand xsi:type="SimpleFilterPart">
+                        <Property>Name</Property>
+                        <SimpleOperator>equals</SimpleOperator>
+                        <Value><![CDATA[${value}]]></Value>
+                    </LeftOperand>
+                    <LogicalOperator>OR</LogicalOperator>
+                    <RightOperand xsi:type="SimpleFilterPart">
+                        <Property>${keyPropertyName}</Property>
+                        <SimpleOperator>equals</SimpleOperator>
+                        <Value><![CDATA[${value}]]></Value>
+                    </RightOperand>
+                </LeftOperand>
+                <LogicalOperator>AND</LogicalOperator>
+                <RightOperand xsi:type="SimpleFilterPart">
+                    <Property>Status</Property>
+                    <SimpleOperator>equals</SimpleOperator>
+                    <Value>Active</Value>
+                </RightOperand>
+            </Filter>`;
+        }
+
         const soapPayload = `
         <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <s:Header>
@@ -1319,19 +1445,7 @@ async function findActivityInSoap(soapType, label, keyPropertyName, value, apiCo
                         <Properties>ObjectID</Properties>
                         <Properties>CustomerKey</Properties>
                         <Properties>Name</Properties>
-                        <Filter xsi:type="ComplexFilterPart">
-                            <LeftOperand xsi:type="SimpleFilterPart">
-                                <Property>Name</Property>
-                                <SimpleOperator>equals</SimpleOperator>
-                                <Value><![CDATA[${value}]]></Value>
-                            </LeftOperand>
-                            <LogicalOperator>OR</LogicalOperator>
-                            <RightOperand xsi:type="SimpleFilterPart">
-                                <Property>${keyPropertyName}</Property>
-                                <SimpleOperator>equals</SimpleOperator>
-                                <Value><![CDATA[${value}]]></Value>
-                            </RightOperand>
-                        </Filter>
+                        ${filterXml}
                     </RetrieveRequest>
                 </RetrieveRequestMsg>
             </s:Body>
@@ -1339,18 +1453,18 @@ async function findActivityInSoap(soapType, label, keyPropertyName, value, apiCo
 
         const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
         const xmlDoc = new DOMParser().parseFromString(responseText, "application/xml");
-        const result = xmlDoc.querySelector("Results");
+        const results = xmlDoc.querySelectorAll("Results"); // Cambiar selector a All
 
-        if (result) {           
-            const objectID = result.querySelector("ObjectID")?.textContent;
-            return {
-                objectID: objectID,
-                customerKey: result.querySelector("CustomerKey")?.textContent || objectID,
+        if (results.length > 0) {
+            return Array.from(results).map(result => ({
+                objectID: result.querySelector("ObjectID")?.textContent,
+                customerKey: result.querySelector("CustomerKey")?.textContent,
                 name: result.querySelector("Name")?.textContent,
                 typeLabel: label,
                 soapType: soapType
-            };
+            }));
         }
+        return [];
     } catch (e) { 
         console.error(`Error buscando ${soapType}:`, e);
     }
@@ -1564,7 +1678,42 @@ export async function fetchQueryDefinitionByCustomerKey(customerKey, apiConfig) 
  * @returns {Promise<object>} Un objeto con los detalles de la query.
  */
 export async function fetchQueryDefinitionDetails(queryObjectId, apiConfig) {
-    const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>QueryDefinition</ObjectType><Properties>Name</Properties><Properties>Description</Properties><Properties>CustomerKey</Properties><Properties>QueryText</Properties><Properties>TargetUpdateType</Properties><Properties>DataExtensionTarget.Name</Properties><Properties>DataExtensionTarget.CustomerKey</Properties><Filter xsi:type="SimpleFilterPart"><Property>ObjectID</Property><SimpleOperator>equals</SimpleOperator><Value>${queryObjectId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+    const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+    <s:Header>
+        <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+        <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+        <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+    </s:Header>
+    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+        <RetrieveRequest>
+            <ObjectType>QueryDefinition</ObjectType>
+            <Properties>Name</Properties>
+            <Properties>Description</Properties>
+            <Properties>CustomerKey</Properties>
+            <Properties>QueryText</Properties>
+            <Properties>TargetUpdateType</Properties>
+            <Properties>DataExtensionTarget.Name</Properties>
+            <Properties>DataExtensionTarget.CustomerKey</Properties>
+            
+            <Filter xsi:type="ComplexFilterPart">
+            <LeftOperand xsi:type="SimpleFilterPart">
+                <Property>ObjectID</Property>
+                <SimpleOperator>equals</SimpleOperator>
+                <Value>${queryObjectId}</Value>
+            </LeftOperand>
+            <LogicalOperator>AND</LogicalOperator>
+            <RightOperand xsi:type="SimpleFilterPart">
+                <Property>Status</Property>
+                <SimpleOperator>equals</SimpleOperator>
+                <Value>Active</Value>
+            </RightOperand>
+            </Filter>
+
+        </RetrieveRequest>
+        </RetrieveRequestMsg>
+    </s:Body>
+    </s:Envelope>`;
 
     const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
     const resultNode = new DOMParser().parseFromString(responseText, "application/xml").querySelector("Results");
@@ -1830,6 +1979,149 @@ export async function searchContentAssets(searchValue, apiConfig) {
         }
     }
 }
+// ==========================================================
+// --- USUARIOS Y PERMISOS ---
+// ==========================================================
+
+/**
+ * Recupera todos los usuarios de la cuenta (SOAP)
+ */
+export async function fetchAllUsers(apiConfig) {
+    const soapPayload = `<?xml version="1.0" encoding="UTF-8"?>
+    <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+        <s:Header>
+            <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+            <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+            <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+        </s:Header>
+        <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+            <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+                <RetrieveRequest>
+                    <ObjectType>AccountUser</ObjectType>
+                    <Properties>ID</Properties>
+                    <Properties>Email</Properties>
+                    <Properties>Name</Properties>
+                    <Properties>ModifiedDate</Properties>
+                    <Properties>ActiveFlag</Properties>
+                    <Properties>CreatedDate</Properties>
+                    <Properties>IsAPIUser</Properties>
+                    <Properties>UserID</Properties>
+                    <Properties>LastSuccessfulLogin</Properties>
+                    <Properties>Roles</Properties>
+                    <Properties>CustomerKey</Properties>
+                </RetrieveRequest>
+            </RetrieveRequestMsg>
+        </s:Body>
+    </s:Envelope>`;
+ 
+    const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+    const doc = new DOMParser().parseFromString(responseText, "application/xml");
+    const results = doc.querySelectorAll("Results");
+ 
+    // Helper: texto de un hijo DIRECTO (evita coger IDs de subelementos como Roles>Role>ID)
+    const directChild = (node, tag) =>
+        Array.from(node.children).find(n => n.tagName === tag)?.textContent || null;
+ 
+    // Helper: PartnerProperties es un array de {Name, Value} — Email e IsAPIUser vienen aquí
+    const partnerProp = (node, propName) => {
+        const entries = Array.from(node.querySelectorAll('PartnerProperties'));
+        const entry = entries.find(e => e.querySelector('Name')?.textContent === propName);
+        return entry ? entry.querySelector('Value')?.textContent || null : null;
+    };
+ 
+    const users = [];
+    results.forEach(node => {
+        const rawRoles = Array.from(node.querySelectorAll("Roles Role"));
+        
+        // Filtrar roles individuales
+        const filteredRoles = rawRoles
+            .map(r => ({
+                name: r.querySelector("Name")?.textContent || "Sin nombre",
+                objectId: r.querySelector("ObjectID")?.textContent
+            }))
+            .filter(r => !r.name.includes("Individual role for"));
+ 
+        // REQUISITO: Si no tiene roles válidos tras el filtro, no incluir usuario
+        if (filteredRoles.length === 0 && rawRoles.length > 0) return;
+ 
+        // IsAPIUser viene en PartnerProperties con valor "True"/"False"
+        const isApiRaw = partnerProp(node, 'isAPIUser') || partnerProp(node, 'IsAPIUser') || directChild(node, 'IsAPIUser') || 'false';
+ 
+        users.push({
+            id:           directChild(node, 'ID') || "---",
+            name:         directChild(node, 'Name') || "Sin Nombre",
+            email:        partnerProp(node, 'email') || partnerProp(node, 'Email') || directChild(node, 'Email') || "---",
+            userName:     directChild(node, 'UserID') || "---",
+            customerKey:  directChild(node, 'CustomerKey') || "---",
+            isActive:     directChild(node, 'ActiveFlag') === 'true',
+            isApi:        isApiRaw.toLowerCase() === 'true',
+            lastLogin:    directChild(node, 'LastSuccessfulLogin') || null,
+            createdDate:  directChild(node, 'CreatedDate') || null,
+            modifiedDate: directChild(node, 'ModifiedDate') || null,
+            roles: filteredRoles
+        });
+    });
+ 
+    return users;
+}
+
+/**
+ * Recupera permisos detallados de una lista de Roles (ObjectIDs)
+ */
+export async function fetchRolesPermissions(roleIds, apiConfig) {
+    // Si no hay roles, devolver vacío
+    if (!roleIds || roleIds.length === 0) return {};
+
+    // Construimos los filtros para cada ObjectID
+    const filterNodes = roleIds.map(id => `
+        <Filter xsi:type="SimpleFilterPart">
+            <Property>ObjectID</Property>
+            <SimpleOperator>equals</SimpleOperator>
+            <Value>${id}</Value>
+        </Filter>`).join('');
+    
+    let allPermissions = {};
+
+    for (const id of roleIds) {
+        const soapPayload = `
+        <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+            <s:Header>
+                <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+                <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+                <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+            </s:Header>
+            <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+                <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+                    <RetrieveRequest>
+                        <ObjectType>Role</ObjectType>
+                        <Properties>ObjectID</Properties>
+                        <Properties>Permissions</Properties>
+                        <Filter xsi:type="SimpleFilterPart">
+                            <Property>ObjectID</Property>
+                            <SimpleOperator>equals</SimpleOperator>
+                            <Value>${id}</Value>
+                        </Filter>
+                    </RetrieveRequest>
+                </RetrieveRequestMsg>
+            </s:Body>
+        </s:Envelope>`;
+
+        const resp = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+        const doc = new DOMParser().parseFromString(resp, "application/xml");
+        
+        doc.querySelectorAll("Permissions > Permission").forEach(p => {
+            const objType = p.querySelector("ObjectType")?.textContent || "General";
+            const name = p.querySelector("Name")?.textContent;
+            const isAllowed = p.querySelector("IsAllowed")?.textContent === 'true';
+
+            if (!allPermissions[objType]) allPermissions[objType] = {};
+            // Si un rol lo permite, queda como permitido (lógica OR de roles)
+            if (isAllowed) allPermissions[objType][name] = true;
+            else if (allPermissions[objType][name] === undefined) allPermissions[objType][name] = false;
+        });
+    }
+    return allPermissions;
+}
 
 // ==========================================================
 // --- HELPERS INTERNOS DEL SERVICIO ---
@@ -1977,9 +2269,20 @@ async function executeRestRequest(url, options = {}) {
     const responseText = await response.text();
     logger.logApiResponse({ status: response.status, body: responseText });
 
-    const responseData = responseText ? JSON.parse(responseText) : {};
     if (!response.ok) {
-        throw new Error(responseData.message || `Error ${response.status}: ${responseText.substring(0, 200)}`);
+        let errorMsg = responseText;
+        try { 
+            const errJson = JSON.parse(responseText);
+            errorMsg = errJson.message || responseText;
+        } catch(e) {}
+        throw new Error(`Error ${response.status}: ${errorMsg}`);
     }
+
+    // Si la respuesta es "OK" (con o sin comillas), la devolvemos como objeto
+    if (responseText.trim() === 'OK' || responseText.trim() === '"OK"') {
+        return { success: true, message: 'OK' };
+    }
+
+    const responseData = responseText ? JSON.parse(responseText) : {};
     return responseData;
 }
