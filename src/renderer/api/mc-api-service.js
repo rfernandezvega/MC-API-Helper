@@ -531,7 +531,7 @@ export async function fetchAllJourneys(apiConfig) {
     let totalPages = 1;
 
     do {
-        const url = `${apiConfig.restUri}interaction/v1/interactions?$page=${page}&$pageSize=500`;
+        const url = `${apiConfig.restUri}interaction/v1/interactions?$page=${page}&$pageSize=500&extras=activity`;
         const options = { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } };
         
         const data = await executeRestRequest(url, options);

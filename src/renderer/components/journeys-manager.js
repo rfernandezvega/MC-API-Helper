@@ -82,11 +82,20 @@ function renderTable(journeys) {
         const row = document.createElement('tr');
         row.dataset.journeyId = j.id;
         row.innerHTML = `
-            <td>${j.name || '---'}</td> <td>${j.version || '---'}</td> <td>${formatDate(j.createdDate)}</td>
-            <td>${formatDate(j.modifiedDate)}</td> <td>${j.eventType || '---'}</td> <td>${j.definitionType || '---'}</td>
-            <td>${j.status || '---'}</td> <td>${j.dataExtensionName || '---'}</td>
-            <td>${j.hasCommunications ? 'Sí' : 'No'}</td> <td>${j.emails.join(', ')}</td>
-            <td>${j.sms.join(', ')}</td> <td>${j.pushes.join(', ')}</td> <td>${j.whatsapps.join(', ')}</td>
+            <td>${j.name || '---'}</td> 
+            <td>${j.version || '---'}</td> 
+            <td>${formatDate(j.createdDate)}</td>
+            <td>${formatDate(j.modifiedDate)}</td>
+            <td>${formatDate(j.activity?.lastContactProcessed) || '---'}</td>
+            <td>${j.eventType || '---'}</td> 
+            <td>${j.definitionType || '---'}</td>
+            <td>${j.status || '---'}</td> 
+            <td>${j.dataExtensionName || '---'}</td>
+            <td>${j.hasCommunications ? 'Sí' : 'No'}</td> 
+            <td>${j.emails.join(', ')}</td>
+            <td>${j.sms.join(', ')}</td> 
+            <td>${j.pushes.join(', ')}</td> 
+            <td>${j.whatsapps.join(', ')}</td>
         `;
         elements.journeysTbody.appendChild(row);
     });
@@ -989,7 +998,7 @@ function downloadJourneysCsv() {
         return;
     }
 
-    const headers = ['Nombre Journey', 'Versión', 'Fecha modificación', 'Tipo', 'Subtipo', 'Estado', 'Data Extension', 'Descargado', 'Emails', 'SMSs', 'Pushes', 'Whatsapps'];
+    const headers = ['Nombre Journey', 'Versión', 'Fecha creación', 'Fecha modificación', 'Fecha actividad', 'Tipo', 'Subtipo', 'Estado', 'Data Extension', 'Descargado', 'Emails', 'SMSs', 'Pushes', 'Whatsapps'];
     
     const sortedData = [...currentFilteredList]; // Copiamos para no modificar la original
     sortData(sortedData); // Usamos la función de ordenación existente
@@ -997,13 +1006,15 @@ function downloadJourneysCsv() {
     const rows = sortedData.map(j => [
         `"${j.name || ''}"`,
         `"${j.version || ''}"`,
+        `"${formatDate(j.createdDate)}"`,
         `"${formatDate(j.modifiedDate)}"`,
+        `"${formatDate(j.activity?.lastContactProcessed) || '---'}"`,
         `"${j.eventType || ''}"`,
         `"${j.definitionType || ''}"`,
         `"${j.status || ''}"`,
         `"${j.dataExtensionName || ''}"`,
         `"${j.hasCommunications ? 'Sí' : 'No'}"`,
-        `"${j.emails.join(' | ')}"`, // Usamos ; para listas dentro de una celda
+        `"${j.emails.join(' | ')}"`,
         `"${j.sms.join(' | ')}"`,
         `"${j.pushes.join(' | ')}"`,
         `"${j.whatsapps.join(' | ')}"`
