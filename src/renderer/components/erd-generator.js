@@ -80,14 +80,11 @@ export function init(dependencies) {
 }
 
 export function view() {
-    const stackKey = document.getElementById('stackKey')?.value || 's50';
-    const stack = stackKey.match(/s\d+/i) ? stackKey.match(/s\d+/i)[0].toLowerCase() : 's50';
-    const url = `https://mc.${stack}.marketingcloudapps.com/contactsmeta/fuelapi/contacts-internal/v1/attributeGroups/`;
-    
-    // Configurar enlace para abrir fuera
     elements.erdSfmcLink.onclick = (e) => {
         e.preventDefault();
-        window.electronAPI.openExternalLink(url);
+        const stack = elements.stackKeyInput?.value?.match(/s\d+/i)?.[0]?.toLowerCase() || 'sX';
+        const url = `https://mc.${stack}.marketingcloudapps.com/contactsmeta/fuelapi/contacts-internal/v1/attributeGroups/`;
+        window.electronAPI.openExternalLink(url); 
     };
 }
 

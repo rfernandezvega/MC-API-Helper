@@ -377,7 +377,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     'docu': 'documentacion-section', 'configuracionAPIs': 'configuracion-apis-section', 
                     'configuracionDE': 'configuracion-de-section', 'gestionCampos': 'configuracion-campos-section', 
 					'validadorEmail': 'email-validator-section', 'buscadores': 'buscadores-section', 
-					'clonadorQueries': 'clonador-queries-section','erdGenerator': 'erd-generator-section'
+					'clonadorQueries': 'clonador-queries-section'
                 };
 				const macroToActionMap = { //Un mapa para vistas simples
 					'carpetas': 'carpetas-section'
