@@ -7,6 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <script src="https://unpkg.com/docx@8.2.2/build/index.umd.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <!-- Enlaza la hoja de estilos principal -->
     <link rel="stylesheet" href="styles/style.css">
 </head>
@@ -80,7 +81,8 @@
 					<li><a class="macro-item" data-macro="gestionJourneys">Journeys</a></li>   
 					<li><a class="macro-item" data-macro="gestionCloudPages">Cloud Pages</a></li>
                     <li><a class="macro-item" data-macro="gestionContenidos">Contenidos</a></li>
-                    <li><a class="macro-item" data-macro="usuarios">Usuarios</a></li>      
+                    <li><a class="macro-item" data-macro="usuarios">Usuarios</a></li>
+                    <li><a class="macro-item" data-macro="erdGenerator">Generador ERD</a></li>      
 					<li><a class="macro-item" data-macro="carpetas">Crear Carpetas</a></li>   
 					<li><a class="macro-item" data-macro="validadorEmail">Validar Emails</a></li>          
 				</ul>
@@ -1233,6 +1235,97 @@
     <div class="config-block">
         <h3>Resultado de la Validación</h3>
         <pre id="email-validation-results">El resultado aparecerá aquí.</pre>
+    </div>
+</div>
+
+<!-- START: erd-generator.html -->
+
+<div id="erd-generator-section" class="section">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>
+        <div class="header-actions">
+            <button id="erd-reset-btn" class="action-button delete-btn hidden">← Nuevo Diagrama</button>
+            <button id="erd-download-csv-btn" class="action-button activate-btn hidden">⬇ Descargar CSV</button>
+            <button id="erd-download-img-btn" class="action-button hidden">⬇ Descargar Imagen</button>
+        </div>
+    </div>
+
+    <h2 style="color: #69a3db; text-align: center; margin-bottom: 20px;">Generador de Diagramas Entidad-Relación (ERD)</h2>
+
+    <div class="tabs-container erd-full-width">
+        <div class="tab-buttons">
+            <button class="tab-button active" data-tab="erd-tab-instrucciones">1. Extraer JSON</button>
+            <button class="tab-button" data-tab="erd-tab-diagrama">2. Generar Diagrama</button>
+        </div>
+
+        <!-- PESTAÑA 1: INSTRUCCIONES -->
+        <div id="erd-tab-instrucciones" class="tab-content active config-section-container erd-full-width">
+            <div class="config-block erd-full-width">
+                <h3 style="color:#558ac7; margin-bottom: 15px;">1. Abrir Marketing Cloud</h3>
+                <p>Haz clic en el siguiente enlace para abrir la ruta base en tu navegador. Debes tener una sesión activa de Marketing Cloud en el cliente seleccionado.</p>
+                <a id="erd-sfmc-link" href="#" class="external-link" style="color:#69a3db; font-weight:bold; text-decoration: underline; cursor:pointer; display:inline-block; margin-bottom: 20px;">IR A LA API DE ATTRIBUTE GROUPS</a>
+
+                <h3 style="color:#558ac7; margin-bottom: 15px;">2. Ejecutar Script</h3>
+                <p>Copia este código y pégalo en la consola (F12) del navegador en la página que acabas de abrir. <br>
+                   <b>Importante:</b> Al ejecutarlo, aparecerá una ventana dentro de Marketing Cloud para que selecciones qué <b>Grupo de Atributos</b> quieres documentar.</p>
+                
+                <div style="background-color: #282c34; border-radius: 6px; overflow: hidden; margin-top: 15px; border: 1px solid #181a1f;">
+                    <div style="display: flex; justify-content: flex-end; padding: 5px 10px; background-color: #21252b; border-bottom: 1px solid #181a1f;">
+                        <button id="erd-copy-script-btn" class="action-button small-text-btn" style="background-color: #3b4048; border: none; color: #fff;">Copiar Código</button>
+                    </div>
+                    <pre id="erd-script-to-copy" style="color: #abb2bf; padding: 15px; max-height: 200px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 12px; margin: 0; white-space: pre; line-height: 1.4;"></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 2: DIAGRAMA -->
+        <div id="erd-tab-diagrama" class="tab-content config-section-container erd-full-width">
+            <div style="display: flex; flex-direction: column; height: 100%; width: 100%;">
+                
+                <!-- Entrada de JSON -->
+                <div id="erd-input-zone" class="config-block erd-full-width">
+                    <div class="form-group">
+                        <label style="font-weight: bold; margin-bottom: 8px; display: block;">Pega el JSON extraído aquí:</label>
+                        <textarea id="erd-json-input" rows="5" placeholder="Pega el contenido del JSON aquí..." style="width: 100%; border: 1px solid #ccc; border-radius: 4px; padding: 10px; font-family: 'Consolas', monospace; font-size: 0.85rem; resize: vertical;"></textarea>
+                    </div>
+                    <div class="form-group checkbox-group" style="margin-top: 10px; justify-content: flex-start;">
+                        <input type="checkbox" id="erd-chk-hide-contacts" checked>
+                        <label for="erd-chk-hide-contacts" style="font-size: 0.9rem;">Ocultar tabla <strong>Contacts</strong> (se identificará con 🔑)</label>
+                    </div>
+                    <div style="text-align: center; margin-top: 15px;">
+                        <button id="erd-generate-btn" class="action-button activate-btn" style="padding: 10px 40px;">Generar Diagrama →</button>
+                    </div>
+                </div>
+
+                <!-- Lienzo del Diagrama -->
+                <div id="erd-canvas-zone" class="config-block hidden erd-full-width" style="flex: 1; padding: 0; position: relative; overflow: hidden; display: flex; flex-direction: column; min-height: 500px; border: 1px solid #e2e8f0;">
+                    <div style="background:rgba(105,163,219,.1); border-bottom:1px solid #e2e8f0; padding:.5rem 1.2rem; font-size:.72rem; color:#558ac7; flex-shrink:0;">
+                        💡 Clic en un campo para ver su relación · ESC para deseleccionar · Arrastra las tablas para reorganizar
+                    </div>
+                    
+                    <div class="erd-wrap" id="erd-wrap">
+                        <div id="erd-canvas" style="position: relative;">
+                            <svg id="erd-svg-lines" style="position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible;"></svg>
+                        </div>
+                    </div>
+
+                    <!-- Tooltip dinámico -->
+                    <div id="erd-tooltip" class="erd-tt hidden">
+                        <div class="tt-ttl" id="erd-tt-ttl"></div>
+                        <div class="tt-row" id="erd-tt-typ"></div>
+                        <div class="tt-row" id="erd-tt-rel"></div>
+                    </div>
+
+                    <!-- Leyenda -->
+                    <div class="erd-legend">
+                        <div class="leg-ttl">Leyenda</div>
+                        <div class="leg-row"><div class="leg-dot" style="background:#e67e22"></div> PK</div>
+                        <div class="leg-row"><div class="leg-dot" style="background:#28a745"></div> FK</div>
+                        <div class="leg-row"><div class="leg-dot" style="background:#9b59b6"></div> REF</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

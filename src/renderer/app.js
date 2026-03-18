@@ -40,6 +40,7 @@ import * as scriptTextFinder from './components/script-text-finder.js';
 import * as automationAnalyzer from './components/automation-analyzer.js';
 import * as journeyAnalyzer from './components/journey-analyzer.js';
 import * as usersManager from './components/users-manager.js';
+import * as erdGenerator from './components/erd-generator.js';
 
 
 
@@ -376,7 +377,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     'docu': 'documentacion-section', 'configuracionAPIs': 'configuracion-apis-section', 
                     'configuracionDE': 'configuracion-de-section', 'gestionCampos': 'configuracion-campos-section', 
 					'validadorEmail': 'email-validator-section', 'buscadores': 'buscadores-section', 
-					'clonadorQueries': 'clonador-queries-section'
+					'clonadorQueries': 'clonador-queries-section','erdGenerator': 'erd-generator-section'
                 };
 				const macroToActionMap = { //Un mapa para vistas simples
 					'carpetas': 'carpetas-section'
@@ -421,6 +422,10 @@ document.addEventListener('DOMContentLoaded', function () {
 				else if (macro === 'usuarios') {
 					showSection('gestion-usuarios-section');
 					usersManager.view();
+				}
+				else if (macro === 'erdGenerator') {
+					showSection('erd-generator-section');
+					erdGenerator.view();
 				}
 			});
 		});
@@ -611,6 +616,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		folderCreator.init({ getAuthenticatedConfig });
 		contentManager.init({ getAuthenticatedConfig });
 		usersManager.init({ getAuthenticatedConfig });
+		erdGenerator.init({ getAuthenticatedConfig });
 		
 		// Carga las configuraciones de cliente guardadas y arranca sin ninguna seleccionada.
 		orgManager.loadConfigsIntoSelect();

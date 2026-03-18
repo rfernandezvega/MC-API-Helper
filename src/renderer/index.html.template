@@ -7,6 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <script src="https://unpkg.com/docx@8.2.2/build/index.umd.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <!-- Enlaza la hoja de estilos principal -->
     <link rel="stylesheet" href="styles/style.css">
 </head>
@@ -80,7 +81,8 @@
 					<li><a class="macro-item" data-macro="gestionJourneys">Journeys</a></li>   
 					<li><a class="macro-item" data-macro="gestionCloudPages">Cloud Pages</a></li>
                     <li><a class="macro-item" data-macro="gestionContenidos">Contenidos</a></li>
-                    <li><a class="macro-item" data-macro="usuarios">Usuarios</a></li>      
+                    <li><a class="macro-item" data-macro="usuarios">Usuarios</a></li>
+                    <li><a class="macro-item" data-macro="erdGenerator">Generador ERD</a></li>      
 					<li><a class="macro-item" data-macro="carpetas">Crear Carpetas</a></li>   
 					<li><a class="macro-item" data-macro="validadorEmail">Validar Emails</a></li>          
 				</ul>
