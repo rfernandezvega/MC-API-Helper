@@ -361,6 +361,7 @@ export function init() {
     elements.analyzerAutomationNameTitle = document.getElementById('analyzerAutomationNameTitle');
     elements.automationAnalyzerStepsContainer = document.getElementById('automationAnalyzerStepsContainer');
     elements.downloadAutomationPdfBtn = document.getElementById('downloadAutomationPdfBtn');
+    elements.downloadAutomationWordBtn = document.getElementById('downloadAutomationWordBtn');
 
     // --- 25. ANALIZADOR DE JOURNEYS ---
     elements.journeyAnalyzerSection = document.getElementById('journey-analyzer-section');

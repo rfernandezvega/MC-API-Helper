@@ -24,6 +24,9 @@ export function init(dependencies) {
     if (elements.downloadAutomationPdfBtn) {
         elements.downloadAutomationPdfBtn.addEventListener('click', () => generatePDF());
     }
+    if (elements.downloadAutomationWordBtn) {
+        elements.downloadAutomationWordBtn.addEventListener('click', () => generateWord());
+    }
 }
 
 export async function view(automationDetails) {
@@ -504,4 +507,214 @@ function highlightJSHtml(code) {
         if (num) return `<span class="js-number">${match}</span>`;
         return match;
     });
+}
+
+async function generateWord() {
+    if (!currentAutomationDetails) return;
+
+    const docxLib = window.docx;
+    if (!docxLib) {
+        ui.showCustomAlert("La librería de Word no se ha cargado. Verifica la conexión.");
+        return;
+    }
+
+    ui.blockUI("Generando documento Word...");
+
+    const {
+        Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+        WidthType, AlignmentType, HeadingLevel, ShadingType, BorderStyle, VerticalAlign
+    } = docxLib;
+
+    const auto = currentAutomationDetails;
+
+    // --- HELPERS ---
+    const noBorder = {
+        top:    { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+        bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+        left:   { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+        right:  { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+    };
+
+    const subtleBorder = {
+        top:    { style: BorderStyle.SINGLE, size: 1, color: "DDDDDD" },
+        bottom: { style: BorderStyle.SINGLE, size: 1, color: "DDDDDD" },
+        left:   { style: BorderStyle.SINGLE, size: 1, color: "DDDDDD" },
+        right:  { style: BorderStyle.SINGLE, size: 1, color: "DDDDDD" },
+    };
+
+    const createMergedHeaderCell = (text, color = "558AC7", fontSize = 20, textColor = "FFFFFF") => new TableCell({
+        children: [new Paragraph({
+            children: [new TextRun({ text, color: textColor, bold: true, size: fontSize })],
+            alignment: AlignmentType.CENTER
+        })],
+        columnSpan: 2,
+        shading: { fill: color, type: ShadingType.CLEAR },
+        verticalAlign: VerticalAlign.CENTER,
+        borders: noBorder,
+        margins: { top: 80, bottom: 80, left: 120, right: 120 }
+    });
+
+    const createLabelCell = (text) => new TableCell({
+        children: [new Paragraph({ children: [new TextRun({ text, bold: true, size: 18, color: "2C3E50" })] })],
+        width: { size: 35, type: WidthType.PERCENTAGE },
+        shading: { fill: "F5F6FA" },
+        borders: subtleBorder,
+        margins: { top: 60, bottom: 60, left: 120, right: 80 }
+    });
+
+    const createValueCell = (text) => {
+        const safeText = String(text !== null && text !== undefined ? text : "");
+        return new TableCell({
+            children: safeText.split('\n').map(line => new Paragraph({
+                children: [new TextRun({ text: line, size: 18, color: "333333" })]
+            })),
+            width: { size: 65, type: WidthType.PERCENTAGE },
+            shading: { fill: "FFFFFF" },
+            borders: subtleBorder,
+            margins: { top: 60, bottom: 60, left: 120, right: 80 }
+        });
+    };
+
+    const createCodeCell = (text) => {
+        const safeText = String(text || "");
+        return new TableCell({
+            children: safeText.split('\n').map(line => new Paragraph({
+                children: [new TextRun({ text: line, font: "Courier New", size: 14, color: "1A1A2E" })],
+                spacing: { before: 0, after: 0 }
+            })),
+            columnSpan: 2,
+            shading: { fill: "F8F9FA" },
+            borders: subtleBorder,
+            margins: { top: 120, bottom: 120, left: 200, right: 120 }
+        });
+    };
+
+    const children = [];
+
+    // 1. TÍTULO
+    children.push(new Paragraph({
+        text: `Análisis de Automatismo: ${auto.name.trim()}`,
+        heading: HeadingLevel.HEADING_1,
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 400 }
+    }));
+
+    // 2. INFORMACIÓN GENERAL
+    children.push(new Paragraph({ text: "INFORMACIÓN GENERAL", heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 200 } }));
+    children.push(new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+            new TableRow({ children: [createMergedHeaderCell("DATOS DEL AUTOMATISMO", "34495E", 18)] }),
+            new TableRow({ children: [createLabelCell("Estado"), createValueCell(auto.status)] }),
+            new TableRow({ children: [createLabelCell("Última Ejecución"), createValueCell(formatDate(auto.lastRunTime))] }),
+            new TableRow({ children: [createLabelCell("Próxima Ejecución"), createValueCell(formatDate(auto.scheduledTime))] }),
+            new TableRow({ children: [createLabelCell("Descripción"), createValueCell(auto.description || 'Sin descripción')] }),
+        ]
+    }));
+
+    // 3. PASOS Y ACTIVIDADES
+    for (const step of auto.steps || []) {
+        children.push(new Paragraph({
+            text: `PASO ${step.step}`,
+            heading: HeadingLevel.HEADING_2,
+            spacing: { before: 600, after: 200 }
+        }));
+
+        for (const act of step.activities || []) {
+            const typeLabel = activityTypeMap[act.objectTypeId] || `Tipo: ${act.objectTypeId}`;
+            const isShared = act.otherUsages && act.otherUsages.length > 0;
+            const rows = [];
+
+            rows.push(new TableRow({ children: [createMergedHeaderCell(act.name, "558AC7", 20)] }));
+            rows.push(new TableRow({ children: [createLabelCell("Tipo"), createValueCell(typeLabel)] }));
+            rows.push(new TableRow({ children: [createLabelCell("Descripción"), createValueCell(act.description || 'Sin descripción')] }));
+
+            if (isShared) {
+                const list = act.otherUsages.map(u => `• ${u.automationName} (Paso: ${u.step})`).join('\n');
+                rows.push(new TableRow({ children: [createLabelCell("⚠ Impacto"), createValueCell(`COMPARTIDA en:\n${list}`)] }));
+            } else {
+                rows.push(new TableRow({ children: [createLabelCell("Impacto"), createValueCell("✓ Actividad Exclusiva")] }));
+            }
+
+            if (act.specificData) {
+                const data = act.specificData;
+                rows.push(new TableRow({ children: [createMergedHeaderCell("CONFIGURACIÓN DETALLADA", "E9ECEF", 18, "2C3E50")] }));
+
+                if (act.objectTypeId === 300) {
+                    rows.push(new TableRow({ children: [createLabelCell("DE Destino"), createValueCell(`${data.targetDE.name}\n(Key: ${data.targetDE.key})`)] }));
+                    rows.push(new TableRow({ children: [createLabelCell("Ruta"), createValueCell(data.targetDE.fullPath || '---')] }));
+                    rows.push(new TableRow({ children: [createLabelCell("Acción"), createValueCell(data.updateType || '---')] }));
+
+                    if (data.dataSources && data.dataSources.length > 0) {
+                        const dsText = data.dataSources.map(ds =>
+                            `• ${ds.name} [${ds.type}]\n${ds.automations.map(a => `  - ${a.automationName} (Paso: ${a.step})`).join('\n')}`
+                        ).join('\n');
+                        rows.push(new TableRow({ children: [createMergedHeaderCell(`⚠ ${data.dataSources.length} actividad(es) impactan en la DE`, "FDECEA", 16, "8B0000")] }));
+                        rows.push(new TableRow({ children: [createLabelCell("Fuentes de Impacto"), createValueCell(dsText)] }));
+                    }
+
+                    if (act.queryText && act.queryText.trim()) {
+                        rows.push(new TableRow({ children: [createMergedHeaderCell("QUERY SQL", "EAF0FB", 16, "2C3E50")] }));
+                        rows.push(new TableRow({ children: [createCodeCell(act.queryText.replace(/\t/g, '    '))] }));
+                    }
+                }
+                else if (act.objectTypeId === 43) {
+                    const targetDE = act.targetDataExtensions?.[0] || { name: 'N/A', key: 'N/A' };
+                    const tech = data;
+                    const delimLabel = tech.delimiter === ',' ? 'Coma (,)' : (tech.delimiter === '|' ? 'Pipe (|)' : (tech.delimiter || 'N/A'));
+                    rows.push(new TableRow({ children: [createLabelCell("DE Destino"), createValueCell(`${targetDE.name}\n(Key: ${targetDE.key})`)] }));
+                    rows.push(new TableRow({ children: [createLabelCell("Ruta"), createValueCell(targetDE.fullPath || '---')] }));
+                    rows.push(new TableRow({ children: [createLabelCell("Acción"), createValueCell(tech.updateType || 'N/A')] }));
+                    rows.push(new TableRow({ children: [createLabelCell("Archivo"), createValueCell(tech.fileSpec || 'N/A')] }));
+                    rows.push(new TableRow({ children: [createLabelCell("Tipo / Separador"), createValueCell(`${tech.fileType || 'N/A'} / ${delimLabel}`)] }));
+                    rows.push(new TableRow({ children: [createLabelCell("Cabecera / Errores"), createValueCell(`${tech.headerLines === '1' ? 'Sí' : 'No'} / ${tech.allowErrors ? 'Ignorar' : 'No ignorar'}`)] }));
+
+                    if (data.dataSources && data.dataSources.length > 0) {
+                        const dsText = data.dataSources.map(ds =>
+                            `• ${ds.name} [${ds.type}]\n${ds.automations.map(a => `  - ${a.automationName} (Paso: ${a.step})`).join('\n')}`
+                        ).join('\n');
+                        rows.push(new TableRow({ children: [createMergedHeaderCell(`⚠ ${data.dataSources.length} actividad(es) impactan en la DE`, "FDECEA", 16, "8B0000")] }));
+                        rows.push(new TableRow({ children: [createLabelCell("Fuentes de Impacto"), createValueCell(dsText)] }));
+                    }
+                }
+                else if (act.objectTypeId === 73) {
+                    if (data.deName) {
+                        rows.push(new TableRow({ children: [createLabelCell("DE Origen"), createValueCell(`${data.deName}\n(Ruta: ${data.fullPath || '---'})`)] }));
+                        rows.push(new TableRow({ children: [createLabelCell("Delimitador"), createValueCell(data.delimiter || '---')] }));
+                    }
+                    rows.push(new TableRow({ children: [createLabelCell("Patrón Archivo"), createValueCell(data.fileSpec || '---')] }));
+                    if (data.convertTo) rows.push(new TableRow({ children: [createLabelCell("Convertir a"), createValueCell(data.convertTo)] }));
+                }
+                else if (act.objectTypeId === 53) {
+                    rows.push(new TableRow({ children: [createLabelCell("Archivo"), createValueCell(data.fileSpec || '---')] }));
+                    rows.push(new TableRow({ children: [createLabelCell("Destino"), createValueCell(data.destination || '---')] }));
+                }
+                else if (act.objectTypeId === 42) {
+                    rows.push(new TableRow({ children: [createLabelCell("Asunto"), createValueCell(data.subject || '---')] }));
+                    if (data.cc) rows.push(new TableRow({ children: [createLabelCell("CC"), createValueCell(data.cc)] }));
+                    if (data.bcc) rows.push(new TableRow({ children: [createLabelCell("BCC"), createValueCell(data.bcc)] }));
+                }
+                else if (act.objectTypeId === 423) {
+                    if (act.scriptCode && act.scriptCode.trim()) {
+                        rows.push(new TableRow({ children: [createMergedHeaderCell("CÓDIGO SSJS", "EAF0FB", 16, "2C3E50")] }));
+                        rows.push(new TableRow({ children: [createCodeCell(act.scriptCode.replace(/\t/g, '    '))] }));
+                    } else {
+                        rows.push(new TableRow({ children: [createLabelCell("Script"), createValueCell('(Script vacío o sin código disponible)')] }));
+                    }
+                }
+            }
+
+            children.push(new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows,
+                margins: { bottom: 400 }
+            }));
+            children.push(new Paragraph({ text: "", spacing: { after: 200 } }));
+        }
+    }
+
+    const docObj = new Document({ sections: [{ children }] });
+    const blob = await Packer.toBlob(docObj);
+    window.saveAs(blob, `Docu_Automatismo_${auto.name.replace(/[^a-zA-Z0-9]/g, '_')}.docx`);
+    ui.unblockUI();
 }
