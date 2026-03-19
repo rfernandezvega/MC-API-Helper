@@ -361,6 +361,7 @@ export function init() {
     elements.analyzerAutomationNameTitle = document.getElementById('analyzerAutomationNameTitle');
     elements.automationAnalyzerStepsContainer = document.getElementById('automationAnalyzerStepsContainer');
     elements.downloadAutomationPdfBtn = document.getElementById('downloadAutomationPdfBtn');
+    elements.downloadAutomationWordBtn = document.getElementById('downloadAutomationWordBtn');
 
     // --- 25. ANALIZADOR DE JOURNEYS ---
     elements.journeyAnalyzerSection = document.getElementById('journey-analyzer-section');
@@ -384,6 +385,32 @@ export function init() {
     elements.tabPermsDetailBtn = document.getElementById('tab-perms-detail-btn');
     elements.btnToggleDiffs = document.getElementById('btn-toggle-diffs');
     elements.btnExpandPerms = document.getElementById('btn-expand-perms');
+
+    // --- 27. GENERADOR ERD ---
+    elements.erdSection = document.getElementById('erd-generator-section');
+    elements.erdCopyScriptBtn = document.getElementById('erd-copy-script-btn');
+    elements.erdScriptToCopy = document.getElementById('erd-script-to-copy');
+    
+    elements.erdJsonInput = document.getElementById('erd-json-input');
+    elements.erdChkHideContacts = document.getElementById('erd-chk-hide-contacts');
+    elements.erdGenerateBtn = document.getElementById('erd-generate-btn');
+    elements.erdResetBtn = document.getElementById('erd-reset-btn');
+    
+    elements.erdInputZone = document.getElementById('erd-input-zone');
+    elements.erdCanvasZone = document.getElementById('erd-canvas-zone');
+    elements.erdWrap = document.getElementById('erd-wrap');
+    elements.erdCanvas = document.getElementById('erd-canvas');
+    elements.erdSvgLines = document.getElementById('erd-svg-lines');
+    
+    elements.erdTooltip = document.getElementById('erd-tooltip');
+    elements.erdTtTtl = document.getElementById('erd-tt-ttl');
+    elements.erdTtTyp = document.getElementById('erd-tt-typ');
+    elements.erdTtRel = document.getElementById('erd-tt-rel');
+
+    elements.erdDownloadCsvBtn = document.getElementById('erd-download-csv-btn');
+    elements.erdDownloadImgBtn = document.getElementById('erd-download-img-btn');
+
+    elements.erdSfmcLink = document.getElementById('erd-sfmc-link'); 
 }
 
 export default elements;

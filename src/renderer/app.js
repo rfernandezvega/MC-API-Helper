@@ -40,6 +40,7 @@ import * as scriptTextFinder from './components/script-text-finder.js';
 import * as automationAnalyzer from './components/automation-analyzer.js';
 import * as journeyAnalyzer from './components/journey-analyzer.js';
 import * as usersManager from './components/users-manager.js';
+import * as erdGenerator from './components/erd-generator.js';
 
 
 
@@ -422,6 +423,10 @@ document.addEventListener('DOMContentLoaded', function () {
 					showSection('gestion-usuarios-section');
 					usersManager.view();
 				}
+				else if (macro === 'erdGenerator') {
+					showSection('erd-generator-section');
+					erdGenerator.view();
+				}
 			});
 		});
 
@@ -611,6 +616,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		folderCreator.init({ getAuthenticatedConfig });
 		contentManager.init({ getAuthenticatedConfig });
 		usersManager.init({ getAuthenticatedConfig });
+		erdGenerator.init({ getAuthenticatedConfig });
 		
 		// Carga las configuraciones de cliente guardadas y arranca sin ninguna seleccionada.
 		orgManager.loadConfigsIntoSelect();
