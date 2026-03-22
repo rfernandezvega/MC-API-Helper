@@ -7,12 +7,16 @@ let getAuthenticatedConfig;
 let scMasterList = [];
 let spMasterList = [];
 let tsMasterList = [];
+let dpMasterList = [];
 let scFilteredList = [];
 let spFilteredList = [];
+let dpFilteredList = [];
 
 const ITEMS_PER_PAGE = 10;
 let currentPageSC = 1;
 let currentPageSP = 1;
+let currentPageDP = 1;
+let dpStack = 's50';
 let currentSortColumn = 'name';
 let currentSortDirection = 'asc';
 
@@ -44,12 +48,22 @@ function setupEventListeners() {
         currentSortColumn = header.dataset.sortBy;
         const activeTab = document.querySelector('#sendManagement-section .tab-button.active').dataset.tab;
         if (activeTab === 'tab-send-classifications') renderTableSC();
-        else renderTableSP();
+        else if (activeTab === 'tab-sender-profiles') renderTableSP();
+        else renderTableDP();
     });
 
     document.querySelectorAll('#sendManagement-section .tab-button').forEach(btn => {
         btn.addEventListener('click', () => setTimeout(updateGlobalCount, 50));
     });
+
+    // Delivery Profiles
+    document.getElementById('dp-copy-script-btn').addEventListener('click', copyDPScript);
+    document.getElementById('dp-json-input').addEventListener('input', e => processDPJson(e.target.value.trim()));
+    ['dpNameFilter', 'dpIpFilter'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => { currentPageDP = 1; applyFiltersDP(); });
+    });
+    document.getElementById('prevPageBtnDP').addEventListener('click', () => { if (currentPageDP > 1) { currentPageDP--; renderTableDP(); } });
+    document.getElementById('nextPageBtnDP').addEventListener('click', () => { if (currentPageDP < Math.ceil(dpFilteredList.length / ITEMS_PER_PAGE)) { currentPageDP++; renderTableDP(); } });
 
     elements.sendManagementSection.addEventListener('click', ui.handleExternalLink);
 }
@@ -76,6 +90,7 @@ async function fetchData() {
             tsMasterList = await mcApiService.fetchTriggeredSendDetails(apiConfig, triggeredSendIds);
         }
 
+        initDPTab(apiConfig);
         applyFiltersSC();
         applyFiltersSP();
     } catch (error) {
@@ -104,7 +119,7 @@ function applyFiltersSC() {
 function renderTableSC() {
     sortData(scFilteredList);
     const paginated = scFilteredList.slice((currentPageSC - 1) * ITEMS_PER_PAGE, currentPageSC * ITEMS_PER_PAGE);
-    const baseUrl = `https://members.exacttarget.com/Content/Administration/SendManagement/SendClassification.aspx?g=`;
+    const baseUrl = `https://members.${dpStack}.exacttarget.com/Content/Administration/SendManagement/SendClassification.aspx?g=`;
 
     elements.sendClassificationsTbody.innerHTML = paginated.map(item => {
         const spMatch = spMasterList.find(sp => sp.customerKey === item.senderProfile);
@@ -139,7 +154,7 @@ function applyFiltersSP() {
 function renderTableSP() {
     sortData(spFilteredList);
     const paginated = spFilteredList.slice((currentPageSP - 1) * ITEMS_PER_PAGE, currentPageSP * ITEMS_PER_PAGE);
-    const baseUrl = `https://members.exacttarget.com/Content/Administration/SendManagement/SenderProfile.aspx?profileid=`;
+    const baseUrl = `https://members.${dpStack}.exacttarget.com/Content/Administration/SendManagement/SenderProfile.aspx?profileid=`;
 
     elements.senderProfilesTbody.innerHTML = paginated.map(item => {
         const tsMatch = tsMasterList.find(ts => ts.id === item.autoReplyTriggeredId);
@@ -175,8 +190,12 @@ function updateGlobalCount() {
     const activeTab = document.querySelector('#sendManagement-section .tab-button.active')?.dataset.tab;
     const countSpan = document.getElementById('send-management-count');
     if (!activeTab || !countSpan) return;
-    const filtered = activeTab === 'tab-send-classifications' ? scFilteredList.length : spFilteredList.length;
-    const master = activeTab === 'tab-send-classifications' ? scMasterList.length : spMasterList.length;
+    const filtered = activeTab === 'tab-send-classifications' ? scFilteredList.length
+                   : activeTab === 'tab-sender-profiles'      ? spFilteredList.length
+                   : dpFilteredList.length;
+    const master   = activeTab === 'tab-send-classifications' ? scMasterList.length
+                   : activeTab === 'tab-sender-profiles'      ? spMasterList.length
+                   : dpMasterList.length;
     countSpan.textContent = `(${filtered} de ${master})`;
     updateSortIndicators();
 }
@@ -205,15 +224,166 @@ function downloadCSV() {
     if (activeTab === 'tab-send-classifications') {
         csv = "Nombre,ExternalKey,Tipo,SenderProfile,DeliveryProfile,Modificado\n";
         scFilteredList.forEach(i => csv += `"${i.name}","${i.customerKey}","${i.type}","${i.senderProfile}","${i.deliveryProfile}","${formatDate(i.modifiedDate)}"\n`);
-    } else {
+    } else if (activeTab === 'tab-sender-profiles') {
         csv = "Nombre,ExternalKey,FromName,FromEmail,AutoReply,AutoForwardEmail,Modificado\n";
         spFilteredList.forEach(i => csv += `"${i.name}","${i.customerKey}","${i.fromName}","${i.fromAddress}","${i.autoReply}","${i.autoForwardEmail}","${formatDate(i.modifiedDate)}"\n`);
+    } else {
+        csv = "Nombre,ExternalKey,Descripcion,ModoIP,IPAddress,Header,Footer\n";
+        dpFilteredList.forEach(i => csv += `"${i.name}","${i.externalKey}","${i.description}","${i.ipMode}","${i.ipAddress}","${i.header}","${i.footer}"\n`);
     }
     const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = activeTab + ".csv";
     link.click();
+}
+
+// ============================================================
+// DELIVERY PROFILES
+// ============================================================
+
+function initDPTab(apiConfig) {
+    // Extrae el stack desde la soapUri, e.g. "...s50.exacttarget.com..." → "s50"
+    const stackMatch = (apiConfig.soapUri || '').match(/\.(s\d+)\./);
+    dpStack = stackMatch ? stackMatch[1] : 's50';
+
+    const listingUrl = `https://members.${dpStack}.exacttarget.com/Content/Administration/SendManagement/DeliveryProfileListing.aspx`;
+    const link = document.getElementById('dp-sfmc-link');
+    if (link) {
+        link.dataset.url = listingUrl;
+        link.onclick = (e) => { e.preventDefault(); window.electronAPI.openExternalLink(listingUrl); };
+    }
+
+    // El script que el usuario pegará en la consola de SFMC.
+    // Al terminar muestra un popup con el JSON limpio y un botón copiar.
+    const script = `(async () => {
+    function findGridContext() {
+        if (window.grid1) return window;
+        for (let f of document.querySelectorAll('iframe')) {
+            try { if (f.contentWindow?.grid1) return f.contentWindow; } catch(e) {}
+        }
+        return null;
+    }
+    const context = findGridContext();
+    if (!context) {
+        alert("❌ No se encontró 'grid1'.\\nAsegúrate de estar en la página de Delivery Profiles y que haya cargado completamente.");
+        return;
+    }
+    const profileList = context.grid1.Data.map(row => ({ id: row[1], gridName: row[2] }));
+    const finalResults = [];
+    for (const profile of profileList) {
+        try {
+            const doc = new DOMParser().parseFromString(
+                await (await fetch(\`https://\${window.location.hostname}/Content/Administration/SendManagement/DeliveryProfile.aspx?g=\${profile.id}\`)).text(),
+                'text/html'
+            );
+            const ipRadio = doc.querySelector('input[name="ip"]:checked');
+            const ipSelect = doc.getElementById('ddlIPAddresses');
+            let activeIp = "Account Default";
+            if (ipRadio?.value === "2") {
+                const sel = ipSelect?.querySelector('option[selected="selected"]') || ipSelect?.options[ipSelect?.selectedIndex];
+                activeIp = sel ? sel.textContent.trim() : "Private (No IP selected)";
+            }
+            finalResults.push({
+                name:        doc.getElementById('name')?.value        || '',
+                externalKey: doc.getElementById('customerKey')?.value || '',
+                description: doc.getElementById('description')?.value || '',
+                configuration: {
+                    ipMode:    ipRadio ? ipRadio.nextSibling.textContent.trim() : "Unknown",
+                    ipAddress: activeIp,
+                    header:    doc.querySelector('input[name="header"]:checked')?.nextSibling.textContent.trim() || "None",
+                    footer:    doc.querySelector('input[name="footer"]:checked')?.nextSibling.textContent.trim() || "None"
+                },
+                id: profile.id
+            });
+        } catch(err) { console.error(\`Error en perfil \${profile.id}:\`, err); }
+    }
+    const json = JSON.stringify(finalResults, null, 2);
+    const overlay = document.createElement('div');
+    overlay.style = "position:fixed;top:10%;left:15%;width:70%;background:white;z-index:999999;padding:30px;border:5px solid #69a3db;box-shadow:0 0 100px rgba(0,0,0,0.8);font-family:Arial;border-radius:8px;";
+    overlay.innerHTML = \`
+        <h3 style="margin-top:0;color:#558ac7;">✅ \${finalResults.length} Delivery Profiles encontrados</h3>
+        <textarea id="_dp_out" readonly style="width:100%;height:180px;font-family:monospace;font-size:11px;border:1px solid #ccc;border-radius:4px;padding:8px;box-sizing:border-box;resize:none;">\${json}</textarea>
+        <div style="display:flex;gap:10px;margin-top:12px;">
+            <button id="_dp_copy" style="flex:1;padding:10px;background:#28a745;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:bold;font-size:14px;">📋 Copiar JSON</button>
+            <button id="_dp_close" style="flex:1;padding:10px;background:#6c757d;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:bold;font-size:14px;">Cerrar</button>
+        </div>\`;
+    document.body.appendChild(overlay);
+    document.getElementById('_dp_close').addEventListener('click', () => overlay.remove());
+    document.getElementById('_dp_copy').addEventListener('click', () => {
+        navigator.clipboard.writeText(json).then(() => {
+            const btn = document.getElementById('_dp_copy');
+            btn.textContent = '✅ ¡Copiado!';
+            btn.style.background = '#1a7232';
+            setTimeout(() => { btn.textContent = '📋 Copiar JSON'; btn.style.background = '#28a745'; }, 2000);
+        });
+    });
+})();`;
+
+    const pre = document.getElementById('dp-script-to-copy');
+    if (pre) pre.textContent = script;
+}
+
+function copyDPScript() {
+    const code = document.getElementById('dp-script-to-copy')?.textContent || '';
+    navigator.clipboard.writeText(code);
+    ui.showCustomAlert('Código copiado al portapapeles. Pégalo en la consola de SFMC.');
+}
+
+function processDPJson(val) {
+    if (!val) return;
+    try {
+        const raw = JSON.parse(val);
+        dpMasterList = raw.map(p => ({
+            id:          p.id,
+            name:        p.name        || '---',
+            externalKey: p.externalKey || '---',
+            description: p.description || '---',
+            ipMode:      p.configuration?.ipMode    || '---',
+            ipAddress:   p.configuration?.ipAddress || '---',
+            header:      p.configuration?.header    || 'None',
+            footer:      p.configuration?.footer    || 'None',
+        }));
+        document.getElementById('dp-import-zone').classList.add('hidden');
+        document.getElementById('dp-table-zone').classList.remove('hidden');
+        currentPageDP = 1;
+        applyFiltersDP();
+    } catch (e) {
+        ui.showCustomAlert('Error al parsear el JSON. Revisa el formato.');
+    }
+}
+
+function applyFiltersDP() {
+    const nameF = document.getElementById('dpNameFilter').value.toLowerCase();
+    const ipF   = document.getElementById('dpIpFilter').value.toLowerCase();
+    dpFilteredList = dpMasterList.filter(p =>
+        (p.name.toLowerCase().includes(nameF) || p.externalKey.toLowerCase().includes(nameF)) &&
+        p.ipAddress.toLowerCase().includes(ipF)
+    );
+    renderTableDP();
+}
+
+function renderTableDP() {
+    sortData(dpFilteredList);
+    const paginated = dpFilteredList.slice((currentPageDP - 1) * ITEMS_PER_PAGE, currentPageDP * ITEMS_PER_PAGE);
+    const baseUrl = `https://members.${dpStack}.exacttarget.com/Content/Administration/SendManagement/DeliveryProfile.aspx?g=`;
+
+    document.getElementById('delivery-profiles-tbody').innerHTML = paginated.map(p => `
+        <tr>
+            <td style="text-align:left;">
+                <a href="${baseUrl}${p.id}" class="external-link"><b>${p.name}</b></a>
+                <br><small style="color:#888;">${p.externalKey}</small>
+            </td>
+            <td style="text-align:left;"><small>${p.description}</small></td>
+            <td>${p.ipMode}</td>
+            <td><code style="font-size:0.85em;">${p.ipAddress}</code></td>
+            <td>${p.header}</td>
+            <td>${p.footer}</td>
+        </tr>
+    `).join('');
+
+    updatePaginationUI('DP', dpFilteredList.length, currentPageDP);
+    updateGlobalCount();
 }
 
 function formatDate(ds) {
