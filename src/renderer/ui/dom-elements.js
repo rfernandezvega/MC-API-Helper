@@ -411,6 +411,13 @@ export function init() {
     elements.erdDownloadImgBtn = document.getElementById('erd-download-img-btn');
 
     elements.erdSfmcLink = document.getElementById('erd-sfmc-link'); 
+
+    // --- 28. SEND MANAGEMENT ---
+    elements.sendManagementSection = document.getElementById('sendManagement-section');
+    elements.sendClassificationsTbody = document.getElementById('send-classifications-tbody');
+    elements.senderProfilesTbody = document.getElementById('sender-profiles-tbody');
+    elements.refreshSendManagementBtn = document.getElementById('refreshSendManagementBtn');
+    elements.downloadSendManagementCsvBtn = document.getElementById('downloadSendManagementCsvBtn');
 }
 
 export default elements;

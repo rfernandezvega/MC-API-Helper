@@ -41,6 +41,7 @@ import * as automationAnalyzer from './components/automation-analyzer.js';
 import * as journeyAnalyzer from './components/journey-analyzer.js';
 import * as usersManager from './components/users-manager.js';
 import * as erdGenerator from './components/erd-generator.js';
+import * as sendManagement from './components/sendManagement.js';
 
 
 
@@ -427,6 +428,10 @@ document.addEventListener('DOMContentLoaded', function () {
 					showSection('erd-generator-section');
 					erdGenerator.view();
 				}
+				else if (macro === 'sendManagement') {
+					showSection('sendManagement-section');
+					sendManagement.view();
+				}
 			});
 		});
 
@@ -617,7 +622,8 @@ document.addEventListener('DOMContentLoaded', function () {
 		contentManager.init({ getAuthenticatedConfig });
 		usersManager.init({ getAuthenticatedConfig });
 		erdGenerator.init({ getAuthenticatedConfig });
-		
+		sendManagement.init({ getAuthenticatedConfig });
+
 		// Carga las configuraciones de cliente guardadas y arranca sin ninguna seleccionada.
 		orgManager.loadConfigsIntoSelect();
 		orgManager.loadAndSyncClientConfig('');

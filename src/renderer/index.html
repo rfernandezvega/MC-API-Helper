@@ -82,7 +82,8 @@
 					<li><a class="macro-item" data-macro="gestionCloudPages">Cloud Pages</a></li>
                     <li><a class="macro-item" data-macro="gestionContenidos">Contenidos</a></li>
                     <li><a class="macro-item" data-macro="usuarios">Usuarios</a></li>
-                    <li><a class="macro-item" data-macro="erdGenerator">Generador ERD</a></li>      
+                    <li><a class="macro-item" data-macro="erdGenerator">Generador ERD</a></li> 
+                    <li><a class="macro-item" data-macro="sendManagement">Gestión Envíos</a></li>     
 					<li><a class="macro-item" data-macro="carpetas">Crear Carpetas</a></li>   
 					<li><a class="macro-item" data-macro="validadorEmail">Validar Emails</a></li>          
 				</ul>
@@ -1261,8 +1262,8 @@
         <!-- PESTAÑA 1: INSTRUCCIONES -->
         <div id="erd-tab-instrucciones" class="tab-content active config-section-container erd-full-width">
             <div class="config-block erd-full-width">
-                <h3 style="color:#558ac7; margin-bottom: 15px;">1. Abrir Marketing Cloud</h3>
-                <p>Haz clic en el siguiente enlace para abrir la ruta base en tu navegador. Debes tener una sesión activa de Marketing Cloud en el cliente seleccionado.</p>
+                <h3 style="color:#558ac7; margin-bottom: 15px;">1. Abrir Contact Builder</h3>
+                <p>Una vez abierto, haz clic en el siguiente enlace para abrir la ruta base en tu navegador. Debes tener una sesión activa de Marketing Cloud en el cliente seleccionado.</p>
                 <a id="erd-sfmc-link" href="#" class="external-link" style="color:#69a3db; font-weight:bold; text-decoration: underline; cursor:pointer; display:inline-block; margin-bottom: 20px;">IR A LA API DE ATTRIBUTE GROUPS</a>
 
                 <h3 style="color:#558ac7; margin-bottom: 15px;">2. Ejecutar Script</h3>
@@ -2045,6 +2046,92 @@
     </div>
 </div>
 
+<div id="sendManagement-section" class="section">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>
+        <div class="header-actions">
+            <button id="refreshSendManagementBtn" class="action-button">Refrescar</button>
+            <button id="downloadSendManagementCsvBtn" class="action-button activate-btn">Exportar</button>
+        </div>
+    </div>
+
+    <h2>Gestión de Envíos <span id="send-management-count" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
+
+    <div class="tabs-container">
+        <div class="tab-buttons">
+            <button class="tab-button active" data-tab="tab-send-classifications">Send Classifications</button>
+            <button class="tab-button" data-tab="tab-sender-profiles">Sender Profiles</button>
+        </div>
+
+        <!-- Pestaña 1: Send Classifications -->
+        <div id="tab-send-classifications" class="tab-content active">
+            <div class="header-filters">
+                <input type="text" id="scNameFilter" class="filter-input" placeholder="Nombre o Key ( , ; | )">
+                <input type="text" id="scProfileFilter" class="filter-input" placeholder="Sender/Delivery Profile...">
+                <select id="scTypeFilter" class="filter-input">
+                    <option value="">Todos los tipos</option>
+                    <option value="Marketing">Comercial</option>
+                    <option value="Operational">Transaccional</option>
+                </select>
+            </div>
+            
+            <div class="table-container">
+                <table id="table-send-classifications">
+                    <thead>
+                        <tr>
+                            <th class="sortable-header" data-sort-by="name">Nombre / Key</th>
+                            <th class="sortable-header" data-sort-by="type">Tipo</th>
+                            <th class="sortable-header" data-sort-by="senderProfile">Sender Profile</th>
+                            <th class="sortable-header" data-sort-by="deliveryProfile">Delivery Profile</th>
+                            <th class="sortable-header" data-sort-by="modifiedDate">Modificado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="send-classifications-tbody"></tbody>
+                </table>
+            </div>
+
+            <div id="pagination-sc" class="pagination-controls">
+                <button id="prevPageBtnSC" class="action-button pagination-arrow">&laquo;</button>
+                <input type="number" id="pageInputSC" class="filter-input page-input" min="1">
+                <span id="totalPagesSC">/ 1</span>
+                <button id="nextPageBtnSC" class="action-button pagination-arrow">&raquo;</button>
+            </div>
+        </div>
+
+        <!-- Pestaña 2: Sender Profiles -->
+        <div id="tab-sender-profiles" class="tab-content">
+            <div class="header-filters">
+                <input type="text" id="spNameFilter" class="filter-input" placeholder="Nombre o Key...">
+                <input type="text" id="spFromNameFilter" class="filter-input" placeholder="From Name...">
+                <input type="text" id="spFromEmailFilter" class="filter-input" placeholder="From Email...">
+            </div>
+
+            <div class="table-container">
+                <table id="table-sender-profiles">
+                    <thead>
+                        <tr>
+                            <th class="sortable-header" data-sort-by="name">Nombre / Key</th>
+                            <th class="sortable-header" data-sort-by="fromName">From Name</th>
+                            <th class="sortable-header" data-sort-by="fromAddress">From Email</th>
+                            <th class="sortable-header" data-sort-by="autoReply">Auto-Reply</th>
+                            <th class="sortable-header" data-sort-by="autoForwardEmail">Forward To</th>
+                            <th class="sortable-header" data-sort-by="modifiedDate">Modificado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sender-profiles-tbody"></tbody>
+                </table>
+            </div>
+
+            <div id="pagination-sp" class="pagination-controls">
+                <button id="prevPageBtnSP" class="action-button pagination-arrow">&laquo;</button>
+                <input type="number" id="pageInputSP" class="filter-input page-input" min="1">
+                <span id="totalPagesSP">/ 1</span>
+                <button id="nextPageBtnSP" class="action-button pagination-arrow">&raquo;</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="gestion-usuarios-section" class="section">
     <div class="section-header">
         <button class="back-button">← Atrás</button>
@@ -2099,16 +2186,22 @@
             <table id="users-table" class="um-table">
                 <thead>
                     <tr>
-                        <th class="um-sortable" data-sort-by="name">Nombre (ID) ↕</th>
-                        <th class="um-sortable" data-sort-by="userName">UserName ↕</th>
-                        <th class="um-sortable" data-sort-by="isApi">API User ↕</th>
-                        <th class="um-sortable" data-sort-by="lastLogin">Último Login ↕</th>
-                        <th class="um-sortable" data-sort-by="isActive">Estado ↕</th>
+                        <th class="um-sortable" data-sort-by="name">Nombre (ID)</th>
+                        <th class="um-sortable" data-sort-by="userName">UserName</th>
+                        <th class="um-sortable" data-sort-by="isApi">API User</th>
+                        <th class="um-sortable" data-sort-by="lastLogin">Último Login</th>
+                        <th class="um-sortable" data-sort-by="isActive">Estado</th>
                         <th>Roles</th>
                     </tr>
                 </thead>
                 <tbody id="users-tbody"></tbody>
             </table>
+        </div>
+        <div id="pagination-users" class="pagination-controls">
+            <button id="prevPageBtnUsers" class="action-button pagination-arrow">&laquo;</button>
+            <input type="number" id="pageInputUsers" class="filter-input page-input" min="1">
+            <span id="totalPagesUsers">/ 1</span>
+            <button id="nextPageBtnUsers" class="action-button pagination-arrow">&raquo;</button>
         </div>
     </div>
 

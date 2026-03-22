@@ -819,3 +819,57 @@ td a:hover { color: #003366; text-decoration: underline; }
 .js-string { color: #98c379; }
 .js-comment { color: #5c6370; font-style: italic; }
 .js-number { color: #d19a66; }
+
+/* ============================================================
+   GESTIÓN DE ENVÍOS (SEND MANAGEMENT) - ESTILO FINAL
+   ============================================================ */
+#sendManagement-section .tab-content.active {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+#sendManagement-section .table-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+#sendManagement-section table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#sendManagement-section th, 
+#sendManagement-section td {
+    border: 1px solid #b9d4e7;
+    padding: 10px;
+    text-align: center;
+    word-wrap: break-word;
+}
+
+#sendManagement-section th {
+    background-color: #69a3db;
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+#sendManagement-section .um-status-pill {
+    padding: 2px 10px;
+    font-size: 10px;
+    border-radius: 12px;
+    display: inline-block;
+    font-weight: bold;
+    color: white;
+    text-transform: uppercase;
+}
+
+#sendManagement-section .table-container::-webkit-scrollbar {
+    width: 8px;
+}
+#sendManagement-section .table-container::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}

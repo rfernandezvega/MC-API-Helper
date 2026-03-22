@@ -82,7 +82,8 @@
 					<li><a class="macro-item" data-macro="gestionCloudPages">Cloud Pages</a></li>
                     <li><a class="macro-item" data-macro="gestionContenidos">Contenidos</a></li>
                     <li><a class="macro-item" data-macro="usuarios">Usuarios</a></li>
-                    <li><a class="macro-item" data-macro="erdGenerator">Generador ERD</a></li>      
+                    <li><a class="macro-item" data-macro="erdGenerator">Generador ERD</a></li> 
+                    <li><a class="macro-item" data-macro="sendManagement">Gestión Envíos</a></li>     
 					<li><a class="macro-item" data-macro="carpetas">Crear Carpetas</a></li>   
 					<li><a class="macro-item" data-macro="validadorEmail">Validar Emails</a></li>          
 				</ul>

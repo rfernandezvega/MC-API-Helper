@@ -14,8 +14,11 @@ let currentSortColumn = 'name';
 let currentSortDirection = 'asc';
 let statusFilter = 'all';
 let selectedRoles = new Set();
+const ITEMS_PER_PAGE = 10;
+let currentPageUsers = 1;
 
 let importedData = [];
+let _lastFilteredCount = 0;
 let onlyDiffsActive = false;
 let isExpanded = true;
 
@@ -58,6 +61,19 @@ function _bind() {
             switchTab(btn.dataset.umTab);
         })
     );
+
+    $id('prevPageBtnUsers')?.addEventListener('click', () => {
+        if (currentPageUsers > 1) { currentPageUsers--; renderUserTable(); }
+    });
+    $id('nextPageBtnUsers')?.addEventListener('click', () => {
+        currentPageUsers++;
+        renderUserTable();
+    });
+    $id('pageInputUsers')?.addEventListener('change', e => {
+        const total = Math.ceil(_lastFilteredCount / ITEMS_PER_PAGE) || 1;
+        currentPageUsers = Math.max(1, Math.min(parseInt(e.target.value) || 1, total));
+        renderUserTable();
+    });
 
     // Cerrar dropdown al hacer clic fuera
     document.addEventListener('mousedown', e => {
@@ -159,12 +175,18 @@ function renderUserTable() {
         return nameMatch && statusMatch && roleMatch;
     });
 
+    // Si el filtro cambió (distinto total), volver a página 1
+    if (data.length !== _lastFilteredCount) currentPageUsers = 1;
+    _lastFilteredCount = data.length;
+
     sortData(data);
+
+    const paginated = data.slice((currentPageUsers - 1) * ITEMS_PER_PAGE, currentPageUsers * ITEMS_PER_PAGE);
 
     const tbody = $id('users-tbody');
     if (!tbody) return;
 
-    tbody.innerHTML = data.map(u => `
+    tbody.innerHTML = paginated.map(u => `
         <tr data-id="${u.id}" class="${selectedUserIds.includes(u.id) ? 'um-selected' : ''}">
             <td style="text-align:left;"><b>${u.name}</b><br><small style="color:#888;">${u.id}</small></td>
             <td style="text-align:left;">${u.userName}</td>
@@ -176,6 +198,16 @@ function renderUserTable() {
     `).join('');
 
     updateSortIndicators();
+    _updatePaginationUI();
+}
+
+function _updatePaginationUI() {
+    const total = Math.ceil(_lastFilteredCount / ITEMS_PER_PAGE) || 1;
+    if (currentPageUsers > total) currentPageUsers = total;
+    $id('totalPagesUsers').textContent = `/ ${total}`;
+    $id('pageInputUsers').value = currentPageUsers;
+    $id('prevPageBtnUsers').disabled = currentPageUsers === 1;
+    $id('nextPageBtnUsers').disabled = currentPageUsers >= total;
 }
 
 // Selección: SOLO manipula clases, nunca llama a renderUserTable
