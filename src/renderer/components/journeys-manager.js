@@ -724,19 +724,40 @@ function handleSort(e) {
  */
 function sortData(data) {
     data.sort((a, b) => {
-        let valA = a[currentSortColumn];
-        let valB = b[currentSortColumn];
+        let valA, valB;
+
+        // La fecha de actividad está anidada en a.activity.lastContactProcessed,
+        // no directamente en a['activity'], así que la extraemos explícitamente.
+        if (currentSortColumn === 'activityDate') {
+            valA = a.activity?.lastContactProcessed ?? null;
+            valB = b.activity?.lastContactProcessed ?? null;
+        } else {
+            valA = a[currentSortColumn];
+            valB = b[currentSortColumn];
+        }
+
         const direction = currentSortDirection === 'asc' ? 1 : -1;
-        
+
+        // Nulls siempre al final, sin importar la dirección de orden
+        if (valA == null && valB == null) return 0;
         if (valA == null) return 1;
         if (valB == null) return -1;
 
-        if (currentSortColumn.includes('Date')) {
+        // Fechas: columnas con 'Date' en el nombre + la columna de actividad
+        if (currentSortColumn.includes('Date') || currentSortColumn === 'activityDate') {
             return (new Date(valA) - new Date(valB)) * direction;
         }
+
         if (typeof valA === 'boolean') {
             return (valA === valB ? 0 : valA ? -1 : 1) * direction;
         }
+
+        // Si ambos valores son números (ej: version), comparar como número,
+        // no como string — evita que "10" < "2" por orden alfabético.
+        if (typeof valA === 'number' && typeof valB === 'number') {
+            return (valA - valB) * direction;
+        }
+
         return String(valA).localeCompare(String(valB), undefined, { sensitivity: 'base' }) * direction;
     });
 }
