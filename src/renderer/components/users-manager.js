@@ -1,6 +1,7 @@
 import * as mcApiService from '../api/mc-api-service.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
+import elements from '../ui/dom-elements.js';
 
 // Scope raíz de toda la sección — todos los querySelector van contra este nodo
 const ROOT_ID = 'gestion-usuarios-section';
@@ -311,8 +312,8 @@ function updateRoleDropdownLabel() {
 function generateInstructions() {
     if (selectedUserIds.length === 0) return;
 
-    const stack = $id('stackKey')?.value?.match(/s\d+/)?.[0] || 's50';
-    const sfmcUrl = `https://members.${stack}.exacttarget.com/Content/Administration/Users/UserListing.aspx`;
+    const stackNumber = (elements.stackKeyInput?.value || '').replace(/S/i, '') || '50';
+    const sfmcUrl = `https://members.s${stackNumber}.exacttarget.com/Content/Administration/Users/UserListing.aspx`;
     const sfmcLink = $id('users-sfmc-link');
     if (sfmcLink) {
         sfmcLink.dataset.url = sfmcUrl;

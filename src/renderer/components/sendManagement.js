@@ -167,8 +167,8 @@ function renderTableSP() {
 
         return `<tr>
             <td style="text-align:left;"><a href="${baseUrl}${item.id}" class="external-link"><b>${item.name}</b></a><br><small style="color:#888;">${item.customerKey}</small></td>
-            <td>${item.fromName}</td>
-            <td>${item.fromAddress}</td>
+            <td style="text-align:left; word-break:break-word; min-width:100px;">${item.fromName}</td>
+            <td style="text-align:left; word-break:break-word; min-width:120px;">${item.fromAddress}</td>
             <td style="text-align:left; font-size: 0.9em;">${autoReplyHtml}</td>
             <td style="text-align:left;"><small><b>Name:</b> ${item.autoForwardName}</small><br><small><b>Email:</b> ${item.autoForwardEmail}</small></td>
             <td>${formatDate(item.modifiedDate)}</td>
@@ -243,9 +243,8 @@ function downloadCSV() {
 // ============================================================
 
 function initDPTab(apiConfig) {
-    // Extrae el stack desde la soapUri, e.g. "...s50.exacttarget.com..." → "s50"
-    const stackMatch = (apiConfig.soapUri || '').match(/\.(s\d+)\./);
-    dpStack = stackMatch ? stackMatch[1] : 's50';
+    const stackNumber = (elements.stackKeyInput?.value || '').replace(/S/i, '') || '50';
+    dpStack = `s${stackNumber}`;
 
     const listingUrl = `https://members.${dpStack}.exacttarget.com/Content/Administration/SendManagement/DeliveryProfileListing.aspx`;
     const link = document.getElementById('dp-sfmc-link');

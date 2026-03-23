@@ -846,6 +846,7 @@ td a:hover { color: #003366; text-decoration: underline; }
     padding: 10px;
     text-align: center;
     word-wrap: break-word;
+    font-size: 0.85em;
 }
 
 #sendManagement-section th {
