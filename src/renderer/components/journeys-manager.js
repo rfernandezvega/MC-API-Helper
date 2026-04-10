@@ -210,8 +210,7 @@ async function fetchData() {
         logger.logMessage("Cargando lista de Journeys y dependencias...");
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
-
-        // fetchAllEventDefinitions ahora devuelve un array completo, como debe ser.
+        
         const [allEventDefs, journeysResponse] = await Promise.all([
             mcApiService.fetchAllEventDefinitions(apiConfig),
             mcApiService.fetchAllJourneys(apiConfig)

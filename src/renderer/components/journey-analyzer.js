@@ -624,7 +624,7 @@ function renderActivities(activities, numberMap) {
         `;
 
         const wrapper = document.createElement('div');
-        wrapper.innerHTML = createCollapsibleHtml(`#${logicNumber} - ${act.name}`, innerContent, `act-${act.key}`, false);
+        wrapper.innerHTML = createCollapsibleHtml(`#${logicNumber} - [${act.type}] ${act.name}`, innerContent, `act-${act.key}`, false);
         container.appendChild(wrapper);
     });
 }
