@@ -1100,7 +1100,7 @@ async function analyzeDeUsageInFilteredJourneys() {
     const journeysToProcess = currentFilteredList;
     if (journeysToProcess.length === 0) return;
 
-    if (!await ui.showCustomConfirm(`Vas a analizar las DEs en ${journeysToProcess.length} journeys? Es una acción que realiza muchas llamadas a la API y que no hay que ejecutaar constantemente. ¿Deseas continuar?`)) return;
+    if (!await ui.showCustomConfirm(`Vas a analizar las DEs en ${journeysToProcess.length} journeys? Es una acción que realiza muchas llamadas a la API y que no hay que ejecutar constantemente. ¿Deseas continuar?`)) return;
 
     const total = journeysToProcess.length;
     let actual = 0;
