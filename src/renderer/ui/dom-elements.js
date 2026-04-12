@@ -199,6 +199,7 @@ export function init() {
     elements.pageInputJourneys = document.getElementById('pageInputJourneys');
     elements.totalPagesJourneys = document.getElementById('totalPagesJourneys');
     elements.analyzeJourneyBtn = document.getElementById('analyzeJourneyBtn');
+    elements.scanDeUsageBtn = document.getElementById('scanDeUsageBtn');
     elements.journeyCommModal = document.getElementById('journey-comm-modal');
     elements.journeyCommMessage = document.getElementById('journey-comm-message');
     elements.journeyCommSelectedBtn = document.getElementById('journey-comm-selected-btn');

@@ -25,6 +25,13 @@ let showJourneyAnalyzerView;
 
 let lastSelectedIndex = -1;
 
+
+let scanDeCache = new Map(); 
+const TARGET_DE_ACTIVITIES = [
+    'MULTICRITERIADECISION', 'UPDATECONTACTDATA', 'MULTICRITERIADECISIONEXTENSION', 
+    'SALESCLOUDACTIVITY', 'OBJECTACTIVITY', 'DECISION', 'CONTACTUPDATE'
+];
+
 // --- 2. FUNCIONES DE RENDERIZADO Y LÓGICA DE TABLA ---
 
 /**
@@ -53,7 +60,13 @@ function applyFiltersAndRender() {
     if (statusFilter) filtered = filtered.filter(j => j.status === statusFilter);
 
     const deFilter = elements.journeyDEFilter.value.toLowerCase().trim();
-    if (deFilter) filtered = filtered.filter(j => j.dataExtensionName && j.dataExtensionName.toLowerCase().includes(deFilter));
+    if (deFilter) {
+        filtered = filtered.filter(j => {
+            const entryDeMatch = j.dataExtensionName && j.dataExtensionName.toLowerCase().includes(deFilter);
+            const activityDeMatch = j.usedDEs && j.usedDEs.toLowerCase().includes(deFilter);
+            return entryDeMatch || activityDeMatch;
+        });
+    }
 
     currentFilteredList = filtered; // Guardamos la lista filtrada
     updateJourneyCount(); // Actualizamos el contador
@@ -91,6 +104,9 @@ function renderTable(journeys) {
             <td>${j.definitionType || '---'}</td>
             <td>${j.status || '---'}</td> 
             <td>${j.dataExtensionName || '---'}</td>
+            <td style="font-size: 0.85em; color: #333; text-align: left !important; vertical-align: middle; padding: 10px; min-width: 200px;">
+                ${j.usedDEs ? j.usedDEs : '<span style="color:#ddd;">---</span>'}
+            </td>
             <td>${j.hasCommunications ? 'Sí' : 'No'}</td> 
             <td>${j.emails.join(', ')}</td>
             <td>${j.sms.join(', ')}</td> 
@@ -126,6 +142,7 @@ export function init(dependencies) {
     elements.downloadJourneysCsvBtn.addEventListener('click', downloadJourneysCsv);
     elements.refreshJourneysTableBtn.addEventListener('click', refreshData);
     elements.getCommunicationsBtn.addEventListener('click', handleCommunicationsAction);
+    elements.scanDeUsageBtn.addEventListener('click', analyzeDeUsageInFilteredJourneys);
 
     elements.copyJourneyBtn.addEventListener('click', copyJourney);
     elements.stopJourneyBtn.addEventListener('click', stopJourneys);
@@ -1018,8 +1035,8 @@ function downloadJourneysCsv() {
         return;
     }
 
-    const headers = ['Nombre Journey', 'Versión', 'Fecha creación', 'Fecha modificación', 'Fecha actividad', 'Tipo', 'Subtipo', 'Estado', 'Data Extension', 'Descargado', 'Emails', 'SMSs', 'Pushes', 'Whatsapps'];
-    
+    const headers = ['Nombre Journey', 'Versión', 'Fecha creación', 'Fecha modificación', 'Fecha actividad', 'Tipo', 'Subtipo', 'Estado', 'Data Extension', 'DEs en Actividades', 'Descargado', 'Emails', 'SMSs', 'Pushes', 'Whatsapps'];
+
     const sortedData = [...currentFilteredList]; // Copiamos para no modificar la original
     sortData(sortedData); // Usamos la función de ordenación existente
     
@@ -1033,6 +1050,7 @@ function downloadJourneysCsv() {
         `"${j.definitionType || ''}"`,
         `"${j.status || ''}"`,
         `"${j.dataExtensionName || ''}"`,
+        `"${j.usedDEs || ''}"`,
         `"${j.hasCommunications ? 'Sí' : 'No'}"`,
         `"${j.emails.join(' | ')}"`,
         `"${j.sms.join(' | ')}"`,
@@ -1072,4 +1090,151 @@ async function handleCommunicationsAction() {
     } else if (choice === 'all') {
         await getAllCommunications(); // Llama a la lógica existente de todos
     }
+}
+
+/**
+ * Analiza las actividades de los journeys filtrados para buscar DEs u Objetos SF.
+ * Utiliza lógica de resolución de nombres igual que el Journey Analyzer.
+ */
+async function analyzeDeUsageInFilteredJourneys() {
+    const journeysToProcess = currentFilteredList;
+    if (journeysToProcess.length === 0) return;
+
+    if (!await ui.showCustomConfirm(`Vas a analizar las DEs en ${journeysToProcess.length} journeys? Es una acción que realiza muchas llamadas a la API y que no hay que ejecutaar constantemente. ¿Deseas continuar?`)) return;
+
+    const total = journeysToProcess.length;
+    let actual = 0;
+    ui.blockUI(`Escaneando 0 de ${total}...`);
+    logger.startLogBuffering();
+
+    try {
+        const apiConfig = await getAuthenticatedConfig();
+        mcApiService.setLogger(logger);
+
+        for (const journey of journeysToProcess) {
+            actual++;
+            ui.blockUI(`Escaneando ${actual} de ${total} Journeys...`);
+            
+            const details = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
+            const activities = details.activities || [];
+            const journeyUniqueDEs = new Set(); 
+
+            for (const act of activities) {
+                // Filtramos por las actividades que nos interesan
+                if (TARGET_DE_ACTIVITIES.includes(act.type) || act.type.includes('DECISION')) {
+                    
+                    // CASO A: Update Contact
+                    if (act.arguments?.activityData?.updateContactFields) {
+                        const deId = act.arguments.activityData.updateContactFields[0]?.dataExtensionId;
+                        const name = await resolveDeNameForScan(deId, apiConfig, journey.dataExtensionName, 'ObjectID');
+                        if (name) journeyUniqueDEs.add(name);
+                    }
+                    
+                    // CASO B: Salesforce Activities
+                    if (act.arguments?.objectMap?.objects) {
+                        act.arguments.objectMap.objects.forEach(obj => {
+                            (obj.fields || []).forEach(f => {
+                                const m = f.FieldValue?.match(/{{(?:Event|Contact|Attribute)\.([^.]+)\./i);
+                                if (m) journeyUniqueDEs.add(m[1]); // No hace falta await aquí si ya sabemos que resolverá
+                            });
+                        });
+                    }
+
+                    // CASO C: Decision Splits (Análisis XML mejorado)
+                    if (act.configurationArguments?.criteria) {
+                        for (const xml of Object.values(act.configurationArguments.criteria)) {
+                            // Esta RegEx busca lo que hay entre comillas en Key="Nombre.Campo" 
+                            // o patrones de Nombre.Campo. Es más efectiva en XML.
+                            const keys = xml.match(/Key="([^.]+)\./g) || xml.match(/(?:Event\.|Contact\.|Attribute\.)([^.]+)\./gi);
+                            if (keys) {
+                                for (let k of keys) {
+                                    const raw = k.replace('Key="', '').replace('Event.', '').replace('Contact.', '').replace('Attribute.', '').replace('.', '');
+                                    const name = await resolveDeNameForScan(raw, apiConfig, journey.dataExtensionName, 'CustomerKey');
+                                    if (name) journeyUniqueDEs.add(name);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // Eliminamos el nombre de la DE de entrada de la lista de "Used" para que esté más limpio
+            // ya que esa ya tiene su propia columna
+            journeyUniqueDEs.delete(journey.dataExtensionName);
+
+            const resolvedSet = new Set();
+            for (let id of journeyUniqueDEs) {
+                const resolved = await resolveDeNameForScan(id, apiConfig, journey.dataExtensionName, 'CustomerKey');
+                if (resolved) resolvedSet.add(resolved);
+            }
+
+            // 2. Eliminamos la DE de entrada de la lista (porque ya tiene su propia columna)
+            resolvedSet.delete(journey.dataExtensionName);
+
+            // 3. Limpiamos, filtramos vacíos y ordenamos
+            const finalSortedList = Array.from(resolvedSet)
+                .map(n => n.trim())
+                .filter(n => n.length > 0)
+                .sort();
+            
+            // UNIMOS POR PIPE para que sea una sola línea plana
+            journey.usedDEs = finalSortedList.join(' | ');
+        }
+        ui.showCustomAlert("Escaneo completado.");
+    } catch (error) {
+        ui.showCustomAlert(`Error: ${error.message}`);
+    } finally {
+        renderFilteredTable();
+        ui.unblockUI();
+        logger.endLogBuffering();
+    }
+}
+
+
+/**
+ * Traduce IDs técnicos o nombres de Contact Data. 
+ * Si detecta que es el origen del Journey, usa el nombre de entrada.
+ */
+async function resolveDeNameForScan(technicalId, apiConfig, entryDeName, type = 'CustomerKey') {
+    if (!technicalId) return null;
+    
+    // 1. LIMPIEZA: Quitamos comillas, saltos de línea y prefijos de sistema
+    let cleanId = technicalId
+        .replace(/["']/g, '')             // Elimina comillas " y '
+        .replace(/Key=/i, '')             // Elimina Key= (común en XML)
+        .replace(/^Event\./i, '')
+        .replace(/^Contact\./i, '')
+        .replace(/^Attribute\./i, '')
+        .replace(/^Attribute\s+/i, '')
+        .replace(/[\r\n\t]/g, '')         // Elimina basura invisible
+        .trim();
+
+    // 2. Si después de limpiar queda algo como "Tabla.Campo", nos quedamos con "Tabla"
+    if (cleanId.includes('.')) {
+        cleanId = cleanId.split('.')[0];
+    }
+
+    // 3. DETECCIÓN DE ORIGEN (ENTRY SOURCE)
+    // Cualquier cosa que empiece por estos prefijos es la DE de entrada
+    const entryPrefixes = ['DEAudience-', 'AutomationAud-', 'APIEvent-', 'SalesforceObj'];
+    const isEntrySource = entryPrefixes.some(p => cleanId.startsWith(p));
+
+    if (isEntrySource) {
+        return entryDeName; // Devolvemos el nombre de la columna principal
+    }
+
+    // 4. Si no es el origen, buscamos en caché o API
+    if (scanDeCache.has(cleanId)) return scanDeCache.get(cleanId);
+
+    if (cleanId.includes('-') || (cleanId.startsWith('SalesforceObj') && cleanId.length > 20)) {
+        try {
+            const name = await mcApiService.fetchDataExtensionName(type, cleanId, apiConfig);
+            if (name && name !== cleanId) {
+                const finalName = name.replace(/[\r\n\t]/g, '').trim();
+                scanDeCache.set(cleanId, finalName);
+                return finalName;
+            }
+        } catch (e) {}
+    }
+
+    return cleanId;
 }
