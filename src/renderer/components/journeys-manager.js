@@ -13,8 +13,8 @@ let eventDefinitionsMap = {};
 let journeyFolderMap = {};
 
 let currentPage = 1;
-let currentSortColumn = 'name';
-let currentSortDirection = 'asc';
+let currentSortColumn = 'modifiedDate';
+let currentSortDirection = 'desc';
 const ITEMS_PER_PAGE = 15;
 
 let currentFilteredList = []; 
