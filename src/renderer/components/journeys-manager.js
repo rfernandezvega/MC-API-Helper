@@ -25,6 +25,8 @@ let showJourneyAnalyzerView;
 
 let lastSelectedIndex = -1;
 
+let isDeColumnVisible = false;
+
 
 let scanDeCache = new Map(); 
 const TARGET_DE_ACTIVITIES = [
@@ -104,14 +106,13 @@ function renderTable(journeys) {
             <td>${j.definitionType || '---'}</td>
             <td>${j.status || '---'}</td> 
             <td>${j.dataExtensionName || '---'}</td>
-            <td style="font-size: 0.85em; color: #333; text-align: left !important; vertical-align: middle; padding: 10px; min-width: 200px;">
+            <td class="col-des" style="font-size: 0.85em; color: #333; text-align: left !important; vertical-align: middle; padding: 10px; min-width: 200px;">
                 ${j.usedDEs ? j.usedDEs : '<span style="color:#ddd;">---</span>'}
             </td>
-            <td>${j.hasCommunications ? 'Sí' : 'No'}</td> 
-            <td>${j.emails.join(', ')}</td>
-            <td>${j.sms.join(', ')}</td> 
-            <td>${j.pushes.join(', ')}</td> 
-            <td>${j.whatsapps.join(', ')}</td>
+            <td class="col-comm">${j.emails.join(', ')}</td>
+            <td class="col-comm">${j.sms.join(', ')}</td> 
+            <td class="col-comm">${j.pushes.join(', ')}</td> 
+            <td class="col-comm">${j.whatsapps.join(', ')}</td>
         `;
         elements.journeysTbody.appendChild(row);
     });
@@ -119,6 +120,7 @@ function renderTable(journeys) {
     updatePaginationUI(journeys.length);
     updateSortIndicators();
     updateButtonsState();
+    updateColumnsVisibility();
 }
 
 // --- 3. FUNCIONES PÚBLICAS (API del Módulo) ---
@@ -213,6 +215,9 @@ export function clearCache() {
     elements.journeyStatusFilter.innerHTML = '<option value="">Todos los estados</option>';
     elements.journeyDEFilter.value = '';
     elements.journeysTbody.innerHTML = '';
+
+    isDeColumnVisible = false;
+    document.querySelectorAll('.col-comm, .col-des').forEach(el => el.style.display = 'none');
 }
 
 // --- 4. LÓGICA DE DATOS Y API ---
@@ -397,31 +402,37 @@ async function getCommunications() {
  * Obtiene los detalles de las comunicaciones para TODOS los journeys cargados.
  */
 async function getAllCommunications() {
-    const totalJourneys = fullJourneyList.length;
-    if (totalJourneys === 0) return;
+    // 1. Usamos la lista filtrada actual
+    const journeysToProcess = currentFilteredList;
+    const totalCount = journeysToProcess.length;
 
-    // 1. Aviso de confirmación
-    const msg = `Vas a obtener las comunicaciones de los ${totalJourneys} journeys cargados. 
-                 Este proceso realiza muchas peticiones a la API y puede tardar varios minutos dependiendo del tamaño de los journeys. 
-                 ¿Deseas continuar?`;
+    if (totalCount === 0) {
+        ui.showCustomAlert("No hay journeys en la lista actual para procesar.");
+        return;
+    }
+
+    const msg = `Vas a obtener las comunicaciones de los ${totalCount} journeys filtrados. 
+                 Este proceso puede tardar un poco. ¿Deseas continuar?`;
     
     if (!await ui.showCustomConfirm(msg)) return;
 
-    ui.blockUI(`Procesando ${totalJourneys} Journeys...`);
+    ui.blockUI(`Procesando 0 de ${totalCount}...`);
     logger.startLogBuffering();
 
     try {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
 
-        logger.logMessage(`Iniciando descarga masiva de comunicaciones para ${totalJourneys} journeys...`);
+        let processed = 0;
+        // 2. Procesamos uno a uno para evitar colapsar la API/App
+        for (const journey of journeysToProcess) {
+            processed++;
+            if (processed % 5 === 0) { // Actualizamos el mensaje del loader cada 5
+                ui.blockUI(`Procesando ${processed} de ${totalCount}...`);
+            }
 
-        // Usamos Promise.all para ejecutar en paralelo (igual que el código que tenías comentado)
-        const communicationPromises = fullJourneyList.map(async (journey) => {
-            try {
-                // Solo descargamos si no las tiene ya
-                if (!journey.hasCommunications) {
-                    logger.logMessage(`Obteniendo actividades para: "${journey.name}"`);
+            if (!journey.hasCommunications) {
+                try {
                     const details = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
                     const comms = parseJourneyActivities(details.activities);
                     Object.assign(journey, { 
@@ -429,23 +440,21 @@ async function getAllCommunications() {
                         activities: details.activities || [], 
                         hasCommunications: true 
                     });
+                } catch (err) {
+                    logger.logMessage(`Error en "${journey.name}": ${err.message}`);
+                    journey.hasCommunications = false;
                 }
-            } catch (error) {
-                logger.logMessage(` -> ERROR en "${journey.name}": ${error.message}`);
-                journey.hasCommunications = false; 
             }
-        });
-
-        await Promise.all(communicationPromises);
+        }
         
-        logger.logMessage("Descarga masiva completada.");
-        ui.showCustomAlert("Se han procesado todas las comunicaciones.");
+        ui.showCustomAlert(`Proceso completado: ${totalCount} journeys analizados.`);
 
     } catch (error) {
         logger.logMessage(`Error general: ${error.message}`);
         ui.showCustomAlert(`Error: ${error.message}`);
     } finally {
-        applyFiltersAndRender(); // Refrescar la tabla para ver los cambios
+        // 3. Renderizamos la tabla SIN resetear la página actual
+        renderFilteredTable(); 
         ui.unblockUI();
         logger.endLogBuffering();
     }
@@ -1108,6 +1117,7 @@ async function analyzeDeUsageInFilteredJourneys() {
     logger.startLogBuffering();
 
     try {
+        isDeColumnVisible = true;
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
 
@@ -1237,4 +1247,18 @@ async function resolveDeNameForScan(technicalId, apiConfig, entryDeName, type = 
     }
 
     return cleanId;
+}
+
+function updateColumnsVisibility() {
+    const hasAnyComm = fullJourneyList.some(j => j.hasCommunications === true);
+
+    // 1. Mostrar/Ocultar Comunicaciones
+    document.querySelectorAll('.col-comm').forEach(el => {
+        el.style.setProperty('display', hasAnyComm ? 'table-cell' : 'none', 'important');
+    });
+
+    // 2. Mostrar/Ocultar DEs (Usando el interruptor que acabamos de crear)
+    document.querySelectorAll('.col-des').forEach(el => {
+        el.style.setProperty('display', isDeColumnVisible ? 'table-cell' : 'none', 'important');
+    });
 }

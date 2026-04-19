@@ -11,8 +11,8 @@ const $id = (id) => document.getElementById(id);
 
 let usersMasterList = [];
 let selectedUserIds = [];   // máximo 2 elementos
-let currentSortColumn = 'name';
-let currentSortDirection = 'asc';
+let currentSortColumn = 'lastLogin';
+let currentSortDirection = 'desc';
 let statusFilter = 'all';
 let selectedRoles = new Set();
 const ITEMS_PER_PAGE = 10;
