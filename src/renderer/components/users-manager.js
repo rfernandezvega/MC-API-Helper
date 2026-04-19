@@ -148,6 +148,7 @@ async function refreshData() {
         buildRoleFilterDropdown();
         renderUserTable();
         updateButtons();
+        updateUserCount();
         setExpandControlsVisible(false);
     } catch (error) {
         ui.showCustomAlert(error.message);
@@ -179,6 +180,8 @@ function renderUserTable() {
     // Si el filtro cambió (distinto total), volver a página 1
     if (data.length !== _lastFilteredCount) currentPageUsers = 1;
     _lastFilteredCount = data.length;
+
+    updateUserCount();
 
     sortData(data);
 
@@ -522,4 +525,13 @@ function toggleExpandCollapse() {
     $$('#users-permissions-container .um-t-icon').forEach(i => i.textContent = isExpanded ? '[-]' : '[+]');
     const btn = $id('btn-expand-perms');
     if (btn) btn.textContent = isExpanded ? 'Colapsar Todo' : 'Expandir Todo';
+}
+
+function updateUserCount() {
+    const total = usersMasterList.length;
+    const filtered = _lastFilteredCount;
+    const countEl = $id('userCount');
+    if (countEl) {
+        countEl.textContent = `(${filtered} de ${total})`;
+    }
 }
