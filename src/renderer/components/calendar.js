@@ -48,21 +48,27 @@ export function init(dependencies) {
 /**
  * Prepara y muestra la vista del calendario.
  */
-export function view() {
+export async function view() {
     populateCalendarYearSelect();
 
-    const savedDataRaw = localStorage.getItem('calendarAutomations');
-    if (savedDataRaw) {
-        const savedData = JSON.parse(savedDataRaw);
-        if (savedData.client === elements.clientNameInput.value) {
-            allScheduledAutomations = savedData.automations;
-            calendarDataForClient = savedData.client;
-            logger.logMessage(`${allScheduledAutomations.length} automatismos cargados de memoria para el calendario.`);
-            generateCalendar();
-            return;
-        }
+    const currentClient = elements.clientNameInput.value;
+    if (!currentClient) {
+        clearData();
+        return;
     }
-    clearData(); // Limpia si no hay datos o son de otro cliente
+
+    // CARGA DESDE DISCO
+    const savedData = await window.electronAPI.loadCalendarCache(currentClient);
+    
+    if (savedData) {
+        allScheduledAutomations = savedData.automations;
+        calendarDataForClient = savedData.client;
+        logger.logMessage(`${allScheduledAutomations.length} automatismos cargados desde disco.`);
+        generateCalendar();
+        return;
+    }
+    
+    clearData(); 
 }
 
 /**
@@ -94,19 +100,20 @@ async function refreshAutomations(journeysOnly) {
 
         if (journeysOnly) {
             scheduledItems = scheduledItems.filter(auto => auto.processes?.some(proc => proc.workerCounts?.some(wc => wc.objectTypeId === 952)));
-            logger.logMessage(`Se encontraron ${scheduledItems.length} automatismos de Journeys programados.`);
-        } else {
-            logger.logMessage(`Se encontraron ${scheduledItems.length} automatismos programados.`);
         }
 
         processAndStoreAutomations(scheduledItems);
 
         const currentClient = elements.clientNameInput.value;
-        localStorage.setItem('calendarAutomations', JSON.stringify({ client: currentClient, automations: allScheduledAutomations }));
-        calendarDataForClient = currentClient;
         
+        await window.electronAPI.saveCalendarCache({ 
+            clientName: currentClient, 
+            data: { client: currentClient, automations: allScheduledAutomations } 
+        });
+
+        calendarDataForClient = currentClient;
         generateCalendar();
-        logger.logMessage(`Calendario actualizado con ${allScheduledAutomations.length} ítems.`);
+        logger.logMessage(`Calendario actualizado y guardado en disco (${allScheduledAutomations.length} ítems).`);
     } catch (e) {
         logger.logMessage(`Error al refrescar datos del calendario: ${e.message}`);
         ui.showCustomAlert(`Error: ${e.message}`);

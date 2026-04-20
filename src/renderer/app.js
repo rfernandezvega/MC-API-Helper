@@ -394,7 +394,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 				else if (macro === 'calendario'){
                     showSection('calendario-section');
-                    calendar.view();
+                    await calendar.view();
                 }  
 				else if (macro === 'gestionAutomatismos') {
 					showSection('gestion-automatismos-section');
@@ -436,8 +436,12 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 
 		// Listeners para componentes de UI genéricos (log, pestañas, menús desplegables).
-		elements.toggleLogBtn.addEventListener('click', () => { 
-			localStorage.setItem('logCollapsedState', elements.appContainer.classList.toggle('log-collapsed')); 
+		elements.toggleLogBtn.addEventListener('click', async () => { 
+			const isCollapsed = elements.appContainer.classList.toggle('log-collapsed');
+			// Guardamos la preferencia en el archivo de ajustes
+			const settings = await window.electronAPI.getSettings();
+			settings.logCollapsed = isCollapsed;
+			await window.electronAPI.saveSettings(settings);
 		});
 		
 		// Este listener gestiona TODOS los sistemas de pestañas de la aplicación.
@@ -464,14 +468,16 @@ document.addEventListener('DOMContentLoaded', function () {
 		}));
 
 		// Este listener gestiona TODOS los menús colapsables.
-		elements.collapsibleHeaders.forEach(header => header.addEventListener('click', () => {
+		elements.collapsibleHeaders.forEach(header => header.addEventListener('click', async () => {
 			const content = header.nextElementSibling;
 			const isExpanded = header.classList.toggle('active');
 			content.style.maxHeight = isExpanded ? content.scrollHeight + "px" : "0px";
-			// Guarda el estado (abierto/cerrado) para recordarlo al reiniciar la app.
-			const states = JSON.parse(localStorage.getItem('collapsibleStates')) || {};
-			states[header.textContent.trim()] = isExpanded;
-			localStorage.setItem('collapsibleStates', JSON.stringify(states));
+			
+			// Guardamos qué menú se ha abierto/cerrado en disco
+			const settings = await window.electronAPI.getSettings();
+			if (!settings.collapsibleStates) settings.collapsibleStates = {};
+			settings.collapsibleStates[header.textContent.trim()] = isExpanded;
+			await window.electronAPI.saveSettings(settings);
 		}));
 	}
 
@@ -506,13 +512,14 @@ document.addEventListener('DOMContentLoaded', function () {
 	
 	/** 
 	 * Restaura el estado (abierto/cerrado) de los menús colapsables al iniciar la app,
-	 * leyendo los datos guardados en localStorage.
+	 * leyendo los datos guardados.
 	 */
-	function initializeCollapsibleMenus() {
-		const collapsibleStates = JSON.parse(localStorage.getItem('collapsibleStates')) || {};
+	async function initializeCollapsibleMenus() {
+		const settings = await window.electronAPI.getSettings();
+		const states = settings.collapsibleStates || {};
 		elements.collapsibleHeaders.forEach(header => {
 			const headerText = header.textContent.trim();
-			if (collapsibleStates[headerText]) {
+			if (states[headerText]) {
 				header.classList.add('active');
 				header.nextElementSibling.style.maxHeight = header.nextElementSibling.scrollHeight + "px";
 			}
@@ -557,24 +564,25 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 	}
 
+
 	/**
 	 * Contiene la lógica de arranque de la aplicación una vez validada la licencia.
 	 * Inicializa todos los módulos de funcionalidades.
 	 */
-	function startFullApp() {
-		// Restaura el estado colapsado del log si estaba guardado.
-		if (localStorage.getItem('logCollapsedState') === 'true') {
+	async function startFullApp() {
+		//Restaura el estado colapsado del log desde el archivo de ajustes
+		const userSettings = await window.electronAPI.getSettings();
+
+		if (userSettings.logCollapsed === true) {
 			elements.appContainer.classList.add('log-collapsed');
 		}
 
         // --- INICIALIZACIÓN DE MÓDULOS ---
-		// Se llama al método `init()` de cada módulo, pasándole como dependencias
-		// las funciones o módulos que pueda necesitar desde `app.js`.
 		fieldsTable.init();
         documentationManager.init();
 		
-		// El gestor de organizaciones necesita referencias a otros módulos para poder limpiar sus cachés.
-		orgManager.init({
+		// ESPERAMOS A QUE EL ORG MANAGER INICIALICE Y MIGRE DATOS
+		await orgManager.init({
 			getAuthenticatedConfig,
 			updateLoginStatus,
 			customerFinder,
@@ -591,7 +599,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         deCreator.init({ getAuthenticatedConfig });
         fieldManager.init({ getAuthenticatedConfig });
-		// El gestor de automatismos necesita una función "puente" para poder navegar a otra vista (la de clonado)
 		automationsManager.init({ getAuthenticatedConfig, showAutomationClonerView: showAutomationCloner, showAutomationAnalyzerView: showAutomationAnalyzer });
 		journeysManager.init({ 
 			getAuthenticatedConfig,
@@ -610,7 +617,6 @@ document.addEventListener('DOMContentLoaded', function () {
 		contentFinder.init({ getAuthenticatedConfig });
 		emailValidator.init({ getAuthenticatedConfig });
 		actividadesFinder.init({ getAuthenticatedConfig });
-		// El calendario necesita una función "puente" para poder navegar a otra vista (la de gestión de automatismos)
 		calendar.init({ getAuthenticatedConfig, showAutomationsView: showFilteredAutomations });
 		automationCloner.init({ getAuthenticatedConfig, goBack });
 		automationAnalyzer.init({ getAuthenticatedConfig, goBack });
@@ -624,21 +630,18 @@ document.addEventListener('DOMContentLoaded', function () {
 		erdGenerator.init({ getAuthenticatedConfig });
 		sendManagement.init({ getAuthenticatedConfig });
 
-		// Carga las configuraciones de cliente guardadas y arranca sin ninguna seleccionada.
-		orgManager.loadConfigsIntoSelect();
-		orgManager.loadAndSyncClientConfig('');
+		// ESPERAMOS A QUE CARGUE EL CLIENTE POR DEFECTO (VACÍO AL INICIO)
+		await orgManager.loadAndSyncClientConfig('');
 
-		// Restaura el estado de los menús desplegables.
 		initializeCollapsibleMenus();
 
 		logger.startLogBuffering();
 		logger.logMessage("Aplicación lista.");
 		logger.endLogBuffering();
 
-		// Activa la funcionalidad de búsqueda en la página.
 		setupFindInPage();
 
-		// Carga y muestra la versión de la aplicación en la UI
+		// CARGAMOS VERSIÓN
         (async () => {
             try {
                 const version = await window.electronAPI.getAppVersion();

@@ -141,5 +141,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
    */
   checkSystemUserLicense: () => ipcRenderer.invoke('check-system-user-license'),
 
-  getAppVersion: () => ipcRenderer.invoke('get-app-version')
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+
+  saveGlobalConfigs: (configs) => ipcRenderer.invoke('save-global-configs', configs),
+  loadGlobalConfigs: () => ipcRenderer.invoke('load-global-configs'),
+  saveCalendarCache: (data) => ipcRenderer.invoke('save-calendar-cache', data),
+  loadCalendarCache: (clientName) => ipcRenderer.invoke('load-calendar-cache', clientName),
+  saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
+  getSettings: () => ipcRenderer.invoke('get-settings')
 });
