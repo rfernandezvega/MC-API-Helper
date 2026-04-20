@@ -1850,11 +1850,24 @@
 
         <!-- 3. Flujo Lógico -->
         <div id="journeyAnalyzerFlowWrapper" style="margin-bottom: 20px;"></div>
-        <div style="margin: 40px 0 15px 0; padding-bottom: 8px; border-bottom: 2px solid #558ac7; display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 1.2rem;">⚙️</span>
-            <h3 style="margin: 0; color: #558ac7; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">
-                Actividades del Journey
-            </h3>
+        <div style="margin: 40px 0 15px 0; padding-bottom: 8px; border-bottom: 2px solid #558ac7; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.2rem;">⚙️</span>
+                <h3 style="margin: 0; color: #558ac7; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">
+                    Actividades del Journey
+                </h3>
+            </div>
+            
+            <!-- Multipicklist de Filtrado -->
+            <div class="um-filter-group" style="position:relative; margin-bottom: 0;">
+                <div id="analyzerActivityTypeFilterTrigger" class="um-dropdown-trigger" style="min-width: 200px; background: white;">
+                    <span id="analyzerActivityTypeFilterLabel">Todos los tipos</span>
+                    <span style="font-size:10px; color:#888;">▼</span>
+                </div>
+                <div id="analyzerActivityTypeFilterMenu" class="um-dropdown-menu" style="display:none; position:fixed; z-index: 1000;">
+                    <div id="analyzerActivityTypeCheckboxList"></div>
+                </div>
+            </div>
         </div>
         <!-- 4. Actividades -->
         <div id="journeyAnalyzerActivitiesContainer"></div>

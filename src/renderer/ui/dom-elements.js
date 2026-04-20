@@ -376,6 +376,10 @@ export function init() {
     elements.expandAllAnalyzerBtn = document.getElementById('expandAllAnalyzerBtn');
     elements.collapseAllAnalyzerBtn = document.getElementById('collapseAllAnalyzerBtn');
     elements.downloadJourneyWordBtn = document.getElementById('downloadJourneyWordBtn');
+    elements.analyzerActivityTypeFilterTrigger = document.getElementById('analyzerActivityTypeFilterTrigger');
+    elements.analyzerActivityTypeFilterLabel = document.getElementById('analyzerActivityTypeFilterLabel');
+    elements.analyzerActivityTypeFilterMenu = document.getElementById('analyzerActivityTypeFilterMenu');
+    elements.analyzerActivityTypeCheckboxList = document.getElementById('analyzerActivityTypeCheckboxList');
 
     // --- 26. USUARIOS Y PERMISOS ---
     elements.usersTbody = document.getElementById('users-tbody');
