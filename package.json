@@ -1,6 +1,6 @@
 {
   "name": "mc-api-helper",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Herramienta para interactuar con la API de Marketing Cloud",
   "main": "src/main/main.js",
   "scripts": {
@@ -10,7 +10,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "dependencies": {
     "axios": "^1.7.2",
     "electron-log": "^5.4.3",
