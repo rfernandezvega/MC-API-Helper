@@ -8,7 +8,7 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    overflow: hidden;
+    /* overflow: hidden eliminado — bloqueaba el scroll */
 }
 
 
@@ -26,6 +26,9 @@
     flex-direction: column;
     gap: 10px;
     margin-left: 15px; /* Espacio entre la tabla y los botones */
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
 }
 
 /* Estilo de los botones dentro del contenedor de controles */
@@ -96,4 +99,22 @@
   cursor: pointer;
 
   /* ELIMINAMOS height: 100% PARA EVITAR QUE LA FILA SE ESTIRE */
+}
+
+/* === MEJORAS DE SCROLL Y FIJACIÓN === */
+
+/* Scroll solo dentro del wrapper de la tabla */
+.table-scroll-wrapper {
+    overflow-x: auto;                /* Scroll horizontal en pantallas pequeñas */
+    overflow-y: auto;                /* Scroll vertical de las filas */
+    max-height: calc(100vh - 260px); /* Limita la altura para que cabecera y botones queden fuera */
+    flex: 1;
+}
+
+/* Cabecera fija al hacer scroll vertical */
+#myTable thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #558ac7;       /* Mantiene el color azul de la cabecera */
 }

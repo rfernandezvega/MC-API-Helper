@@ -8,6 +8,7 @@ import { loadCustomFonts } from '../ui/fonts.js';
 let goBackFunction;
 let getAuthenticatedConfig;
 let currentJourneyDetails = null;
+let selectedActivityTypes = new Set();
 
 // CACHÉs: Evita llamadas repetidas a la API por el mismo campo/tabla
 const fieldCache = new Map(); 
@@ -57,6 +58,17 @@ export function init(dependencies) {
     if (elements.expandAllAnalyzerBtn) elements.expandAllAnalyzerBtn.addEventListener('click', () => bulkToggle(true));
     if (elements.collapseAllAnalyzerBtn) elements.collapseAllAnalyzerBtn.addEventListener('click', () => bulkToggle(false));
 
+    if (elements.analyzerActivityTypeFilterTrigger) {
+        elements.analyzerActivityTypeFilterTrigger.addEventListener('click', toggleActivityTypeDropdown);
+    }
+
+    document.addEventListener('mousedown', e => {
+        if (!elements.analyzerActivityTypeFilterMenu || elements.analyzerActivityTypeFilterMenu.style.display === 'none') return;
+        if (!elements.analyzerActivityTypeFilterTrigger.contains(e.target) && !elements.analyzerActivityTypeFilterMenu.contains(e.target)) {
+            elements.analyzerActivityTypeFilterMenu.style.display = 'none';
+        }
+    });
+
     elements.journeyAnalyzerActivitiesContainer.addEventListener('click', ui.handleExternalLink);
 }
 
@@ -72,6 +84,9 @@ export async function view(journeyDetails) {
         
         currentJourneyDetails = journeyDetails;
         elements.analyzerJourneyNameTitle.textContent = journeyDetails.name;
+
+        selectedActivityTypes.clear();
+        buildActivityTypeFilter(journeyDetails.activities);
         
         // 1. Renderizar cabecera
         renderHeader(journeyDetails);
@@ -88,6 +103,8 @@ export async function view(journeyDetails) {
             false
         );
         renderActivities(journeyDetails.activities, flowResult.numberMap);
+
+        applyActivityFilter();
 
         initCollapsibleListeners();
 
@@ -144,6 +161,12 @@ function renderActivities(activities, numberMap) {
     container.innerHTML = '';    
 
     if (!activities) return;
+
+    const filteredActivities = activities.filter(act => {
+        const matchesFilter = selectedActivityTypes.size === 0 || selectedActivityTypes.has(act.type);
+        const isInFlow = numberMap.has(act.key);
+        return matchesFilter && isInFlow;
+    });
 
     const flowActivities = activities
         .filter(act => numberMap.has(act.key))
@@ -624,7 +647,9 @@ function renderActivities(activities, numberMap) {
         `;
 
         const wrapper = document.createElement('div');
-        wrapper.innerHTML = createCollapsibleHtml(`#${logicNumber} - ${act.name}`, innerContent, `act-${act.key}`, false);
+        wrapper.className = 'analyzer-activity-block'; // Clase para localizarlos
+        wrapper.dataset.type = act.type;             // Atributo para filtrar
+        wrapper.innerHTML = createCollapsibleHtml(`#${logicNumber} - [${act.type}] ${act.name}`, innerContent, `act-${act.key}`, false);
         container.appendChild(wrapper);
     });
 }
@@ -1817,4 +1842,67 @@ async function generateWord() {
     const blob = await Packer.toBlob(docObj);
     window.saveAs(blob, `Docu_Journey_${j.name.replace(/[^a-zA-Z0-9]/g, '_')}.docx`);
     ui.unblockUI();
+}
+
+
+function buildActivityTypeFilter(activities) {
+    const types = [...new Set(activities.map(act => act.type))].sort();
+    const list = elements.analyzerActivityTypeCheckboxList;
+    if (!list) return;
+
+    list.innerHTML = '';
+    types.forEach(type => {
+        const friendlyName = ACTIVITY_TYPE_MAP[type] || `[${type}]`;
+        const lbl = document.createElement('label');
+        lbl.className = 'um-dropdown-item';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; 
+        cb.value = type;
+        cb.addEventListener('change', () => {
+            if (cb.checked) selectedActivityTypes.add(type);
+            else selectedActivityTypes.delete(type);
+            updateActivityTypeDropdownLabel();
+            applyActivityFilter(); // Solo oculta/muestra, mucho más seguro y rápido
+        });
+        lbl.appendChild(cb);
+        lbl.appendChild(document.createTextNode(`${friendlyName} ${type}`));
+        list.appendChild(lbl);
+    });
+    updateActivityTypeDropdownLabel();
+}
+
+function toggleActivityTypeDropdown() {
+    const menu = elements.analyzerActivityTypeFilterMenu;
+    const trigger = elements.analyzerActivityTypeFilterTrigger;
+    if (menu.style.display !== 'none') {
+        menu.style.display = 'none';
+        return;
+    }
+    const rect = trigger.getBoundingClientRect();
+    menu.style.width = rect.width + 'px';
+    menu.style.left = rect.left + 'px';
+    menu.style.top = (rect.bottom + 4) + 'px';
+    menu.style.display = 'block';
+}
+
+function updateActivityTypeDropdownLabel() {
+    const label = elements.analyzerActivityTypeFilterLabel;
+    if (!label) return;
+    if (selectedActivityTypes.size === 0) {
+        label.textContent = 'Todos los tipos';
+    } else if (selectedActivityTypes.size === 1) {
+        label.textContent = [...selectedActivityTypes][0];
+    } else {
+        label.textContent = `${selectedActivityTypes.size} tipos seleccionados`;
+    }
+}
+
+function applyActivityFilter() {
+    const blocks = document.querySelectorAll('.analyzer-activity-block');
+    blocks.forEach(block => {
+        const type = block.dataset.type;
+        // Si no hay nada seleccionado o el tipo está en el Set, se muestra
+        const isVisible = selectedActivityTypes.size === 0 || selectedActivityTypes.has(type);
+        block.style.display = isVisible ? 'block' : 'none';
+    });
 }

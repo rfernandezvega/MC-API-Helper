@@ -22,7 +22,7 @@ let contentManager;
 let usersManager;
 
 /**
- * Recoge los valores del formulario que son seguros para guardar en localStorage.
+ * Recoge los valores del formulario que son seguros para guardarlos.
  * @returns {object} Un objeto con la configuración segura del cliente.
  */
 function getConfigToSave() {
@@ -36,27 +36,22 @@ function getConfigToSave() {
 }
 
 /**
- * Guarda la configuración actual en el localStorage.
+ * Guarda la configuración actual.
  */
-function saveClientConfig() {
+async function saveClientConfig() { 
     logger.startLogBuffering();
     try {
         const clientName = elements.clientNameInput.value.trim();
-        if (!clientName) {
-            ui.showCustomAlert('Introduzca un nombre para el cliente antes de guardar.');
-            return;
-        }
-        let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
+        if (!clientName) { ui.showCustomAlert('Introduzca un nombre.'); return; }
+
+        let configs = await window.electronAPI.loadGlobalConfigs();
         configs[clientName] = getConfigToSave();
-        localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
-        loadConfigsIntoSelect();
-        const configToLoad = configs[clientName] || {};
-        customerFinder.updateClientConfig(configToLoad);
-        logger.logMessage(`Configuración para "${clientName}" guardada localmente.`);
-        ui.showCustomAlert(`Configuración para "${clientName}" guardada.`);
-    } finally {
-        logger.endLogBuffering();
-    }
+        await window.electronAPI.saveGlobalConfigs(configs);
+
+        await loadConfigsIntoSelect();
+        customerFinder.updateClientConfig(configs[clientName]);
+        ui.showCustomAlert(`Configuración para "${clientName}" guardada en disco.`);
+    } finally { logger.endLogBuffering(); }
 }
 
 /**
@@ -101,19 +96,15 @@ async function logout() {
     logger.startLogBuffering();
     try {
         const clientName = elements.savedConfigsSelect.value;
-        if (!clientName) {
-            ui.showCustomAlert("Seleccione un cliente para hacer logout.");
-            return;
-        }
-        if (await ui.showCustomConfirm(`Esto borrará la configuración y cerrará la sesión para "${clientName}". ¿Continuar?`)) {
-            let configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
+        if (!clientName) return;
+        if (await ui.showCustomConfirm(`¿Borrar configuración de "${clientName}"?`)) {
+            let configs = await window.electronAPI.loadGlobalConfigs();
             delete configs[clientName];
-            localStorage.setItem('mcApiConfigs', JSON.stringify(configs));
+            await window.electronAPI.saveGlobalConfigs(configs);
             window.electronAPI.logout(clientName);
+            await loadConfigsIntoSelect();
         }
-    } finally {
-        logger.endLogBuffering();
-    }
+    } finally { logger.endLogBuffering(); }
 }
 
 
@@ -134,10 +125,10 @@ function setClientConfigForm(config) {
 }
 
 /**
- * Carga todas las configuraciones guardadas en `localStorage` y las muestra en los selectores.
+ * Carga todas las configuraciones guardadas y las muestra en los selectores.
  */
-export function loadConfigsIntoSelect() {
-    const configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
+export async function loadConfigsIntoSelect() {
+    const configs = await window.electronAPI.loadGlobalConfigs();
     const currentValue = elements.sidebarClientSelect.value || elements.savedConfigsSelect.value;
     elements.savedConfigsSelect.innerHTML = '<option value="">Seleccionar configuración...</option>';
     elements.sidebarClientSelect.innerHTML = '<option value="">Ninguno seleccionado</option>';
@@ -149,11 +140,12 @@ export function loadConfigsIntoSelect() {
     elements.sidebarClientSelect.value = currentValue;
 }
 
+
 /**
  * Carga la configuración de un cliente, la aplica y valida la sesión.
  * @param {string} clientName - El nombre del cliente a cargar.
  */
-export function loadAndSyncClientConfig(clientName) {
+export async function loadAndSyncClientConfig(clientName) {
     logger.startLogBuffering();
 
     // Si el cliente seleccionado es el mismo que ya está activo, no hacemos nada.
@@ -164,8 +156,9 @@ export function loadAndSyncClientConfig(clientName) {
     }
 
     try {
-        // Solo limpiamos las cachés si estamos cambiando de cliente (o seleccionando "ninguno")
+        // Solo limpiamos las cachés si estamos cambiando de cliente
         logger.logMessage(`Cambiando de cliente: de "${currentActiveClient || 'ninguno'}" a "${clientName || 'ninguno'}"`);
+        
         calendar.clearData();
         automationsManager.clearCache();
         journeysManager.clearCache();
@@ -176,7 +169,8 @@ export function loadAndSyncClientConfig(clientName) {
         // Actualizamos el cliente activo
         currentActiveClient = clientName; 
         
-        const configs = JSON.parse(localStorage.getItem('mcApiConfigs')) || {};
+        // CARGA DESDE ARCHIVO FÍSICO
+        const configs = await window.electronAPI.loadGlobalConfigs();
         updateLoginStatus(false);
 
         if (clientName) {
@@ -184,6 +178,7 @@ export function loadAndSyncClientConfig(clientName) {
             const configToLoad = configs[clientName] || {};
             customerFinder.updateClientConfig(configToLoad);
             setClientConfigForm(configToLoad);
+            
             elements.clientNameInput.value = clientName;
             elements.savedConfigsSelect.value = clientName;
             elements.sidebarClientSelect.value = clientName;
@@ -211,7 +206,6 @@ async function exportDvConfig() {
     logger.startLogBuffering();
     try {
         const configs = getDvConfigsFromTable();
-        // Filtrar filas vacías que el usuario pueda haber añadido sin rellenar
         const validConfigs = configs.filter(c => c.title || c.deKey || c.field);
 
         if (validConfigs.length === 0) {
@@ -254,17 +248,15 @@ async function importDvConfig() {
             return;
         }
 
-        const existingConfigs = getDvConfigsFromTable().filter(c => c.deKey); // Usamos deKey como identificador
+        const existingConfigs = getDvConfigsFromTable().filter(c => c.deKey);
         const existingKeys = new Set(existingConfigs.map(c => c.deKey));
 
         const newConfigs = [];
         const lines = result.content.trim().split('\n');
-        // Empezamos en 1 para saltar la cabecera
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i].trim();
             if (!line) continue;
 
-            // Simple parseo de CSV que asume comillas
             const parts = line.split('","').map(p => p.replace(/"/g, ''));
             if (parts.length < 3) continue;
 
@@ -274,10 +266,9 @@ async function importDvConfig() {
                 field: parts[2] || ''
             };
 
-            // Si la clave externa no está vacía y no existe ya, la añadimos
             if (newConfig.deKey && !existingKeys.has(newConfig.deKey)) {
                 newConfigs.push(newConfig);
-                existingKeys.add(newConfig.deKey); // Prevenir duplicados dentro del mismo fichero
+                existingKeys.add(newConfig.deKey);
             }
         }
 
@@ -285,11 +276,10 @@ async function importDvConfig() {
             const mergedConfigs = [...existingConfigs, ...newConfigs];
             populateDvConfigsTable(mergedConfigs);
             saveClientConfig();
-            logger.logMessage(`${newConfigs.length} nueva(s) configuracion(es) importada(s) y añadidas a la tabla.`);
+            logger.logMessage(`${newConfigs.length} nueva(s) configuracion(es) importada(s).`);
             ui.showCustomAlert(`Se han importado ${newConfigs.length} nuevas filas.`);
         } else {
-            logger.logMessage('No se encontraron nuevas configuraciones para importar en el fichero seleccionado.');
-            ui.showCustomAlert('El fichero no contenía ninguna configuración nueva que no estuviera ya en la tabla.');
+            ui.showCustomAlert('El fichero no contenía ninguna configuración nueva.');
         }
 
     } catch (error) {
@@ -329,10 +319,11 @@ function populateDvConfigsTable(configs = []) {
 
 
 /**
- * Inicializa el módulo, configurando listeners y dependencias externas.
+ * Inicializa el módulo, configurando listeners, dependencias externas 
+ * y realizando la migración de datos de localStorage a archivo físico.
  * @param {object} dependencies - Objeto con las dependencias necesarias.
  */
-export function init(dependencies) {
+export async function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
     updateLoginStatus = dependencies.updateLoginStatus;
     customerFinder = dependencies.customerFinder;
@@ -343,10 +334,24 @@ export function init(dependencies) {
     contentManager = dependencies.contentManager;
     usersManager = dependencies.usersManager;
 
+    // BLOQUE DE MIGRACIÓN (Seguridad para no perder clientes actuales)
+    const oldLocalData = localStorage.getItem('mcApiConfigs');
+    if (oldLocalData) {
+        try {
+            const configs = JSON.parse(oldLocalData);
+            await window.electronAPI.saveGlobalConfigs(configs);
+            localStorage.removeItem('mcApiConfigs'); 
+            logger.logMessage("Migración de datos a disco completada.");
+        } catch (e) {
+            console.error("Error durante la migración:", e);
+        }
+    }
+
+    await loadConfigsIntoSelect();
+
     elements.saveConfigBtn.addEventListener('click', saveClientConfig);
     elements.loginBtn.addEventListener('click', startLogin);
     elements.logoutBtn.addEventListener('click', logout);
-
     elements.exportDvConfigBtn.addEventListener('click', exportDvConfig);
     elements.importDvConfigBtn.addEventListener('click', importDvConfig);
 
@@ -379,7 +384,6 @@ export function init(dependencies) {
         }
     });
 
-    // Añade automáticamente /v2/token a la Auth URI si no está presente.
     elements.authUriInput.addEventListener('blur', () => {
         const uri = elements.authUriInput.value.trim();
         if (uri && !uri.endsWith('v2/token')) {

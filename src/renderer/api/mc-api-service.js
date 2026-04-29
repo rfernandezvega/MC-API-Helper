@@ -2224,6 +2224,208 @@ export async function getFolderPath(folderId, apiConfig) {
 
     return fullPath;
 }
+// ==========================================================
+// --- SEND MANAGEMENT ---
+// ==========================================================
+/**
+ * Recupera todas las Send Classifications (SOAP)
+ */
+export async function fetchAllSendClassifications(apiConfig) {
+    const soapPayload = `<?xml version="1.0" encoding="UTF-8"?>
+    <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+        <s:Header>
+            <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+            <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+            <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+        </s:Header>
+        <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+            <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+                <RetrieveRequest>
+                    <ObjectType>SendClassification</ObjectType>
+                    <Properties>ObjectID</Properties>
+                    <Properties>Name</Properties>
+                    <Properties>CustomerKey</Properties>
+                    <Properties>SendClassificationType</Properties>
+                    <Properties>Description</Properties>
+                    <Properties>SenderProfile.CustomerKey</Properties>
+                    <Properties>DeliveryProfile.CustomerKey</Properties>
+                    <Properties>ModifiedDate</Properties>
+                </RetrieveRequest>
+            </RetrieveRequestMsg>
+        </s:Body>
+    </s:Envelope>`;
+
+    const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+    const doc = new DOMParser().parseFromString(responseText, "application/xml");
+    const results = doc.querySelectorAll("Results");
+
+    return Array.from(results).map(node => ({
+        id: node.querySelector("ObjectID")?.textContent,
+        name: node.querySelector("Name")?.textContent,
+        customerKey: node.querySelector("CustomerKey")?.textContent,
+        type: node.querySelector("SendClassificationType")?.textContent,
+        description: node.querySelector("Description")?.textContent || "---",
+        senderProfile: node.querySelector("SenderProfile > CustomerKey")?.textContent,
+        deliveryProfile: node.querySelector("DeliveryProfile > CustomerKey")?.textContent,
+        modifiedDate: node.querySelector("ModifiedDate")?.textContent
+    }));
+}
+
+/**
+ * Recupera todos los Sender Profiles (SOAP) enriquecidos
+ */
+export async function fetchAllSenderProfiles(apiConfig) {
+    const soapPayload = `<?xml version="1.0" encoding="UTF-8"?>
+    <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+        <s:Header>
+            <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+            <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+            <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+        </s:Header>
+        <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+            <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+                <RetrieveRequest>
+                    <ObjectType>SenderProfile</ObjectType>
+                    <Properties>ObjectID</Properties>
+                    <Properties>Name</Properties>
+                    <Properties>CustomerKey</Properties>
+                    <Properties>FromName</Properties>
+                    <Properties>FromAddress</Properties>
+                    <Properties>Description</Properties>
+                    <Properties>ModifiedDate</Properties>
+                    <Properties>UseDefaultRMMRules</Properties>
+                    <Properties>AutoForwardToEmailAddress</Properties>
+                    <Properties>AutoForwardToName</Properties>
+                    <Properties>DirectForward</Properties>
+                    <Properties>AutoReply</Properties>
+                    <Properties>AutoReplyTriggeredSend.ObjectID</Properties>
+                </RetrieveRequest>
+            </RetrieveRequestMsg>
+        </s:Body>
+    </s:Envelope>`;
+
+    const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+    const doc = new DOMParser().parseFromString(responseText, "application/xml");
+    const results = doc.querySelectorAll("Results");
+
+    return Array.from(results).map(node => ({
+        id: node.querySelector("ObjectID")?.textContent,
+        name: node.querySelector("Name")?.textContent,
+        customerKey: node.querySelector("CustomerKey")?.textContent,
+        fromName: node.querySelector("FromName")?.textContent,
+        fromAddress: node.querySelector("FromAddress")?.textContent,
+        description: node.querySelector("Description")?.textContent || "---",
+        modifiedDate: node.querySelector("ModifiedDate")?.textContent,
+        useDefaultRMM: node.querySelector("UseDefaultRMMRules")?.textContent === 'true',
+        autoForwardEmail: node.querySelector("AutoForwardToEmailAddress")?.textContent || "---",
+        autoForwardName: node.querySelector("AutoForwardToName")?.textContent || "---",
+        directForward: node.querySelector("DirectForward")?.textContent === 'true',
+        autoReply: node.querySelector("AutoReply")?.textContent === 'true',
+        autoReplyTriggeredId: node.querySelector("AutoReplyTriggeredSend > ObjectID")?.textContent || "---"
+    }));
+}
+
+/**
+ * Recupera detalles de Triggered Send Definitions por una lista de ObjectIDs
+ */
+export async function fetchTriggeredSendDetails(apiConfig, objectIds) {
+    if (!objectIds || objectIds.length === 0) return [];
+
+    const filterXml = buildObjectIdFilter(objectIds);
+
+    const soapPayload = `<?xml version="1.0" encoding="UTF-8"?>
+    <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+        <s:Header>
+            <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+            <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+            <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+        </s:Header>
+        <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+            <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+                <RetrieveRequest>
+                    <ObjectType>TriggeredSendDefinition</ObjectType>
+                    <Properties>ObjectID</Properties>
+                    <Properties>Name</Properties>
+                    <Properties>CustomerKey</Properties>
+                    <Properties>TriggeredSendStatus</Properties>
+                    ${filterXml}
+                </RetrieveRequest>
+            </RetrieveRequestMsg>
+        </s:Body>
+    </s:Envelope>`;
+
+    const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+    const doc = new DOMParser().parseFromString(responseText, "application/xml");
+    const results = doc.querySelectorAll("Results");
+
+    return Array.from(results).map(node => ({
+        id: node.querySelector("ObjectID")?.textContent,
+        name: node.querySelector("Name")?.textContent,
+        customerKey: node.querySelector("CustomerKey")?.textContent,
+        status: node.querySelector("TriggeredSendStatus")?.textContent
+    }));
+}
+
+/**
+ * Builds a SimpleFilterPart using "equals" for a single ID,
+ * or "IN" with multiple <Value> nodes for multiple IDs.
+ * Avoids the broken nested ComplexFilterPart approach.
+ */
+function buildObjectIdFilter(objectIds) {
+    const operator = objectIds.length === 1 ? 'equals' : 'IN';
+    const values = objectIds
+        .map(id => `<Value>${id}</Value>`)
+        .join('\n                    ');
+
+    return `<Filter xsi:type="SimpleFilterPart">
+                <Property>ObjectID</Property>
+                <SimpleOperator>${operator}</SimpleOperator>
+                ${values}
+            </Filter>`;
+}
+
+/**
+ * Generic helper to build a ComplexFilterPart from a plain JS object,
+ * matching the nested structure that the API expects.
+ *
+ * Example input:
+ * {
+ *   LeftOperand:    { Property: "Adult", SimpleOperator: "equals", Value: true },
+ *   LogicalOperator: "OR",
+ *   RightOperand: {
+ *     LeftOperand:    { Property: "Age", SimpleOperator: "isNotNull", Value: "" },
+ *     LogicalOperator: "AND",
+ *     RightOperand:   { Property: "Age", SimpleOperator: "greaterThan", Value: 18 }
+ *   }
+ * }
+ */
+export function buildComplexFilter(node) {
+    // Leaf node → SimpleFilterPart
+    if (node.Property) {
+        const values = Array.isArray(node.Value)
+            ? node.Value.map(v => `<Value>${v}</Value>`).join('\n')
+            : `<Value>${node.Value}</Value>`;
+
+        return {
+            xml: `<Property>${node.Property}</Property>
+                <SimpleOperator>${node.SimpleOperator}</SimpleOperator>
+                ${values}`,
+            type: 'SimpleFilterPart'
+        };
+    }
+
+    // Branch node → ComplexFilterPart
+    const left  = buildComplexFilter(node.LeftOperand);
+    const right = buildComplexFilter(node.RightOperand);
+
+    return {
+        xml: `<LeftOperand xsi:type="${left.type}">${left.xml}</LeftOperand>
+            <LogicalOperator>${node.LogicalOperator}</LogicalOperator>
+            <RightOperand xsi:type="${right.type}">${right.xml}</RightOperand>`,
+        type: 'ComplexFilterPart'
+    };
+}
+
 
 // ==========================================================
 // --- LLAMADAS GENERICAS DEL SERVICIO ---

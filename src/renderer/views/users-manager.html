@@ -7,7 +7,7 @@
         </div>
     </div>
 
-    <h2>Gestión de Usuarios y Permisos</h2>
+    <h2>Gestión de Usuarios y Permisos <span id="userCount" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
 
     <!-- Cabecera de pestañas — usa um-tab-button para no interferir con el listener global de app.js -->
     <div class="tabs-header-container">
@@ -52,16 +52,22 @@
             <table id="users-table" class="um-table">
                 <thead>
                     <tr>
-                        <th class="um-sortable" data-sort-by="name">Nombre (ID) ↕</th>
-                        <th class="um-sortable" data-sort-by="userName">UserName ↕</th>
-                        <th class="um-sortable" data-sort-by="isApi">API User ↕</th>
-                        <th class="um-sortable" data-sort-by="lastLogin">Último Login ↕</th>
-                        <th class="um-sortable" data-sort-by="isActive">Estado ↕</th>
+                        <th class="um-sortable" data-sort-by="name">Nombre (ID)</th>
+                        <th class="um-sortable" data-sort-by="userName">UserName</th>
+                        <th class="um-sortable" data-sort-by="isApi">API User</th>
+                        <th class="um-sortable" data-sort-by="lastLogin">Último Login</th>
+                        <th class="um-sortable" data-sort-by="isActive">Estado</th>
                         <th>Roles</th>
                     </tr>
                 </thead>
                 <tbody id="users-tbody"></tbody>
             </table>
+        </div>
+        <div id="pagination-users" class="pagination-controls">
+            <button id="prevPageBtnUsers" class="action-button pagination-arrow">&laquo;</button>
+            <input type="number" id="pageInputUsers" class="filter-input page-input" min="1">
+            <span id="totalPagesUsers">/ 1</span>
+            <button id="nextPageBtnUsers" class="action-button pagination-arrow">&raquo;</button>
         </div>
     </div>
 

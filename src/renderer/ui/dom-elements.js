@@ -199,6 +199,7 @@ export function init() {
     elements.pageInputJourneys = document.getElementById('pageInputJourneys');
     elements.totalPagesJourneys = document.getElementById('totalPagesJourneys');
     elements.analyzeJourneyBtn = document.getElementById('analyzeJourneyBtn');
+    elements.scanDeUsageBtn = document.getElementById('scanDeUsageBtn');
     elements.journeyCommModal = document.getElementById('journey-comm-modal');
     elements.journeyCommMessage = document.getElementById('journey-comm-message');
     elements.journeyCommSelectedBtn = document.getElementById('journey-comm-selected-btn');
@@ -375,6 +376,10 @@ export function init() {
     elements.expandAllAnalyzerBtn = document.getElementById('expandAllAnalyzerBtn');
     elements.collapseAllAnalyzerBtn = document.getElementById('collapseAllAnalyzerBtn');
     elements.downloadJourneyWordBtn = document.getElementById('downloadJourneyWordBtn');
+    elements.analyzerActivityTypeFilterTrigger = document.getElementById('analyzerActivityTypeFilterTrigger');
+    elements.analyzerActivityTypeFilterLabel = document.getElementById('analyzerActivityTypeFilterLabel');
+    elements.analyzerActivityTypeFilterMenu = document.getElementById('analyzerActivityTypeFilterMenu');
+    elements.analyzerActivityTypeCheckboxList = document.getElementById('analyzerActivityTypeCheckboxList');
 
     // --- 26. USUARIOS Y PERMISOS ---
     elements.usersTbody = document.getElementById('users-tbody');
@@ -411,6 +416,13 @@ export function init() {
     elements.erdDownloadImgBtn = document.getElementById('erd-download-img-btn');
 
     elements.erdSfmcLink = document.getElementById('erd-sfmc-link'); 
+
+    // --- 28. SEND MANAGEMENT ---
+    elements.sendManagementSection = document.getElementById('sendManagement-section');
+    elements.sendClassificationsTbody = document.getElementById('send-classifications-tbody');
+    elements.senderProfilesTbody = document.getElementById('sender-profiles-tbody');
+    elements.refreshSendManagementBtn = document.getElementById('refreshSendManagementBtn');
+    elements.downloadSendManagementCsvBtn = document.getElementById('downloadSendManagementCsvBtn');
 }
 
 export default elements;

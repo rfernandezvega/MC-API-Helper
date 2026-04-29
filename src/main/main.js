@@ -181,6 +181,67 @@ function handleFindInPage(win) {
   });
 }
 
+
+ipcMain.handle('save-global-configs', (event, configs) => {
+    try {
+        const userDataPath = app.getPath('userData');
+        const filePath = path.join(userDataPath, 'client_configs.json');
+        fs.writeFileSync(filePath, JSON.stringify(configs, null, 2));
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('load-global-configs', (event) => {
+    try {
+        const userDataPath = app.getPath('userData');
+        const filePath = path.join(userDataPath, 'client_configs.json');
+        if (fs.existsSync(filePath)) {
+            return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        }
+        return {}; 
+    } catch (error) {
+        return {};
+    }
+});
+
+ipcMain.handle('save-settings', (event, settings) => {
+    const filePath = path.join(app.getPath('userData'), 'settings.json');
+    fs.writeFileSync(filePath, JSON.stringify(settings, null, 2));
+});
+
+ipcMain.handle('get-settings', (event) => {
+    const filePath = path.join(app.getPath('userData'), 'settings.json');
+    return fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf-8')) : {};
+});
+
+ipcMain.handle('save-calendar-cache', (event, { clientName, data }) => {
+    try {
+        const userDataPath = app.getPath('userData');
+        const cacheDirPath = path.join(userDataPath, 'CalendarCache');
+        if (!fs.existsSync(cacheDirPath)) fs.mkdirSync(cacheDirPath);
+        const filePath = path.join(cacheDirPath, `${clientName}.json`);
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+        return { success: true };
+    } catch (error) {
+        return { success: false };
+    }
+});
+
+ipcMain.handle('load-calendar-cache', (event, clientName) => {
+    try {
+        const userDataPath = app.getPath('userData');
+        const filePath = path.join(userDataPath, 'CalendarCache', `${clientName}.json`);
+        if (fs.existsSync(filePath)) {
+            return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        }
+        return null;
+    } catch (error) {
+        return null;
+    }
+});
+
 // Escucha la petición de búsqueda desde el renderizador.
 ipcMain.on('find-in-page', (event, { text, options }) => {
   const webContents = event.sender;
@@ -438,7 +499,12 @@ ipcMain.on('start-login', async (event, config) => {
 
     const loginWindow = new BrowserWindow({
         width: 800, height: 600, parent: mainWindow, modal: true, show: true,
-        webPreferences: { nodeIntegration: false, contextIsolation: true }
+        webPreferences: { 
+            nodeIntegration: false, 
+            contextIsolation: true,
+            // CAMBIO: Esto fuerza a que la ventana de login NO comparta cookies ni sesión con nada
+            partition: 'nonpersistent' 
+        }
     });
     
     loginWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {

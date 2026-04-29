@@ -1,6 +1,7 @@
 import * as mcApiService from '../api/mc-api-service.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
+import elements from '../ui/dom-elements.js';
 
 // Scope raíz de toda la sección — todos los querySelector van contra este nodo
 const ROOT_ID = 'gestion-usuarios-section';
@@ -10,12 +11,15 @@ const $id = (id) => document.getElementById(id);
 
 let usersMasterList = [];
 let selectedUserIds = [];   // máximo 2 elementos
-let currentSortColumn = 'name';
-let currentSortDirection = 'asc';
+let currentSortColumn = 'lastLogin';
+let currentSortDirection = 'desc';
 let statusFilter = 'all';
 let selectedRoles = new Set();
+const ITEMS_PER_PAGE = 10;
+let currentPageUsers = 1;
 
 let importedData = [];
+let _lastFilteredCount = 0;
 let onlyDiffsActive = false;
 let isExpanded = true;
 
@@ -58,6 +62,19 @@ function _bind() {
             switchTab(btn.dataset.umTab);
         })
     );
+
+    $id('prevPageBtnUsers')?.addEventListener('click', () => {
+        if (currentPageUsers > 1) { currentPageUsers--; renderUserTable(); }
+    });
+    $id('nextPageBtnUsers')?.addEventListener('click', () => {
+        currentPageUsers++;
+        renderUserTable();
+    });
+    $id('pageInputUsers')?.addEventListener('change', e => {
+        const total = Math.ceil(_lastFilteredCount / ITEMS_PER_PAGE) || 1;
+        currentPageUsers = Math.max(1, Math.min(parseInt(e.target.value) || 1, total));
+        renderUserTable();
+    });
 
     // Cerrar dropdown al hacer clic fuera
     document.addEventListener('mousedown', e => {
@@ -131,6 +148,7 @@ async function refreshData() {
         buildRoleFilterDropdown();
         renderUserTable();
         updateButtons();
+        updateUserCount();
         setExpandControlsVisible(false);
     } catch (error) {
         ui.showCustomAlert(error.message);
@@ -159,12 +177,20 @@ function renderUserTable() {
         return nameMatch && statusMatch && roleMatch;
     });
 
+    // Si el filtro cambió (distinto total), volver a página 1
+    if (data.length !== _lastFilteredCount) currentPageUsers = 1;
+    _lastFilteredCount = data.length;
+
+    updateUserCount();
+
     sortData(data);
+
+    const paginated = data.slice((currentPageUsers - 1) * ITEMS_PER_PAGE, currentPageUsers * ITEMS_PER_PAGE);
 
     const tbody = $id('users-tbody');
     if (!tbody) return;
 
-    tbody.innerHTML = data.map(u => `
+    tbody.innerHTML = paginated.map(u => `
         <tr data-id="${u.id}" class="${selectedUserIds.includes(u.id) ? 'um-selected' : ''}">
             <td style="text-align:left;"><b>${u.name}</b><br><small style="color:#888;">${u.id}</small></td>
             <td style="text-align:left;">${u.userName}</td>
@@ -176,6 +202,16 @@ function renderUserTable() {
     `).join('');
 
     updateSortIndicators();
+    _updatePaginationUI();
+}
+
+function _updatePaginationUI() {
+    const total = Math.ceil(_lastFilteredCount / ITEMS_PER_PAGE) || 1;
+    if (currentPageUsers > total) currentPageUsers = total;
+    $id('totalPagesUsers').textContent = `/ ${total}`;
+    $id('pageInputUsers').value = currentPageUsers;
+    $id('prevPageBtnUsers').disabled = currentPageUsers === 1;
+    $id('nextPageBtnUsers').disabled = currentPageUsers >= total;
 }
 
 // Selección: SOLO manipula clases, nunca llama a renderUserTable
@@ -279,8 +315,8 @@ function updateRoleDropdownLabel() {
 function generateInstructions() {
     if (selectedUserIds.length === 0) return;
 
-    const stack = $id('stackKey')?.value?.match(/s\d+/)?.[0] || 's50';
-    const sfmcUrl = `https://members.${stack}.exacttarget.com/Content/Administration/Users/UserListing.aspx`;
+    const stackNumber = (elements.stackKeyInput?.value || '').replace(/S/i, '') || '50';
+    const sfmcUrl = `https://members.s${stackNumber}.exacttarget.com/Content/Administration/Users/UserListing.aspx`;
     const sfmcLink = $id('users-sfmc-link');
     if (sfmcLink) {
         sfmcLink.dataset.url = sfmcUrl;
@@ -489,4 +525,13 @@ function toggleExpandCollapse() {
     $$('#users-permissions-container .um-t-icon').forEach(i => i.textContent = isExpanded ? '[-]' : '[+]');
     const btn = $id('btn-expand-perms');
     if (btn) btn.textContent = isExpanded ? 'Colapsar Todo' : 'Expandir Todo';
+}
+
+function updateUserCount() {
+    const total = usersMasterList.length;
+    const filtered = _lastFilteredCount;
+    const countEl = $id('userCount');
+    if (countEl) {
+        countEl.textContent = `(${filtered} de ${total})`;
+    }
 }

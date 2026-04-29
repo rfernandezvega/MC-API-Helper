@@ -9,8 +9,8 @@ import * as logger from '../ui/logger.js';
 // --- 1. ESTADO DEL MÓDULO ---
 let fullAutomationList = [];
 let currentPage = 1;
-let currentSortColumn = 'name';
-let currentSortDirection = 'asc';
+let currentSortColumn = 'lastRunTime';
+let currentSortDirection = 'desc';
 const ITEMS_PER_PAGE = 15;
 
 let currentFilteredList = [];
