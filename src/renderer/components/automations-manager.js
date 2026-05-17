@@ -371,6 +371,9 @@ function handleSort(e) {
 /**
  * Ordena un array de datos basándose en la columna y dirección actuales.
  */
+/**
+ * Ordena un array de datos basándose en la columna y dirección actuales.
+ */
 function sortData(dataToSort) {
     const direction = currentSortDirection === 'asc' ? 1 : -1;
     
@@ -383,19 +386,18 @@ function sortData(dataToSort) {
 
         if (aIsNull && bIsNull) return 0; // Ambos son nulos, son iguales.
         
-        // Si 'a' es nulo, lo movemos al final (asc) o al principio (desc).
-        if (aIsNull) return 1 * direction; 
-        
-        // Si 'b' es nulo, lo movemos al final (asc) o al principio (desc).
-        if (bIsNull) return -1 * direction;
+        //Los nulos SIEMPRE al final
+        if (aIsNull) return 1; 
+        if (bIsNull) return -1;
 
         // Si llegamos aquí, ninguno es nulo y podemos comparar.
         if (currentSortColumn.includes('Time')) {
             const dateA = new Date(valA);
             const dateB = new Date(valB);
 
-            if (isNaN(dateA.getTime())) return 1 * direction;
-            if (isNaN(dateB.getTime())) return -1 * direction;
+            // Para fechas inválidas, siempre al final
+            if (isNaN(dateA.getTime())) return 1;
+            if (isNaN(dateB.getTime())) return -1;
 
             return (dateA - dateB) * direction;
         }
