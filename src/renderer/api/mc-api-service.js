@@ -19,7 +19,6 @@ export * from './api-folders.js';
 export * from './api-helpers.js';
 export * from './api-journeys.js';
 export * from './api-queries.js';
-export * from './api-search.js';
 export * from './api-send-management.js';
 export * from './api-subscribers.js';
 export * from './api-users.js';
