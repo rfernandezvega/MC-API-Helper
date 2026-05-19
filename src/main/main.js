@@ -377,6 +377,40 @@ ipcMain.handle('load-client-contents-from-file', (event, clientName) => {
     }
 });
 
+ipcMain.handle('save-audit-cache', (event, { clientName, auditData }) => {
+    try {
+        const userDataPath = app.getPath('userData');
+        const cacheDirPath = path.join(userDataPath, 'ClientCache');
+        if (!fs.existsSync(cacheDirPath)) {
+            fs.mkdirSync(cacheDirPath);
+        }
+        // Fichero por cliente: audit_NombreCliente.json
+        // Al guardar siempre se sobreescribe, machacando la auditoría anterior.
+        const filePath = path.join(cacheDirPath, `audit_${clientName}.json`);
+        fs.writeFileSync(filePath, JSON.stringify(auditData, null, 2));
+        return { success: true };
+    } catch (error) {
+        console.error('Error al guardar caché de auditoría:', error);
+        return { success: false, error: error.message };
+    }
+});
+ 
+ipcMain.handle('load-audit-cache', (event, clientName) => {
+    try {
+        const userDataPath = app.getPath('userData');
+        const filePath     = path.join(userDataPath, 'ClientCache', `audit_${clientName}.json`);
+        if (fs.existsSync(filePath)) {
+            const raw = fs.readFileSync(filePath, 'utf-8');
+            return { success: true, data: JSON.parse(raw) };
+        }
+        // Sin caché previa → no es un error
+        return { success: true, data: null };
+    } catch (error) {
+        console.error('Error al cargar caché de auditoría:', error);
+        return { success: false, error: error.message };
+    }
+});
+
 ipcMain.handle('save-cloud-pages-cache', (event, { clientName, cloudPagesData }) => {
     try {
         const userDataPath = app.getPath('userData');

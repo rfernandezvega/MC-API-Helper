@@ -42,6 +42,7 @@ import * as journeyAnalyzer from './components/journey-analyzer.js';
 import * as usersManager from './components/users-manager.js';
 import * as erdGenerator from './components/erd-generator.js';
 import * as sendManagement from './components/sendManagement.js';
+import * as auditManager from './components/audit-manager.js';
 
 
 
@@ -90,7 +91,8 @@ document.addEventListener('DOMContentLoaded', function () {
 			'gestion-contenidos-section': 'gestionContenidos',
 			'carpetas-section':'gestionCarpetas',
 			'email-validator-section':'validadorEmail',
-			'gestion-de-unificada-section': 'gestionDEs'
+			'gestion-de-unificada-section': 'gestionDEs',
+			'auditoria-section': 'auditoria'
 		};
 
 		const activeMacro = sectionToMacroMap[activeSectionId];
@@ -432,6 +434,10 @@ document.addEventListener('DOMContentLoaded', function () {
 					showSection('sendManagement-section');
 					sendManagement.view();
 				}
+				else if (macro === 'auditoria') {
+					showSection('auditoria-section');
+					// La vista se muestra vacía, no lanzamos carga hasta que pulse el botón
+				}
 			});
 		});
 
@@ -629,6 +635,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		usersManager.init({ getAuthenticatedConfig });
 		erdGenerator.init({ getAuthenticatedConfig });
 		sendManagement.init({ getAuthenticatedConfig });
+		auditManager.init({ getAuthenticatedConfig });
 
 		// ESPERAMOS A QUE CARGUE EL CLIENTE POR DEFECTO (VACÍO AL INICIO)
 		await orgManager.loadAndSyncClientConfig('');

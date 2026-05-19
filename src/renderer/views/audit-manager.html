@@ -1,0 +1,168 @@
+<div id="auditoria-section" class="section config-section-container">
+
+    <style>
+        /* Estilos para métricas interactivas y Modal de Detalles */
+        .drillable { cursor: pointer; transition: all 0.2s ease; }
+        .drillable:hover { background-color: #f8fafc !important; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.12) !important; }
+        .drillable-bar { cursor: pointer; transition: background 0.2s ease; }
+        .drillable-bar:hover { background-color: #f1f5f9 !important; border-radius: 4px; }
+        
+        #audit-drill-modal {
+            display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; backdrop-filter: blur(2px);
+        }
+        .audit-modal-content {
+            background-color: #fff; padding: 25px; border-radius: 12px; width: 85%; max-width: 1000px;
+            max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .audit-modal-header {
+            display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 12px; margin-bottom: 15px;
+        }
+        .audit-modal-header h3 { margin: 0; color: #2c3e50; font-size: 1.25em; display: inline-block; margin-right: 15px; }
+        .audit-modal-close {
+            background: none; border: none; font-size: 1.5em; cursor: pointer; color: #95a5a6; transition: color 0.2s;
+        }
+        .audit-modal-close:hover { color: #e74c3c; }
+        .audit-modal-body {
+            overflow-y: auto; flex: 1;
+        }
+        .audit-drill-table {
+            width: 100%; border-collapse: collapse; font-size: 0.88em; text-align: left;
+        }
+        .audit-drill-table th {
+            background-color: #f8fafc; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; color: #475569; position: sticky; top: 0;
+        }
+        .audit-drill-table td {
+            padding: 9px 12px; border-bottom: 1px solid #e2e8f0; color: #334155; word-break: break-word;
+        }
+        .audit-drill-table tr:hover td { background-color: #f1f5f9; }
+    </style>
+
+    <!-- CABECERA PRINCIPAL -->
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>
+        <div class="header-actions">
+            <button id="runAuditBtn" class="action-button activate-btn">🔍 Iniciar Escaneo de Instancia</button>
+        </div>
+    </div>
+
+    <!-- TÍTULO Y CONTENEDOR DE ESTADÍSTICAS FLOTANTE -->
+    <div style="position: relative; margin-bottom: 24px; min-height: 45px;">
+        <h2 style="color:#69a3db; text-align:center; margin: 0 0 6px 0;">Auditoría Técnica de Instancia</h2>
+        <p style="text-align:center; color:#888; font-size:0.88em; margin:0;">
+            Sanity check completo: usuarios, automatismos, journeys, cloud pages y configuración de envío.
+        </p>
+        <!-- El div de estadísticas se posiciona a la derecha -->
+        <div id="audit-stats-container" style="position: absolute; right: 0; top: 5px;"></div>
+    </div>
+
+    <!-- PANEL DE CONFIGURACIÓN -->
+    <div id="audit-options" class="config-block" style="max-width:860px; margin:0 auto 30px auto; border-top:4px solid #69a3db;">
+
+        <h3 style="margin-top:0; color:#2c3e50;">Configuración del Análisis</h3>
+        <p style="color:#666; font-size:0.88em; line-height:1.6; margin-bottom:6px;">
+            El escaneo básico usa únicamente llamadas masivas y es rápido.
+            Las opciones de análisis profundo inspeccionan cada elemento individualmente — pueden tardar varios minutos.
+        </p>
+        <p style="color:#888; font-size:0.82em; margin-bottom:20px; font-style:italic;">
+            Si ya existe una auditoría guardada, se mostrará al entrar en la vista sin necesidad de volver a lanzarla.
+        </p>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+            <!-- OPCIÓN: Automatismos -->
+            <div style="background:#f0f7ff; padding:16px; border-radius:10px; border:1px solid #d1e3f5;">
+                <label style="display:flex; align-items:flex-start; gap:12px; cursor:pointer;">
+                    <input type="checkbox" id="audit-opt-autos" style="width:18px; height:18px; margin-top:3px; flex-shrink:0;">
+                    <div>
+                        <div style="font-weight:700; font-size:1em; color:#2c3e50; margin-bottom:6px;">
+                            ⚙️ Automatismos — Análisis Profundo
+                        </div>
+                        <ul style="font-size:0.83em; color:#555; margin:0; padding-left:16px; line-height:1.7;">
+                            <li>Verificación de <b>email de alerta por error</b> y extracción de <b>dominios</b> de aviso.</li>
+                            <li>Detección de <b>descripciones</b> en actividades (incluye llamada individual a SQL y SSJS).</li>
+                            <li>Mapa de <b>actividades compartidas</b> entre múltiples automatismos.</li>
+                        </ul>
+                        <div style="margin-top:6px; font-size:0.8em; color:#555; font-style:italic;">
+                            Tipos de actividad, imports, exports y launchers de Journeys
+                            se calculan <b>sin llamadas extra</b> desde el listado masivo.
+                        </div>
+                        <div style="margin-top:8px; font-size:0.8em; color:#c0392b; font-weight:600;">
+                            ⚠️ Lento — 2 llamadas por automatismo + 1 por actividad SQL/SSJS.
+                        </div>
+                    </div>
+                </label>
+            </div>
+
+            <!-- OPCIÓN: Journeys -->
+            <div style="background:#fdf5e6; padding:16px; border-radius:10px; border:1px solid #f9e1b5;">
+                <label style="display:flex; align-items:flex-start; gap:12px; cursor:pointer;">
+                    <input type="checkbox" id="audit-opt-journeys" style="width:18px; height:18px; margin-top:3px; flex-shrink:0;">
+                    <div>
+                        <div style="font-weight:700; font-size:1em; color:#2c3e50; margin-bottom:6px;">
+                            🗺️ Journeys — Análisis Profundo
+                        </div>
+                        <ul style="font-size:0.83em; color:#555; margin:0; padding-left:16px; line-height:1.7;">
+                            <li>Detección de <b>nodos Salesforce</b> activos en el canvas.</li>
+                            <li>Mix multicanal real: <b>Email, SMS, Push/In-App, WhatsApp</b>.</li>
+                            <li>Journeys con <b>solo lógica</b> (sin actividades de envío).</li>
+                        </ul>
+                        <div style="margin-top:6px; font-size:0.8em; color:#555; font-style:italic;">
+                            Subtipo, Goals, criterios de salida y tipología de entrada
+                            se calculan <b>sin llamadas extra</b> desde el listado masivo.
+                        </div>
+                        <div style="margin-top:8px; font-size:0.8em; color:#27ae60; font-weight:600;">
+                            ✅ Rápido si la API devuelve actividades en la llamada de lista.
+                            Si no, 1 llamada extra por journey.
+                        </div>
+                    </div>
+                </label>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- DASHBOARD CON PESTAÑAS -->
+    <div id="audit-dashboard" class="tabs-container" style="display:none; height:100%;">
+
+        <div class="tab-buttons" style="
+            justify-content:flex-start; margin-bottom:0;
+            border-bottom:2px solid #e0e7ef; gap:2px; flex-wrap:wrap;">
+            <button class="tab-button active" data-tab="audit-tab-users"    style="padding:10px 18px; font-size:0.88em;">👤 Usuarios</button>
+            <button class="tab-button"        data-tab="audit-tab-autos"    style="padding:10px 18px; font-size:0.88em;">⚙️ Automatismos</button>
+            <button class="tab-button"        data-tab="audit-tab-journeys" style="padding:10px 18px; font-size:0.88em;">🗺️ Journeys</button>
+            <button class="tab-button"        data-tab="audit-tab-cp"       style="padding:10px 18px; font-size:0.88em;">📄 Cloud Pages</button>
+            <button class="tab-button"        data-tab="audit-tab-sm"       style="padding:10px 18px; font-size:0.88em;">📨 Send Management</button>
+        </div>
+
+        <div style="background:#f4f7fb; border-radius:0 0 10px 10px; flex:1; overflow-y:auto; min-height:0;">
+            <div id="audit-tab-users"    class="tab-content active"></div>
+            <div id="audit-tab-autos"    class="tab-content"></div>
+            <div id="audit-tab-journeys" class="tab-content"></div>
+            <div id="audit-tab-cp"       class="tab-content"></div>
+            <div id="audit-tab-sm"       class="tab-content"></div>
+        </div>
+
+    </div>
+
+    <!-- MODAL DE DETALLES (DRILL-DOWN) -->
+    <div id="audit-drill-modal">
+        <div class="audit-modal-content">
+            <div class="audit-modal-header">
+                <div>
+                    <h3 id="audit-drill-title">Detalles</h3>
+                    <button id="audit-drill-download" style="background:#27ae60; color:#fff; border:none; border-radius:4px; padding:6px 12px; cursor:pointer; font-size:0.85em; font-weight:bold; transition: background 0.2s;">⬇️ Descargar CSV</button>
+                </div>
+                <button class="audit-modal-close" id="audit-drill-close">&times;</button>
+            </div>
+            <div class="audit-modal-body">
+                <table class="audit-drill-table" id="audit-drill-table">
+                    <thead id="audit-drill-thead"></thead>
+                    <tbody id="audit-drill-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>

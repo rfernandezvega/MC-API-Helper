@@ -87,6 +87,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * @returns {Promise<object>}
    */
   loadCloudPagesCache: (clientName) => ipcRenderer.invoke('load-cloud-pages-cache', clientName),
+
+   /**
+   * Guarda el resultado completo de una auditoría técnica para un cliente.
+   * Sobreescribe cualquier auditoría previa guardada para ese cliente.
+   * @param {object} data - Un objeto con { clientName: string, auditData: object }.
+   * @returns {Promise<object>} - { success: true } o { success: false, error: string }.
+   */
+  saveAuditCache: (data) => ipcRenderer.invoke('save-audit-cache', data),
+ 
+  /**
+   * Carga el resultado de la última auditoría guardada para un cliente.
+   * @param {string} clientName - El nombre del cliente.
+   * @returns {Promise<object>} - { success: true, data: object } o { success: true, data: null } si no hay caché.
+   */
+  loadAuditCache: (clientName) => ipcRenderer.invoke('load-audit-cache', clientName),
+  
     /**
    * Pide al proceso principal que busque texto en la página.
    * @param {string} text - El texto a buscar.
