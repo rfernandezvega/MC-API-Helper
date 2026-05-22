@@ -32,7 +32,7 @@ const ACTIVITY_TYPE_MAP = {
     1101: 'IS Decision',             1701: 'Einstein Rec',
 };
 
-const TAB_IDS = ['users', 'autos', 'journeys', 'cp', 'sm'];
+const TAB_IDS = ['users', 'autos', 'journeys', 'cp', 'sm', 'de'];
 
 // ==========================================
 // INIT + VIEW
@@ -59,6 +59,8 @@ export function init(dependencies) {
     document.getElementById('audit-drill-download')
         ?.addEventListener('click', downloadDrillCsv);
 
+    document.getElementById('audit-de-cb-link')?.addEventListener('click', ui.handleExternalLink);
+
     // Modal: lógica simple — el modal está dentro de #auditoria-section
     // y su CSS position:fixed funciona correctamente en este contexto.
     const modal   = document.getElementById('audit-drill-modal');
@@ -70,6 +72,132 @@ export function init(dependencies) {
     // de clientNameInput, porque org-manager.js llama a view() directamente cuando cambia
     // de cliente (igual que hace con calendar.clearData()). Esto garantiza que se cargue
     // la caché correcta tanto al entrar a la vista como al cambiar de cliente.
+
+    
+
+    document.getElementById('audit-de-copy-script')?.addEventListener('click', () => {
+        const pre = document.getElementById('audit-de-script-pre');
+        const txt = pre?._scriptContent || pre?.textContent || '';
+        navigator.clipboard.writeText(txt).then(() => {
+            const btn = document.getElementById('audit-de-copy-script');
+            const orig = btn.textContent;
+            btn.textContent = 'Copiado';
+            btn.style.background = '#16a085';
+            setTimeout(() => { btn.textContent = orig; btn.style.background = '#3b82f6'; }, 2000);
+        });
+    });
+
+    elements.stackKeyInput?.addEventListener('change', updateDeScript);
+    elements.stackKeyInput?.addEventListener('input',  updateDeScript);
+    setTimeout(updateDeScript, 200);
+}
+
+// Renderizar el script copiable con el stack dinámico del cliente
+ function updateDeScript() {
+    const stackKey = elements.stackKeyInput?.value?.trim();
+    const link = document.getElementById('audit-de-cb-link');
+    const pre = document.getElementById('audit-de-script-pre');
+
+    if (!link || !pre) return;
+
+    // Variables para dinamizar el script
+    let finalStack = 's50'; // Valor por defecto
+    let mcBaseUrl = 'https://mc.s50.marketingcloudapps.com';
+
+    // Si el stack no es válido
+    if (!stackKey || stackKey === 'No disponible' || stackKey === '') {
+        link.href = "#";
+        link.style.color = "#888"; 
+        link.style.opacity = "0.6";
+    } else {
+        const stackNum = stackKey.toLowerCase().replace('s', '');
+        finalStack = 's' + stackNum;
+        mcBaseUrl = `https://mc.${finalStack}.marketingcloudapps.com`;
+        
+        link.href = `${mcBaseUrl}/contactsmeta/fuelapi/data-internal/v1/customobjects/category/`;
+        link.style.color = "#0070d2"; 
+        link.style.opacity = "1";
+    }
+
+    // El script que se copia a la consola
+    const script = `(async () => {
+    console.log("🚀 Iniciando extracción de Data Extensions en ${finalStack}...");
+    const baseUrl = "${mcBaseUrl}";
+    const allDEs = [];
+
+    async function fetchApi(url) {
+        try { 
+            const r = await fetch(url); 
+            if (!r.ok) throw new Error('HTTP ' + r.status); 
+            return await r.json(); 
+        } catch (err) { 
+            console.error('❌ Error en', url, err); 
+            return null; 
+        }
+    }
+
+    async function processFolder(folderId, folderName) {
+        console.log('📂 Procesando:', folderName);
+        let page = 1, pageSize = 200, hasMore = true;
+        while (hasMore) {
+            const deUrl = \`\${baseUrl}/contactsmeta/fuelapi/data-internal/v1/customobjects/category/\${folderId}?retrievalType=1&$page=\${page}&$pagesize=\${pageSize}&$orderBy=modifiedDate%20DESC\`;
+            const data = await fetchApi(deUrl);
+            if (data && data.items && data.items.length > 0) {
+                data.items.forEach(item => {
+                    allDEs.push({ 
+                        name: item.name, 
+                        key: item.key, 
+                        description: item.description, 
+                        categoryId: item.categoryId, 
+                        folderPath: folderName, 
+                        isSendable: item.isSendable, 
+                        isTestable: item.isTestable, 
+                        createdByName: item.createdByName, 
+                        createdDate: item.createdDate, 
+                        modifiedByName: item.modifiedByName, 
+                        modifiedDate: item.modifiedDate, 
+                        dataRetentionProperties: item.dataRetentionProperties, 
+                        fieldCount: item.fieldCount, 
+                        rowCount: item.rowCount 
+                    });
+                });
+                if (data.items.length < pageSize) hasMore = false; else page++;
+            } else hasMore = false;
+        }
+        const childrenUrl = \`\${baseUrl}/contactsmeta/fuelapi/legacy/v1/beta/folder/\${folderId}/children?Localization=true&$top=1000&$skip=0\`;
+        const children = await fetchApi(childrenUrl);
+        if (children && children.entry) {
+            for (const child of children.entry) {
+                await processFolder(child.id, \`\${folderName} > \${child.name}\`);
+            }
+        }
+    }
+
+    const rootUrl = \`\${baseUrl}/contactsmeta/fuelapi/legacy/v1/beta/folder?$where=allowedtypes%20in%20(%27synchronizeddataextension%27,%20%27dataextension%27,%20%27shared_data%27,%20%27salesforcedataextension%27,%20%27recyclebin%27)&Localization=true\`;
+    const root = await fetchApi(rootUrl);
+    
+    if (root && root.entry) {
+        const deRoot = root.entry.find(f => f.type === 'dataextension');
+        if (deRoot) {
+            await processFolder(deRoot.id, deRoot.name);
+            const json = JSON.stringify(allDEs, null, 2);
+            
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;top:10%;left:20%;width:60%;height:70%;background:#fff;border:2px solid #0070d2;border-radius:8px;z-index:999999;padding:20px;box-shadow:0 0 20px rgba(0,0,0,.5);display:flex;flex-direction:column;font-family:sans-serif;';
+            modal.innerHTML = \`
+                <h2 style="margin-top:0;color:#0070d2;">Extracción finalizada — \${allDEs.length} DEs</h2>
+                <textarea style="flex-grow:1;font-family:monospace;font-size:11px;padding:8px;border:1px solid #ccc;margin-bottom:12px;" id="de-out">\${json}</textarea>
+                <div style="display:flex;gap:10px;">
+                    <button onclick="navigator.clipboard.writeText(document.getElementById('de-out').value);this.textContent='✅ Copiado';setTimeout(()=>this.textContent='Copiar al portapapeles',2000);" style="background:#0070d2;color:#fff;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;font-weight:bold;">Copiar al portapapeles</button>
+                    <button onclick="this.closest('div').parentElement.remove();" style="background:#f4f6f9;border:1px solid #ccc;padding:10px 20px;border-radius:4px;cursor:pointer;">Cerrar</button>
+                </div>\`;
+            document.body.appendChild(modal);
+        }
+    }
+})();`;
+
+    pre.textContent = script;
+    pre._scriptContent = script;
 }
 
 async function handleRunAuditClick() {
@@ -118,6 +246,8 @@ export async function view() {
         // result.data === null → sin caché → se queda en panel de opciones
     } catch (e) {
         console.error('[AuditManager] Error al cargar la caché:', e);
+    } finally {
+        setTimeout(updateDeScript, 100); 
     }
 }
 
@@ -139,6 +269,12 @@ function renderCachedAudit(cached) {
         const el = document.getElementById(`audit-tab-${id}`);
         if (el && cached.tabs?.[id]) el.innerHTML = cached.tabs[id];
     });
+
+    // Restaurar el JSON de DEs si se guardó
+    if (cached.deJson) {
+        const deArea = document.getElementById('audit-de-json');
+        if (deArea) deArea.value = cached.deJson;
+    }
 
     // Banner de estadísticas + aviso de caché (compacto para caber en la fila de pestañas)
     const savedDate = cached.savedAt ? new Date(cached.savedAt).toLocaleString('es-ES') : '';
@@ -305,25 +441,30 @@ async function runAudit() {
     try {
         const apiConfig = await getAuthenticatedConfig();
 
-        ui.blockUI('1/5: Escaneando Usuarios…');
+        ui.blockUI('1/6: Escaneando Usuarios…');
         await auditUsers(apiConfig);
         renderedTabs.users = document.getElementById('audit-tab-users').innerHTML;
 
-        ui.blockUI('2/5: Escaneando Automatismos…');
+        ui.blockUI('2/6: Escaneando Automatismos…');
         await auditAutomations(apiConfig, isDetailedAutos);
         renderedTabs.autos = document.getElementById('audit-tab-autos').innerHTML;
 
-        ui.blockUI('3/5: Escaneando Journeys…');
+        ui.blockUI('3/6: Escaneando Journeys…');
         await auditJourneys(apiConfig, isDetailedJourneys);
         renderedTabs.journeys = document.getElementById('audit-tab-journeys').innerHTML;
 
-        ui.blockUI('4/5: Escaneando Cloud Pages…');
+        ui.blockUI('4/6: Escaneando Cloud Pages…');
         await auditCloudPages(apiConfig);
         renderedTabs.cp = document.getElementById('audit-tab-cp').innerHTML;
 
-        ui.blockUI('5/5: Escaneando Send Management…');
+        ui.blockUI('5/6: Escaneando Send Management…');
         await auditSendManagement(apiConfig);
         renderedTabs.sm = document.getElementById('audit-tab-sm').innerHTML;
+
+        const deJson = document.getElementById('audit-de-json')?.value?.trim();
+        ui.blockUI('6/6: Analizando Data Extensions…');
+        await auditDataExtensions(deJson);
+        renderedTabs.de = document.getElementById('audit-tab-de').innerHTML;
 
         const durationMs = Date.now() - startTime;
         const min = Math.floor(durationMs / 60000);
@@ -345,6 +486,7 @@ async function runAudit() {
                 auditData: {
                     savedAt:   new Date().toISOString(),
                     options:   { autos: isDetailedAutos, journeys: isDetailedJourneys },
+                    deJson:    document.getElementById('audit-de-json')?.value?.trim() || '',
                     tabs:      renderedTabs,
                     drillData: auditDrillData,
                     pdfData:   globalPdfData,
@@ -1234,6 +1376,186 @@ async function auditSendManagement(apiConfig) {
     document.getElementById('audit-tab-sm').innerHTML = buildTabWrapper(
         buildKpiRow(kpis) + callouts.join('') +
         buildGrid(cards.map(c => buildMetricCard(c.title, c.help, c.bars, { wide: c.wide })))
+    );
+}
+
+
+// ==========================================
+// 6. DATA EXTENSIONS
+// ==========================================
+async function auditDataExtensions(jsonText) {
+    const container = document.getElementById('audit-tab-de');
+
+    if (!jsonText) {
+        container.innerHTML = buildTabWrapper(
+            buildCallout('info', 'Sin datos de Data Extensions',
+                'Para auditar las Data Extensions, pega el JSON obtenido desde Contact Builder en el campo de la pantalla de configuración y vuelve a lanzar el escaneo.')
+        );
+        return;
+    }
+
+    let des = [];
+    try {
+        des = JSON.parse(jsonText);
+        if (!Array.isArray(des)) throw new Error('El JSON debe ser un array.');
+    } catch (e) {
+        container.innerHTML = buildTabWrapper(
+            buildCallout('danger', 'Error al parsear el JSON', 'Revisa que el texto pegado sea un JSON válido.')
+        );
+        return;
+    }
+
+    // Excluir DEs compartidas (shared) — no tienen folderPath propio o están en /Shared
+    const ownDes = des.filter(d => !d.folderPath?.toLowerCase().includes('shared'));
+    const total  = ownDes.length;
+
+    // Métricas
+    let noDescCount   = 0;
+    let sendableCount = 0, testableCount = 0;
+    let retentionCount = 0;
+    let over1MCount   = 0;
+    let totalFields   = 0;
+
+    const retentionTypes   = {};
+    const folderCounts     = {};
+    const noDescByUser     = {};
+    const fieldBuckets     = { '1-10': 0, '11-25': 0, '26-50': 0, '51+': 0 };
+
+    registerDrill('de_total',        'Total Data Extensions',              ['Nombre', 'Key', 'Carpeta', 'Filas', 'Campos', 'Sendable', 'Testable', 'Descripción', 'Creado por']);
+    registerDrill('de_no_desc',      'Sin Descripción',                    ['Nombre', 'Key', 'Carpeta', 'Creado por', 'Modificado por']);
+    registerDrill('de_sendable',     'Sendable',                           ['Nombre', 'Key', 'Carpeta', 'Filas']);
+    registerDrill('de_testable',     'Testable',                           ['Nombre', 'Key', 'Carpeta', 'Filas']);
+    registerDrill('de_retention',    'Con Data Retention',                 ['Nombre', 'Key', 'Tipo Retención', 'Borrar al final', 'Reset en Import']);
+    registerDrill('de_over1m',       'Con más de 1M de registros',         ['Nombre', 'Key', 'Carpeta', 'Filas']);
+    registerDrill('de_no_desc_users','Sin descripción — por propietario',  ['Nombre', 'Key', 'Carpeta']);
+
+    ownDes.forEach(d => {
+        const folder     = d.folderPath || 'Sin carpeta';
+        const rows       = d.rowCount   || 0;
+        const fields     = d.fieldCount || 0;
+        const hasDesc    = !!(d.description?.trim());
+        const createdBy  = d.createdByName  || 'Sin propietario';
+        const modifiedBy = d.modifiedByName || 'Sin propietario';
+
+        addDrillRow('de_total', [d.name, d.key, folder, rows, fields, d.isSendable?'Sí':'No', d.isTestable?'Sí':'No', d.description||'---', createdBy]);
+
+        folderCounts[folder] = (folderCounts[folder] || 0) + 1;
+        totalFields += fields;
+
+        if (!hasDesc) {
+            noDescCount++;
+            addDrillRow('de_no_desc', [d.name, d.key, folder, createdBy, modifiedBy]);
+            if (!noDescByUser[createdBy]) noDescByUser[createdBy] = [];
+            noDescByUser[createdBy].push([d.name, d.key, folder]);
+        }
+
+        if (d.isSendable) { sendableCount++; addDrillRow('de_sendable', [d.name, d.key, folder, rows]); }
+        if (d.isTestable) { testableCount++; addDrillRow('de_testable', [d.name, d.key, folder, rows]); }
+
+        if (rows > 1000000) { over1MCount++; addDrillRow('de_over1m', [d.name, d.key, folder, rows.toLocaleString('es-ES')]); }
+
+        // Data Retention
+        const ret = d.dataRetentionProperties;
+        if (ret) {
+            const hasRetention = ret.isDeleteAtEndOfRetentionPeriod || ret.isRowBasedRetention;
+            if (hasRetention) {
+                retentionCount++;
+                const retType = ret.isRowBasedRetention ? 'Por fila (Row-based)' : 'Al final del período';
+                retentionTypes[retType] = (retentionTypes[retType] || 0) + 1;
+                addDrillRow('de_retention', [d.name, d.key, retType, ret.isDeleteAtEndOfRetentionPeriod?'Sí':'No', ret.isResetRetentionPeriodOnImport?'Sí':'No']);
+            }
+        }
+
+        // Buckets de campos
+        if      (fields <= 10) fieldBuckets['1-10']++;
+        else if (fields <= 25) fieldBuckets['11-25']++;
+        else if (fields <= 50) fieldBuckets['26-50']++;
+        else                   fieldBuckets['51+']++;
+    });
+
+    // Carpetas con más de 10 DEs
+    const bigFolders = Object.entries(folderCounts)
+        .filter(([, n]) => n > 10)
+        .sort((a, b) => b[1] - a[1]);
+
+    registerDrill('de_big_folders', 'Carpetas con más de 10 DEs', ['Carpeta', 'Nº DEs']);
+    bigFolders.forEach(([folder, n]) => {
+        addDrillRow('de_big_folders', [folder, n]);
+        // ARREGLO: Generar key y título dinámicos
+        const dKeyF = `de_folder_${folder.replace(/[^a-z0-9]/gi, '')}`;
+        registerDrill(dKeyF, `DEs en: ${folder}`, ['Nombre', 'Key', 'Filas', 'Campos', 'Descripción']);
+        ownDes.filter(d => (d.folderPath || 'Sin carpeta') === folder)
+              .forEach(d => addDrillRow(dKeyF, [d.name, d.key, d.rowCount||0, d.fieldCount||0, d.description||'---']));
+    });
+
+    // Drills por propietario sin descripción
+    Object.entries(noDescByUser).forEach(([owner, items]) => {
+        // ARREGLO: Generar key y título dinámicos
+        const dKey = `de_no_desc_${owner.replace(/[^a-z0-9]/gi, '')}`;
+        registerDrill(dKey, `Sin descripción — ${owner}`, ['Nombre', 'Key', 'Carpeta']);
+        items.forEach(row => addDrillRow(dKey, row));
+    });
+
+    const noDescPct   = total > 0 ? Math.round((noDescCount / total) * 100) : 0;
+    const avgFields   = total > 0 ? Math.round(totalFields / total) : 0;
+
+    const callouts = [];
+    if (noDescPct > 50) callouts.push(buildCallout('warning', 'Mayoría de DEs sin descripción',
+        `El ${noDescPct}% de las Data Extensions no tienen descripción. Dificulta el mantenimiento y la búsqueda.`));
+    if (over1MCount > 0) callouts.push(buildCallout('info', `${over1MCount} DEs superan 1M de registros`,
+        'Revisar si tienen política de retención activa y si el volumen está justificado por el caso de uso.'));
+    if (bigFolders.length > 0) callouts.push(buildCallout('info', 'Carpetas con gran volumen de DEs',
+        `${bigFolders.length} carpeta(s) tienen más de 10 Data Extensions. Valorar si la estructura de carpetas es la adecuada.`));
+
+    // ARREGLO: Asignar el valor del drillKey dinámico para la tabla
+    const noDescUserBars = Object.entries(noDescByUser)
+        .sort((a, b) => b[1].length - a[1].length)
+        .map(([owner, items]) => ({ label: owner, value: items.length, total: noDescCount || 1, drillKey: `de_no_desc_${owner.replace(/[^a-z0-9]/gi, '')}` }));
+
+    // ARREGLO: Asignar el valor del drillKey dinámico para las carpetas
+    const bigFolderBars = bigFolders.map(([folder, n]) => ({
+        label: folder, value: n, total: total,
+        drillKey: `de_folder_${folder.replace(/[^a-z0-9]/gi, '')}`
+    }));
+
+    const kpis = [
+        { value: total,          label: 'Total DEs (propias)', color: '#69a3db', drillKey: 'de_total' },
+        { value: noDescCount,    label: 'Sin descripción',     color: noDescPct > 50 ? '#e74c3c' : '#f39c12', drillKey: 'de_no_desc' },
+        { value: sendableCount,  label: 'Sendable',            color: '#27ae60', drillKey: 'de_sendable' },
+        { value: testableCount,  label: 'Testable',            color: '#3498db', drillKey: 'de_testable' },
+        { value: retentionCount, label: 'Con Retención',       color: '#9b59b6', drillKey: 'de_retention' },
+        { value: over1MCount,    label: '>1M registros',       color: over1MCount > 0 ? '#e74c3c' : '#bdc3c7', drillKey: 'de_over1m' },
+        { value: avgFields,      label: 'Campos (media)',      color: '#69a3db' },
+    ];
+
+    const cards = [
+        { title: 'Descripción', help: 'Presencia de descripción en las Data Extensions propias.', bars: [
+            { label: 'Con descripción', value: total - noDescCount, total, color: '#27ae60', drillKey: 'de_total' },
+            { label: 'Sin descripción', value: noDescCount,         total, color: '#e74c3c', drillKey: 'de_no_desc' },
+        ]},
+        { title: 'Sin descripción — por propietario', help: 'Usuarios que más DEs sin documentar han creado.', bars: noDescUserBars.length > 0 ? noDescUserBars : [{ label: 'Todas documentadas', value: 0, total: 1, color: '#27ae60' }] },
+        { title: 'Sendable y Testable', help: 'DEs configuradas para envío o pruebas.', bars: [
+            { label: 'Sendable', value: sendableCount, total, color: '#27ae60', drillKey: 'de_sendable' },
+            { label: 'Testable', value: testableCount, total, color: '#3498db', drillKey: 'de_testable' },
+        ]},
+        { title: 'Data Retention', help: 'DEs con política de retención de datos activa.', bars: [
+            { label: 'Con retención',   value: retentionCount,         total, color: '#9b59b6', drillKey: 'de_retention' },
+            { label: 'Sin retención',   value: total - retentionCount, total, color: '#bdc3c7' },
+            ...Object.entries(retentionTypes).map(([label, value]) => ({ label, value, total: retentionCount || 1 })),
+        ]},
+        // ARREGLO: Faltaba texto en "help:" y la variable label en el map.
+        { title: 'Distribución por nº de campos', help: 'Volumetría de Data Extensions agrupadas por la cantidad de campos que poseen.', bars:
+            Object.entries(fieldBuckets).map(([label, value]) => ({ label, value, total }))
+        },
+        { title: 'Carpetas con más de 10 DEs', help: 'Carpetas que concentran muchas DEs. Haz clic para ver su contenido.', bars:
+            bigFolderBars.length > 0 ? bigFolderBars : [{ label: 'Ninguna supera el umbral', value: 0, total: 1, color: '#27ae60' }]
+        },
+    ];
+
+    registerPdfData('de', kpis, cards);
+    container.innerHTML = buildTabWrapper(
+        buildKpiRow(kpis) + callouts.join('') +
+        buildGrid(cards.map(c => buildMetricCard(c.title, c.help, c.bars)))
     );
 }
 
