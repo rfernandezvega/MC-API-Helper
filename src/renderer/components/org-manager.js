@@ -20,6 +20,7 @@ let journeysManager;
 let cloudPagesManager;
 let contentManager;
 let usersManager;
+let auditManager; // ← AÑADIDO: para llamar a view() cuando cambie el cliente
 
 /**
  * Recoge los valores del formulario que son seguros para guardarlos.
@@ -184,6 +185,12 @@ export async function loadAndSyncClientConfig(clientName) {
             elements.sidebarClientSelect.value = clientName;
 
             logger.logMessage(`Cliente "${clientName}" cargado. Comprobando sesión...`);
+
+            // ← AÑADIDO: actualizar la vista de auditoría con la caché del nuevo cliente
+            // (o mostrar las opciones si no tiene caché). Se llama aquí porque
+            // clientNameInput.value se asigna programáticamente y no dispara el evento 'change'.
+            if (auditManager) auditManager.view();
+
             getAuthenticatedConfig()
                 .catch(() => { /* Error ya manejado internamente */ })
                 .finally(ui.unblockUI);
@@ -193,6 +200,9 @@ export async function loadAndSyncClientConfig(clientName) {
             elements.savedConfigsSelect.value = '';
             elements.sidebarClientSelect.value = '';
             logger.logMessage("Ningún cliente seleccionado.");
+
+            // ← AÑADIDO: limpiar la vista de auditoría cuando no hay cliente
+            if (auditManager) auditManager.view();
         }
     } finally {
         logger.endLogBuffering();
@@ -325,14 +335,15 @@ function populateDvConfigsTable(configs = []) {
  */
 export async function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
-    updateLoginStatus = dependencies.updateLoginStatus;
-    customerFinder = dependencies.customerFinder;
-    calendar = dependencies.calendar;
-    automationsManager = dependencies.automationsManager;
-    journeysManager = dependencies.journeysManager;
-    cloudPagesManager = dependencies.cloudPagesManager;
-    contentManager = dependencies.contentManager;
-    usersManager = dependencies.usersManager;
+    updateLoginStatus      = dependencies.updateLoginStatus;
+    customerFinder         = dependencies.customerFinder;
+    calendar               = dependencies.calendar;
+    automationsManager     = dependencies.automationsManager;
+    journeysManager        = dependencies.journeysManager;
+    cloudPagesManager      = dependencies.cloudPagesManager;
+    contentManager         = dependencies.contentManager;
+    usersManager           = dependencies.usersManager;
+    auditManager           = dependencies.auditManager; // ← AÑADIDO
 
     // BLOQUE DE MIGRACIÓN (Seguridad para no perder clientes actuales)
     const oldLocalData = localStorage.getItem('mcApiConfigs');

@@ -600,7 +600,8 @@ document.addEventListener('DOMContentLoaded', function () {
 			automationAnalyzer,
 			journeyAnalyzer,
 			contentManager,
-			usersManager  
+			usersManager,
+			auditManager
 		});
 
         deCreator.init({ getAuthenticatedConfig });

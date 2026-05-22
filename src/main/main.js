@@ -442,6 +442,29 @@ ipcMain.handle('load-cloud-pages-cache', (event, clientName) => {
     }
 });
 
+ipcMain.handle('select-folder', async (event) => {
+    const browserWindow = BrowserWindow.fromWebContents(event.sender);
+    const { canceled, filePaths } = await dialog.showOpenDialog(browserWindow, {
+        title: 'Seleccionar carpeta para guardar',
+        properties: ['openDirectory']
+    });
+    if (canceled || !filePaths || filePaths.length === 0) return null;
+    return filePaths[0];
+});
+
+ipcMain.handle('save-multiple-csvs', async (event, { folderPath, files }) => {
+    try {
+        for (const file of files) {
+            const filePath = path.join(folderPath, file.filename);
+            fs.writeFileSync(filePath, file.content, 'utf-8');
+        }
+        return { success: true };
+    } catch (error) {
+        console.error('Error al guardar múltiples CSVs:', error);
+        return { success: false, error: error.message };
+    }
+});
+
 
 // --- 5. GESTIÓN DE CREDENCIALES Y TOKENS ---
 async function refreshAccessToken(clientName) {
@@ -535,8 +558,7 @@ ipcMain.on('start-login', async (event, config) => {
         width: 800, height: 600, parent: mainWindow, modal: true, show: true,
         webPreferences: { 
             nodeIntegration: false, 
-            contextIsolation: true,
-            // CAMBIO: Esto fuerza a que la ventana de login NO comparta cookies ni sesión con nada
+            contextIsolation: true,            
             partition: 'nonpersistent' 
         }
     });

@@ -423,6 +423,10 @@ export function init() {
     elements.senderProfilesTbody = document.getElementById('sender-profiles-tbody');
     elements.refreshSendManagementBtn = document.getElementById('refreshSendManagementBtn');
     elements.downloadSendManagementCsvBtn = document.getElementById('downloadSendManagementCsvBtn');
+
+    // --- 29. AUDIT MANAGER ---
+    elements.downloadAuditPdfBtn = document.getElementById('downloadAuditPdfBtn');
+    elements.downloadAuditDetailsBtn = document.getElementById('downloadAuditDetailsBtn');
 }
 
 export default elements;

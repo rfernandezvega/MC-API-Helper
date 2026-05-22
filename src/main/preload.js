@@ -102,7 +102,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * @returns {Promise<object>} - { success: true, data: object } o { success: true, data: null } si no hay caché.
    */
   loadAuditCache: (clientName) => ipcRenderer.invoke('load-audit-cache', clientName),
-  
+
     /**
    * Pide al proceso principal que busque texto en la página.
    * @param {string} text - El texto a buscar.
@@ -164,5 +164,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveCalendarCache: (data) => ipcRenderer.invoke('save-calendar-cache', data),
   loadCalendarCache: (clientName) => ipcRenderer.invoke('load-calendar-cache', clientName),
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
-  getSettings: () => ipcRenderer.invoke('get-settings')
+  getSettings: () => ipcRenderer.invoke('get-settings'),
+  selectFolder: () => ipcRenderer.invoke('select-folder'),
+  saveMultipleCsvs: (data) => ipcRenderer.invoke('save-multiple-csvs', data)
 });
