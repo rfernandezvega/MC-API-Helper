@@ -220,7 +220,7 @@ async function downloadAllDetailsCsv() {
     ui.blockUI('Generando y guardando archivos CSV...');
     try {
         // Excluir claves demasiado granulares del export masivo
-        const skipPrefixes = ['sm_from_', 'auto_email_'];
+        const skipPrefixes = ['sm_from_', 'auto_email_', 'auto_noDesc_user_', 'auto_exec_year_', 'auto_status_'];
         const filesToSave = [];
         for (const [key, data] of Object.entries(auditDrillData)) {
             if (data.rows.length === 0) continue;
@@ -488,7 +488,7 @@ async function auditUsers(apiConfig) {
         ]},
         { title: 'Actividad de login (usuarios activos)', help: `Base: ${activeUsersForLogin} activos. Último login registrado para detectar cuentas realmente en uso.`, bars: loginBars },
         { title: 'Top roles asignados', help: 'Roles más frecuentes para evaluar la distribución de permisos.', bars:
-            Object.entries(roles).sort((a, b) => b[1] - a[1]).slice(0, 7).map(([label, value]) => ({
+            Object.entries(roles).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({
                 label, value, total, drillKey: `users_role_${label.replace(/[^a-z0-9]/gi, '')}`,
             }))
         },
@@ -620,7 +620,7 @@ async function auditAutomations(apiConfig, isDetailed) {
     });
 
     const totalActivityInstances = Object.values(activityTypeCounts).reduce((s, v) => s + v, 0) || 1;
-    const actTypeBars = Object.entries(activityTypeCounts).sort((a, b) => b[1] - a[1]).slice(0, 14).map(([label, value]) => {
+    const actTypeBars = Object.entries(activityTypeCounts).sort((a, b) => b[1] - a[1]).map(([label, value]) => {
         const dKey = `auto_act_${label.replace(/[^a-z0-9]/gi, '')}`;
         if (!isDetailed) {
             registerDrill(dKey, `Actividades: ${label}`, ['Automatismo Padre', 'Cantidad', 'Estado', 'Propietario']);
@@ -817,7 +817,7 @@ async function auditAutomations(apiConfig, isDetailed) {
             .map(([email, data]) => ({ label: email, value: data.count, total: notifications['Con email de alerta'] || 1, drillKey: `auto_email_${email.replace(/[^a-z0-9]/gi, '')}` }));
 
         const autoNoDescUserBars = Object.entries(autoNoDescByUser)
-            .sort((a, b) => b[1].length - a[1].length).slice(0, 8)
+            .sort((a, b) => b[1].length - a[1].length)
             .map(([owner, items]) => ({ label: owner, value: items.length, total: autoDescriptions['Sin descripción'] || 1, drillKey: `auto_noDesc_user_${owner.replace(/[^a-z0-9]/gi, '')}` }));
 
         detailedCards = [
@@ -1205,7 +1205,7 @@ async function auditSendManagement(apiConfig) {
     if (config['From dinámico (%%=)'] > 0) callouts.push(buildCallout('info', 'Remitente dinámico detectado',
         `${config['From dinámico (%%=)']} perfiles usan AMPscript (%%=) en el campo From. Verificar que la lógica de personalización sea intencionada.`));
 
-    const fromBars = Object.entries(froms).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([label,value]) => ({
+    const fromBars = Object.entries(froms).sort((a,b)=>b[1]-a[1]).map(([label,value]) => ({
         label, value, total: sp.length, drillKey: `sm_from_${label.replace(/[^a-z0-9]/gi,'')}`,
     }));
 

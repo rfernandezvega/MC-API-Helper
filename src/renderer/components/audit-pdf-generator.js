@@ -1,5 +1,5 @@
 // Fichero: src/renderer/components/audit-pdf-generator.js
-// Descripción: Módulo para exportar la auditoría técnica a PDF dibujando los gráficos de la vista.
+// Descripción: Módulo para exportar la auditoría a PDF dibujando los gráficos de la vista.
 
 import * as ui from '../ui/ui-helpers.js';
 import { loadCustomFonts } from '../ui/fonts.js';
@@ -28,12 +28,12 @@ export async function generateAuditPDF(pdfData, stats, clientName) {
 
         // --- PORTADA Y CABECERA ---
         doc.setFontSize(22).setTextColor(40, 116, 166).setFont("helvetica", "bold");
-        doc.text(`Informe de Auditoría Técnica SFMC`, 14, currentY);
+        doc.text(`Informe de Auditoría Marketing Cloud`, 14, currentY);
         
         currentY += 10;
         doc.setFontSize(12).setTextColor(100, 100, 100).setFont("helvetica", "normal");
         const dateStr = new Date().toLocaleString('es-ES');
-        doc.text(`Cliente/Entorno: ${clientName || 'Desconocido'}`, 14, currentY);
+        doc.text(`Entorno: ${clientName || 'Desconocido'}`, 14, currentY);
         doc.text(`Fecha: ${dateStr}`, 140, currentY);
         
         if (stats) {
