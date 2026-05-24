@@ -356,7 +356,7 @@ async function downloadAllDetailsCsv() {
     ui.blockUI('Generando y guardando archivos CSV...');
     try {
         // Excluir claves demasiado granulares del export masivo
-        const skipPrefixes = ['sm_from_', 'auto_email_', 'auto_noDesc_user_', 'auto_exec_year_', 'auto_status_'];
+        const skipPrefixes = ['sm_from_', 'auto_email_', 'auto_noDesc_user_', 'auto_exec_year_', 'auto_status_', 'de_no_desc_', 'de_folder_'];
         const filesToSave = [];
         for (const [key, data] of Object.entries(auditDrillData)) {
             if (data.rows.length === 0) continue;
@@ -1414,6 +1414,8 @@ async function auditDataExtensions(jsonText) {
     let sendableCount = 0, testableCount = 0;
     let retentionCount = 0;
     let over1MCount   = 0;
+    let emptyCount    = 0;
+    let testNameCount = 0; // DEs con "test" o "prueba" en el nombre
     let totalFields   = 0;
 
     const retentionTypes   = {};
@@ -1427,6 +1429,8 @@ async function auditDataExtensions(jsonText) {
     registerDrill('de_testable',     'Testable',                           ['Nombre', 'Key', 'Carpeta', 'Filas']);
     registerDrill('de_retention',    'Con Data Retention',                 ['Nombre', 'Key', 'Tipo Retención', 'Borrar al final', 'Reset en Import']);
     registerDrill('de_over1m',       'Con más de 1M de registros',         ['Nombre', 'Key', 'Carpeta', 'Filas']);
+    registerDrill('de_empty',        'DEs sin registros (vacías)',          ['Nombre', 'Key', 'Carpeta', 'Creado por']);
+    registerDrill('de_test_name',    'DEs con nombre de prueba/test',       ['Nombre', 'Key', 'Carpeta', 'Filas', 'Creado por']);
     registerDrill('de_no_desc_users','Sin descripción — por propietario',  ['Nombre', 'Key', 'Carpeta']);
 
     ownDes.forEach(d => {
@@ -1453,6 +1457,14 @@ async function auditDataExtensions(jsonText) {
         if (d.isTestable) { testableCount++; addDrillRow('de_testable', [d.name, d.key, folder, rows]); }
 
         if (rows > 1000000) { over1MCount++; addDrillRow('de_over1m', [d.name, d.key, folder, rows.toLocaleString('es-ES')]); }
+        if (rows === 0) { emptyCount++; addDrillRow('de_empty', [d.name, d.key, folder, createdBy]); }
+
+        // DEs con nombre de prueba/test (case-insensitive, cualquier posición)
+        const TEST_PATTERNS = /test|prueba/i;
+        if (TEST_PATTERNS.test(d.name)) {
+            testNameCount++;
+            addDrillRow('de_test_name', [d.name, d.key, folder, rows, createdBy]);
+        }
 
         // Data Retention
         const ret = d.dataRetentionProperties;
@@ -1475,10 +1487,10 @@ async function auditDataExtensions(jsonText) {
 
     // Carpetas con más de 10 DEs
     const bigFolders = Object.entries(folderCounts)
-        .filter(([, n]) => n > 10)
+        .filter(([, n]) => n > 15)
         .sort((a, b) => b[1] - a[1]);
 
-    registerDrill('de_big_folders', 'Carpetas con más de 10 DEs', ['Carpeta', 'Nº DEs']);
+    registerDrill('de_big_folders', 'Carpetas con más de 15 DEs', ['Carpeta', 'Nº DEs']);
     bigFolders.forEach(([folder, n]) => {
         addDrillRow('de_big_folders', [folder, n]);
         // ARREGLO: Generar key y título dinámicos
@@ -1505,7 +1517,7 @@ async function auditDataExtensions(jsonText) {
     if (over1MCount > 0) callouts.push(buildCallout('info', `${over1MCount} DEs superan 1M de registros`,
         'Revisar si tienen política de retención activa y si el volumen está justificado por el caso de uso.'));
     if (bigFolders.length > 0) callouts.push(buildCallout('info', 'Carpetas con gran volumen de DEs',
-        `${bigFolders.length} carpeta(s) tienen más de 10 Data Extensions. Valorar si la estructura de carpetas es la adecuada.`));
+        `${bigFolders.length} carpeta(s) tienen más de 15 Data Extensions. Valorar si la estructura de carpetas es la adecuada.`));
 
     // ARREGLO: Asignar el valor del drillKey dinámico para la tabla
     const noDescUserBars = Object.entries(noDescByUser)
@@ -1525,7 +1537,8 @@ async function auditDataExtensions(jsonText) {
         { value: testableCount,  label: 'Testable',            color: '#3498db', drillKey: 'de_testable' },
         { value: retentionCount, label: 'Con Retención',       color: '#9b59b6', drillKey: 'de_retention' },
         { value: over1MCount,    label: '>1M registros',       color: over1MCount > 0 ? '#e74c3c' : '#bdc3c7', drillKey: 'de_over1m' },
-        { value: avgFields,      label: 'Campos (media)',      color: '#69a3db' },
+        { value: emptyCount,     label: 'Sin registros',       color: emptyCount > total * 0.3 ? '#f39c12' : '#bdc3c7', drillKey: 'de_empty' },
+        { value: testNameCount,  label: 'Nombre de prueba',    color: testNameCount > 0 ? '#e67e22' : '#bdc3c7', drillKey: 'de_test_name' },
     ];
 
     const cards = [
@@ -1533,7 +1546,7 @@ async function auditDataExtensions(jsonText) {
             { label: 'Con descripción', value: total - noDescCount, total, color: '#27ae60', drillKey: 'de_total' },
             { label: 'Sin descripción', value: noDescCount,         total, color: '#e74c3c', drillKey: 'de_no_desc' },
         ]},
-        { title: 'Sin descripción — por propietario', help: 'Usuarios que más DEs sin documentar han creado.', bars: noDescUserBars.length > 0 ? noDescUserBars : [{ label: 'Todas documentadas', value: 0, total: 1, color: '#27ae60' }] },
+        { title: 'Sin descripción — por propietario', help: 'Usuarios que más DEs sin documentar han creado.', wide: true, bars: noDescUserBars.length > 0 ? noDescUserBars : [{ label: 'Todas documentadas', value: 0, total: 1, color: '#27ae60' }] },
         { title: 'Sendable y Testable', help: 'DEs configuradas para envío o pruebas.', bars: [
             { label: 'Sendable', value: sendableCount, total, color: '#27ae60', drillKey: 'de_sendable' },
             { label: 'Testable', value: testableCount, total, color: '#3498db', drillKey: 'de_testable' },
@@ -1544,10 +1557,15 @@ async function auditDataExtensions(jsonText) {
             ...Object.entries(retentionTypes).map(([label, value]) => ({ label, value, total: retentionCount || 1 })),
         ]},
         // ARREGLO: Faltaba texto en "help:" y la variable label en el map.
-        { title: 'Distribución por nº de campos', help: 'Volumetría de Data Extensions agrupadas por la cantidad de campos que poseen.', bars:
-            Object.entries(fieldBuckets).map(([label, value]) => ({ label, value, total }))
-        },
-        { title: 'Carpetas con más de 10 DEs', help: 'Carpetas que concentran muchas DEs. Haz clic para ver su contenido.', bars:
+        { title: 'DEs sin registros (vacías)', help: 'Data Extensions que actualmente no tienen ningún registro. Pueden ser de uso esporádico o candidatas a revisión.', bars: [
+            { label: 'Con registros',    value: total - emptyCount, total, color: '#27ae60' },
+            { label: 'Sin registros',    value: emptyCount,         total, color: '#f39c12', drillKey: 'de_empty' },
+        ]},
+        { title: 'DEs con nombre de prueba/test', help: 'DEs que contienen "test" o "prueba" en el nombre (sin distinción de mayúsculas). Candidatas a revisión o limpieza.', bars: [
+            { label: 'Nombre normal',       value: total - testNameCount, total, color: '#27ae60' },
+            { label: 'Contiene test/prueba',value: testNameCount,         total, color: '#e67e22', drillKey: 'de_test_name' },
+        ]},
+        { title: 'Carpetas con más de 15 DEs', help: 'Carpetas que concentran muchas DEs. Haz clic para ver su contenido.', wide: true, bars:
             bigFolderBars.length > 0 ? bigFolderBars : [{ label: 'Ninguna supera el umbral', value: 0, total: 1, color: '#27ae60' }]
         },
     ];

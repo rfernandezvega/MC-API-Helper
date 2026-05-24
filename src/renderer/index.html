@@ -284,12 +284,14 @@
             </div>
 
 
-        <!-- OPCIÓN: Data Extensions (JSON) — a todo el ancho -->
-        <div style="margin-top:24px; border-top:1px solid #e2e8f0; padding-top:20px; width:100%;">
+        </div><!-- /grid 2 columnas -->
+
+        <!-- OPCIÓN: Data Extensions (JSON) — fuera del grid, ocupa todo el ancho -->
+        <div style="margin-top:24px; border-top:1px solid #e2e8f0; padding-top:20px;">
             <div style="font-weight:700; font-size:1em; color:#2c3e50; margin-bottom:6px;">Data Extensions — Análisis desde JSON</div>
             <p style="font-size:0.83em; color:#555; margin:0 0 12px 0; line-height:1.6;">
-                Para auditar las DEs de la instancia, accede <a id="audit-de-cb-link" href="#" class="external-link" style="color: #0070d2; text-decoration: underline; font-weight: bold;">aquí</a>  y ejecuta el script de abajo en la consola del navegador
-                estando logado en <b>Contact Builder</b>. El script recorre todas las carpetas y te mostrará
+                Cada escaneo <b>sobreescribe la caché anterior</b> — si relanzas sin las opciones de análisis profundo marcadas, perderás esos datos.<br>Para auditar las DEs de la instancia, accede <a id="audit-de-cb-link" href="#" class="external-link" style="color: #0070d2; text-decoration: underline; font-weight: bold;">aquí</a>  y ejecuta el script de abajo en la consola del navegador
+                estando logado en <b>Contact Builder</b>. El script recorre todas las carpetas (para ~6.000 DEs tarda aproximadamente 20 minutos) y te mostrará
                 un popup para copiar el JSON resultante. Las DEs compartidas (carpeta <i>Shared</i>) se excluyen automáticamente del análisis.
             </p>
 
@@ -307,7 +309,6 @@
             <textarea id="audit-de-json" placeholder="Pega aquí el JSON de Data Extensions (array de objetos)…"
                 style="width:100%; height:110px; font-size:0.78em; font-family:monospace; border:1px solid #d1d5db;
                        border-radius:8px; padding:10px; resize:vertical; color:#374151; background:#f9fafb; box-sizing:border-box;"></textarea>
-        </div>
         </div>
     </div>
 

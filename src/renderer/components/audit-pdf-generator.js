@@ -49,7 +49,8 @@ export async function generateAuditPDF(pdfData, stats, clientName) {
             { key: 'autos', title: '2. AUTOMATISMOS' },
             { key: 'journeys', title: '3. JOURNEYS' },
             { key: 'cp', title: '4. CLOUD PAGES' },
-            { key: 'sm', title: '5. SEND MANAGEMENT' }
+            { key: 'sm', title: '5. SEND MANAGEMENT' },
+            { key: 'de', title: '6. DATA EXTENSIONS' }
         ];
 
         for (let i = 0; i < sections.length; i++) {
@@ -108,65 +109,90 @@ export async function generateAuditPDF(pdfData, stats, clientName) {
             }
 
             // PINTAR TARJETAS (Gráficos de barras)
+            // Las tarjetas "wide" ocupan todo el ancho; las normales podrían pintarse en columnas,
+            // pero por legibilidad en PDF se pintan todas a ancho completo.
             for (const card of data.cards) {
-                // Prevenir corte de página si la tarjeta es larga
-                const cardEstHeight = 15 + (card.bars.length * 7);
-                if (currentY + cardEstHeight > 280) {
+                const HEADER_H = 18; // espacio para título + ayuda
+                const BAR_H    = 7;  // alto por fila de barra
+                const PAD      = 5;  // padding inferior entre tarjetas
+                const PAGE_MAX = 275;
+                const PAGE_TOP = 20;
+
+                const bars = card.bars || [];
+
+                // ¿Cabe al menos la cabecera + 1 barra en la página actual?
+                if (currentY + HEADER_H + BAR_H > PAGE_MAX) {
                     doc.addPage();
-                    currentY = 20;
+                    currentY = PAGE_TOP;
                 }
 
-                // Fondo tarjeta
-                doc.setDrawColor(220, 220, 220);
-                doc.setFillColor(255, 255, 255);
-                doc.rect(14, currentY, 182, cardEstHeight, 'FD');
-
-                // Título de la tarjeta
+                // Dibujar cabecera de tarjeta
                 doc.setFontSize(11).setTextColor(40, 40, 40).setFont("helvetica", "bold");
                 doc.text(card.title, 18, currentY + 8);
-                
-                // Texto de ayuda
                 doc.setFontSize(8).setTextColor(120, 120, 120).setFont("helvetica", "normal");
-                doc.text(card.help || '', 18, currentY + 12);
+                const helpLines = doc.splitTextToSize(card.help || '', 175);
+                doc.text(helpLines, 18, currentY + 13);
+                const headerUsed = HEADER_H + Math.max(0, (helpLines.length - 1) * 4);
+                currentY += headerUsed;
 
-                let barY = currentY + 18;
-
-                if (card.bars.length === 0) {
+                if (bars.length === 0) {
                     doc.setFontSize(9).setTextColor(150, 150, 150).setFont("helvetica", "italic");
-                    doc.text("Sin datos disponibles.", 18, barY);
+                    doc.text("Sin datos disponibles.", 18, currentY);
+                    currentY += BAR_H;
                 } else {
-                    for (const bar of card.bars) {
-                        doc.setFontSize(8).setTextColor(60, 60, 60).setFont("helvetica", "normal");
-                        // Truncar label si es muy largo
-                        let labelText = bar.label;
-                        if (labelText.length > 50) labelText = labelText.substring(0, 47) + '...';
-                        doc.text(labelText, 18, barY);
+                    // Fondo de la tarjeta: calcular cuántas barras caben en la página actual
+                    // y paginar el resto
+                    let barsRemaining = [...bars];
+                    let firstChunk = true;
 
-                        // Barra base gris
-                        doc.setFillColor(240, 240, 240);
-                        doc.rect(100, barY - 3, 60, 4, 'F');
+                    while (barsRemaining.length > 0) {
+                        const spaceLeft   = PAGE_MAX - currentY;
+                        const barsFit     = Math.max(1, Math.floor(spaceLeft / BAR_H));
+                        const chunk       = barsRemaining.splice(0, barsFit);
+                        const chunkHeight = chunk.length * BAR_H;
 
-                        // Porcentaje
-                        const pct = bar.total > 0 ? Math.min(100, Math.round((bar.value / bar.total) * 100)) : 0;
-                        const fillWidth = (pct / 100) * 60;
+                        // Fondo del bloque (solo si hay espacio)
+                        doc.setDrawColor(220, 220, 220);
+                        doc.setFillColor(255, 255, 255);
+                        doc.rect(14, currentY - 2, 182, chunkHeight + 4, 'FD');
 
-                        // Barra color
-                        const rgb = hexToRgb(bar.color || '#69a3db');
-                        doc.setFillColor(rgb.r, rgb.g, rgb.b);
-                        if (fillWidth > 0) {
-                            doc.rect(100, barY - 3, fillWidth, 4, 'F');
+                        for (const bar of chunk) {
+                            let labelText = bar.label || '';
+                            if (labelText.length > 50) labelText = labelText.substring(0, 47) + '...';
+
+                            doc.setFontSize(8).setTextColor(60, 60, 60).setFont("helvetica", "normal");
+                            doc.text(labelText, 18, currentY + 4);
+
+                            // Barra base gris
+                            doc.setFillColor(240, 240, 240);
+                            doc.rect(100, currentY, 65, 4, 'F');
+
+                            const pct       = bar.total > 0 ? Math.min(100, Math.round((bar.value / bar.total) * 100)) : 0;
+                            const fillWidth = (pct / 100) * 65;
+                            const rgb       = hexToRgb(bar.color || '#69a3db');
+
+                            doc.setFillColor(rgb.r, rgb.g, rgb.b);
+                            if (fillWidth > 0) doc.rect(100, currentY, fillWidth, 4, 'F');
+
+                            doc.setFontSize(9).setTextColor(rgb.r, rgb.g, rgb.b).setFont("helvetica", "bold");
+                            doc.text(String(bar.value), 175, currentY + 4, { align: 'right' });
+                            doc.setFontSize(8).setTextColor(150, 150, 150).setFont("helvetica", "normal");
+                            doc.text(`${pct}%`, 193, currentY + 4, { align: 'right' });
+
+                            currentY += BAR_H;
                         }
 
-                        // Textos derecha
-                        doc.setFontSize(9).setTextColor(rgb.r, rgb.g, rgb.b).setFont("helvetica", "bold");
-                        doc.text(String(bar.value), 175, barY, { align: 'right' });
-                        doc.setFontSize(8).setTextColor(150, 150, 150).setFont("helvetica", "normal");
-                        doc.text(`${pct}%`, 190, barY, { align: 'right' });
-
-                        barY += 7;
+                        // Si quedan barras, nueva página y repetir título abreviado
+                        if (barsRemaining.length > 0) {
+                            doc.addPage();
+                            currentY = PAGE_TOP;
+                            doc.setFontSize(10).setTextColor(100, 100, 100).setFont("helvetica", "italic");
+                            doc.text(`${card.title} (continuación)`, 18, currentY);
+                            currentY += 8;
+                        }
                     }
                 }
-                currentY += cardEstHeight + 5;
+                currentY += PAD;
             }
         }
 
