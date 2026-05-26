@@ -977,7 +977,7 @@ function parseJourneyActivities(activities = []) {
     
     for (const activity of activities) {
         if (activity.type === 'EMAILV2') {
-            // CORRECCIÓN: Usar triggeredSend.key, NO triggeredSendKey
+            
             const triggeredKey = activity.configurationArguments?.triggeredSend?.key || 
                                  activity.configurationArguments?.triggeredSendKey || 
                                  activity.key;
@@ -988,7 +988,7 @@ function parseJourneyActivities(activities = []) {
             });
         }
         else if (['SMS', 'SMSSYNC'].includes(activity.type)) communications.sms.push(activity.name);
-        else if (['INAPP', 'INBOX', 'MOBILEPUSH','PUSHINBOXACTIVITY'].includes(activity.type)) communications.pushes.push(activity.name);
+        else if (['INAPP', 'INBOX', 'MOBILEPUSH','PUSHINBOXACTIVITY', 'PUSHNOTIFICATIONACTIVITY'].includes(activity.type)) communications.pushes.push(activity.name);
         else if (activity.type === 'WHATSAPPACTIVITY') communications.whatsapps.push(activity.name);
     }
     return communications;

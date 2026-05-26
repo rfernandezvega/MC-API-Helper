@@ -546,28 +546,20 @@ document.addEventListener('DOMContentLoaded', function () {
 		initDomElements();
 		setupEventListeners();
 
-		// Muestra el modal de licencia con un mensaje de espera
 		elements.licenseModal.style.display = 'flex';
 		elements.licenseStatusMessage.textContent = 'Verificando licencia de usuario...';
 
 		try {
-			// Llama a la función del backend
-			const isValid = await window.electronAPI.checkSystemUserLicense();
+			const licenseResult = await window.electronAPI.checkSystemUserLicense();
 
-			if (isValid === true) {
-				// Si la licencia es válida, oculta el modal y arranca la aplicación
+			if (licenseResult && licenseResult.valid === true) {
 				elements.licenseModal.style.display = 'none';
-				startFullApp();
+				startFullApp(licenseResult);  // ✅ Pasar el resultado
 			} else {
-				// Si el usuario no es válido, muestra un mensaje de error permanente y bloquea la app
 				elements.licenseStatusMessage.textContent = 'No tienes permiso para utilizar esta aplicación. Por favor, contacta con el administrador.';
-				// (Opcional) Puedes añadir una clase para estilizar el error, si la tienes en tu CSS
-				// elements.licenseStatusMessage.classList.add('error-text'); 
 			}
 		} catch (error) {
-			// Si ocurre un error de comunicación (ej: sin internet), lo muestra
 			elements.licenseStatusMessage.textContent = `Error de validación: ${error.message || 'No se pudo conectar para validar la licencia.'}.`;
-			// elements.licenseStatusMessage.classList.add('error-text');
 		}
 	}
 
@@ -576,7 +568,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Contiene la lógica de arranque de la aplicación una vez validada la licencia.
 	 * Inicializa todos los módulos de funcionalidades.
 	 */
-	async function startFullApp() {
+	async function startFullApp(licenseResult) {
 		//Restaura el estado colapsado del log desde el archivo de ajustes
 		const userSettings = await window.electronAPI.getSettings();
 
@@ -651,6 +643,17 @@ document.addEventListener('DOMContentLoaded', function () {
 		logger.startLogBuffering();
 		logger.logMessage("Aplicación lista.");
 		logger.endLogBuffering();
+
+		// Controlar acceso a Auditoría
+		if (!licenseResult.auditAccess) {
+			const auditLink = document.querySelector('.macro-item[data-macro="auditoria"]');
+			if (auditLink) {
+				auditLink.style.pointerEvents = 'none';
+				auditLink.style.opacity = '0.4';
+				auditLink.style.cursor = 'not-allowed';
+				auditLink.title = 'No tienes acceso a esta funcionalidad. Contacta con el administrador.';
+			}
+		}
 
 		setupFindInPage();
 

@@ -135,7 +135,7 @@ async function validateUserInSheet(email, version) {
 
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${SHEET_NAME}!A:F`,
+            range: `${SHEET_NAME}!A:G`,
         });
 
         const rows = response.data.values;
@@ -143,7 +143,7 @@ async function validateUserInSheet(email, version) {
 
         const dataRows = rows.slice(1);
         const userRowIndex = dataRows.findIndex(row => row[1] && row[1].toLowerCase() === email.toLowerCase());
-        if (userRowIndex === -1) return false; // Usuario no encontrado
+        if (userRowIndex === -1) return { valid: false, auditAccess: false }; // Usuario no encontrado
         
         const userRow = dataRows[userRowIndex];
         const isActive = userRow[2];
@@ -151,7 +151,7 @@ async function validateUserInSheet(email, version) {
         
         const isValid = (isActive?.toLowerCase() === 'true' || isActive?.toLowerCase() === 'sí');
 
-        if (!isValid) return false; // El usuario no está activo
+        if (!isValid) return { valid: false, auditAccess: false }; // El usuario no está activo
 
         const sheetRowNumber = userRowIndex + 2;
         const currentCount = parseInt(userRow[3], 10) || 0;
@@ -164,11 +164,12 @@ async function validateUserInSheet(email, version) {
             },
         });
         
-        return true;
+        const hasAuditAccess = (userRow[6]?.toLowerCase() === 'true' || userRow[6]?.toLowerCase() === 'sí');
+        return { valid: true, auditAccess: hasAuditAccess };
     } catch (error) {
         console.error('Error al validar con Google Sheets:', error.message);
         if (error.code === 'ENOENT') throw new Error('No se encontró el fichero de credenciales de Google (google-credentials.json).');
-        return false;
+        return { valid: false, auditAccess: false };
     }
 }
 
