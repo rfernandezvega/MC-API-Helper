@@ -593,9 +593,9 @@ async function auditUsers(apiConfig) {
     const inactivePct = total > 0 ? Math.round((inactiveCount / total) * 100) : 0;
 
     const callouts = [];
-    if (inactiveOver3Pct > 20) callouts.push(buildCallout('danger', '⚠️ Cuentas activas sin actividad reciente',
+    if (inactiveOver3Pct > 20) callouts.push(buildCallout('danger', 'Cuentas activas sin actividad reciente',
         `El ${inactiveOver3Pct}% de los usuarios activos llevan más de 3 meses sin conectarse. Valorar deshabilitar esas cuentas para reducir la superficie de acceso.`));
-    if (inactivePct > 40) callouts.push(buildCallout('warning', '⚠️ Alta proporción de cuentas inactivas',
+    if (inactivePct > 40) callouts.push(buildCallout('warning', 'Alta proporción de cuentas inactivas',
         `El ${inactivePct}% de las cuentas están deshabilitadas. Puede indicar limpieza de instancia pendiente.`));
 
     const loginBars = Object.keys(loginByYear)
