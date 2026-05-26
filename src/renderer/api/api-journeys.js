@@ -1,7 +1,7 @@
 // ===================================================================
 // Fichero: api-journeys.js
 // ===================================================================
-import { executeRestRequest } from './api-core.js';
+import { executeRestRequest, executeSoapRequest } from './api-core.js';
 import { getFolderPath } from './api-helpers.js';
 
 /**
@@ -157,6 +157,47 @@ export async function stopJourney(journeyId, version, apiConfig) {
             "Content-Type": "application/json"
         },
         body: '' 
+    };
+    return executeRestRequest(url, options);
+}
+
+/**
+ * Pausa una versión específica de un Journey publicado.
+ * @param {string} journeyId - ID del Journey a pausar.
+ * @param {number|string} version - Número de la versión a pausar.
+ * @param {object} pauseOptions - Opciones de pausa (ExtendWaitEndDates, PausedDays, etc.).
+ * @param {object} apiConfig - Configuración autenticada de la API.
+ * @returns {Promise<object>} Objeto de respuesta de la API.
+ */
+export async function pauseJourney(journeyId, version, pauseOptions, apiConfig) {
+    const url = `${apiConfig.restUri}interaction/v1/interactions/pause/${journeyId}?versionNumber=${version}`;
+    const options = {
+        method: 'POST',
+        headers: {
+            "Authorization": `Bearer ${apiConfig.accessToken}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(pauseOptions || {})
+    };
+    return executeRestRequest(url, options);
+}
+
+/**
+ * Reanuda una versión específica de un Journey pausado.
+ * @param {string} journeyId - ID del Journey a reanudar.
+ * @param {number|string} version - Número de la versión a reanudar.
+ * @param {object} apiConfig - Configuración autenticada de la API.
+ * @returns {Promise<object>} Objeto de respuesta de la API.
+ */
+export async function resumeJourney(journeyId, version, apiConfig) {
+    const url = `${apiConfig.restUri}interaction/v1/interactions/resume/${journeyId}?versionNumber=${version}`;
+    const options = {
+        method: 'POST',
+        headers: {
+            "Authorization": `Bearer ${apiConfig.accessToken}`,
+            "Content-Type": "application/json"
+        },
+        body: '{}'
     };
     return executeRestRequest(url, options);
 }
@@ -326,4 +367,252 @@ export async function ejectContactFromJourneys(contactKey, definitionKeys, apiCo
     };
     
     return executeRestRequest(url, options);
+}
+
+// ===================================================================
+// ===== JOURNEY HISTORY (ERRORES) ===================================
+// ===================================================================
+
+/**
+ * Recupera el historial de Journey buscando registros en estado Error/Warning para los IDs dados.
+ * Itera día por día y por estado, paginando hasta 500 resultados por página (máx. 20 páginas).
+ * @param {Array<string>} definitionIds - IDs (definitionId) de los journeys.
+ * @param {string} startDate - Fecha inicio en formato 'YYYY-MM-DD'.
+ * @param {string} endDate - Fecha fin en formato 'YYYY-MM-DD'.
+ * @param {object} apiConfig - Configuración autenticada de la API.
+ * @param {function} [onProgress] - Callback opcional con mensaje de progreso (string).
+ * @returns {Promise<Array>} Lista de registros normalizados con {j, a, t, c, s, e, d}.
+ */
+export async function fetchJourneyHistoryErrors(journeyIds, startDate, endDate, apiConfig, onProgress) {
+    if (!journeyIds || journeyIds.length === 0) return [];
+    
+    const allErrors = [];
+    const statusesToFetch = ['Error', 'Warning'];
+    
+    // Convertir fechas
+    const [startY, startM, startD] = startDate.split('-').map(Number);
+    const [endY, endM, endD] = endDate.split('-').map(Number);
+    
+    const dateCursor = new Date(startY, startM - 1, startD);
+    const dateLimit = new Date(endY, endM - 1, endD);
+    
+    let dayCount = 0;
+    const maxDays = 35;
+    
+    // Función helper para formatear fecha ISO
+    const getISOString = (date, time) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}T${time}`;
+    };
+    
+    // Iterar día por día
+    while (dateCursor <= dateLimit && dayCount < maxDays) {
+        const isoStart = getISOString(dateCursor, '00:00:00Z');
+        const isoEnd = getISOString(dateCursor, '23:59:59Z');
+        const dateStr = dateCursor.toLocaleDateString('es-ES');
+        
+        if (onProgress) {
+            onProgress(`Buscando errores del ${dateStr}...`);
+        }
+        
+        // Buscar Error y Warning por separado
+        for (const status of statusesToFetch) {
+            let page = 1;
+            let hasMore = true;
+            
+            while (hasMore && page <= 20) {
+                try {
+                    const endpoint = `${apiConfig.restUri}interaction/v1/interactions/journeyhistory/search?$page=${page}&$pageSize=500`;
+                    
+                    const payload = {
+                        definitionIds: journeyIds,
+                        activityTypes: ['EMAILV2', 'SALESCLOUDACTIVITY'],
+                        clientStatuses: [status],
+                        start: isoStart,
+                        end: isoEnd
+                    };
+                    
+                    const response = await executeRestRequest(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${apiConfig.accessToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (response.items && response.items.length > 0) {
+                        response.items.forEach(item => {
+                            const messages = item.result?.messages?.map(m => m.message) || [];
+                            
+                            allErrors.push({
+                                j: item.definitionName || 'N/A',
+                                a: item.activityName || 'N/A',
+                                t: item.activityType || 'N/A',
+                                c: item.contactKey || 'N/A',
+                                s: status.toUpperCase(),
+                                e: messages,
+                                d: item.transactionTime
+                            });
+                        });
+                        
+                        // Si devolvió menos de 500, no hay más páginas
+                        if (response.items.length < 500) {
+                            hasMore = false;
+                        } else {
+                            page++;
+                        }
+                    } else {
+                        hasMore = false;
+                    }
+                } catch (error) {
+                    hasMore = false;
+                }
+            }
+        }
+        
+        dateCursor.setDate(dateCursor.getDate() + 1);
+        dayCount++;
+    }
+    
+    return allErrors;
+}
+
+// ===================================================================
+// ===== TRIGGERED SEND (SOAP) =======================================
+// ===================================================================
+
+/**
+ * Helper interno: extrae el contenido de un tag XML simple desde un bloque de texto.
+ * Soporta CDATA y espacios en blanco.
+ * @param {string} xml - Bloque XML donde buscar.
+ * @param {string} tagName - Nombre del tag.
+ * @returns {string} El contenido del tag o cadena vacía.
+ */
+function extractXmlValue(xml, tagName) {
+    const regex = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i');
+    const match = xml.match(regex);
+    if (!match || match.length < 2) return '';
+    let val = String(match[1]);
+    val = val.replace('<![CDATA[', '').replace(']]>', '');
+    return val.replace(/^\s+|\s+$/g, '');
+}
+
+/**
+ * Recupera la definición SOAP de uno o varios TriggeredSendDefinition por su CustomerKey.
+ * @param {Array<string>} customerKeys - Lista de CustomerKey a consultar.
+ * @param {object} apiConfig - Configuración autenticada (con soapUri y accessToken).
+ * @returns {Promise<object>} Mapa { customerKey: { objectId, status, description, created, modified } }.
+ */
+export async function fetchTriggeredSendDefinitionsByKeys(customerKeys, apiConfig) {
+    if (!customerKeys || customerKeys.length === 0) return {};
+
+    const operator = customerKeys.length === 1 ? 'equals' : 'IN';
+    const valuesXml = customerKeys.map(k => `<Value>${k}</Value>`).join('');
+
+    const soapPayload = `<?xml version="1.0" encoding="UTF-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+    <s:Header>
+        <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+        <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+        <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+    </s:Header>
+    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+            <RetrieveRequest>
+                <ObjectType>TriggeredSendDefinition</ObjectType>
+                <Properties>ObjectID</Properties>
+                <Properties>CustomerKey</Properties>
+                <Properties>TriggeredSendStatus</Properties>
+                <Properties>Description</Properties>
+                <Properties>CreatedDate</Properties>
+                <Properties>ModifiedDate</Properties>
+                <Filter xsi:type="SimpleFilterPart">
+                    <Property>CustomerKey</Property>
+                    <SimpleOperator>${operator}</SimpleOperator>
+                    ${valuesXml}
+                </Filter>
+            </RetrieveRequest>
+        </RetrieveRequestMsg>
+    </s:Body>
+</s:Envelope>`;
+
+    const respText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+
+    const resultsMap = {};
+    const blocks = respText.split('<Results');
+    for (let b = 1; b < blocks.length; b++) {
+        const block = blocks[b];
+        const ck = extractXmlValue(block, 'CustomerKey');
+        if (ck) {
+            resultsMap[ck] = {
+                objectId: extractXmlValue(block, 'ObjectID'),
+                status: extractXmlValue(block, 'TriggeredSendStatus') || 'Desconocido',
+                description: extractXmlValue(block, 'Description'),
+                created: extractXmlValue(block, 'CreatedDate'),
+                modified: extractXmlValue(block, 'ModifiedDate')
+            };
+        }
+    }
+    return resultsMap;
+}
+
+/**
+ * Recupera las métricas agregadas (Sent, Queued, NotSentDueToError) de uno o más TriggeredSends.
+ * @param {Array<string>} objectIds - Lista de ObjectID de TriggeredSendDefinition.
+ * @param {object} apiConfig - Configuración autenticada (con soapUri y accessToken).
+ * @returns {Promise<object>} Mapa { objectId: { sent, queued, errored } }.
+ */
+export async function fetchTriggeredSendSummariesByObjectIds(objectIds, apiConfig) {
+    if (!objectIds || objectIds.length === 0) return {};
+
+    const operator = objectIds.length === 1 ? 'equals' : 'IN';
+    const valuesXml = objectIds.map(id => `<Value>${id}</Value>`).join('');
+
+    const soapPayload = `<?xml version="1.0" encoding="UTF-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+    <s:Header>
+        <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+        <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+        <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+    </s:Header>
+    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+        <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+            <RetrieveRequest>
+                <ObjectType>TriggeredSendSummary</ObjectType>
+                <Properties>ObjectID</Properties>
+                <Properties>Sent</Properties>
+                <Properties>Queued</Properties>
+                <Properties>NotSentDueToError</Properties>
+                <Filter xsi:type="SimpleFilterPart">
+                    <Property>TriggeredSendDefinition.ObjectId</Property>
+                    <SimpleOperator>${operator}</SimpleOperator>
+                    ${valuesXml}
+                </Filter>
+            </RetrieveRequest>
+        </RetrieveRequestMsg>
+    </s:Body>
+</s:Envelope>`;
+
+    const respText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+
+    const resultsMap = {};
+    const blocks = respText.split('<Results');
+    
+    for (let b = 1; b < blocks.length; b++) {
+        const block = blocks[b];
+        const objId = extractXmlValue(block, 'ObjectID');
+        
+        if (objId) {
+            resultsMap[objId] = {
+                sent: extractXmlValue(block, 'Sent') || '0',
+                queued: extractXmlValue(block, 'Queued') || '0',
+                errored: extractXmlValue(block, 'NotSentDueToError') || '0'
+            };
+        }
+    }
+    
+    return resultsMap;
 }

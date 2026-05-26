@@ -181,6 +181,7 @@ export function init() {
     elements.analyzeAutomationBtn = document.getElementById('analyzeAutomationBtn');
 
     // --- 12. Sección: Gestión de Journeys ---
+    elements.gestionJourneysSection = document.getElementById('gestion-journeys-section');
     elements.journeysTbody = document.getElementById('journeys-tbody');
     elements.journeyNameFilter = document.getElementById('journeyNameFilter');
     elements.journeyTypeFilter = document.getElementById('journeyTypeFilter');
@@ -205,6 +206,9 @@ export function init() {
     elements.journeyCommSelectedBtn = document.getElementById('journey-comm-selected-btn');
     elements.journeyCommAllBtn = document.getElementById('journey-comm-all-btn');
     elements.journeyCommCancelBtn = document.getElementById('journey-comm-cancel-btn');
+    elements.actionsJourneyBtn = document.getElementById('actionsJourneyBtn');
+    elements.getJourneyErrorsBtn = document.getElementById('getJourneyErrorsBtn');
+    elements.journeyCommsFilter = document.getElementById('journeyCommsFilter');
 
     // --- 13. Sección: Clonador de Queries ---
     elements.queriesClonerStep1 = document.getElementById('queries-cloner-step1');
@@ -427,6 +431,44 @@ export function init() {
     // --- 29. AUDIT MANAGER ---
     elements.downloadAuditPdfBtn = document.getElementById('downloadAuditPdfBtn');
     elements.downloadAuditDetailsBtn = document.getElementById('downloadAuditDetailsBtn');
+
+    // --- 30. VISTA: ERRORES DE JOURNEYS ---
+    elements.journeyErrorsSection = document.getElementById('journey-errors-section');
+    elements.journeyErrorsBackBtn = document.getElementById('journeyErrorsBackBtn');
+    elements.refreshJourneyErrorsBtn = document.getElementById('refreshJourneyErrorsBtn');
+    elements.downloadJourneyErrorsCsvBtn = document.getElementById('downloadJourneyErrorsCsvBtn');
+    elements.journeyErrorsStartDate = document.getElementById('journeyErrorsStartDate');
+    elements.journeyErrorsEndDate = document.getElementById('journeyErrorsEndDate');
+    elements.journeyErrorsJourneyFilter = document.getElementById('journeyErrorsJourneyFilter');
+    elements.journeyErrorsStatusFilter = document.getElementById('journeyErrorsStatusFilter');
+    elements.journeyErrorsActivityFilter = document.getElementById('journeyErrorsActivityFilter');
+    elements.journeyErrorsTypeFilter = document.getElementById('journeyErrorsTypeFilter');
+    elements.journeyErrorsTbody = document.getElementById('journeyErrorsTbody');
+    elements.pageInputJourneyErrors = document.getElementById('pageInputJourneyErrors');
+    elements.totalPagesJourneyErrors = document.getElementById('totalPagesJourneyErrors');
+    elements.prevPageBtnJourneyErrors = document.getElementById('prevPageBtnJourneyErrors');
+    elements.nextPageBtnJourneyErrors = document.getElementById('nextPageBtnJourneyErrors');
+    elements.journeyErrorsCountSpan = document.getElementById('journeyErrorsCountSpan');
+
+    // --- 31. MODAL: ACCIONES SOBRE JOURNEYS (Parar/Pausar/Reanudar/Borrar) ---
+    elements.journeyActionsModal = document.getElementById('journey-actions-modal');
+    elements.journeyActionsMessage = document.getElementById('journey-actions-message');
+    elements.journeyActionsPauseBtn = document.getElementById('journey-actions-pause-btn');
+    elements.journeyActionsResumeBtn = document.getElementById('journey-actions-resume-btn');
+    elements.journeyActionsStopBtn = document.getElementById('journey-actions-stop-btn');
+    elements.journeyActionsDeleteBtn = document.getElementById('journey-actions-delete-btn');
+    elements.journeyActionsCancelBtn = document.getElementById('journey-actions-cancel-btn');
+
+    // --- 32. MODAL: CONFIGURACIÓN DE PAUSA ---
+    elements.journeyPauseModal = document.getElementById('journey-pause-modal');
+    elements.journeyPauseCountText = document.getElementById('journey-pause-count-text');
+    elements.journeyPauseDays = document.getElementById('journey-pause-days');
+    elements.journeyPauseGuardrail = document.getElementById('journey-pause-guardrail');
+    elements.journeyPauseExtend = document.getElementById('journey-pause-extend');
+    elements.journeyPauseProcess = document.getElementById('journey-pause-process');
+    elements.journeyPauseRetain = document.getElementById('journey-pause-retain');
+    elements.journeyPauseConfirmBtn = document.getElementById('journey-pause-confirm-btn');
+    elements.journeyPauseCancelBtn = document.getElementById('journey-pause-cancel-btn');
 }
 
 export default elements;

@@ -70,6 +70,11 @@ function createWindow() {
     }
 
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+
+    // Establecer zoom por defecto
+    mainWindow.webContents.on('did-finish-load', () => {
+        mainWindow.webContents.setZoomFactor(0.85); // Ajusta este valor (0.8, 0.85, 0.9, etc.)
+    });
 }
 
 // --- 3. GESTIÓN DEL CICLO DE VIDA Y ACTUALIZACIONES ---

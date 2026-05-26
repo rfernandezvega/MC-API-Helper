@@ -43,6 +43,7 @@ import * as usersManager from './components/users-manager.js';
 import * as erdGenerator from './components/erd-generator.js';
 import * as sendManagement from './components/sendManagement.js';
 import * as auditManager from './components/audit-manager.js';
+import * as journeyErrors from './components/journey-errors.js';
 
 
 
@@ -628,6 +629,10 @@ document.addEventListener('DOMContentLoaded', function () {
 		automationCloner.init({ getAuthenticatedConfig, goBack });
 		automationAnalyzer.init({ getAuthenticatedConfig, goBack });
 		journeyAnalyzer.init({
+			getAuthenticatedConfig,
+			goBack: () => showSection('gestion-journeys-section')
+		});
+		journeyErrors.init({
 			getAuthenticatedConfig,
 			goBack: () => showSection('gestion-journeys-section')
 		});

@@ -807,3 +807,124 @@ export function showJourneyCommModal(message) {
         };
     });
 }
+
+/**
+ * Muestra el modal de acciones sobre journeys (Pausar/Reanudar/Parar/Borrar).
+ * @param {number} count - Número de journeys seleccionados.
+ * @param {object} callbacks - Objeto con funciones: { onPause, onResume, onStop, onDelete, onCancel }
+ */
+export function showJourneyActionsModal(count, callbacks) {
+    const modal = elements.journeyActionsModal;
+    const message = elements.journeyActionsMessage;
+    
+    // Actualizar mensaje
+    message.textContent = `Has seleccionado ${count} journey(s). ¿Qué acción deseas realizar?`;
+    
+    // Limpiar listeners previos
+    const pauseBtn = elements.journeyActionsPauseBtn;
+    const resumeBtn = elements.journeyActionsResumeBtn;
+    const stopBtn = elements.journeyActionsStopBtn;
+    const deleteBtn = elements.journeyActionsDeleteBtn;
+    const cancelBtn = elements.journeyActionsCancelBtn;
+    
+    const newPauseBtn = pauseBtn.cloneNode(true);
+    const newResumeBtn = resumeBtn.cloneNode(true);
+    const newStopBtn = stopBtn.cloneNode(true);
+    const newDeleteBtn = deleteBtn.cloneNode(true);
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    
+    pauseBtn.parentNode.replaceChild(newPauseBtn, pauseBtn);
+    resumeBtn.parentNode.replaceChild(newResumeBtn, resumeBtn);
+    stopBtn.parentNode.replaceChild(newStopBtn, stopBtn);
+    deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+    
+    // Actualizar referencias en elements
+    elements.journeyActionsPauseBtn = newPauseBtn;
+    elements.journeyActionsResumeBtn = newResumeBtn;
+    elements.journeyActionsStopBtn = newStopBtn;
+    elements.journeyActionsDeleteBtn = newDeleteBtn;
+    elements.journeyActionsCancelBtn = newCancelBtn;
+    
+    // Asignar callbacks
+    newPauseBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+        if (callbacks.onPause) callbacks.onPause();
+    });
+    
+    newResumeBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+        if (callbacks.onResume) callbacks.onResume();
+    });
+    
+    newStopBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+        if (callbacks.onStop) callbacks.onStop();
+    });
+    
+    newDeleteBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+        if (callbacks.onDelete) callbacks.onDelete();
+    });
+    
+    newCancelBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+        if (callbacks.onCancel) callbacks.onCancel();
+    });
+    
+    modal.style.display = 'flex';
+}
+
+/**
+ * Muestra el modal de configuración de pausa de journeys.
+ * @param {number} count - Número de journeys a pausar.
+ * @param {function} onConfirm - Callback que recibe el objeto de opciones de pausa.
+ * @param {function} onCancel - Callback de cancelación.
+ */
+export function showJourneyPauseModal(count, onConfirm, onCancel) {
+    const modal = elements.journeyPauseModal;
+    const countText = elements.journeyPauseCountText;
+    
+    // Actualizar contador
+    countText.textContent = count;
+    
+    // Reset valores por defecto
+    elements.journeyPauseDays.value = 14;
+    elements.journeyPauseGuardrail.value = 'Resume';
+    elements.journeyPauseExtend.checked = true;
+    elements.journeyPauseProcess.checked = true;
+    elements.journeyPauseRetain.checked = true;
+    
+    // Limpiar listeners previos
+    const confirmBtn = elements.journeyPauseConfirmBtn;
+    const cancelBtn = elements.journeyPauseCancelBtn;
+    
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+    
+    elements.journeyPauseConfirmBtn = newConfirmBtn;
+    elements.journeyPauseCancelBtn = newCancelBtn;
+    
+    // Asignar callbacks
+    newConfirmBtn.addEventListener('click', () => {
+        const pauseOptions = {
+            ExtendWaitEndDates: elements.journeyPauseExtend.checked,
+            PausedDays: parseInt(elements.journeyPauseDays.value, 10),
+            ProcessWaitUntilEvents: elements.journeyPauseProcess.checked,
+            GuardrailAction: elements.journeyPauseGuardrail.value,
+            RetainContactInjectionWhileJourneyPaused: elements.journeyPauseRetain.checked
+        };
+        modal.style.display = 'none';
+        if (onConfirm) onConfirm(pauseOptions);
+    });
+    
+    newCancelBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+        if (onCancel) onCancel();
+    });
+    
+    modal.style.display = 'flex';
+}

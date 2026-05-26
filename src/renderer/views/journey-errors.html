@@ -1,0 +1,55 @@
+<!-- Vista: Errores de Journeys -->
+<div id="journey-errors-section" class="section">
+    <div class="section-header">
+        <button id="journeyErrorsBackBtn" class="back-button">← Volver</button>
+        <div class="header-actions">
+            <button id="refreshJourneyErrorsBtn" class="action-button">Refrescar</button>
+            <button id="downloadJourneyErrorsCsvBtn" class="action-button">Descargar CSV</button>
+        </div>
+    </div>
+    
+    <h2>Errores de Journeys <span id="journeyErrorsCountSpan" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
+    
+    <div class="header-filters">
+        <input type="date" id="journeyErrorsStartDate" class="filter-input" style="width: 140px;">
+        <input type="date" id="journeyErrorsEndDate" class="filter-input" style="width: 140px;">
+        <select id="journeyErrorsJourneyFilter" class="filter-input" style="min-width: 200px;">
+            <option value="">Todos los journeys</option>
+        </select>
+        <select id="journeyErrorsStatusFilter" class="filter-input" style="min-width: 150px;">
+            <option value="">Todos los estados</option>
+            <option value="ERROR">Error</option>
+            <option value="WARNING">Warning</option>
+        </select>
+        <input type="text" id="journeyErrorsActivityFilter" class="filter-input" placeholder="Filtrar por actividad..." style="min-width: 200px;">
+        <select id="journeyErrorsTypeFilter" class="filter-input" style="min-width: 150px;">
+            <option value="">Todos los tipos</option>
+            <option value="EMAILV2">Email</option>
+            <option value="SALESCLOUDACTIVITY">Salesforce</option>
+        </select>
+    </div>
+    
+    <div class="table-container">
+        <table id="journey-errors-table">
+            <thead>
+                <tr>
+                    <th>Journey</th>
+                    <th>Actividad</th>
+                    <th>Tipo</th>
+                    <th>Contact Key</th>
+                    <th>Estado</th>
+                    <th>Mensajes de Error</th>
+                    <th>Fecha/Hora</th>
+                </tr>
+            </thead>
+            <tbody id="journeyErrorsTbody"></tbody>
+        </table>
+    </div>
+    
+    <div id="pagination-journey-errors" class="pagination-controls">
+        <button id="prevPageBtnJourneyErrors" class="action-button pagination-arrow">&laquo;</button>
+        <input type="number" id="pageInputJourneyErrors" class="filter-input page-input" min="1">
+        <span id="totalPagesJourneyErrors">/ 1</span>
+        <button id="nextPageBtnJourneyErrors" class="action-button pagination-arrow">&raquo;</button>
+    </div>
+</div>

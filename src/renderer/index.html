@@ -2050,6 +2050,140 @@
     </div>
 </div>
 
+<!-- Vista: Errores de Journeys -->
+<div id="journey-errors-section" class="section">
+    <div class="section-header">
+        <button id="journeyErrorsBackBtn" class="back-button">← Volver</button>
+        <div class="header-actions">
+            <button id="refreshJourneyErrorsBtn" class="action-button">Refrescar</button>
+            <button id="downloadJourneyErrorsCsvBtn" class="action-button">Descargar CSV</button>
+        </div>
+    </div>
+    
+    <h2>Errores de Journeys <span id="journeyErrorsCountSpan" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
+    
+    <div class="header-filters">
+        <input type="date" id="journeyErrorsStartDate" class="filter-input" style="width: 140px;">
+        <input type="date" id="journeyErrorsEndDate" class="filter-input" style="width: 140px;">
+        <select id="journeyErrorsJourneyFilter" class="filter-input" style="min-width: 200px;">
+            <option value="">Todos los journeys</option>
+        </select>
+        <select id="journeyErrorsStatusFilter" class="filter-input" style="min-width: 150px;">
+            <option value="">Todos los estados</option>
+            <option value="ERROR">Error</option>
+            <option value="WARNING">Warning</option>
+        </select>
+        <input type="text" id="journeyErrorsActivityFilter" class="filter-input" placeholder="Filtrar por actividad..." style="min-width: 200px;">
+        <select id="journeyErrorsTypeFilter" class="filter-input" style="min-width: 150px;">
+            <option value="">Todos los tipos</option>
+            <option value="EMAILV2">Email</option>
+            <option value="SALESCLOUDACTIVITY">Salesforce</option>
+        </select>
+    </div>
+    
+    <div class="table-container">
+        <table id="journey-errors-table">
+            <thead>
+                <tr>
+                    <th>Journey</th>
+                    <th>Actividad</th>
+                    <th>Tipo</th>
+                    <th>Contact Key</th>
+                    <th>Estado</th>
+                    <th>Mensajes de Error</th>
+                    <th>Fecha/Hora</th>
+                </tr>
+            </thead>
+            <tbody id="journeyErrorsTbody"></tbody>
+        </table>
+    </div>
+    
+    <div id="pagination-journey-errors" class="pagination-controls">
+        <button id="prevPageBtnJourneyErrors" class="action-button pagination-arrow">&laquo;</button>
+        <input type="number" id="pageInputJourneyErrors" class="filter-input page-input" min="1">
+        <span id="totalPagesJourneyErrors">/ 1</span>
+        <button id="nextPageBtnJourneyErrors" class="action-button pagination-arrow">&raquo;</button>
+    </div>
+</div>
+
+<!-- ================================================================== -->
+<!-- Fichero: journey-modals.html -->
+<!-- Modales para gestión avanzada de Journeys (Acciones + Pausa) -->
+<!-- ================================================================== -->
+
+<!-- MODAL: ACCIONES SOBRE JOURNEYS -->
+<div id="journey-actions-modal" class="modal-overlay">
+    <div class="modal-content" style="width: 400px;">
+        <h3>Acciones sobre Journeys</h3>
+        <p id="journey-actions-message" style="font-size: 14px; margin-bottom: 25px;">
+            ¿Qué acción deseas realizar sobre los journeys seleccionados?
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+            <button id="journey-actions-pause-btn" class="action-button">Pausar Journeys</button>
+            <button id="journey-actions-resume-btn" class="action-button">Reanudar Journeys</button>
+            <button id="journey-actions-stop-btn" class="action-button">Parar Journeys</button>
+            <button id="journey-actions-delete-btn" class="action-button delete-btn">Borrar Journeys</button>
+        </div>
+        <div class="modal-actions" style="margin-top: 25px;">
+            <button id="journey-actions-cancel-btn" class="action-button cancel-btn">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: CONFIGURACIÓN DE PAUSA -->
+<div id="journey-pause-modal" class="modal-overlay">
+    <div class="modal-content" style="width: 520px;">
+        <h3>Pausar Journeys</h3>
+        <p style="font-size: 14px; margin-bottom: 20px;">
+            Vas a pausar <strong id="journey-pause-count-text">0</strong> journey(s). Configura las opciones de pausa:
+        </p>
+        
+        <div class="form-group">
+            <label title="El número de días para pausar el journey. El valor mínimo es 1 y el máximo es 14.">
+                Paused Days ℹ️
+            </label>
+            <input type="number" id="journey-pause-days" class="filter-input" min="1" max="14" value="14" style="width: 100px;">
+        </div>
+
+        <div class="form-group">
+            <label title="La acción a tomar cuando transcurran los días indicados en Paused Days.">
+                Guardrail Action ℹ️
+            </label>
+            <select id="journey-pause-guardrail" class="filter-input">
+                <option value="Resume">Resume (Reanudar)</option>
+                <option value="Stop">Stop (Parar)</option>
+                <option value="None">None (Nada)</option>
+            </select>
+        </div>
+
+        <div class="form-group" style="flex-direction: row; align-items: center;">
+            <input type="checkbox" id="journey-pause-extend" checked style="width: auto; margin-right: 10px;">
+            <label for="journey-pause-extend" title="Si es 'true', la fecha de finalización de una actividad 'Wait By Duration' se extiende por los días pausados." style="margin: 0;">
+                Extend Wait End Dates ℹ️
+            </label>
+        </div>
+
+        <div class="form-group" style="flex-direction: row; align-items: center;">
+            <input type="checkbox" id="journey-pause-process" checked style="width: auto; margin-right: 10px;">
+            <label for="journey-pause-process" title="Especifica si se deben evaluar y procesar los eventos de las actividades 'Wait Until Event' durante la pausa." style="margin: 0;">
+                Process Wait Until Events ℹ️
+            </label>
+        </div>
+
+        <div class="form-group" style="flex-direction: row; align-items: center;">
+            <input type="checkbox" id="journey-pause-retain" checked style="width: auto; margin-right: 10px;">
+            <label for="journey-pause-retain" title="Si es 'true', los nuevos contactos se encolan mientras dure la pausa y entran al reanudarse el journey." style="margin: 0;">
+                Retain Contact Injection ℹ️
+            </label>
+        </div>
+
+        <div class="modal-actions">
+            <button id="journey-pause-cancel-btn" class="action-button cancel-btn">Cancelar</button>
+            <button id="journey-pause-confirm-btn" class="action-button activate-btn">Pausar Journeys</button>
+        </div>
+    </div>
+</div>
+
 <!-- 11. SECCIÓN: GESTIÓN DE JOURNEYS -->
 <div id="gestion-journeys-section" class="section">
     <div class="section-header">
@@ -2058,11 +2192,11 @@
             <button id="refreshJourneysTableBtn" class="action-button">Refrescar</button>
             <button id="downloadJourneysCsvBtn" class="action-button">Exportar</button>
             <button id="analyzeJourneyBtn" class="action-button" disabled>Analizar</button>
-            <button id="scanDeUsageBtn" class="action-button"">Data Extensions</button>
+            <button id="scanDeUsageBtn" class="action-button">Data Extensions</button>
             <button id="getCommunicationsBtn" class="action-button activate-btn" disabled>Comunicaciones</button>
             <button id="copyJourneyBtn" class="action-button" disabled>Copiar</button>
-            <button id="stopJourneyBtn" class="action-button delete-btn" disabled>Parar</button>
-            <button id="deleteJourneyBtn" class="action-button delete-btn-darker" disabled>Borrar</button>
+            <button id="actionsJourneyBtn" class="action-button delete-btn" disabled>Acciones</button>
+            <button id="getJourneyErrorsBtn" class="action-button" disabled>Ver Errores</button>
         </div>          
     </div>
     <h2>Gestión de Journeys <span id="journeyCount" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
@@ -2082,6 +2216,10 @@
             <!-- Opciones se cargarán dinámicamente -->
         </select>
         <input type="text" id="journeyDEFilter" class="filter-input" placeholder="Buscar por Data Extension...">
+        <label style="display: flex; align-items: center; gap: 5px; margin-left: 10px;">
+            <input type="checkbox" id="journeyCommsFilter">
+            <span>Comunicaciones</span>
+        </label>
     </div>
     <div class="table-container">
         <table id="journeys-table">
@@ -2095,13 +2233,8 @@
             <th class="sortable-header" data-sort-by="eventType">Tipo</th>
             <th class="sortable-header" data-sort-by="definitionType">Subtipo</th>
             <th class="sortable-header" data-sort-by="status">Estado</th>
-            <!--<th class="sortable-header" data-sort-by="location">Ubicación</th>-->
             <th class="sortable-header" data-sort-by="dataExtensionName">Data Extension</th>
             <th class="sortable-header col-des" data-sort-by="usedDEs">DEs en Actividades</th>
-            <th class="sortable-header col-comm" data-sort-by="emails">Emails</th>
-            <th class="sortable-header col-comm" data-sort-by="sms">SMSs</th>
-            <th class="sortable-header col-comm" data-sort-by="pushes">Pushes</th>
-            <th class="sortable-header col-comm" data-sort-by="whatsapps">Whatsapps</th>
             </tr>
         </thead>
         <tbody id="journeys-tbody"></tbody>

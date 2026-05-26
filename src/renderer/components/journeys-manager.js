@@ -70,6 +70,11 @@ function applyFiltersAndRender() {
         });
     }
 
+    const commsFilter = elements.journeyCommsFilter.checked;
+    if (commsFilter) {
+        filtered = filtered.filter(j => j.hasCommunications === true);
+    }
+
     currentFilteredList = filtered; // Guardamos la lista filtrada
     updateJourneyCount(); // Actualizamos el contador
 
@@ -96,8 +101,14 @@ function renderTable(journeys) {
     paginatedItems.forEach(j => {
         const row = document.createElement('tr');
         row.dataset.journeyId = j.id;
+        
+        // Chevron CSS con clase
+        const chevron = j.hasCommunications 
+            ? `<span class="comm-chevron" data-journey-id="${j.id}"></span>` 
+            : '';
+        
         row.innerHTML = `
-            <td>${j.name || '---'}</td> 
+            <td>${chevron}  ${j.name || '---'}</td> 
             <td>${j.version || '---'}</td> 
             <td>${formatDate(j.createdDate)}</td>
             <td>${formatDate(j.modifiedDate)}</td>
@@ -109,10 +120,6 @@ function renderTable(journeys) {
             <td class="col-des" style="font-size: 0.85em; color: #333; text-align: left !important; vertical-align: middle; padding: 10px; min-width: 200px;">
                 ${j.usedDEs ? j.usedDEs : '<span style="color:#ddd;">---</span>'}
             </td>
-            <td class="col-comm">${j.emails.join(', ')}</td>
-            <td class="col-comm">${j.sms.join(', ')}</td> 
-            <td class="col-comm">${j.pushes.join(', ')}</td> 
-            <td class="col-comm">${j.whatsapps.join(', ')}</td>
         `;
         elements.journeysTbody.appendChild(row);
     });
@@ -121,6 +128,117 @@ function renderTable(journeys) {
     updateSortIndicators();
     updateButtonsState();
     updateColumnsVisibility();
+}
+
+/**
+ * Toggle de fila desplegable con comunicaciones.
+ */
+function toggleCommunicationsRow(journeyId, forceOpen = null) {
+    const existingRow = document.querySelector(`tr[data-comms-for="${journeyId}"]`);
+    const mainRow = document.querySelector(`tr[data-journey-id="${journeyId}"]`);
+    const chevron = mainRow?.querySelector('.comm-chevron');
+    
+    // Si forceOpen es null, hacer toggle; si es true/false, forzar ese estado
+    const shouldOpen = forceOpen !== null ? forceOpen : !existingRow;
+    
+    if (!shouldOpen && existingRow) {
+        // Cerrar
+        existingRow.remove();
+        if (chevron) chevron.classList.remove('open');
+        return;
+    }
+    
+    if (shouldOpen && existingRow) {
+        // Ya está abierta, no hacer nada
+        return;
+    }
+
+    // Abrir
+    const journey = currentFilteredList.find(j => j.id === journeyId);
+    if (!journey || !journey.hasCommunications) return;
+
+    const commsRow = document.createElement('tr');
+    commsRow.dataset.commsFor = journeyId;
+    commsRow.style.backgroundColor = '#f9f9f9';
+
+    const commsCell = document.createElement('td');
+    commsCell.colSpan = 10;
+    commsCell.style.padding = '15px';
+
+    // Emails con tabla completa si hay datos SOAP
+    if (journey.emails && journey.emails.length > 0) {
+        const emailSection = document.createElement('div');
+        emailSection.innerHTML = '<h4 style="margin: 0 0 10px 0;">Emails</h4>';
+        
+        const hasDetailedData = journey.emails.some(e => typeof e === 'object' && e.customerKey);
+        
+        if (hasDetailedData) {
+            const emailTable = document.createElement('table');
+            emailTable.className = 'data-table';
+            emailTable.style.width = '100%';
+            emailTable.style.marginBottom = '20px';
+            
+            emailTable.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Customer Key</th>
+                        <th>Estado</th>
+                        <th>Descripción</th>
+                        <th>Creado</th>
+                        <th>Modificado</th>
+                        <th>Completados</th>
+                        <th>En cola</th>
+                        <th>Errores</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${journey.emails.map(email => `
+                        <tr>
+                            <td>${email.name || 'N/A'}</td>
+                            <td>${email.customerKey || 'N/A'}</td>
+                            <td style="font-weight: bold; color: ${email.status === 'Active' ? '#2e7d32' : '#666'};">${email.status || 'N/A'}</td>
+                            <td>${email.description || '-'}</td>
+                            <td>${email.created ? new Date(email.created).toLocaleDateString('es-ES') : 'N/A'}</td>
+                            <td>${email.modified ? new Date(email.modified).toLocaleDateString('es-ES') : 'N/A'}</td>
+                            <td>${email.completed || '0'}</td>
+                            <td>${email.queued || '0'}</td>
+                            <td style="font-weight: bold; color: ${parseInt(email.errored || '0') > 0 ? '#d32f2f' : '#666'};">${email.errored || '0'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            `;
+            emailSection.appendChild(emailTable);
+        } else {
+            const text = document.createElement('div');
+            text.style.marginLeft = '10px';
+            text.textContent = journey.emails.map(e => typeof e === 'string' ? e : e.name).join(', ');
+            emailSection.appendChild(text);
+        }
+        
+        commsCell.appendChild(emailSection);
+    }
+
+    // SMS, Push, WhatsApp sin bullets
+    ['sms', 'pushes', 'whatsapps'].forEach(type => {
+        if (journey[type] && journey[type].length > 0) {
+            const section = document.createElement('div');
+            section.style.marginBottom = '15px';
+            section.innerHTML = `<h4 style="margin: 0 0 5px 0;">${type.toUpperCase()}</h4>`;
+            
+            const text = document.createElement('div');
+            text.style.marginLeft = '10px';
+            text.textContent = journey[type].join(', ');
+            section.appendChild(text);
+            
+            commsCell.appendChild(section);
+        }
+    });
+
+    commsRow.appendChild(commsCell);
+    mainRow.parentNode.insertBefore(commsRow, mainRow.nextSibling);
+    
+    if (chevron) chevron.classList.add('open');
 }
 
 // --- 3. FUNCIONES PÚBLICAS (API del Módulo) ---
@@ -139,6 +257,7 @@ export function init(dependencies) {
     elements.journeySubtypeFilter.addEventListener('change', applyFiltersAndRender);
     elements.journeyStatusFilter.addEventListener('change', applyFiltersAndRender);
     elements.journeyDEFilter.addEventListener('input', applyFiltersAndRender);
+    elements.journeyCommsFilter.addEventListener('change', applyFiltersAndRender);
 
     // Listeners de botones de acción
     elements.downloadJourneysCsvBtn.addEventListener('click', downloadJourneysCsv);
@@ -147,8 +266,8 @@ export function init(dependencies) {
     elements.scanDeUsageBtn.addEventListener('click', analyzeDeUsageInFilteredJourneys);
 
     elements.copyJourneyBtn.addEventListener('click', copyJourney);
-    elements.stopJourneyBtn.addEventListener('click', stopJourneys);
-    elements.deleteJourneyBtn.addEventListener('click', deleteJourneys);
+    elements.actionsJourneyBtn.addEventListener('click', handleActionsButton);
+    elements.getJourneyErrorsBtn.addEventListener('click', handleErrorsButton);
     elements.analyzeJourneyBtn.addEventListener('click', () => inspectAndShowAnalyzer());
 
     // Listeners de la tabla
@@ -263,31 +382,6 @@ async function fetchData() {
         // Pasamos la lista de journeys y el array completo de eventos para el enriquecimiento.
         fullJourneyList = enrichJourneys(allJourneys, allEventDefs);
 
-        /*DESCOMENTAR PARA DESCARGAR TODAS LAS COMUNICACIONES DE TODOS LOS JOURNEYS
-        // Ahora, iteramos sobre CADA journey para obtener sus comunicaciones antes de pintar la tabla.
-        logger.logMessage(`Iniciando obtención de detalles de comunicación para los ${fullJourneyList.length} journeys...`);
-
-        // Usamos Promise.all para hacer las llamadas en paralelo y acelerar el proceso
-        const communicationPromises = fullJourneyList.map(async (journey) => {
-            try {
-                // Esta es la lógica central reutilizada de getCommunications()
-                logger.logMessage(`Obteniendo actividades para: "${journey.name}"`);
-                const details = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
-                const comms = parseJourneyActivities(details.activities);
-                // Usamos Object.assign para modificar el objeto journey directamente en la lista principal
-                Object.assign(journey, { ...comms, activities: details.activities || [], hasCommunications: true });
-            } catch (error) {
-                logger.logMessage(` -> ERROR al obtener detalles para "${journey.name}": ${error.message}`);
-                // Opcional: añadir una bandera para saber que falló
-                journey.hasCommunications = false; 
-            }
-        });
-
-        // Esperamos a que todas las peticiones terminen
-        await Promise.all(communicationPromises);
-
-        logger.logMessage("Todas las comunicaciones han sido procesadas."); */
-
         populateJourneyFilters(fullJourneyList);
     } catch (error) {
         logger.logMessage(`Error al obtener journeys: ${error.message}`);
@@ -387,12 +481,20 @@ async function getCommunications() {
             const comms = parseJourneyActivities(details.activities);
             Object.assign(journey, { ...comms, activities: details.activities || [], hasCommunications: true });
         }
+        
+        // Enriquecer emails con SOAP
+        try {
+            await enrichEmailsWithSOAP(journeysToProcess, apiConfig);
+        } catch (soapError) {
+            logger.logMessage(`Error enriqueciendo con SOAP: ${soapError.message}`);
+        }
+        
         ui.showCustomAlert("Comunicaciones actualizadas.");
     } catch (error) {
         logger.logMessage(` -> ERROR al obtener detalles para "${error.message}"`);
         ui.showCustomAlert(`Error: ${error.message}`);
     } finally {
-        applyFiltersAndRender();
+        renderFilteredTable();
         ui.unblockUI();
         logger.endLogBuffering();
     }
@@ -447,6 +549,13 @@ async function getAllCommunications() {
             }
         }
         
+        // Enriquecer emails con SOAP
+        try {
+            await enrichEmailsWithSOAP(journeysToProcess, apiConfig);
+        } catch (soapError) {
+            logger.logMessage(`Error enriqueciendo con SOAP: ${soapError.message}`);
+        }
+        
         ui.showCustomAlert(`Proceso completado: ${totalCount} journeys analizados.`);
 
     } catch (error) {
@@ -499,152 +608,90 @@ async function copyAutomationAudienceJourney(journey) {
         return;
     }
 
-    if (!await ui.showCustomConfirm(`Se creará una copia de "${finalConfig.newJourneyName}". ¿Continuar?`)) {
-        return;
-    }
-
-    ui.blockUI("Clonando Journey de Automatismo...");
-    logger.startLogBuffering();
-
+    // PASO 3: Ejecutar clonación
     try {
-        const apiConfig = await getAuthenticatedConfig();
-        mcApiService.setLogger(logger);
+        logger.logMessage("Iniciando el proceso de clonación de Automation Audience Journey...");
+        const originalJourneyDetails = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
+        const originalEventDef = await mcApiService.getEventDefinitionById(originalJourneyDetails.triggers[0].metaData.eventDefinitionId, apiConfig);
+        const newEventDef = await mcApiService.createAutomationAudienceEventDefinition(originalEventDef, selection.automationId, selection.dataExtensionDetails, apiConfig, finalConfig.newJourneyName);
 
-        // La lógica de obtener detalles y crear el Event Definition sigue igual...
-        logger.logMessage(`--- INICIO CLONACIÓN DE JOURNEY TIPO AUTOMATIONAUDIENCE ---`);
-        logger.logMessage(`PASO 2/4: Obteniendo definición original del Journey...`);
-        const originalJourney = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
-        const eventDefId = originalJourney.triggers?.[0]?.metaData?.eventDefinitionId;
-        if (!eventDefId) throw new Error("No se pudo encontrar el Event Definition ID del Journey original.");
-
-        logger.logMessage(`PASO 3/4: Obteniendo Event Definition original...`);
-        const originalEventDef = await mcApiService.getEventDefinitionById(eventDefId, apiConfig);
+        const journeyPayload = prepareJourneyForCopy('AutomationAudience', originalJourneyDetails, originalEventDef, newEventDef, finalConfig.newJourneyName, finalConfig.newJourneyCategoryId);
         
-        logger.logMessage(`PASO 4/4: Creando nuevo Event Definition...`);
-        const deDetailsForEventDef = { objectID: finalConfig.selectedDE.id };
-        const newEventDef = await mcApiService.createAutomationAudienceEventDefinition(originalEventDef, finalConfig.automationId, deDetailsForEventDef, apiConfig, finalConfig.newJourneyName);
-        logger.logMessage(`-> Nuevo Event Definition creado con Key: ${newEventDef.eventDefinitionKey}`);
-
-        // PASO 5: Usamos los datos del modal para crear el Journey final.
-        logger.logMessage(`PASO 5/5: Creando la copia final del Journey...`);
-        const copyPayload = prepareJourneyForCopy("AutomationAudience",originalJourney, originalEventDef, newEventDef, finalConfig.newJourneyName, finalConfig.newJourneyCategoryId);
-        const newJourney = await mcApiService.createJourney(copyPayload, apiConfig);
-        logger.logMessage(`-> ¡Journey "${newJourney.name}" creado con éxito!`);
-
-        ui.showCustomAlert(`¡Éxito! Se ha creado la copia "${newJourney.name}".`);
-        //await refreshData();
+        const created = await mcApiService.createJourney(journeyPayload, apiConfig);
+        logger.logMessage(`Journey "${created.name}" creado exitosamente con ID ${created.id}.`);
+        ui.showCustomAlert(`Journey copiado exitosamente: "${created.name}"`);
+        await refreshData();
     } catch (error) {
-        logger.logMessage(`ERROR en la copia del AutomationAudience Journey: ${error.message}`);
-        ui.showCustomAlert(`Error en la copia: ${error.message}`);
+        logger.logMessage(`ERROR al copiar el Journey: ${error.message}`);
+        ui.showCustomAlert(`Error al copiar el Journey: ${error.message}`);
     } finally {
         ui.unblockUI();
-        logger.endLogBuffering();
     }
 }
+
 
 async function copyEmailAudienceJourney(journey) {
-    ui.blockUI('Preparando configuración...');
+    // PASO 1: Recuperar la DE de origen desde el EventDefinition
+    ui.blockUI('Recuperando información de la DE de origen...');
+    const apiConfig = await getAuthenticatedConfig();
+    const originalJourneyDetails = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
+    const originalEventDef = await mcApiService.getEventDefinitionById(originalJourneyDetails.triggers[0].metaData.eventDefinitionId, apiConfig);
 
-    // PASO 1: Llamar al modal que ahora maneja toda la lógica.
-    const apiConfig = await getAuthenticatedConfig(); // Necesitamos la config para pasarla al modal
-    const config = await ui.showJourneyClonerModal(journey, { getAuthenticatedConfig, mcApiService, logger, apiConfig });
-
-    if (!config) {
-        logger.logMessage("Proceso de clonación de EmailAudience cancelado por el usuario.");
+    const sourceDeExternalKey = journey.dataExtensionName;
+    if (!sourceDeExternalKey) {
+        ui.showCustomAlert('No se pudo obtener la Data Extension de origen.');
         ui.unblockUI();
         return;
     }
 
-    if (!await ui.showCustomConfirm(`Se creará una copia de "${journey.name}". ¿Continuar?`)) return;
+    // PASO 2: Mostrar el modal para configurar la DE destino y la carpeta del journey
+    const finalConfig = await ui.showJourneyClonerModal(journey, { getAuthenticatedConfig, mcApiService, logger, apiConfig }, null);
+    if (!finalConfig) {
+        logger.logMessage('Proceso de clonación cancelado en el modal.');
+        ui.unblockUI();
+        return;
+    }
 
-    ui.blockUI("Copiando Journey...");
+    // PASO 3: Ejecutar la clonación
+    ui.blockUI('Iniciando clonación...');
     logger.startLogBuffering();
+
     try {
-        mcApiService.setLogger(logger);
+        logger.logMessage(`Iniciando clonación de Journey tipo EmailAudience: "${journey.name}"...`);
 
-        logger.logMessage(`--- INICIO CLONACIÓN DE JOURNEY TIPO EMAILAUDIENCE ---`);
-        logger.logMessage(`PASO 1/5: Obteniendo definición de "${journey.name}"...`);
-        const originalJourney = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
-        const eventDefId = originalJourney.triggers?.[0]?.metaData?.eventDefinitionId;
-        if (!eventDefId) throw new Error("No se pudo encontrar el Event Definition ID.");
-        
-        logger.logMessage(`PASO 2/5: Obteniendo Event Definition original...`);
-        const originalEventDef = await mcApiService.getEventDefinitionById(eventDefId, apiConfig);
+        // 3.1: Clonar la DE de entrada
+        logger.logMessage(`Clonando Data Extension "${sourceDeExternalKey}"...`);
+        const clonedDe = await mcApiService.cloneDataExtension(
+            sourceDeExternalKey,
+            finalConfig.newDeName,
+            finalConfig.newDeFolderId,
+            apiConfig
+        );
 
-        let clonedDeInfo;
-        if (config.useExistingDe) {
-            // Si reutilizamos, ya tenemos toda la info.
-            clonedDeInfo = { objectID: config.selectedDE.id, customerKey: config.selectedDE.key };
-            logger.logMessage(`PASO 3/5: Reutilizando DE existente: "${config.selectedDE.name}"`);
-        } else {
-            // Si no, clonamos la DE como antes, pero con el nuevo nombre y carpeta.
-            logger.logMessage(`PASO 3/5: Buscando detalles de la DE original "${originalEventDef.dataExtensionName}"...`);
-            const deDetails = await mcApiService.getDataExtensionDetailsByName(originalEventDef.dataExtensionName, apiConfig);
-            
-            logger.logMessage(`PASO 4/5: Clonando la Data Extension con el nombre "${config.newDeName}"...`);
-            clonedDeInfo = await mcApiService.cloneDataExtension(deDetails.customerKey, config.newDeName, "", config.newDeCategoryId, apiConfig);
-            logger.logMessage(`-> Nueva DE creada con Key: ${clonedDeInfo.customerKey}`);
-        }
+        // 3.2: Crear el nuevo Event Definition apuntando a la DE clonada
+        logger.logMessage('Creando nuevo Event Definition...');
+        const newEventDef = await mcApiService.createEmailAudienceEventDefinition(originalEventDef, clonedDe, apiConfig, finalConfig.newJourneyName);
 
-        logger.logMessage(`PASO 4/5: Creando nuevo Event Definition...`);
-        const newEventDef = await mcApiService.createEmailAudienceEventDefinition(originalEventDef, clonedDeInfo, apiConfig, config.newJourneyName);
-        logger.logMessage(`-> Nuevo Event Definition creado con Key: ${newEventDef.eventDefinitionKey}`);
+        // 3.3: Preparar el payload del Journey y crearlo
+        logger.logMessage('Creando el nuevo Journey...');
+        const journeyPayload = prepareJourneyForCopy('EmailAudience', originalJourneyDetails, originalEventDef, newEventDef, finalConfig.newJourneyName, finalConfig.newJourneyCategoryId);
+        const createdJourney = await mcApiService.createJourney(journeyPayload, apiConfig);
 
-        logger.logMessage(`PASO 5/5: Creando la copia final del Journey...`);
-        const copyPayload = prepareJourneyForCopy("EmailAudience",originalJourney, originalEventDef, newEventDef, config.newJourneyName, config.newJourneyCategoryId);
-        const newJourney = await mcApiService.createJourney(copyPayload, apiConfig);
-        logger.logMessage(`-> ¡Journey "${newJourney.name}" creado con éxito!`);
-
-        ui.showCustomAlert(`¡Éxito! Se ha creado la copia "${newJourney.name}".`);
-        //await refreshData();
+        logger.logMessage(`✅ Journey clonado exitosamente: "${createdJourney.name}" (ID: ${createdJourney.id})`);
+        ui.showCustomAlert(`Journey "${createdJourney.name}" creado con éxito.`);
+        await refreshData();
     } catch (error) {
-        logger.logMessage(`ERROR en la copia: ${error.message}`);
-        ui.showCustomAlert(`Error en la copia: ${error.message}`);
+        logger.logMessage(`❌ Error en el proceso de clonación: ${error.message}`);
+        ui.showCustomAlert(`Error al copiar el Journey: ${error.message}`);
     } finally {
         ui.unblockUI();
         logger.endLogBuffering();
     }
 }
 
-/**
- * Helper interno para detener versiones (Evita error 403 al filtrar solo Published)
- */
-async function processStopAction(journey, mode, apiConfig) {
-    let successCount = 0;
-    let errorCount = 0;
-
-    if (mode === 'all') {
-        // Usamos definitionId solo para obtener la lista de todas las versiones
-        const versions = await mcApiService.fetchJourneyVersions(journey.name, apiConfig);
-        console.log(versions);
-        // Filtramos por los estados que permite el script de la docu
-        const toStop = versions.filter(v => v.status === 'Published' || v.status === 'Unpublished');
-        
-        for (const ver of toStop) {
-            try {
-                // Usamos el ID de la versión encontrada (ver.id)
-                await mcApiService.stopJourney(journey.id, ver.version, apiConfig);
-                successCount++;
-            } catch (err) {
-                errorCount++;
-            }
-        }
-    } else {
-        // Modo 'single': usamos el journey.id directamente (el de la fila de la tabla)
-        if (journey.status === 'Published' || journey.status === 'Unpublished') {
-            try {
-                await mcApiService.stopJourney(journey.id, journey.version, apiConfig);
-                successCount++;
-            } catch (err) {
-                errorCount++;
-            }
-        }
-    }
-    return { success: successCount, error: errorCount };
-}
 
 /**
- * BOTÓN PARAR: Lógica con la nueva modal
+ * BOTÓN PARAR: Parar los journeys seleccionados con opción de "current", "all", o cancelar.
  */
 async function stopJourneys() {
     const journeys = getSelectedJourneys();
@@ -795,102 +842,94 @@ function handleRowSelection(e) {
     const row = e.target.closest('tr');
     if (!row || !row.dataset.journeyId) return;
 
+    const journeyId = row.dataset.journeyId;
+    const journey = currentFilteredList.find(j => j.id === journeyId);
+    if (!journey) return;
+
     const rows = Array.from(elements.journeysTbody.querySelectorAll('tr'));
     const currentIndex = rows.indexOf(row);
+    const chevron = row.querySelector('.comm-chevron');
 
     if (e.shiftKey && lastSelectedIndex !== -1) {
-        // Si pulsa shift, calculamos el rango
-        const start = Math.min(currentIndex, lastSelectedIndex);
-        const end = Math.max(currentIndex, lastSelectedIndex);
-        
-        // Seleccionamos todos en el rango (puedes decidir si añadir o toggle)
+        // Shift: seleccionar rango (sin expandir)
+        const start = Math.min(lastSelectedIndex, currentIndex);
+        const end = Math.max(lastSelectedIndex, currentIndex);
         for (let i = start; i <= end; i++) {
             rows[i].classList.add('selected');
         }
     } else {
-        // Comportamiento normal (toggle)
-        row.classList.toggle('selected');
+        // Click simple: TOGGLE selección + expandir si tiene comms
+        const wasSelected = row.classList.contains('selected');
+        
+        if (wasSelected) {
+            // Deseleccionar y colapsar
+            row.classList.remove('selected');
+            const detailsRow = document.querySelector(`tr[data-comms-for="${journeyId}"]`);
+            if (detailsRow) {
+                detailsRow.remove();
+            }
+            if (chevron) chevron.classList.remove('open');
+        } else {
+            // Seleccionar y expandir si hay comunicaciones
+            row.classList.add('selected');
+            if (journey.hasCommunications) {
+                toggleCommunicationsRow(journeyId, true); // true = abrir
+                if (chevron) chevron.classList.add('open');
+            }
+        }
     }
 
-    lastSelectedIndex = currentIndex; // Actualizamos el último índice pulsado
+    lastSelectedIndex = currentIndex;
     updateButtonsState();
 }
 
-// --- 7. HELPERS Y FUNCIONES AUXILIARES ---
-
 /**
- * Devuelve un array con los objetos de journey completos que están seleccionados en la tabla.
- * @returns {Array}
- */
-function getSelectedJourneys() {
-    const selectedIds = Array.from(document.querySelectorAll('#journeys-table tbody tr.selected')).map(row => row.dataset.journeyId);
-    return fullJourneyList.filter(j => selectedIds.includes(j.id));
-}
-
-/**
- * Actualiza el estado (habilitado/deshabilitado) de todos los botones de acción.
+ * Actualiza el estado de los botones de acción en función de la selección.
  */
 function updateButtonsState() {
     const selected = getSelectedJourneys();
-    const count = selected.length;
-
-    elements.getCommunicationsBtn.disabled = fullJourneyList.length === 0;
-
-    const clonableTypes = ['EmailAudience', 'AutomationAudience'];
-    elements.copyJourneyBtn.disabled = !(count === 1 && clonableTypes.includes(selected[0].eventType));
-
-    elements.stopJourneyBtn.disabled = !(count > 0 && selected.every(j => j.definitionType === 'Multistep'));
-    // Lógica para DELETE
-    if (count > 0) {
+    const hasSelection = selected.length > 0;
+    const isSingleSelection = selected.length === 1;
+    
+    // Validar compatibilidad para acciones masivas
+    let areCompatible = true;
+    if (selected.length > 1) {
         const firstType = selected[0].definitionType;
-        const allSameType = selected.every(j => j.definitionType === firstType);
+        const firstStatus = selected[0].status;
         
-        if (allSameType) {
-            if (firstType === 'Quicksend') {
-                elements.deleteJourneyBtn.disabled = false; // Quicksend se borran siempre
-            } else if (firstType === 'Multistep') {
-                elements.deleteJourneyBtn.disabled = false; // Multistep se permite (validaremos parada en la función)
-            } else {
-                elements.deleteJourneyBtn.disabled = true;
-            }
-        } else {
-            elements.deleteJourneyBtn.disabled = true; // Tipos mezclados: Desactivar
-        }
-    } else {
-        elements.deleteJourneyBtn.disabled = true;
+        // Todos deben tener el mismo definitionType y status
+        areCompatible = selected.every(j => 
+            j.definitionType === firstType && j.status === firstStatus
+        );
     }
-
-    elements.analyzeJourneyBtn.disabled = (selected.length !== 1);
+    
+    elements.getCommunicationsBtn.disabled = !hasSelection;
+    elements.copyJourneyBtn.disabled = !isSingleSelection;
+    elements.actionsJourneyBtn.disabled = !hasSelection || !areCompatible;
+    elements.getJourneyErrorsBtn.disabled = !hasSelection;
+    elements.analyzeJourneyBtn.disabled = !isSingleSelection;
 }
 
 /**
- * Rellena los desplegables de filtros con las opciones únicas disponibles.
- * @param {Array} journeys - La lista completa de journeys.
+ * Actualiza el estado visible u oculto de las columnas adicionales (DEs en actividades, comunicaciones).
  */
-function populateJourneyFilters(journeys) {
-    const createOptions = (element, key, label) => {
-        const current = element.value;
-        element.innerHTML = `<option value="">Todos los ${label}</option>`;
-        const values = [...new Set(journeys.map(j => j[key]).filter(Boolean))].sort();
-        values.forEach(val => element.appendChild(new Option(val, val)));
-        element.value = current;
-    };
-    createOptions(elements.journeyTypeFilter, 'eventType', 'tipos');
-    createOptions(elements.journeySubtypeFilter, 'definitionType', 'subtipos');
-    createOptions(elements.journeyStatusFilter, 'status', 'estados');
+function updateColumnsVisibility() {
+    const showDes = isDeColumnVisible;
+   
+    document.querySelectorAll('.col-des').forEach(el => {
+        el.style.display = showDes ? '' : 'none';
+    });
 }
 
 /**
- * Actualiza la UI de los controles de paginación.
- * @param {number} totalItems - El número total de items en la lista filtrada.
+ * Actualiza los controles de paginación basándose en el total de elementos.
+ * @param {number} totalItems - El número total de elementos (filtrados).
  */
 function updatePaginationUI(totalItems) {
     const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
     elements.totalPagesJourneys.textContent = `/ ${totalPages}`;
     elements.pageInputJourneys.value = currentPage;
     elements.pageInputJourneys.max = totalPages;
-    elements.prevPageBtnJourneys.disabled = currentPage === 1;
-    elements.nextPageBtnJourneys.disabled = currentPage >= totalPages;
 }
 
 /**
@@ -927,7 +966,7 @@ function copyFlowToClipboard() {
     });
 }
 
-/**SMSSYNC
+/**
  * Parsea las actividades de un journey para extraer las comunicaciones.
  * @param {Array} activities - El array de actividades de la API.
  * @returns {object} Un objeto con arrays de emails, sms, pushes y whatsapps.
@@ -935,8 +974,19 @@ function copyFlowToClipboard() {
 function parseJourneyActivities(activities = []) {
     const communications = { emails: [], sms: [], pushes: [], whatsapps: []  };
     if (!activities) return communications;
+    
     for (const activity of activities) {
-        if (activity.type === 'EMAILV2') communications.emails.push(activity.name);
+        if (activity.type === 'EMAILV2') {
+            // CORRECCIÓN: Usar triggeredSend.key, NO triggeredSendKey
+            const triggeredKey = activity.configurationArguments?.triggeredSend?.key || 
+                                 activity.configurationArguments?.triggeredSendKey || 
+                                 activity.key;
+            
+            communications.emails.push({
+                name: activity.name,
+                customerKey: triggeredKey  // Este es el que se busca en SOAP
+            });
+        }
         else if (['SMS', 'SMSSYNC'].includes(activity.type)) communications.sms.push(activity.name);
         else if (['INAPP', 'INBOX', 'MOBILEPUSH','PUSHINBOXACTIVITY'].includes(activity.type)) communications.pushes.push(activity.name);
         else if (activity.type === 'WHATSAPPACTIVITY') communications.whatsapps.push(activity.name);
@@ -1061,7 +1111,7 @@ function downloadJourneysCsv() {
         `"${j.dataExtensionName || ''}"`,
         `"${j.usedDEs || ''}"`,
         `"${j.hasCommunications ? 'Sí' : 'No'}"`,
-        `"${j.emails.join(' | ')}"`,
+        `"${j.emails.map(e => typeof e === 'object' ? e.name : e).join(' | ')}"`,
         `"${j.sms.join(' | ')}"`,
         `"${j.pushes.join(' | ')}"`,
         `"${j.whatsapps.join(' | ')}"`
@@ -1140,125 +1190,400 @@ async function analyzeDeUsageInFilteredJourneys() {
                         if (name) journeyUniqueDEs.add(name);
                     }
                     
-                    // CASO B: Salesforce Activities
-                    if (act.arguments?.objectMap?.objects) {
-                        act.arguments.objectMap.objects.forEach(obj => {
-                            (obj.fields || []).forEach(f => {
-                                const m = f.FieldValue?.match(/{{(?:Event|Contact|Attribute)\.([^.]+)\./i);
-                                if (m) journeyUniqueDEs.add(m[1]); // No hace falta await aquí si ya sabemos que resolverá
-                            });
-                        });
-                    }
-
-                    // CASO C: Decision Splits (Análisis XML mejorado)
-                    if (act.configurationArguments?.criteria) {
-                        for (const xml of Object.values(act.configurationArguments.criteria)) {
-                            // Esta RegEx busca lo que hay entre comillas en Key="Nombre.Campo" 
-                            // o patrones de Nombre.Campo. Es más efectiva en XML.
-                            const keys = xml.match(/Key="([^.]+)\./g) || xml.match(/(?:Event\.|Contact\.|Attribute\.)([^.]+)\./gi);
-                            if (keys) {
-                                for (let k of keys) {
-                                    const raw = k.replace('Key="', '').replace('Event.', '').replace('Contact.', '').replace('Attribute.', '').replace('.', '');
-                                    const name = await resolveDeNameForScan(raw, apiConfig, journey.dataExtensionName, 'CustomerKey');
-                                    if (name) journeyUniqueDEs.add(name);
+                    // CASO B: Multicriterio + Simple Decision
+                    if (act.arguments?.criteria) {
+                        for (const crit of act.arguments.criteria) {
+                            if (crit.objectSourceDataExtension) {
+                                const name = await resolveDeNameForScan(crit.objectSourceDataExtension, apiConfig, journey.dataExtensionName, 'CustomerKey');
+                                if (name) journeyUniqueDEs.add(name);
+                            }
+                            if (crit.values && Array.isArray(crit.values)) {
+                                for (const v of crit.values) {
+                                    if (v.objectSourceDataExtension) {
+                                        const name = await resolveDeNameForScan(v.objectSourceDataExtension, apiConfig, journey.dataExtensionName, 'CustomerKey');
+                                        if (name) journeyUniqueDEs.add(name);
+                                    }
                                 }
                             }
                         }
                     }
+                    
+                    // CASO C: Sales Cloud Activity
+                    if (act.configurationArguments?.objectName) {
+                        const sfObj = act.configurationArguments.objectName || 'Desconocido';
+                        journeyUniqueDEs.add(`[SF] ${sfObj}`);
+                    }
                 }
             }
-            // Eliminamos el nombre de la DE de entrada de la lista de "Used" para que esté más limpio
-            // ya que esa ya tiene su propia columna
-            journeyUniqueDEs.delete(journey.dataExtensionName);
 
-            const resolvedSet = new Set();
-            for (let id of journeyUniqueDEs) {
-                const resolved = await resolveDeNameForScan(id, apiConfig, journey.dataExtensionName, 'CustomerKey');
-                if (resolved) resolvedSet.add(resolved);
-            }
-
-            // 2. Eliminamos la DE de entrada de la lista (porque ya tiene su propia columna)
-            resolvedSet.delete(journey.dataExtensionName);
-
-            // 3. Limpiamos, filtramos vacíos y ordenamos
-            const finalSortedList = Array.from(resolvedSet)
-                .map(n => n.trim())
-                .filter(n => n.length > 0)
-                .sort();
-            
-            // UNIMOS POR PIPE para que sea una sola línea plana
-            journey.usedDEs = finalSortedList.join(' | ');
+            // Actualizamos la propiedad del journey
+            journey.usedDEs = journeyUniqueDEs.size > 0 ? Array.from(journeyUniqueDEs).join(', ') : '';
         }
-        ui.showCustomAlert("Escaneo completado.");
+
+        ui.showCustomAlert(`Análisis de DEs completado para ${total} journeys.`);
+        applyFiltersAndRender();
     } catch (error) {
-        ui.showCustomAlert(`Error: ${error.message}`);
+        ui.showCustomAlert(`Error en el análisis: ${error.message}`);
+        logger.logMessage(`Error: ${error.message}`);
     } finally {
-        renderFilteredTable();
         ui.unblockUI();
         logger.endLogBuffering();
     }
 }
 
 
-/**
- * Traduce IDs técnicos o nombres de Contact Data. 
- * Si detecta que es el origen del Journey, usa el nombre de entrada.
- */
-async function resolveDeNameForScan(technicalId, apiConfig, entryDeName, type = 'CustomerKey') {
-    if (!technicalId) return null;
-    
-    // 1. LIMPIEZA: Quitamos comillas, saltos de línea y prefijos de sistema
-    let cleanId = technicalId
-        .replace(/["']/g, '')             // Elimina comillas " y '
-        .replace(/Key=/i, '')             // Elimina Key= (común en XML)
-        .replace(/^Event\./i, '')
-        .replace(/^Contact\./i, '')
-        .replace(/^Attribute\./i, '')
-        .replace(/^Attribute\s+/i, '')
-        .replace(/[\r\n\t]/g, '')         // Elimina basura invisible
-        .trim();
+async function resolveDeNameForScan(identifier, apiConfig, entryDeName, searchBy = 'ObjectID') {
+    if (!identifier) return null;
 
-    // 2. Si después de limpiar queda algo como "Tabla.Campo", nos quedamos con "Tabla"
-    if (cleanId.includes('.')) {
-        cleanId = cleanId.split('.')[0];
+    // Si ya está en la caché, reutilizar
+    if (scanDeCache.has(identifier)) {
+        return scanDeCache.get(identifier);
     }
 
-    // 3. DETECCIÓN DE ORIGEN (ENTRY SOURCE)
-    // Cualquier cosa que empiece por estos prefijos es la DE de entrada
-    const entryPrefixes = ['DEAudience-', 'AutomationAud-', 'APIEvent-', 'SalesforceObj'];
-    const isEntrySource = entryPrefixes.some(p => cleanId.startsWith(p));
-
-    if (isEntrySource) {
-        return entryDeName; // Devolvemos el nombre de la columna principal
+    try {
+        const result = await mcApiService.searchDataExtensions(searchBy, identifier, apiConfig);
+        if (result && result.length > 0) {
+            const name = result[0].Name || identifier;
+            scanDeCache.set(identifier, name);
+            return name;
+        } else {
+            const fallback = `[No encontrada: ${identifier}]`;
+            scanDeCache.set(identifier, fallback);
+            return fallback;
+        }
+    } catch (error) {
+        logger.logMessage(`Error resolving ${searchBy}=${identifier}: ${error.message}`);
+        const fallback = `[Error: ${identifier}]`;
+        scanDeCache.set(identifier, fallback);
+        return fallback;
     }
-
-    // 4. Si no es el origen, buscamos en caché o API
-    if (scanDeCache.has(cleanId)) return scanDeCache.get(cleanId);
-
-    if (cleanId.includes('-') || (cleanId.startsWith('SalesforceObj') && cleanId.length > 20)) {
-        try {
-            const name = await mcApiService.fetchDataExtensionName(type, cleanId, apiConfig);
-            if (name && name !== cleanId) {
-                const finalName = name.replace(/[\r\n\t]/g, '').trim();
-                scanDeCache.set(cleanId, finalName);
-                return finalName;
-            }
-        } catch (e) {}
-    }
-
-    return cleanId;
 }
 
-function updateColumnsVisibility() {
-    const hasAnyComm = fullJourneyList.some(j => j.hasCommunications === true);
+/**
+ * Procesa la lógica de parada para un Journey, dependiendo de si es Multistep o Scheduled.
+ * @param {object} journey - El objeto journey a procesar.
+ * @param {string} choice - 'current', 'all', o cancelar (null/undefined).
+ * @param {object} apiConfig - La configuración autenticada de la API.
+ * @returns {object} Un resumen con número de éxitos y errores.
+ */
+async function processStopAction(journey, choice, apiConfig) {
+    const type = journey.definitionType;
+    let successCount = 0;
+    let errorCount = 0;
 
-    // 1. Mostrar/Ocultar Comunicaciones
-    document.querySelectorAll('.col-comm').forEach(el => {
-        el.style.setProperty('display', hasAnyComm ? 'table-cell' : 'none', 'important');
+    if (type === 'Multistep') {
+        if (choice === 'current') {
+            logger.logMessage(`Parando versión actual (v${journey.version}) del Journey: "${journey.name}"...`);
+            try {
+                await mcApiService.stopJourney(journey.id, journey.version, apiConfig);
+                logger.logMessage(`✓ Versión ${journey.version} de "${journey.name}" parada exitosamente.`);
+                successCount++;
+            } catch (error) {
+                logger.logMessage(`✗ Error al parar v${journey.version} de "${journey.name}": ${error.message}`);
+                errorCount++;
+            }
+        } else if (choice === 'all') {
+            logger.logMessage(`Parando TODAS las versiones de "${journey.name}"...`);
+            try {
+                const allVersions = await mcApiService.fetchJourneyVersions(journey.name, apiConfig);
+                for (const v of allVersions) {
+                    if (v.status === 'Running') {
+                        try {
+                            await mcApiService.stopJourney(v.id, v.version, apiConfig);
+                            logger.logMessage(`✓ Versión ${v.version} parada.`);
+                            successCount++;
+                        } catch (error) {
+                            logger.logMessage(`✗ Error al parar v${v.version}: ${error.message}`);
+                            errorCount++;
+                        }
+                    }
+                }
+            } catch (error) {
+                logger.logMessage(`✗ Error al obtener versiones de "${journey.name}": ${error.message}`);
+                errorCount++;
+            }
+        }
+    } else if (type === 'Scheduled') {
+        logger.logMessage(`Parando Journey programado: "${journey.name}" (v${journey.version})...`);
+        try {
+            await mcApiService.stopJourney(journey.id, journey.version, apiConfig);
+            logger.logMessage(`✓ Journey "${journey.name}" (v${journey.version}) parado exitosamente.`);
+            successCount++;
+        } catch (error) {
+            logger.logMessage(`✗ Error al parar "${journey.name}": ${error.message}`);
+            errorCount++;
+        }
+    }
+
+    return { success: successCount, error: errorCount };
+}
+
+/**
+ * Llena los selectores de filtro con los valores únicos de la lista de journeys.
+ * @param {Array} journeys - La lista de journeys cargada.
+ */
+function populateJourneyFilters(journeys) {
+    // Tipos únicos
+    const types = [...new Set(journeys.map(j => j.eventType).filter(Boolean))];
+    elements.journeyTypeFilter.innerHTML = '<option value="">Todos los tipos</option>';
+    types.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = t;
+        elements.journeyTypeFilter.appendChild(opt);
     });
 
-    // 2. Mostrar/Ocultar DEs (Usando el interruptor que acabamos de crear)
-    document.querySelectorAll('.col-des').forEach(el => {
-        el.style.setProperty('display', isDeColumnVisible ? 'table-cell' : 'none', 'important');
+    // Subtipos únicos
+    const subtypes = [...new Set(journeys.map(j => j.definitionType).filter(Boolean))];
+    elements.journeySubtypeFilter.innerHTML = '<option value="">Todos los subtipos</option>';
+    subtypes.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        elements.journeySubtypeFilter.appendChild(opt);
     });
+
+    // Estados únicos
+    const statuses = [...new Set(journeys.map(j => j.status).filter(Boolean))];
+    elements.journeyStatusFilter.innerHTML = '<option value="">Todos los estados</option>';
+    statuses.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        elements.journeyStatusFilter.appendChild(opt);
+    });
+}
+
+/**
+ * Devuelve un array con los journeys cuyas filas estén seleccionadas en la tabla.
+ * @returns {Array} La lista de journeys seleccionados.
+ */
+function getSelectedJourneys() {
+    const selectedRows = elements.journeysTbody.querySelectorAll('tr.selected');
+    const selectedJourneys = [];
+    selectedRows.forEach(row => {
+        const journeyId = row.dataset.journeyId;
+        const journey = currentFilteredList.find(j => j.id === journeyId);
+        if (journey) selectedJourneys.push(journey);
+    });
+    return selectedJourneys;
+}
+
+/**
+ * Enriquece emails con datos SOAP (TriggeredSendDefinition + Summary).
+ */
+async function enrichEmailsWithSOAP(journeys, apiConfig) {
+    const allEmailCustomerKeys = [];
+    journeys.forEach(j => {
+        if (j.emails && j.emails.length > 0) {
+            j.emails.forEach(e => {
+                if (typeof e === 'object' && e.customerKey) {
+                    allEmailCustomerKeys.push(e.customerKey);
+                }
+            });
+        }
+    });
+    
+    if (allEmailCustomerKeys.length === 0) {
+        logger.logMessage('⚠️ No hay customer keys para enriquecer con SOAP.');
+        return;
+    }
+    
+    logger.logMessage(`📧 CustomerKeys encontrados: ${allEmailCustomerKeys.length}`);
+    logger.logMessage(`📧 Keys: ${allEmailCustomerKeys.join(', ')}`);
+    
+    const uniqueKeys = [...new Set(allEmailCustomerKeys)];
+    logger.logMessage(`📧 Keys únicos: ${uniqueKeys.length}`);
+    
+    // PASO 1: Obtener definiciones
+    const defsMap = await mcApiService.fetchTriggeredSendDefinitionsByKeys(uniqueKeys, apiConfig);
+    logger.logMessage(`✅ Definiciones obtenidas: ${Object.keys(defsMap).length}`);
+    logger.logMessage(`✅ Definiciones: ${JSON.stringify(defsMap, null, 2)}`);
+    
+    // PASO 2: Extraer ObjectIDs
+    const objectIds = Object.values(defsMap).map(d => d.objectId).filter(Boolean);
+    logger.logMessage(`🔑 ObjectIDs extraídos: ${objectIds.length}`);
+    logger.logMessage(`🔑 IDs: ${objectIds.join(', ')}`);
+    
+    if (objectIds.length === 0) {
+        logger.logMessage('❌ No se obtuvieron ObjectIDs de las definiciones. No se pueden obtener métricas.');
+        return;
+    }
+    
+    // PASO 3: Obtener métricas
+    const summariesMap = await mcApiService.fetchTriggeredSendSummariesByObjectIds(objectIds, apiConfig);
+    logger.logMessage(`📊 Métricas obtenidas: ${Object.keys(summariesMap).length}`);
+    logger.logMessage(`📊 Summaries: ${JSON.stringify(summariesMap, null, 2)}`);
+    
+    // PASO 4: Aplicar enriquecimiento
+    let enrichedCount = 0;
+    journeys.forEach(journey => {
+        if (journey.emails && journey.emails.length > 0) {
+            journey.emails = journey.emails.map(email => {
+                if (typeof email !== 'object') return email;
+                
+                const def = defsMap[email.customerKey];
+                if (def) {
+                    const summary = summariesMap[def.objectId] || {};
+                    enrichedCount++;
+                    
+                    logger.logMessage(`✨ Enriqueciendo "${email.name}" (${email.customerKey})`);
+                    logger.logMessage(`   ObjectID: ${def.objectId}`);
+                    logger.logMessage(`   Status: ${def.status}`);
+                    logger.logMessage(`   Sent: ${summary.sent}, Queued: ${summary.queued}, Errored: ${summary.errored}`);
+                    
+                    return {
+                        ...email,
+                        status: def.status,
+                        description: def.description,
+                        created: def.created,
+                        modified: def.modified,
+                        completed: summary.sent || '0',
+                        queued: summary.queued || '0',
+                        errored: summary.errored || '0'
+                    };
+                } else {
+                    logger.logMessage(`❌ Email "${email.name}" (${email.customerKey}) -> NO se encontró en SOAP`);
+                }
+                return email;
+            });
+        }
+    });
+    
+    logger.logMessage(`🎉 Enriquecimiento completado: ${enrichedCount} emails procesados`);
+}
+
+/**
+ * Maneja el botón Acciones.
+ */
+async function handleActionsButton() {
+    const selected = getSelectedJourneys();
+    
+    if (selected.length === 0) {
+        ui.showCustomAlert('Por favor selecciona al menos un journey.');
+        return;
+    }
+    
+    ui.showJourneyActionsModal(selected.length, {
+        onPause: () => pauseJourneys(selected),
+        onResume: () => resumeJourneys(selected),
+        onStop: () => stopJourneys(),
+        onDelete: () => deleteJourneys()
+    });
+}
+
+/**
+ * Pausa journeys seleccionados.
+ */
+async function pauseJourneys(journeys) {
+    const running = journeys.filter(j => j.status === 'Running');
+    
+    if (running.length === 0) {
+        ui.showCustomAlert('No hay journeys en estado "Running" para pausar.');
+        return;
+    }
+    
+    ui.showJourneyPauseModal(running.length, async (pauseOptions) => {
+        ui.blockUI(`Pausando ${running.length} journey(s)...`);
+        logger.startLogBuffering();
+        
+        try {
+            const apiConfig = await getAuthenticatedConfig();
+            mcApiService.setLogger(logger);
+            let successCount = 0;
+            let errorCount = 0;
+            
+            for (const journey of running) {
+                try {
+                    await mcApiService.pauseJourney(journey.id, journey.version, pauseOptions, apiConfig);
+                    logger.logMessage(`✓ Pausado: ${journey.name}`);
+                    successCount++;
+                } catch (error) {
+                    logger.logMessage(`✗ Error pausando ${journey.name}: ${error.message}`);
+                    errorCount++;
+                }
+            }
+            
+            ui.showCustomAlert(`Pausados: ${successCount} | Errores: ${errorCount}`);
+            await refreshData();
+            
+        } catch (error) {
+            ui.showCustomAlert(`Error al pausar journeys: ${error.message}`);
+        } finally {
+            ui.unblockUI();
+            logger.endLogBuffering();
+        }
+    });
+}
+
+/**
+ * Reanuda journeys seleccionados.
+ */
+async function resumeJourneys(journeys) {
+    const paused = journeys.filter(j => j.status === 'Paused');
+    
+    if (paused.length === 0) {
+        ui.showCustomAlert('No hay journeys en estado "Paused" para reanudar.');
+        return;
+    }
+    
+    const confirmed = await ui.showCustomConfirm(`¿Deseas reanudar ${paused.length} journey(s)?`);
+    if (!confirmed) return;
+    
+    ui.blockUI(`Reanudando ${paused.length} journey(s)...`);
+    logger.startLogBuffering();
+    
+    try {
+        const apiConfig = await getAuthenticatedConfig();
+        mcApiService.setLogger(logger);
+        let successCount = 0;
+        let errorCount = 0;
+        
+        for (const journey of paused) {
+            try {
+                await mcApiService.resumeJourney(journey.id, journey.version, apiConfig);
+                logger.logMessage(`✓ Reanudado: ${journey.name}`);
+                successCount++;
+            } catch (error) {
+                logger.logMessage(`✗ Error reanudando ${journey.name}: ${error.message}`);
+                errorCount++;
+            }
+        }
+        
+        ui.showCustomAlert(`Reanudados: ${successCount} | Errores: ${errorCount}`);
+        await refreshData();
+        
+    } catch (error) {
+        ui.showCustomAlert(`Error al reanudar journeys: ${error.message}`);
+    } finally {
+        ui.unblockUI();
+        logger.endLogBuffering();
+    }
+}
+
+/**
+ * Maneja el botón Ver Errores.
+ */
+async function handleErrorsButton() {
+    const selected = getSelectedJourneys();
+    
+    if (selected.length === 0) {
+        ui.showCustomAlert('Por favor selecciona al menos un journey.');
+        return;
+    }
+    
+    const journeyIds = selected.map(j => j.id);
+    
+    elements.gestionJourneysSection.style.display = 'none';
+    elements.journeyErrorsSection.style.display = 'flex';
+    
+    try {
+        const journeyErrorsModule = await import('./journey-errors.js');
+        journeyErrorsModule.view(journeyIds);
+    } catch (error) {
+        logger.logMessage(`Error cargando módulo de errores: ${error.message}`);
+        ui.showCustomAlert('Error al cargar la vista de errores');
+        elements.journeyErrorsSection.style.display = 'none';
+        elements.gestionJourneysSection.style.display = 'flex';
+    }
 }
