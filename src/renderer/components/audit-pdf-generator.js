@@ -108,6 +108,34 @@ export async function generateAuditPDF(pdfData, stats, clientName) {
                 currentY += kpiHeight + 10;
             }
 
+            // PINTAR CALLOUTS / MENSAJES
+            if (data.callouts && data.callouts.length > 0) {
+                for (const callout of data.callouts) {
+                    if (currentY + 20 > 275) { doc.addPage(); currentY = 20; }
+                    
+                    const rgb = hexToRgb(callout.color || '#3498db');
+                    
+                    // Barra lateral de color
+                    doc.setFillColor(rgb.r, rgb.g, rgb.b);
+                    doc.rect(14, currentY, 2, 14, 'F');
+                    
+                    // Fondo
+                    doc.setFillColor(248, 249, 250);
+                    doc.rect(16, currentY, 180, 14, 'F');
+                    
+                    // Título
+                    doc.setFontSize(9).setTextColor(44, 62, 80).setFont("helvetica", "bold");
+                    doc.text(callout.title, 20, currentY + 5);
+                    
+                    // Mensaje
+                    doc.setFontSize(8).setTextColor(100, 100, 100).setFont("helvetica", "normal");
+                    const msgLines = doc.splitTextToSize(callout.message, 170);
+                    doc.text(msgLines, 20, currentY + 10);
+                    
+                    currentY += 14 + Math.max(0, (msgLines.length - 1) * 4) + 4;
+                }
+            }
+            
             // PINTAR TARJETAS (Gráficos de barras)
             // Las tarjetas "wide" ocupan todo el ancho; las normales podrían pintarse en columnas,
             // pero por legibilidad en PDF se pintan todas a ancho completo.

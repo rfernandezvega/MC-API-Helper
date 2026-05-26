@@ -23,50 +23,49 @@
 </div>
 
 <!-- MODAL: CONFIGURACIÓN DE PAUSA -->
+<!-- MODAL: CONFIGURACIÓN DE PAUSA -->
 <div id="journey-pause-modal" class="modal-overlay">
     <div class="modal-content" style="width: 520px;">
         <h3>Pausar Journeys</h3>
-        <p style="font-size: 14px; margin-bottom: 20px;">
+        <p style="font-size: 14px; margin-bottom: 25px;">
             Vas a pausar <strong id="journey-pause-count-text">0</strong> journey(s). Configura las opciones de pausa:
         </p>
         
-        <div class="form-group">
-            <label title="El número de días para pausar el journey. El valor mínimo es 1 y el máximo es 14.">
-                Paused Days ℹ️
-            </label>
-            <input type="number" id="journey-pause-days" class="filter-input" min="1" max="14" value="14" style="width: 100px;">
-        </div>
+        <div style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 30px;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <label style="min-width: 160px; font-weight: 600;" title="El número de días para pausar el journey. El valor mínimo es 1 y el máximo es 14.">
+                    ℹ️ Paused Days 
+                </label>
+                <input type="number" id="journey-pause-days" class="filter-input" min="1" max="14" value="14" style="width: 80px;">
+            </div>
 
-        <div class="form-group">
-            <label title="La acción a tomar cuando transcurran los días indicados en Paused Days.">
-                Guardrail Action ℹ️
-            </label>
-            <select id="journey-pause-guardrail" class="filter-input">
-                <option value="Resume">Resume (Reanudar)</option>
-                <option value="Stop">Stop (Parar)</option>
-                <option value="None">None (Nada)</option>
-            </select>
-        </div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <label style="min-width: 160px; font-weight: 600;" title="La acción a tomar cuando transcurran los días indicados en Paused Days.">
+                    ℹ️ Guardrail Action 
+                </label>
+                <select id="journey-pause-guardrail" class="filter-input" style="width: 200px;">
+                    <option value="Resume">Resume (Reanudar)</option>
+                    <option value="Stop">Stop (Parar)</option>
+                    <option value="None">None (Nada)</option>
+                </select>
+            </div>
 
-        <div class="form-group" style="flex-direction: row; align-items: center;">
-            <input type="checkbox" id="journey-pause-extend" checked style="width: auto; margin-right: 10px;">
-            <label for="journey-pause-extend" title="Si es 'true', la fecha de finalización de una actividad 'Wait By Duration' se extiende por los días pausados." style="margin: 0;">
-                Extend Wait End Dates ℹ️
-            </label>
-        </div>
+            <div style="border-top: 1px solid #eee; padding-top: 15px; display: flex; flex-direction: column; gap: 12px;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;" title="Si es 'true', la fecha de finalización de una actividad 'Wait By Duration' se extiende por los días pausados.">
+                    <span style="font-weight: 600;">ℹ️ Extend Wait End Dates</span>
+                    <input type="checkbox" id="journey-pause-extend" checked style="width: 18px; height: 18px;">
+                </label>
 
-        <div class="form-group" style="flex-direction: row; align-items: center;">
-            <input type="checkbox" id="journey-pause-process" checked style="width: auto; margin-right: 10px;">
-            <label for="journey-pause-process" title="Especifica si se deben evaluar y procesar los eventos de las actividades 'Wait Until Event' durante la pausa." style="margin: 0;">
-                Process Wait Until Events ℹ️
-            </label>
-        </div>
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;" title="Especifica si se deben evaluar y procesar los eventos de las actividades 'Wait Until Event' durante la pausa.">
+                    <span style="font-weight: 600;">ℹ️ Process Wait Until Events</span>
+                    <input type="checkbox" id="journey-pause-process" checked style="width: 18px; height: 18px;">
+                </label>
 
-        <div class="form-group" style="flex-direction: row; align-items: center;">
-            <input type="checkbox" id="journey-pause-retain" checked style="width: auto; margin-right: 10px;">
-            <label for="journey-pause-retain" title="Si es 'true', los nuevos contactos se encolan mientras dure la pausa y entran al reanudarse el journey." style="margin: 0;">
-                Retain Contact Injection ℹ️
-            </label>
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;" title="Si es 'true', los nuevos contactos se encolan mientras dure la pausa y entran al reanudarse el journey.">
+                    <span style="font-weight: 600;">ℹ️ Retain Contact Injection</span>
+                    <input type="checkbox" id="journey-pause-retain" checked style="width: 18px; height: 18px;">                    
+                </label>
+            </div>
         </div>
 
         <div class="modal-actions">

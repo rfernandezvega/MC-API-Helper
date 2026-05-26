@@ -70,7 +70,7 @@ function applyFiltersAndRender() {
         });
     }
 
-    const commsFilter = elements.journeyCommsFilter.checked;
+    const commsFilter = elements.journeyCommsFilter.dataset.active === 'true';
     if (commsFilter) {
         filtered = filtered.filter(j => j.hasCommunications === true);
     }
@@ -257,7 +257,16 @@ export function init(dependencies) {
     elements.journeySubtypeFilter.addEventListener('change', applyFiltersAndRender);
     elements.journeyStatusFilter.addEventListener('change', applyFiltersAndRender);
     elements.journeyDEFilter.addEventListener('input', applyFiltersAndRender);
-    elements.journeyCommsFilter.addEventListener('change', applyFiltersAndRender);
+    elements.journeyCommsFilter.addEventListener('click', () => {
+        const btn = elements.journeyCommsFilter;
+        const isActive = btn.dataset.active === 'true';
+        btn.dataset.active = isActive ? 'false' : 'true';
+        btn.textContent = isActive ? '☐ Comunicaciones' : '☑ Comunicaciones';
+        btn.style.backgroundColor = isActive ? '#f9f9f9' : '#558ac7';
+        btn.style.color = isActive ? '' : '#fff';
+        btn.style.borderColor = isActive ? '' : '#558ac7';
+        applyFiltersAndRender();
+    });
 
     // Listeners de botones de acción
     elements.downloadJourneysCsvBtn.addEventListener('click', downloadJourneysCsv);
@@ -588,7 +597,6 @@ async function copyJourney() {
 }
 
 async function copyAutomationAudienceJourney(journey) {
-    // PASO 1: Sigue siendo igual, seleccionamos el automatismo y la DE de origen.
     const selection = await ui.showAutomationDESelectorModal({ getAuthenticatedConfig, mcApiService, logger });
     if (!selection) {
         logger.logMessage("Proceso de clonación de AutomationAudience cancelado por el usuario.");
@@ -597,10 +605,8 @@ async function copyAutomationAudienceJourney(journey) {
 
     ui.blockUI('Preparando configuración...');
 
-    // Obtenemos la configuración de la API ANTES de llamar al modal.
     const apiConfig = await getAuthenticatedConfig();
 
-    // PASO 2: Llamamos al nuevo modal, AHORA SÍ incluyendo 'apiConfig' en las dependencias.
     const finalConfig = await ui.showJourneyClonerModal(journey, { getAuthenticatedConfig, mcApiService, logger, apiConfig }, selection);
     if (!finalConfig) {
         logger.logMessage("Proceso de clonación cancelado en la configuración final.");
@@ -608,81 +614,39 @@ async function copyAutomationAudienceJourney(journey) {
         return;
     }
 
-    // PASO 3: Ejecutar clonación
-    try {
-        logger.logMessage("Iniciando el proceso de clonación de Automation Audience Journey...");
-        const originalJourneyDetails = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
-        const originalEventDef = await mcApiService.getEventDefinitionById(originalJourneyDetails.triggers[0].metaData.eventDefinitionId, apiConfig);
-        const newEventDef = await mcApiService.createAutomationAudienceEventDefinition(originalEventDef, selection.automationId, selection.dataExtensionDetails, apiConfig, finalConfig.newJourneyName);
-
-        const journeyPayload = prepareJourneyForCopy('AutomationAudience', originalJourneyDetails, originalEventDef, newEventDef, finalConfig.newJourneyName, finalConfig.newJourneyCategoryId);
-        
-        const created = await mcApiService.createJourney(journeyPayload, apiConfig);
-        logger.logMessage(`Journey "${created.name}" creado exitosamente con ID ${created.id}.`);
-        ui.showCustomAlert(`Journey copiado exitosamente: "${created.name}"`);
-        await refreshData();
-    } catch (error) {
-        logger.logMessage(`ERROR al copiar el Journey: ${error.message}`);
-        ui.showCustomAlert(`Error al copiar el Journey: ${error.message}`);
-    } finally {
-        ui.unblockUI();
-    }
-}
-
-
-async function copyEmailAudienceJourney(journey) {
-    // PASO 1: Recuperar la DE de origen desde el EventDefinition
-    ui.blockUI('Recuperando información de la DE de origen...');
-    const apiConfig = await getAuthenticatedConfig();
-    const originalJourneyDetails = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
-    const originalEventDef = await mcApiService.getEventDefinitionById(originalJourneyDetails.triggers[0].metaData.eventDefinitionId, apiConfig);
-
-    const sourceDeExternalKey = journey.dataExtensionName;
-    if (!sourceDeExternalKey) {
-        ui.showCustomAlert('No se pudo obtener la Data Extension de origen.');
-        ui.unblockUI();
+    if (!await ui.showCustomConfirm(`Se creará una copia de "${finalConfig.newJourneyName}". ¿Continuar?`)) {
         return;
     }
 
-    // PASO 2: Mostrar el modal para configurar la DE destino y la carpeta del journey
-    const finalConfig = await ui.showJourneyClonerModal(journey, { getAuthenticatedConfig, mcApiService, logger, apiConfig }, null);
-    if (!finalConfig) {
-        logger.logMessage('Proceso de clonación cancelado en el modal.');
-        ui.unblockUI();
-        return;
-    }
-
-    // PASO 3: Ejecutar la clonación
-    ui.blockUI('Iniciando clonación...');
+    ui.blockUI("Clonando Journey de Automatismo...");
     logger.startLogBuffering();
 
     try {
-        logger.logMessage(`Iniciando clonación de Journey tipo EmailAudience: "${journey.name}"...`);
+        mcApiService.setLogger(logger);
 
-        // 3.1: Clonar la DE de entrada
-        logger.logMessage(`Clonando Data Extension "${sourceDeExternalKey}"...`);
-        const clonedDe = await mcApiService.cloneDataExtension(
-            sourceDeExternalKey,
-            finalConfig.newDeName,
-            finalConfig.newDeFolderId,
-            apiConfig
-        );
+        logger.logMessage(`--- INICIO CLONACIÓN DE JOURNEY TIPO AUTOMATIONAUDIENCE ---`);
+        logger.logMessage(`PASO 2/4: Obteniendo definición original del Journey...`);
+        const originalJourney = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
+        const eventDefId = originalJourney.triggers?.[0]?.metaData?.eventDefinitionId;
+        if (!eventDefId) throw new Error("No se pudo encontrar el Event Definition ID del Journey original.");
 
-        // 3.2: Crear el nuevo Event Definition apuntando a la DE clonada
-        logger.logMessage('Creando nuevo Event Definition...');
-        const newEventDef = await mcApiService.createEmailAudienceEventDefinition(originalEventDef, clonedDe, apiConfig, finalConfig.newJourneyName);
+        logger.logMessage(`PASO 3/4: Obteniendo Event Definition original...`);
+        const originalEventDef = await mcApiService.getEventDefinitionById(eventDefId, apiConfig);
+        
+        logger.logMessage(`PASO 4/4: Creando nuevo Event Definition...`);
+        const deDetailsForEventDef = { objectID: finalConfig.selectedDE.id };
+        const newEventDef = await mcApiService.createAutomationAudienceEventDefinition(originalEventDef, finalConfig.automationId, deDetailsForEventDef, apiConfig, finalConfig.newJourneyName);
+        logger.logMessage(`-> Nuevo Event Definition creado con Key: ${newEventDef.eventDefinitionKey}`);
 
-        // 3.3: Preparar el payload del Journey y crearlo
-        logger.logMessage('Creando el nuevo Journey...');
-        const journeyPayload = prepareJourneyForCopy('EmailAudience', originalJourneyDetails, originalEventDef, newEventDef, finalConfig.newJourneyName, finalConfig.newJourneyCategoryId);
-        const createdJourney = await mcApiService.createJourney(journeyPayload, apiConfig);
+        logger.logMessage(`PASO 5/5: Creando la copia final del Journey...`);
+        const copyPayload = prepareJourneyForCopy("AutomationAudience", originalJourney, originalEventDef, newEventDef, finalConfig.newJourneyName, finalConfig.newJourneyCategoryId);
+        const newJourney = await mcApiService.createJourney(copyPayload, apiConfig);
+        logger.logMessage(`-> ¡Journey "${newJourney.name}" creado con éxito!`);
 
-        logger.logMessage(`✅ Journey clonado exitosamente: "${createdJourney.name}" (ID: ${createdJourney.id})`);
-        ui.showCustomAlert(`Journey "${createdJourney.name}" creado con éxito.`);
-        await refreshData();
+        ui.showCustomAlert(`¡Éxito! Se ha creado la copia "${newJourney.name}".`);
     } catch (error) {
-        logger.logMessage(`❌ Error en el proceso de clonación: ${error.message}`);
-        ui.showCustomAlert(`Error al copiar el Journey: ${error.message}`);
+        logger.logMessage(`ERROR en la copia del AutomationAudience Journey: ${error.message}`);
+        ui.showCustomAlert(`Error en la copia: ${error.message}`);
     } finally {
         ui.unblockUI();
         logger.endLogBuffering();
@@ -690,6 +654,65 @@ async function copyEmailAudienceJourney(journey) {
 }
 
 
+async function copyEmailAudienceJourney(journey) {
+    ui.blockUI('Preparando configuración...');
+
+    const apiConfig = await getAuthenticatedConfig();
+    const config = await ui.showJourneyClonerModal(journey, { getAuthenticatedConfig, mcApiService, logger, apiConfig });
+
+    if (!config) {
+        logger.logMessage("Proceso de clonación de EmailAudience cancelado por el usuario.");
+        ui.unblockUI();
+        return;
+    }
+
+    if (!await ui.showCustomConfirm(`Se creará una copia de "${journey.name}". ¿Continuar?`)) return;
+
+    ui.blockUI("Copiando Journey...");
+    logger.startLogBuffering();
+    try {
+        mcApiService.setLogger(logger);
+
+        logger.logMessage(`--- INICIO CLONACIÓN DE JOURNEY TIPO EMAILAUDIENCE ---`);
+        logger.logMessage(`PASO 1/5: Obteniendo definición de "${journey.name}"...`);
+        const originalJourney = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
+        const eventDefId = originalJourney.triggers?.[0]?.metaData?.eventDefinitionId;
+        if (!eventDefId) throw new Error("No se pudo encontrar el Event Definition ID.");
+        
+        logger.logMessage(`PASO 2/5: Obteniendo Event Definition original...`);
+        const originalEventDef = await mcApiService.getEventDefinitionById(eventDefId, apiConfig);
+
+        let clonedDeInfo;
+        if (config.useExistingDe) {
+            clonedDeInfo = { objectID: config.selectedDE.id, customerKey: config.selectedDE.key };
+            logger.logMessage(`PASO 3/5: Reutilizando DE existente: "${config.selectedDE.name}"`);
+        } else {
+            logger.logMessage(`PASO 3/5: Buscando detalles de la DE original "${originalEventDef.dataExtensionName}"...`);
+            const deDetails = await mcApiService.getDataExtensionDetailsByName(originalEventDef.dataExtensionName, apiConfig);
+            
+            logger.logMessage(`PASO 4/5: Clonando la Data Extension con el nombre "${config.newDeName}"...`);
+            clonedDeInfo = await mcApiService.cloneDataExtension(deDetails.customerKey, config.newDeName, "", config.newDeCategoryId, apiConfig);
+            logger.logMessage(`-> Nueva DE creada con Key: ${clonedDeInfo.customerKey}`);
+        }
+
+        logger.logMessage(`PASO 4/5: Creando nuevo Event Definition...`);
+        const newEventDef = await mcApiService.createEmailAudienceEventDefinition(originalEventDef, clonedDeInfo, apiConfig, config.newJourneyName);
+        logger.logMessage(`-> Nuevo Event Definition creado con Key: ${newEventDef.eventDefinitionKey}`);
+
+        logger.logMessage(`PASO 5/5: Creando la copia final del Journey...`);
+        const copyPayload = prepareJourneyForCopy("EmailAudience", originalJourney, originalEventDef, newEventDef, config.newJourneyName, config.newJourneyCategoryId);
+        const newJourney = await mcApiService.createJourney(copyPayload, apiConfig);
+        logger.logMessage(`-> ¡Journey "${newJourney.name}" creado con éxito!`);
+
+        ui.showCustomAlert(`¡Éxito! Se ha creado la copia "${newJourney.name}".`);
+    } catch (error) {
+        logger.logMessage(`ERROR en la copia: ${error.message}`);
+        ui.showCustomAlert(`Error en la copia: ${error.message}`);
+    } finally {
+        ui.unblockUI();
+        logger.endLogBuffering();
+    }
+}
 /**
  * BOTÓN PARAR: Parar los journeys seleccionados con opción de "current", "all", o cancelar.
  */
@@ -1287,7 +1310,7 @@ async function processStopAction(journey, choice, apiConfig) {
             try {
                 const allVersions = await mcApiService.fetchJourneyVersions(journey.name, apiConfig);
                 for (const v of allVersions) {
-                    if (v.status === 'Running') {
+                    if (v.status === 'Published' || v.status === 'Unpublished') {
                         try {
                             await mcApiService.stopJourney(v.id, v.version, apiConfig);
                             logger.logMessage(`✓ Versión ${v.version} parada.`);
@@ -1476,15 +1499,15 @@ async function handleActionsButton() {
  * Pausa journeys seleccionados.
  */
 async function pauseJourneys(journeys) {
-    const running = journeys.filter(j => j.status === 'Running');
+    const published = journeys.filter(j => j.status === 'Published');
     
-    if (running.length === 0) {
-        ui.showCustomAlert('No hay journeys en estado "Running" para pausar.');
+    if (published.length === 0) {
+        ui.showCustomAlert('No hay journeys en estado "Published" para pausar.');
         return;
     }
     
-    ui.showJourneyPauseModal(running.length, async (pauseOptions) => {
-        ui.blockUI(`Pausando ${running.length} journey(s)...`);
+    ui.showJourneyPauseModal(published.length, async (pauseOptions) => {
+        ui.blockUI(`Pausando ${published.length} journey(s)...`);
         logger.startLogBuffering();
         
         try {
@@ -1493,7 +1516,7 @@ async function pauseJourneys(journeys) {
             let successCount = 0;
             let errorCount = 0;
             
-            for (const journey of running) {
+            for (const journey of published) {
                 try {
                     await mcApiService.pauseJourney(journey.id, journey.version, pauseOptions, apiConfig);
                     logger.logMessage(`✓ Pausado: ${journey.name}`);

@@ -300,8 +300,8 @@ function addDrillRow(key, rowArray) {
     if (auditDrillData[key]) auditDrillData[key].rows.push(rowArray);
 }
 
-function registerPdfData(sectionId, kpis, cards) {
-    globalPdfData[sectionId] = { kpis, cards };
+function registerPdfData(sectionId, kpis, cards, callouts = []) {
+    globalPdfData[sectionId] = { kpis, cards, callouts };
 }
 
 function showDrillDownModal(key) {
@@ -636,9 +636,9 @@ async function auditUsers(apiConfig) {
         },
     ];
 
-    registerPdfData('users', kpis, cards);
+    registerPdfData('users', kpis, cards, callouts.map(c => parsePdfCallout(c)));
     document.getElementById('audit-tab-users').innerHTML = buildTabWrapper(
-        buildKpiRow(kpis) + callouts.join('') + buildGrid(cards.map(c => buildMetricCard(c.title, c.help, c.bars)))
+        buildKpiRow(kpis) + callouts.join('') + buildGrid(cards.map(c => buildMetricCard(c.title, c.help, c.bars, { wide: c.wide })))
     );
 }
 
@@ -676,6 +676,7 @@ async function auditAutomations(apiConfig, isDetailed) {
         ['Nombre', 'Estado', 'Tipo Ejecución', 'Última Ejecución']);
 
     const autoDescriptions = { 'Con descripción': 0, 'Sin descripción': 0 };
+    let testNameCount = 0;
     const activityTypeCounts = {};
     let journeyLaunchingCount = 0, importCountAll = 0, exportCountAll = 0;
     const execTypeCounts = {
@@ -693,6 +694,7 @@ async function auditAutomations(apiConfig, isDetailed) {
     registerDrill('auto_export',         'Con Exportaciones',              ['Nombre', 'Cant. Exports', 'Estado', 'Propietario']);
     registerDrill('auto_desc_yes',       'Con Descripción',                ['Nombre', 'Estado', 'Descripción']);
     registerDrill('auto_desc_no',        'Sin Descripción',                ['Nombre', 'Estado', 'Tipo Ejecución', 'Propietario']);
+    registerDrill('auto_test_name', 'Automatismos con nombre de prueba/test', ['Nombre', 'Estado', 'Tipo Ejecución', 'Propietario']);
 
     autos.forEach(a => {
         const ownerLabel  = getUserLabel(a.createdBy || a.modifiedBy || a.ownerId);
@@ -735,6 +737,12 @@ async function auditAutomations(apiConfig, isDetailed) {
             addDrillRow('auto_desc_no', [a.name, a.status, execType, ownerLabel]);
             if (!autoNoDescByUser[ownerLabel]) autoNoDescByUser[ownerLabel] = [];
             autoNoDescByUser[ownerLabel].push({ name: a.name, status: a.status, execType });
+        }
+
+        const TEST_PATTERNS = /test|prueba|tmp|borr/i;
+        if (TEST_PATTERNS.test(a.name)) {
+            testNameCount++;
+            addDrillRow('auto_test_name', [a.name, a.status, execType, ownerLabel]);
         }
 
         let launchesJourney = false, importAutoCount = 0, exportAutoCount = 0;
@@ -801,7 +809,11 @@ async function auditAutomations(apiConfig, isDetailed) {
                 const color = label.includes('Schedule') ? '#27ae60' : label.includes('Fire') ? '#9b59b6' : label.includes('File') ? '#16a085' : '#bdc3c7';
                 return { label, value, total: totalAutos, color, drillKey: `auto_exec_${label.replace(/[^a-z0-9]/gi, '')}` };
             })
-        },
+        },        
+        { title: 'Automatismos con nombre de prueba/test', help: 'Automatismos que contienen "test", "prueba", "tmp" o "borr" en el nombre. Candidatos a revisión o limpieza.', bars: [
+            { label: 'Nombre normal', value: totalAutos - testNameCount, total: totalAutos, color: '#27ae60' },
+            { label: 'Contiene test/prueba', value: testNameCount, total: totalAutos, color: '#e67e22', drillKey: 'auto_test_name' },
+        ]},
         { title: 'Tipos de actividad más usados', help: 'Qué actividades son las más utilizadas en los automatismos.', bars: actTypeBars, wide: true },
     ];
 
@@ -985,7 +997,7 @@ async function auditAutomations(apiConfig, isDetailed) {
 
         detailedHtml = detailedCallouts.join('') +
             buildSectionHeader('Análisis Detallado — Inspección Individual') +
-            buildGrid(detailedCards.map(c => buildMetricCard(c.title, c.help, c.bars)));
+            buildGrid(detailedCards.map(c => buildMetricCard(c.title, c.help, c.bars, { wide: c.wide })));
     } else {
         detailedHtml = buildCallout('info', 'Análisis profundo no ejecutado',
             'Activa la opción para obtener: alertas de error, dominios de aviso, descripciones, responsables de contenido sin documentar y reutilización de actividades.');
@@ -1004,9 +1016,10 @@ async function auditAutomations(apiConfig, isDetailed) {
         { value: journeyLaunchingCount,    label: 'Lanzan Journeys',     color: '#9b59b6', drillKey: 'auto_launch_journey' },
         { value: importCountAll,           label: 'Acts. Import',        color: '#3498db', drillKey: 'auto_import' },
         { value: exportCountAll,           label: 'Acts. Export',        color: '#16a085', drillKey: 'auto_export' },
+        { value: testNameCount, label: 'Nombre prueba/test', color: testNameCount > 0 ? '#e67e22' : '#bdc3c7', drillKey: 'auto_test_name' },
     ];
 
-    registerPdfData('autos', kpis, [...baseCards, ...detailedCards]);
+    registerPdfData('autos', kpis, [...baseCards, ...detailedCards], [...topCallouts, ...((typeof detailedCallouts !== 'undefined') ? detailedCallouts : [])].map(c => parsePdfCallout(c)));
 
     document.getElementById('audit-tab-autos').innerHTML = buildTabWrapper(
         buildKpiRow(kpis) + topCallouts.join('') +
@@ -1034,6 +1047,7 @@ async function auditJourneys(apiConfig, isDetailed) {
     let publishedCount = 0, logicOnlyCount = 0;
     let activeNoActivity1m = 0, activeNoActivity3m = 0, activeNoActivity6m  = 0,
         activeNoActivity9m = 0, activeNoActivity12m = 0;
+    let testNameCount = 0;
 
     const now = new Date();
     const [oneMonthAgo, threeMonthsAgo, sixMonthsAgo, nineMonthsAgo, twelveMonthsAgo] =
@@ -1052,6 +1066,7 @@ async function auditJourneys(apiConfig, isDetailed) {
     registerDrill('journey_no_act_6m', 'Publicados sin actividad >6m',  ['Nombre', 'Versión', 'Última Actividad']);
     registerDrill('journey_no_act_9m', 'Publicados sin actividad >9m',  ['Nombre', 'Versión', 'Última Actividad']);
     registerDrill('journey_no_act_12m','Publicados sin actividad >12m', ['Nombre', 'Versión', 'Última Actividad']);
+    registerDrill('journey_test_name', 'Journeys con nombre de prueba/test', ['Nombre', 'Versión', 'Estado', 'Subtipo']);
 
     const eventMapByGuid = {};
     eventDefs.forEach(e => {
@@ -1108,6 +1123,12 @@ async function auditJourneys(apiConfig, isDetailed) {
         }
         if (j.status === 'Draft')   addDrillRow('journey_draft',   [j.name, j.version, type]);
         if (j.status === 'Stopped') addDrillRow('journey_stopped', [j.name, j.version, type, modDate]);
+
+        const TEST_PATTERNS = /test|prueba|tmp|borr/i;
+        if (TEST_PATTERNS.test(j.name)) {
+            testNameCount++;
+            addDrillRow('journey_test_name', [j.name, j.version, j.status, sub]);
+        }
 
         if (isDetailed) {
             ui.blockUI(`3/5: Analizando ${j.name} (${i + 1}/${journeys.length})…`);
@@ -1166,6 +1187,7 @@ async function auditJourneys(apiConfig, isDetailed) {
         { value: status['Stopped']||0,label: 'Detenidos',             color: '#e74c3c', drillKey: 'journey_stopped' },
         { value: withGoals,           label: 'Con Goal',              color: '#27ae60', drillKey: 'journey_goal_yes' },
         { value: withExits,           label: 'Con salida',            color: '#3498db', drillKey: 'journey_exit_yes' },
+        { value: testNameCount, label: 'Nombre prueba/test', color: testNameCount > 0 ? '#e67e22' : '#bdc3c7', drillKey: 'journey_test_name' },
     ];
 
     const baseCards = [
@@ -1184,12 +1206,16 @@ async function auditJourneys(apiConfig, isDetailed) {
             { label: 'Con criterio de salida', value: withExits,    total, color: '#27ae60', drillKey: 'journey_exit_yes' },
             { label: 'Sin criterio de salida', value: withoutExits, total, color: '#f39c12', drillKey: 'journey_exit_no' },
         ]},
-        { title: 'Actividad reciente (Journeys Publicados)', help: `Base: ${publishedCount} publicados. Tiempo sin procesar contactos.`, wide: true, bars: [
+        { title: 'Actividad reciente (Journeys Publicados)', help: `Base: ${publishedCount} publicados. Tiempo sin procesar contactos.`, bars: [
             { label: 'Sin actividad >1 mes',   value: activeNoActivity1m,  total: publishedCount, color: '#f39c12', drillKey: 'journey_no_act_1m' },
             { label: 'Sin actividad >3 meses', value: activeNoActivity3m,  total: publishedCount, color: '#e67e22', drillKey: 'journey_no_act_3m' },
             { label: 'Sin actividad >6 meses', value: activeNoActivity6m,  total: publishedCount, color: '#e74c3c', drillKey: 'journey_no_act_6m' },
             { label: 'Sin actividad >9 meses', value: activeNoActivity9m,  total: publishedCount, color: '#c0392b', drillKey: 'journey_no_act_9m' },
             { label: 'Sin actividad >12 meses',value: activeNoActivity12m, total: publishedCount, color: '#922b21', drillKey: 'journey_no_act_12m' },
+        ]},
+        { title: 'Journeys con nombre de prueba/test', help: 'Journeys que contienen "test", "prueba", "tmp" o "borr" en el nombre. Candidatos a revisión o limpieza.', bars: [
+            { label: 'Nombre normal', value: total - testNameCount, total, color: '#27ae60' },
+            { label: 'Contiene test/prueba', value: testNameCount, total, color: '#e67e22', drillKey: 'journey_test_name' },
         ]},
     ];
 
@@ -1201,10 +1227,10 @@ async function auditJourneys(apiConfig, isDetailed) {
         { title: 'Multicanalidad', help: 'Combinación de canales (Email, SMS, Push/In-App, WhatsApp).', bars: channelBars },
     ] : [];
 
-    registerPdfData('journeys', kpis, [...baseCards, ...deepCards]);
+    registerPdfData('journeys', kpis, [...baseCards, ...deepCards], callouts.map(c => parsePdfCallout(c)));
 
     const deepSection = isDetailed
-        ? buildGrid(deepCards.map(c => buildMetricCard(c.title, c.help, c.bars)))
+        ? buildGrid(deepCards.map(c => buildMetricCard(c.title, c.help, c.bars, { wide: c.wide })))
         : buildCallout('info', 'Análisis profundo no ejecutado', 'Activa la opción para ver el mix multicanal real y los nodos de Salesforce en el canvas.');
 
     document.getElementById('audit-tab-journeys').innerHTML = buildTabWrapper(
@@ -1284,9 +1310,9 @@ async function auditCloudPages(apiConfig) {
         ]},
     ];
 
-    registerPdfData('cp', kpis, cards);
+    registerPdfData('cp', kpis, cards, callouts.map(c => parsePdfCallout(c)));
     document.getElementById('audit-tab-cp').innerHTML = buildTabWrapper(
-        buildKpiRow(kpis) + callouts.join('') + buildGrid(cards.map(c => buildMetricCard(c.title, c.help, c.bars)))
+        buildKpiRow(kpis) + callouts.join('') + buildGrid(cards.map(c => buildMetricCard(c.title, c.help, c.bars, { wide: c.wide })))
     );
 }
 
@@ -1372,7 +1398,7 @@ async function auditSendManagement(apiConfig) {
         { title: 'Concentración de direcciones From', help: 'Top 8 remitentes.', bars: fromBars, wide: true },
     ];
 
-    registerPdfData('sm', kpis, cards);
+    registerPdfData('sm', kpis, cards, callouts.map(c => parsePdfCallout(c)));
     document.getElementById('audit-tab-sm').innerHTML = buildTabWrapper(
         buildKpiRow(kpis) + callouts.join('') +
         buildGrid(cards.map(c => buildMetricCard(c.title, c.help, c.bars, { wide: c.wide })))
@@ -1493,7 +1519,7 @@ async function auditDataExtensions(jsonText) {
     registerDrill('de_big_folders', 'Carpetas con más de 15 DEs', ['Carpeta', 'Nº DEs']);
     bigFolders.forEach(([folder, n]) => {
         addDrillRow('de_big_folders', [folder, n]);
-        // ARREGLO: Generar key y título dinámicos
+        // Generar key y título dinámicos
         const dKeyF = `de_folder_${folder.replace(/[^a-z0-9]/gi, '')}`;
         registerDrill(dKeyF, `DEs en: ${folder}`, ['Nombre', 'Key', 'Filas', 'Campos', 'Descripción']);
         ownDes.filter(d => (d.folderPath || 'Sin carpeta') === folder)
@@ -1502,7 +1528,7 @@ async function auditDataExtensions(jsonText) {
 
     // Drills por propietario sin descripción
     Object.entries(noDescByUser).forEach(([owner, items]) => {
-        // ARREGLO: Generar key y título dinámicos
+        // Generar key y título dinámicos
         const dKey = `de_no_desc_${owner.replace(/[^a-z0-9]/gi, '')}`;
         registerDrill(dKey, `Sin descripción — ${owner}`, ['Nombre', 'Key', 'Carpeta']);
         items.forEach(row => addDrillRow(dKey, row));
@@ -1519,12 +1545,12 @@ async function auditDataExtensions(jsonText) {
     if (bigFolders.length > 0) callouts.push(buildCallout('info', 'Carpetas con gran volumen de DEs',
         `${bigFolders.length} carpeta(s) tienen más de 15 Data Extensions. Valorar si la estructura de carpetas es la adecuada.`));
 
-    // ARREGLO: Asignar el valor del drillKey dinámico para la tabla
+    // Asignar el valor del drillKey dinámico para la tabla
     const noDescUserBars = Object.entries(noDescByUser)
         .sort((a, b) => b[1].length - a[1].length)
         .map(([owner, items]) => ({ label: owner, value: items.length, total: noDescCount || 1, drillKey: `de_no_desc_${owner.replace(/[^a-z0-9]/gi, '')}` }));
 
-    // ARREGLO: Asignar el valor del drillKey dinámico para las carpetas
+    // Asignar el valor del drillKey dinámico para las carpetas
     const bigFolderBars = bigFolders.map(([folder, n]) => ({
         label: folder, value: n, total: total,
         drillKey: `de_folder_${folder.replace(/[^a-z0-9]/gi, '')}`
@@ -1546,7 +1572,7 @@ async function auditDataExtensions(jsonText) {
             { label: 'Con descripción', value: total - noDescCount, total, color: '#27ae60', drillKey: 'de_total' },
             { label: 'Sin descripción', value: noDescCount,         total, color: '#e74c3c', drillKey: 'de_no_desc' },
         ]},
-        { title: 'Sin descripción — por propietario', help: 'Usuarios que más DEs sin documentar han creado.', wide: true, bars: noDescUserBars.length > 0 ? noDescUserBars : [{ label: 'Todas documentadas', value: 0, total: 1, color: '#27ae60' }] },
+        { title: 'Sin descripción — por propietario', help: 'Usuarios que más DEs sin documentar han creado.', bars: noDescUserBars.length > 0 ? noDescUserBars : [{ label: 'Todas documentadas', value: 0, total: 1, color: '#27ae60' }] },
         { title: 'Sendable y Testable', help: 'DEs configuradas para envío o pruebas.', bars: [
             { label: 'Sendable', value: sendableCount, total, color: '#27ae60', drillKey: 'de_sendable' },
             { label: 'Testable', value: testableCount, total, color: '#3498db', drillKey: 'de_testable' },
@@ -1556,7 +1582,7 @@ async function auditDataExtensions(jsonText) {
             { label: 'Sin retención',   value: total - retentionCount, total, color: '#bdc3c7' },
             ...Object.entries(retentionTypes).map(([label, value]) => ({ label, value, total: retentionCount || 1 })),
         ]},
-        // ARREGLO: Faltaba texto en "help:" y la variable label en el map.
+        // Faltaba texto en "help:" y la variable label en el map.
         { title: 'DEs sin registros (vacías)', help: 'Data Extensions que actualmente no tienen ningún registro. Pueden ser de uso esporádico o candidatas a revisión.', bars: [
             { label: 'Con registros',    value: total - emptyCount, total, color: '#27ae60' },
             { label: 'Sin registros',    value: emptyCount,         total, color: '#f39c12', drillKey: 'de_empty' },
@@ -1570,10 +1596,10 @@ async function auditDataExtensions(jsonText) {
         },
     ];
 
-    registerPdfData('de', kpis, cards);
+    registerPdfData('de', kpis, cards, callouts.map(c => parsePdfCallout(c)));
     container.innerHTML = buildTabWrapper(
         buildKpiRow(kpis) + callouts.join('') +
-        buildGrid(cards.map(c => buildMetricCard(c.title, c.help, c.bars)))
+        buildGrid(cards.map(c => buildMetricCard(c.title, c.help, c.bars, { wide: c.wide })))
     );
 }
 
@@ -1647,6 +1673,17 @@ function buildLoadingPlaceholder() {
     return `<div style="padding:40px; text-align:center; color:#bbb;"><div style="font-size:1.8em; margin-bottom:10px;">⏳</div><div style="font-size:0.9em;">Cargando datos del escaneo…</div></div>`;
 }
 
+function parsePdfCallout(htmlString) {
+    const titleMatch = htmlString.match(/<span style="font-weight:700;">(.*?)<\/span>/);
+    const msgMatch = htmlString.match(/<br>(.*?)<\/div>/s);
+    const typeMatch = htmlString.match(/border-left:4px solid (#[a-f0-9]+)/i);
+    return {
+        title: titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '') : '',
+        message: msgMatch ? msgMatch[1].replace(/<[^>]+>/g, '').trim() : '',
+        color: typeMatch ? typeMatch[1] : '#3498db'
+    };
+}
+
 function resolveBarColor(label) {
     const l = (label || '').toLowerCase();
     if (/^con |activos? con login|activos$|en uso|exclusiv|publicad|published|scheduled|^login en \d{4}/.test(l)) return '#27ae60';
@@ -1666,3 +1703,4 @@ function resolveBarColor(label) {
     if (/journey/.test(l))          return '#9b59b6';
     return '#69a3db';
 }
+
