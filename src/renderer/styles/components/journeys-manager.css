@@ -28,8 +28,6 @@
 }
 
 
-/* --- Estilos del Modal de Flujo (sin cambios) --- */
-
 .modal-content.modal-lg {
   max-width: 800px;
   width: 90%;
@@ -78,4 +76,26 @@
 }
 #drawJourneyBtn:hover:not([disabled]) {
     background-color: #e67e22;
+}
+
+/* Chevron para comunicaciones */
+.comm-chevron {
+    border: solid #0066cc;
+    border-width: 0 2px 2px 0;
+    display: inline-block;
+    padding: 4px;
+
+    transform: rotate(-45deg);
+
+    margin-left: 8px;
+
+    position: relative;
+    top: -2px; /* ajusta aquí */
+
+    transition: transform 0.2s;
+    cursor: pointer;
+}
+
+.comm-chevron.open {
+    transform: rotate(45deg);
 }

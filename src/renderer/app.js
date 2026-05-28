@@ -42,6 +42,8 @@ import * as journeyAnalyzer from './components/journey-analyzer.js';
 import * as usersManager from './components/users-manager.js';
 import * as erdGenerator from './components/erd-generator.js';
 import * as sendManagement from './components/sendManagement.js';
+import * as auditManager from './components/audit-manager.js';
+import * as journeyErrors from './components/journey-errors.js';
 
 
 
@@ -90,7 +92,8 @@ document.addEventListener('DOMContentLoaded', function () {
 			'gestion-contenidos-section': 'gestionContenidos',
 			'carpetas-section':'gestionCarpetas',
 			'email-validator-section':'validadorEmail',
-			'gestion-de-unificada-section': 'gestionDEs'
+			'gestion-de-unificada-section': 'gestionDEs',
+			'auditoria-section': 'auditoria'
 		};
 
 		const activeMacro = sectionToMacroMap[activeSectionId];
@@ -432,6 +435,10 @@ document.addEventListener('DOMContentLoaded', function () {
 					showSection('sendManagement-section');
 					sendManagement.view();
 				}
+				else if (macro === 'auditoria') {
+					showSection('auditoria-section');
+					// La vista se muestra vacía, no lanzamos carga hasta que pulse el botón
+				}
 			});
 		});
 
@@ -539,28 +546,20 @@ document.addEventListener('DOMContentLoaded', function () {
 		initDomElements();
 		setupEventListeners();
 
-		// Muestra el modal de licencia con un mensaje de espera
 		elements.licenseModal.style.display = 'flex';
 		elements.licenseStatusMessage.textContent = 'Verificando licencia de usuario...';
 
 		try {
-			// Llama a la función del backend
-			const isValid = await window.electronAPI.checkSystemUserLicense();
+			const licenseResult = await window.electronAPI.checkSystemUserLicense();
 
-			if (isValid === true) {
-				// Si la licencia es válida, oculta el modal y arranca la aplicación
+			if (licenseResult && licenseResult.valid === true) {
 				elements.licenseModal.style.display = 'none';
-				startFullApp();
+				startFullApp(licenseResult);  // ✅ Pasar el resultado
 			} else {
-				// Si el usuario no es válido, muestra un mensaje de error permanente y bloquea la app
 				elements.licenseStatusMessage.textContent = 'No tienes permiso para utilizar esta aplicación. Por favor, contacta con el administrador.';
-				// (Opcional) Puedes añadir una clase para estilizar el error, si la tienes en tu CSS
-				// elements.licenseStatusMessage.classList.add('error-text'); 
 			}
 		} catch (error) {
-			// Si ocurre un error de comunicación (ej: sin internet), lo muestra
 			elements.licenseStatusMessage.textContent = `Error de validación: ${error.message || 'No se pudo conectar para validar la licencia.'}.`;
-			// elements.licenseStatusMessage.classList.add('error-text');
 		}
 	}
 
@@ -569,7 +568,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Contiene la lógica de arranque de la aplicación una vez validada la licencia.
 	 * Inicializa todos los módulos de funcionalidades.
 	 */
-	async function startFullApp() {
+	async function startFullApp(licenseResult) {
 		//Restaura el estado colapsado del log desde el archivo de ajustes
 		const userSettings = await window.electronAPI.getSettings();
 
@@ -594,7 +593,8 @@ document.addEventListener('DOMContentLoaded', function () {
 			automationAnalyzer,
 			journeyAnalyzer,
 			contentManager,
-			usersManager  
+			usersManager,
+			auditManager
 		});
 
         deCreator.init({ getAuthenticatedConfig });
@@ -624,11 +624,16 @@ document.addEventListener('DOMContentLoaded', function () {
 			getAuthenticatedConfig,
 			goBack: () => showSection('gestion-journeys-section')
 		});
+		journeyErrors.init({
+			getAuthenticatedConfig,
+			goBack: () => showSection('gestion-journeys-section')
+		});
 		folderCreator.init({ getAuthenticatedConfig });
 		contentManager.init({ getAuthenticatedConfig });
 		usersManager.init({ getAuthenticatedConfig });
 		erdGenerator.init({ getAuthenticatedConfig });
 		sendManagement.init({ getAuthenticatedConfig });
+		auditManager.init({ getAuthenticatedConfig });
 
 		// ESPERAMOS A QUE CARGUE EL CLIENTE POR DEFECTO (VACÍO AL INICIO)
 		await orgManager.loadAndSyncClientConfig('');
@@ -638,6 +643,17 @@ document.addEventListener('DOMContentLoaded', function () {
 		logger.startLogBuffering();
 		logger.logMessage("Aplicación lista.");
 		logger.endLogBuffering();
+
+		// Controlar acceso a Auditoría
+		if (!licenseResult.auditAccess) {
+			const auditLink = document.querySelector('.macro-item[data-macro="auditoria"]');
+			if (auditLink) {
+				auditLink.style.pointerEvents = 'none';
+				auditLink.style.opacity = '0.4';
+				auditLink.style.cursor = 'not-allowed';
+				auditLink.title = 'No tienes acceso a esta funcionalidad. Contacta con el administrador.';
+			}
+		}
 
 		setupFindInPage();
 

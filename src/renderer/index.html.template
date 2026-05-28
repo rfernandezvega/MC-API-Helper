@@ -85,7 +85,8 @@
                     <li><a class="macro-item" data-macro="erdGenerator">Generador ERD</a></li> 
                     <li><a class="macro-item" data-macro="sendManagement">Gestión Envíos</a></li>     
 					<li><a class="macro-item" data-macro="carpetas">Crear Carpetas</a></li>   
-					<li><a class="macro-item" data-macro="validadorEmail">Validar Emails</a></li>          
+					<li><a class="macro-item" data-macro="validadorEmail">Validar Emails</a></li>
+                    <li><a class="macro-item" data-macro="auditoria">Auditoría</a></li>          
 				</ul>
 			</div>
 		</div>

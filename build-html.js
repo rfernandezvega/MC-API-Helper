@@ -12,8 +12,7 @@ const injectionMarker = '<!-- VIEWS WILL BE INJECTED HERE -->';
 
 console.log('Iniciando la construcción del fichero HTML principal...');
 
-// 1. Renombra tu index.html a index.html.template para no sobreescribirlo.
-//    Este script creará el index.html final.
+// 1. Este script creará el index.html final.
 if (!fs.existsSync(shellPath)) {
     fs.renameSync(finalIndexPath, shellPath);
     console.log('Se ha renombrado "index.html" a "index.html.template" para usarlo como plantilla.');

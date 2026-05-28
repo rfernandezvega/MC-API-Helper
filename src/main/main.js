@@ -70,6 +70,11 @@ function createWindow() {
     }
 
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+
+    // Establecer zoom por defecto
+    mainWindow.webContents.on('did-finish-load', () => {
+        mainWindow.webContents.setZoomFactor(0.85); // Ajusta este valor (0.8, 0.85, 0.9, etc.)
+    });
 }
 
 // --- 3. GESTIÓN DEL CICLO DE VIDA Y ACTUALIZACIONES ---
@@ -130,7 +135,7 @@ async function validateUserInSheet(email, version) {
 
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${SHEET_NAME}!A:F`,
+            range: `${SHEET_NAME}!A:G`,
         });
 
         const rows = response.data.values;
@@ -138,7 +143,7 @@ async function validateUserInSheet(email, version) {
 
         const dataRows = rows.slice(1);
         const userRowIndex = dataRows.findIndex(row => row[1] && row[1].toLowerCase() === email.toLowerCase());
-        if (userRowIndex === -1) return false; // Usuario no encontrado
+        if (userRowIndex === -1) return { valid: false, auditAccess: false }; // Usuario no encontrado
         
         const userRow = dataRows[userRowIndex];
         const isActive = userRow[2];
@@ -146,7 +151,7 @@ async function validateUserInSheet(email, version) {
         
         const isValid = (isActive?.toLowerCase() === 'true' || isActive?.toLowerCase() === 'sí');
 
-        if (!isValid) return false; // El usuario no está activo
+        if (!isValid) return { valid: false, auditAccess: false }; // El usuario no está activo
 
         const sheetRowNumber = userRowIndex + 2;
         const currentCount = parseInt(userRow[3], 10) || 0;
@@ -159,11 +164,12 @@ async function validateUserInSheet(email, version) {
             },
         });
         
-        return true;
+        const hasAuditAccess = (userRow[6]?.toLowerCase() === 'true' || userRow[6]?.toLowerCase() === 'sí');
+        return { valid: true, auditAccess: hasAuditAccess };
     } catch (error) {
         console.error('Error al validar con Google Sheets:', error.message);
         if (error.code === 'ENOENT') throw new Error('No se encontró el fichero de credenciales de Google (google-credentials.json).');
-        return false;
+        return { valid: false, auditAccess: false };
     }
 }
 
@@ -377,6 +383,40 @@ ipcMain.handle('load-client-contents-from-file', (event, clientName) => {
     }
 });
 
+ipcMain.handle('save-audit-cache', (event, { clientName, auditData }) => {
+    try {
+        const userDataPath = app.getPath('userData');
+        const cacheDirPath = path.join(userDataPath, 'ClientCache');
+        if (!fs.existsSync(cacheDirPath)) {
+            fs.mkdirSync(cacheDirPath);
+        }
+        // Fichero por cliente: audit_NombreCliente.json
+        // Al guardar siempre se sobreescribe, machacando la auditoría anterior.
+        const filePath = path.join(cacheDirPath, `audit_${clientName}.json`);
+        fs.writeFileSync(filePath, JSON.stringify(auditData, null, 2));
+        return { success: true };
+    } catch (error) {
+        console.error('Error al guardar caché de auditoría:', error);
+        return { success: false, error: error.message };
+    }
+});
+ 
+ipcMain.handle('load-audit-cache', (event, clientName) => {
+    try {
+        const userDataPath = app.getPath('userData');
+        const filePath     = path.join(userDataPath, 'ClientCache', `audit_${clientName}.json`);
+        if (fs.existsSync(filePath)) {
+            const raw = fs.readFileSync(filePath, 'utf-8');
+            return { success: true, data: JSON.parse(raw) };
+        }
+        // Sin caché previa → no es un error
+        return { success: true, data: null };
+    } catch (error) {
+        console.error('Error al cargar caché de auditoría:', error);
+        return { success: false, error: error.message };
+    }
+});
+
 ipcMain.handle('save-cloud-pages-cache', (event, { clientName, cloudPagesData }) => {
     try {
         const userDataPath = app.getPath('userData');
@@ -404,6 +444,29 @@ ipcMain.handle('load-cloud-pages-cache', (event, clientName) => {
         return { success: true, data: null }; // No hay caché, no es un error
     } catch (error) {
         console.error('Error al cargar caché de Cloud Pages:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('select-folder', async (event) => {
+    const browserWindow = BrowserWindow.fromWebContents(event.sender);
+    const { canceled, filePaths } = await dialog.showOpenDialog(browserWindow, {
+        title: 'Seleccionar carpeta para guardar',
+        properties: ['openDirectory']
+    });
+    if (canceled || !filePaths || filePaths.length === 0) return null;
+    return filePaths[0];
+});
+
+ipcMain.handle('save-multiple-csvs', async (event, { folderPath, files }) => {
+    try {
+        for (const file of files) {
+            const filePath = path.join(folderPath, file.filename);
+            fs.writeFileSync(filePath, file.content, 'utf-8');
+        }
+        return { success: true };
+    } catch (error) {
+        console.error('Error al guardar múltiples CSVs:', error);
         return { success: false, error: error.message };
     }
 });
@@ -501,8 +564,7 @@ ipcMain.on('start-login', async (event, config) => {
         width: 800, height: 600, parent: mainWindow, modal: true, show: true,
         webPreferences: { 
             nodeIntegration: false, 
-            contextIsolation: true,
-            // CAMBIO: Esto fuerza a que la ventana de login NO comparta cookies ni sesión con nada
+            contextIsolation: true,            
             partition: 'nonpersistent' 
         }
     });
