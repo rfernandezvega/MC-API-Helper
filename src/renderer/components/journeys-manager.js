@@ -10,6 +10,7 @@ import * as logger from '../ui/logger.js';
 
 let fullJourneyList = [];
 let eventDefinitionsMap = {};
+let allEventDefsCache = [];
 let journeyFolderMap = {};
 
 let currentPage = 1;
@@ -68,6 +69,32 @@ function applyFiltersAndRender() {
             const activityDeMatch = j.usedDEs && j.usedDEs.toLowerCase().includes(deFilter);
             return entryDeMatch || activityDeMatch;
         });
+    }
+
+    // --- FILTRO POR CAMPOS EN ENTRADA (Event Definitions) ---
+    const fieldsFilterValue = elements.journeyFieldsFilter.value.trim();
+    if (fieldsFilterValue) {
+        // El usuario puede escribir varios campos separados por coma, punto y coma, o pipe
+        const fieldsToSearch = fieldsFilterValue
+            .split(/[,;|]/)
+            .map(f => f.trim().toLowerCase())
+            .filter(f => f !== '');
+
+        // Buscamos qué eventDefinition names contienen alguno de esos campos
+        const matchingEventDefNames = new Set();
+        for (const eventDef of allEventDefsCache) {
+            // Saltamos los internos del sistema (igual que el script de Postman)
+            if ((eventDef.dataExtensionName || '').startsWith('___')) continue;
+
+            const serialized = JSON.stringify(eventDef).toLowerCase();
+            if (fieldsToSearch.some(campo => serialized.includes(campo))) {
+                if (eventDef.name) matchingEventDefNames.add(eventDef.name);
+            }
+        }
+
+        // Filtramos los journeys cuyo nombre de journey coincida con algún eventDef encontrado
+        // (la relación journey <-> eventDef se establece por nombre en enrichJourneys)
+        filtered = filtered.filter(j => matchingEventDefNames.has(j.name));
     }
 
     const commsFilter = elements.journeyCommsFilter.dataset.active === 'true';
@@ -257,6 +284,7 @@ export function init(dependencies) {
     elements.journeySubtypeFilter.addEventListener('change', applyFiltersAndRender);
     elements.journeyStatusFilter.addEventListener('change', applyFiltersAndRender);
     elements.journeyDEFilter.addEventListener('input', applyFiltersAndRender);
+    elements.journeyFieldsFilter.addEventListener('input', applyFiltersAndRender);
     elements.journeyCommsFilter.addEventListener('click', () => {
         const btn = elements.journeyCommsFilter;
         const isActive = btn.dataset.active === 'true';
@@ -336,6 +364,7 @@ export async function view() {
 export function clearCache() {
     fullJourneyList = [];
     eventDefinitionsMap = {};
+    allEventDefsCache = [];
     journeyFolderMap = {};
     elements.journeyNameFilter.value = '';
     elements.journeyTypeFilter.innerHTML = '<option value="">Todos los tipos</option>';
@@ -384,6 +413,7 @@ async function fetchData() {
                 eventDefinitionsMap[item.name] = item;
             }
         }
+        allEventDefsCache = allEventDefs;
         
         // Se comenta para reducir tiempo de carga
         // journeyFolderMap = await mcApiService.buildJourneyFolderMap(journeys, apiConfig);
