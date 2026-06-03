@@ -188,6 +188,7 @@ export function init() {
     elements.journeySubtypeFilter = document.getElementById('journeySubtypeFilter');
     elements.journeyStatusFilter = document.getElementById('journeyStatusFilter');
     elements.journeyDEFilter = document.getElementById('journeyDEFilter');
+    elements.journeyFieldsFilter = document.getElementById('journeyFieldsFilter');
     elements.refreshJourneysTableBtn = document.getElementById('refreshJourneysTableBtn');
     elements.getCommunicationsBtn = document.getElementById('getCommunicationsBtn');
     elements.copyJourneyBtn = document.getElementById('copyJourneyBtn');

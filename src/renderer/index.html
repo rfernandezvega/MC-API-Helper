@@ -2215,6 +2215,7 @@
             <!-- Opciones se cargarán dinámicamente -->
         </select>
         <input type="text" id="journeyDEFilter" class="filter-input" placeholder="Buscar por Data Extension...">
+        <input type="text" id="journeyFieldsFilter" class="filter-input" placeholder="Campos en entrada ( , ; | )...">
         <button type="button" id="journeyCommsFilter" class="filter-input" style="cursor: pointer; text-align: center; min-width: 140px; transition: all 0.2s; padding: 8px 12px; background-color: #f9f9f9;">
             ☐ Comunicaciones
         </button>
@@ -2518,6 +2519,7 @@
     </div>
 
     <h2>Gestión de Usuarios y Permisos <span id="userCount" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
+    
 
     <!-- Cabecera de pestañas — usa um-tab-button para no interferir con el listener global de app.js -->
     <div class="tabs-header-container">
@@ -2528,7 +2530,7 @@
         <div id="users-expand-controls" style="display:none; gap:8px; padding-bottom:4px; align-items:center;">
             <button id="btn-toggle-diffs" class="um-mini-btn">Solo Diferencias</button>
             <button id="btn-expand-perms" class="um-mini-btn">Colapsar Todo</button>
-        </div>
+        </div>    
     </div>
 
     <!-- PESTAÑA 1: LISTA -->
