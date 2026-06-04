@@ -522,6 +522,7 @@ async function auditUsers(apiConfig) {
         if (u.userName) usersById[u.userName] = u;
     });
 
+    let noRolesCount = 0;
     let activeCount = 0, inactiveCount = 0, apiCheckCount = 0;
     let inactiveOver3Months = 0, activeUsersForLogin = 0;
     const loginByYear = {};
@@ -540,6 +541,8 @@ async function auditUsers(apiConfig) {
     registerDrill('users_api_no',      'Sin check API User',                ['Nombre', 'Usuario', 'Email', 'Estado']);
     registerDrill('users_inactive_3m', 'Sin actividad reciente (>3 meses)', ['Nombre', 'Usuario', 'Email', 'Último Login']);
     registerDrill('users_login_old',   'Login en años anteriores',          ['Nombre', 'Usuario', 'Email', 'Último Login']);
+    registerDrill('users_no_roles', 'Usuarios sin roles asignados', ['Nombre', 'Usuario', 'Email', 'Estado', 'API User']);
+
 
     users.forEach(u => {
         const uLogin   = formatDate(u.lastLogin);
@@ -586,6 +589,10 @@ async function auditUsers(apiConfig) {
             registerDrill(dKey, `Usuarios con rol: ${r.name}`, ['Nombre', 'Usuario', 'Email', 'Estado']);
             addDrillRow(dKey, [u.name, u.userName, u.email, uState]);
         });
+        if ((u.roles || []).length === 0) {
+            noRolesCount++;
+            addDrillRow('users_no_roles', [u.name, u.userName, u.email, uState, uApi]);
+        }
     });
 
     const inactiveOver3Pct = activeUsersForLogin > 0
@@ -597,6 +604,8 @@ async function auditUsers(apiConfig) {
         `El ${inactiveOver3Pct}% de los usuarios activos llevan más de 3 meses sin conectarse. Valorar deshabilitar esas cuentas para reducir la superficie de acceso.`));
     if (inactivePct > 40) callouts.push(buildCallout('warning', 'Alta proporción de cuentas inactivas',
         `El ${inactivePct}% de las cuentas están deshabilitadas. Puede indicar limpieza de instancia pendiente.`));
+    if (noRolesCount > 0) callouts.push(buildCallout('info', 'Usuarios sin roles asignados',
+        `${noRolesCount} usuario${noRolesCount > 1 ? 's' : ''} no tienen ningún rol asignado. Revisar si son cuentas activas que necesitan configuración.`));
 
     const loginBars = Object.keys(loginByYear)
         .sort((a, b) => { if (a === 'Más antiguos') return 1; if (b === 'Más antiguos') return -1; return parseInt(b) - parseInt(a); })
@@ -617,6 +626,7 @@ async function auditUsers(apiConfig) {
         { value: inactiveCount,       label: 'Inactivos',            color: '#bdc3c7', drillKey: 'users_inactive' },
         { value: apiCheckCount,       label: 'Con check "API User"', color: '#9b59b6', drillKey: 'users_api' },
         { value: inactiveOver3Months, label: 'Sin login >3 meses',   color: inactiveOver3Pct > 20 ? '#e74c3c' : '#f39c12', drillKey: 'users_inactive_3m' },
+        { value: noRolesCount, label: 'Sin roles asignados', color: noRolesCount > 0 ? '#e67e22' : '#bdc3c7', drillKey: 'users_no_roles' },
     ];
 
     const cards = [
@@ -627,6 +637,10 @@ async function auditUsers(apiConfig) {
         { title: 'Check "API User"', help: 'Usuarios con el check API habilitado en su perfil.', bars: [
             { label: 'Con check API', value: apiCheckCount,         total, color: '#9b59b6', drillKey: 'users_api' },
             { label: 'Sin check API', value: total - apiCheckCount, total, color: '#3498db', drillKey: 'users_api_no' },
+        ]},
+        { title: 'Usuarios sin roles', help: 'Usuarios que no tienen ningún rol asignado. Pueden ser cuentas huérfanas o pendientes de configurar.', bars: [
+            { label: 'Con roles',    value: total - noRolesCount, total, color: '#27ae60' },
+            { label: 'Sin roles',    value: noRolesCount,         total, color: '#e67e22', drillKey: 'users_no_roles' },
         ]},
         { title: 'Actividad de login (usuarios activos)', help: `Base: ${activeUsersForLogin} activos. Último login registrado para detectar cuentas realmente en uso.`, bars: loginBars },
         { title: 'Top roles asignados', help: 'Roles más frecuentes para evaluar la distribución de permisos.', bars:
