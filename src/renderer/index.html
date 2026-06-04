@@ -1344,6 +1344,432 @@
 						</li>
 					</ul>
 				</div>
+				<!--
+  ================================================================
+  BLOQUE A INSERTAR EN documentation.html
+  Ubicación: Dentro del <div id="guia-rapida" class="tab-content">,
+  justo ANTES del div "docu-no-results" (el último de la guía).
+  ================================================================
+-->
+
+				<!-- GRUPO: AUTOMATISMOS -->
+				<div class="docu-group" data-group-name="Automatismos">
+					<h3 class="docu-group-title">Automatismos</h3>
+					<ul class="docu-accordion">
+						<li class="docu-accordion-item"
+							data-keywords="automatismos automatismo tabla refrescar exportar activar ejecutar parar estado notificaciones">
+							<div class="docu-accordion-header">
+								<span>Gestión de Automatismos</span>
+							</div>
+							<div class="docu-accordion-content">
+								<div class="docu-list">
+									<p>
+										Esta vista muestra todos los automatismos de la instancia en una tabla paginada con los siguientes datos:
+										<b>Nombre</b>, <b>Última Ejecución</b>, <b>Próxima Ejecución</b>, <b>Estado</b> y las <b>Notificaciones</b> configuradas para errores y ejecuciones.
+									</p>
+									<p>
+										Se puede filtrar por nombre (soporta múltiples valores separados por <code>,</code> <code>;</code> o <code>|</code>) y por estado.
+										Las columnas son ordenables haciendo clic en la cabecera.
+									</p>
+									<p>Botones disponibles:</p>
+									<ul>
+										<li><b>Refrescar</b> — Recarga los datos desde la API.</li>
+										<li><b>Analizar</b> (requiere selección de 1) — Abre la vista de análisis detallado del automatismo seleccionado.</li>
+										<li><b>Cargar Notificaciones</b> — Obtiene los emails de alerta configurados en cada automatismo y los muestra en la tabla.</li>
+										<li><b>Exportar</b> — Descarga un CSV con los datos visibles (respetando los filtros activos).</li>
+										<li><b>Activar</b> (requiere selección) — Activa automatismos que están parados o pausados.</li>
+										<li><b>Ejecutar</b> (requiere selección) — Lanza una ejecución manual inmediata.</li>
+										<li><b>Parar</b> (requiere selección) — Detiene automatismos en ejecución o programados.</li>
+										<li><b>Clonar</b> (requiere selección de 1) — Navega al clonador selectivo de ese automatismo.</li>
+									</ul>
+									<p>
+										Los botones de acción (<b>Activar</b>, <b>Ejecutar</b>, <b>Parar</b>) solo se habilitan cuando los automatismos seleccionados tienen un estado compatible con la acción.
+										Si se seleccionan varios con estados distintos, los botones quedan deshabilitados.
+									</p>
+								</div>
+							</div>
+						</li>
+						<li class="docu-accordion-item"
+							data-keywords="clonar automatismo clonador selectivo actividades queries scripts carpeta destino">
+							<div class="docu-accordion-header">
+								<span>Clonador de Automatismos</span>
+							</div>
+							<div class="docu-accordion-content">
+								<div class="docu-list">
+									<p>
+										Accesible desde la vista de Automatismos seleccionando uno y pulsando <b>Clonar</b>.
+										Permite duplicar un automatismo de forma selectiva: se elige qué actividades clonar y cuáles reutilizar.
+									</p>
+									<p>
+										Configuración disponible:
+									</p>
+									<ul>
+										<li><b>Nombre Destino</b> — Nombre del nuevo automatismo (editable).</li>
+										<li><b>Carpeta Destino</b> — Por defecto se usa la misma carpeta del original; se puede cambiar con el buscador de carpetas.</li>
+										<li>Por cada actividad del automatismo se puede indicar si clonarla o reutilizar la original, y se puede cambiar el nombre y la Data Extension de destino.</li>
+										<li>Se puede establecer una <b>carpeta de DEs por defecto</b> para que todas las DEs clonadas se guarden ahí sin tener que configurarlas una a una.</li>
+									</ul>
+									<p>
+										El proceso crea primero las DEs de destino (si es necesario), luego las actividades y finalmente el automatismo completo con todos sus pasos.
+									</p>
+								</div>
+							</div>
+						</li>
+					</ul>
+				</div>
+
+				<!-- GRUPO: JOURNEYS -->
+				<div class="docu-group" data-group-name="Journeys">
+					<h3 class="docu-group-title">Journeys</h3>
+					<ul class="docu-accordion">
+						<li class="docu-accordion-item"
+							data-keywords="journeys journey tabla refrescar exportar copiar acciones errores comunicaciones data extensions analizar">
+							<div class="docu-accordion-header">
+								<span>Gestión de Journeys</span>
+							</div>
+							<div class="docu-accordion-content">
+								<div class="docu-list">
+									<p>
+										Esta vista muestra todos los journeys de la instancia en una tabla paginada. Cada fila incluye: <b>Nombre</b>, <b>Tipo</b>, <b>Subtipo</b>, <b>Estado</b>, <b>Data Extension de entrada</b>, <b>versiones</b> y, si se han cargado, las comunicaciones (Emails, SMS, Push, WhatsApp) usadas en cada journey.
+									</p>
+									<p>
+										Filtros disponibles: por nombre, tipo, subtipo, estado, Data Extension de entrada y campos de entrada. El botón <b>☐ Comunicaciones</b> activa un filtro adicional para mostrar solo journeys que tienen comunicaciones cargadas.
+									</p>
+									<p>Botones disponibles:</p>
+									<ul>
+										<li><b>Refrescar</b> — Recarga los datos desde la API.</li>
+										<li><b>Exportar</b> — Descarga un CSV con los journeys visibles (respetando filtros activos).</li>
+										<li><b>Analizar</b> (requiere selección de 1) — Abre la vista de análisis detallado del journey.</li>
+										<li><b>Data Extensions</b> — Escanea las DEs de entrada de todos los journeys filtrados y las muestra agrupadas.</li>
+										<li><b>Comunicaciones</b> (requiere selección) — Carga las comunicaciones (emails, SMS, etc.) configuradas en los journeys seleccionados y las muestra como columnas adicionales.</li>
+										<li><b>Copiar</b> (requiere selección de 1) — Abre el asistente de clonación del journey.</li>
+										<li><b>Acciones</b> (requiere selección) — Permite <b>Pausar</b>, <b>Reanudar</b>, <b>Parar</b> o <b>Borrar</b> los journeys seleccionados.</li>
+										<li><b>Ver Errores</b> (requiere selección de 1) — Navega a la vista de errores de ese journey.</li>
+									</ul>
+									<p>
+										Al pulsar <b>Parar</b> se muestra un modal con dos opciones: parar solo la versión activa (<b>Current</b>) o parar <b>todas</b> las versiones.
+										Para los journeys de tipo <b>Multistep</b>, al borrarlos se para primero todas las versiones automáticamente.
+									</p>
+								</div>
+							</div>
+						</li>
+						<li class="docu-accordion-item"
+							data-keywords="clonar journey copiar EmailAudience AutomationAudience DE entrada">
+							<div class="docu-accordion-header">
+								<span>Clonador de Journeys</span>
+							</div>
+							<div class="docu-accordion-content">
+								<div class="docu-list">
+									<p>
+										Accesible desde la vista de Journeys seleccionando uno y pulsando <b>Copiar</b>.
+										El asistente guía el proceso según el tipo de entrada del journey original:
+									</p>
+									<ul>
+										<li>
+											<b>EmailAudience</b> — Pregunta si se quiere clonar la Data Extension de entrada o reutilizar una existente.
+											Si se clona, se puede indicar el nombre de la nueva DE.
+										</li>
+										<li>
+											<b>AutomationAudience</b> — Busca las DEs de destino del automatismo de origen y permite seleccionar cuál actuará como fuente de datos del nuevo journey.
+										</li>
+									</ul>
+									<p>
+										En todos los casos se puede modificar el nombre del nuevo journey antes de ejecutar la clonación.
+										El proceso crea el event definition, la DE (si aplica) y el propio journey con toda su configuración.
+									</p>
+								</div>
+							</div>
+						</li>
+						<li class="docu-accordion-item"
+							data-keywords="errores journey errors fecha filtro estado actividad tipo exportar">
+							<div class="docu-accordion-header">
+								<span>Errores de Journeys</span>
+							</div>
+							<div class="docu-accordion-content">
+								<div class="docu-list">
+									<p>
+										Vista accesible desde el botón <b>Ver Errores</b> en la tabla de Journeys (con un journey seleccionado).
+										Muestra todos los errores registrados en ese journey en un rango de fechas configurable.
+									</p>
+									<p>
+										Permite filtrar por: <b>Journey</b>, <b>Estado del error</b>, <b>Actividad</b> y <b>Tipo de error</b>.
+										Los resultados son paginados y se pueden exportar en CSV con el botón <b>Exportar</b>.
+									</p>
+								</div>
+							</div>
+						</li>
+					</ul>
+				</div>
+
+				<!-- GRUPO: CLONAR QUERIES -->
+				<div class="docu-group" data-group-name="Clonar Queries">
+					<h3 class="docu-group-title">Clonar Queries</h3>
+					<ul class="docu-accordion">
+						<li class="docu-accordion-item"
+							data-keywords="clonar queries masivo carpeta origen destino de data extension">
+							<div class="docu-accordion-header">
+								<span>Clonador Masivo de Queries</span>
+							</div>
+							<div class="docu-accordion-content">
+								<div class="docu-list">
+									<p>
+										Esta funcionalidad permite clonar de forma masiva todas las Query Activities de una carpeta de origen a una carpeta de destino, clonando también sus Data Extensions de destino.
+									</p>
+									<p>
+										El proceso es un asistente de <b>2 pasos</b>:
+									</p>
+									<ul>
+										<li>
+											<b>Paso 1 — Configuración de carpetas:</b> Se indican los nombres (o parte del nombre) de tres carpetas:
+											la carpeta origen de las queries, la carpeta destino para las queries clonadas y la carpeta destino para las DEs clonadas.
+											Al pulsar <b>Buscar Carpetas</b> se muestran las carpetas encontradas en tres columnas; se debe seleccionar una de cada columna y pulsar <b>Continuar</b>.
+										</li>
+										<li>
+											<b>Paso 2 — Selección de queries:</b> Se muestra la lista de todas las queries de la carpeta origen.
+											Para cada una se puede editar el nombre de la query clonada y el nombre de la DE clonada.
+											Se puede seleccionar todas con el checkbox del encabezado o marcarlas individualmente.
+											Al pulsar <b>Clonar Seleccionadas</b> se lanza el proceso.
+										</li>
+									</ul>
+									<p>
+										Si varias queries comparten la misma DE de destino, esta solo se clona una vez y se reutiliza para las demás.
+									</p>
+								</div>
+							</div>
+						</li>
+					</ul>
+				</div>
+
+				<!-- GRUPO: CLOUD PAGES -->
+				<div class="docu-group" data-group-name="Cloud Pages">
+					<h3 class="docu-group-title">Cloud Pages</h3>
+					<ul class="docu-accordion">
+						<li class="docu-accordion-item"
+							data-keywords="cloud pages cloudpages refrescar exportar ids contenidos url tipo publicacion">
+							<div class="docu-accordion-header">
+								<span>Gestión de Cloud Pages</span>
+							</div>
+							<div class="docu-accordion-content">
+								<div class="docu-list">
+									<p>
+										Esta vista muestra todas las Cloud Pages de la instancia en una tabla paginada con: <b>Nombre</b>, <b>Tipo</b>, <b>Fecha de Modificación</b>, <b>Fecha de Publicación</b>, <b>Ubicación</b>, <b>URL</b> y <b>Page ID</b>.
+									</p>
+									<p>
+										Filtros disponibles: por nombre, por Page ID, por contenido (si se han cargado los contenidos) y por tipo.
+									</p>
+									<p>Botones disponibles:</p>
+									<ul>
+										<li><b>Refrescar</b> — Recarga la lista de Cloud Pages desde la API.</li>
+										<li><b>Exportar</b> — Descarga un CSV con las Cloud Pages visibles.</li>
+										<li>
+											<b>Recuperar IDs</b> — Abre un modal con instrucciones para obtener los Page IDs de las Cloud Pages.
+											Es necesario abrir la URL indicada en el navegador (con sesión activa de MC) y pegar el JSON resultante.
+											Esto permite que la columna <b>Page ID</b> de la tabla se rellene correctamente.
+										</li>
+										<li>
+											<b>Recuperar Contenidos</b> — Abre un modal con las instrucciones para extraer el HTML de todas las Cloud Pages.
+											Hay que abrir Content Builder en el navegador, ejecutar el script en la consola (F12), copiar el resultado y pegarlo en el modal.
+											Una vez importados, el filtro de contenido de la tabla queda activo.
+											<b>Nota:</b> Si al abrir el enlace se muestra UNAUTHORIZED, abre Content Builder y vuelve a intentarlo.
+										</li>
+									</ul>
+								</div>
+							</div>
+						</li>
+					</ul>
+				</div>
+
+				<!-- GRUPO: CONTENIDOS -->
+				<!-- (ya existía — se mantiene tal cual en el fichero original) -->
+
+				<!-- GRUPO: GESTIÓN DE ENVÍOS -->
+				<div class="docu-group" data-group-name="Gestión de Envíos">
+					<h3 class="docu-group-title">Gestión de Envíos</h3>
+					<ul class="docu-accordion">
+						<li class="docu-accordion-item"
+							data-keywords="envios send classifications sender profiles delivery profiles exportar refrescar comercial transaccional">
+							<div class="docu-accordion-header">
+								<span>Gestión de Envíos</span>
+							</div>
+							<div class="docu-accordion-content">
+								<div class="docu-list">
+									<p>
+										Esta vista agrupa toda la configuración de envío de Marketing Cloud en tres pestañas:
+									</p>
+									<ul>
+										<li>
+											<b>Send Classifications</b> — Lista todas las clasificaciones de envío de la instancia.
+											Muestra el nombre, External Key, tipo (Comercial/Transaccional), el Sender Profile y Delivery Profile asociados y la fecha de modificación.
+											Permite filtrar por nombre/key, por perfil y por tipo.
+										</li>
+										<li>
+											<b>Sender Profiles</b> — Lista todos los perfiles de remitente.
+											Muestra nombre, External Key, From Name, From Email, si tiene Auto-Reply, si tiene reenvío automático (Forward To) y la fecha de modificación.
+											Permite filtrar por nombre/key, From Name y From Email.
+										</li>
+										<li>
+											<b>Delivery Profiles</b> — Lista los perfiles de entrega de la instancia.
+											Muestra nombre, External Key, descripción, modo IP, dirección IP, header y footer.
+											Dado que la API de MC no expone estos datos directamente, se obtienen ejecutando un script en la consola del navegador en la página de Delivery Profiles.
+											El modal explica los pasos y proporciona el script a copiar.
+										</li>
+									</ul>
+									<p>
+										Los botones <b>Refrescar</b> y <b>Exportar</b> son globales: refrescan o exportan la pestaña activa en ese momento.
+										La exportación genera un CSV con los datos visibles respetando los filtros activos.
+									</p>
+									<p>
+										Las columnas de todas las tablas son ordenables haciendo clic en la cabecera.
+									</p>
+								</div>
+							</div>
+						</li>
+					</ul>
+				</div>
+
+				<!-- GRUPO: USUARIOS -->
+				<div class="docu-group" data-group-name="Usuarios">
+					<h3 class="docu-group-title">Usuarios</h3>
+					<ul class="docu-accordion">
+						<li class="docu-accordion-item"
+							data-keywords="usuarios permisos roles activos inactivos api user exportar comparativa detalle">
+							<div class="docu-accordion-header">
+								<span>Gestión de Usuarios y Permisos</span>
+							</div>
+							<div class="docu-accordion-content">
+								<div class="docu-list">
+									<p>
+										Esta vista tiene dos pestañas:
+									</p>
+									<ul>
+										<li>
+											<b>Lista de Usuarios</b> — Muestra todos los usuarios de la instancia con: Nombre (ID), UserName, si es API User, Último Login, Estado (activo/inactivo) y Roles asignados.
+											Permite filtrar por nombre, por estado (activos/inactivos) y por roles (selector múltiple desplegable).
+											Las columnas son ordenables. El botón <b>Descargar Usuarios</b> exporta en CSV los usuarios visibles.
+										</li>
+										<li>
+											<b>Detalle / Comparativa</b> — Permite obtener un desglose completo de permisos por usuario para comparar entre ellos.
+											Como MC no expone esta información por API, es necesario ejecutar un script en la consola del navegador (F12) desde la página de administración de usuarios.
+											El modal de <b>Preparar Captura</b> proporciona el enlace y el script a ejecutar.
+											Una vez pegado el resultado, se genera una tabla expandible con todos los permisos agrupados por categoría.
+											El botón <b>Solo Diferencias</b> oculta los permisos iguales entre usuarios para facilitar la comparativa.
+											El botón <b>Colapsar Todo / Expandir Todo</b> controla la visibilidad de los grupos de permisos.
+										</li>
+									</ul>
+								</div>
+							</div>
+						</li>
+					</ul>
+				</div>
+
+				<!-- GRUPO: GENERADOR ERD -->
+				<div class="docu-group" data-group-name="Generador ERD">
+					<h3 class="docu-group-title">Generador ERD</h3>
+					<ul class="docu-accordion">
+						<li class="docu-accordion-item"
+							data-keywords="erd diagrama entidad relacion attribute groups contact builder json PK FK relaciones">
+							<div class="docu-accordion-header">
+								<span>Generador de Diagramas Entidad-Relación (ERD)</span>
+							</div>
+							<div class="docu-accordion-content">
+								<div class="docu-list">
+									<p>
+										Esta funcionalidad genera un diagrama visual de las relaciones entre Data Extensions de un <b>Attribute Group</b> de Contact Builder.
+										Es útil para entender el modelo de datos del cliente de un vistazo.
+									</p>
+									<p>
+										El proceso tiene dos pasos (pestañas):
+									</p>
+									<ul>
+										<li>
+											<b>1. Extraer JSON</b> — Hay que abrir el enlace que proporciona la app (apunta a la API interna de Attribute Groups de MC) y ejecutar el script en la consola del navegador.
+											El script muestra un popup donde seleccionar qué Attribute Group analizar y genera el JSON de las relaciones.
+										</li>
+										<li>
+											<b>2. Generar Diagrama</b> — Se pega el JSON extraído en el cuadro de texto y se pulsa <b>Generar Diagrama</b>.
+											Opcionalmente se puede marcar <b>Ocultar tabla Contacts</b> para simplificar el diagrama (la tabla Contacts se marca con 🔑 en los campos que la referencian).
+										</li>
+									</ul>
+									<p>
+										El diagrama resultante es interactivo:
+									</p>
+									<ul>
+										<li>Las tablas son arrastrables para reorganizar el layout.</li>
+										<li>Al hacer clic en un campo se resalta la relación correspondiente (líneas de FK/REF).</li>
+										<li>Los campos se colorean según su tipo: 🟠 PK, 🟢 FK, 🟣 REF.</li>
+										<li>Al pasar el ratón sobre un campo se muestra un tooltip con el tipo de dato y la relación.</li>
+										<li>Se puede descargar el diagrama como imagen (<b>Descargar Imagen</b>) o exportar las relaciones como CSV (<b>Descargar CSV</b>).</li>
+										<li>El botón <b>Nuevo Diagrama</b> limpia el lienzo para empezar con otro Attribute Group.</li>
+									</ul>
+								</div>
+							</div>
+						</li>
+					</ul>
+				</div>
+
+				<!-- GRUPO: AUDITORÍA -->
+				<div class="docu-group" data-group-name="Auditoría">
+					<h3 class="docu-group-title">Auditoría</h3>
+					<ul class="docu-accordion">
+						<li class="docu-accordion-item"
+							data-keywords="auditoria auditoria instancia escaneo usuarios automatismos journeys cloud pages send management data extensions kpi graficos pdf exportar">
+							<div class="docu-accordion-header">
+								<span>Auditoría de Instancia</span>
+							</div>
+							<div class="docu-accordion-content">
+								<div class="docu-list">
+									<p>
+										Esta vista realiza un análisis completo del estado de la instancia de Marketing Cloud y genera un dashboard con KPIs y gráficos para cada área.
+										Si ya existe una auditoría guardada para el cliente activo, se carga automáticamente al entrar a la vista.
+									</p>
+									<p>
+										El análisis se organiza en seis pestañas de resultados: <b>Usuarios</b>, <b>Automatismos</b>, <b>Journeys</b>, <b>Cloud Pages</b>, <b>Send Management</b> y <b>Data Extensions</b>.
+									</p>
+									<p>
+										Antes de lanzar el escaneo se pueden activar opciones de <b>análisis profundo</b>:
+									</p>
+									<ul>
+										<li>
+											<b>Automatismos — Análisis Profundo</b> (lento: 2 llamadas por automatismo + 1 por SQL/SSJS) — Detecta email de alerta por error, extrae dominios de aviso, detecta descripciones en SQL/SSJS y genera un mapa de actividades compartidas entre automatismos.
+										</li>
+										<li>
+											<b>Journeys — Análisis Profundo</b> (rápido si la API devuelve actividades en la llamada de lista) — Detecta nodos Salesforce activos, calcula el mix multicanal real (Email, SMS, Push/In-App, WhatsApp) e identifica journeys con solo lógica (sin envíos).
+										</li>
+										<li>
+											<b>Data Extensions — Análisis desde JSON</b> — Para auditar las DEs hay que ejecutar un script en la consola del navegador estando en Contact Builder. El script recorre todas las carpetas (puede tardar ~20 min para ~6.000 DEs) y genera un JSON que se pega en la vista. Las DEs de la carpeta <i>Shared</i> se excluyen automáticamente.
+											<b>Atención:</b> Cada escaneo sobreescribe la caché anterior.
+										</li>
+									</ul>
+									<p>
+										Métricas disponibles por área:
+									</p>
+									<ul>
+										<li><b>Usuarios</b>: total, activos, inactivos, API users, último login, roles más frecuentes.</li>
+										<li><b>Automatismos</b>: total, activos/programados, sin historial de ejecución, que lanzan Journeys, actividades de import/export, nombres de prueba.</li>
+										<li><b>Journeys</b>: total, publicados, por tipo/subtipo/estado, integración con Salesforce, mix de canales, con/sin Goals, con/sin criterios de salida, inactividad.</li>
+										<li><b>Cloud Pages</b>: total, por tipo, publicadas vs no publicadas.</li>
+										<li><b>Send Management</b>: Send Classifications, Sender Profiles, perfiles en uso vs huérfanos, remitentes dinámicos, AutoReply y Forward.</li>
+										<li><b>Data Extensions</b>: total, sin descripción (por propietario), sendable/testable, con retención, vacías, con nombre de prueba, carpetas con más de 15 DEs.</li>
+									</ul>
+									<p>
+										Haciendo clic en cualquier barra de los gráficos se abre un <b>modal de detalle</b> con la lista de elementos que componen esa métrica, exportable en CSV.
+									</p>
+									<p>
+										Una vez completada la auditoría están disponibles dos botones:
+									</p>
+									<ul>
+										<li><b>Descargar PDF</b> — Genera un informe PDF con todos los gráficos y KPIs.</li>
+										<li><b>Exportar Detalles</b> — Descarga un ZIP con un CSV por cada categoría auditada.</li>
+									</ul>
+									<p>
+										Los resultados se guardan automáticamente en disco para el cliente activo y se cargan la próxima vez que se acceda a la vista.
+										El botón <b>Volver a Opciones</b> permite relanzar el escaneo con diferentes opciones (sobreescribiendo la caché anterior).
+									</p>
+								</div>
+							</div>
+						</li>
+					</ul>
+				</div>
 				<!-- Mensaje de no resultados -->
 				<div id="docu-no-results" class="error-text hidden"> No se han encontrado funcionalidades que coincidan	con la búsqueda. </div>
 			</div>
