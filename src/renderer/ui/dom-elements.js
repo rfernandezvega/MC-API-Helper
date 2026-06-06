@@ -166,9 +166,8 @@ export function init() {
     elements.automationNameFilter = document.getElementById('automationNameFilter');
     elements.automationStatusFilter = document.getElementById('automationStatusFilter');
     elements.refreshAutomationsTableBtn = document.getElementById('refreshAutomationsTableBtn');
-    elements.activateAutomationBtn = document.getElementById('activateAutomationBtn');
-    elements.runAutomationBtn = document.getElementById('runAutomationBtn');
-    elements.stopAutomationBtn = document.getElementById('stopAutomationBtn');
+    elements.actionsAutomationBtn = document.getElementById('actionsAutomationBtn');
+    elements.automationJourneyFilter = document.getElementById('automationJourneyFilter');
     elements.cloneAutomationBtn = document.getElementById('cloneAutomationBtn');
     elements.automationCountSpan = document.getElementById('automationCount');
     elements.downloadAutomationsCsvBtn = document.getElementById('downloadAutomationsCsvBtn');
@@ -179,6 +178,14 @@ export function init() {
     elements.totalPagesAutomations = document.getElementById('totalPagesAutomations');
     elements.getNotificationsBtn = document.getElementById('getNotificationsBtn');
     elements.analyzeAutomationBtn = document.getElementById('analyzeAutomationBtn');
+
+    // --- 11b. MODAL: ACCIONES SOBRE AUTOMATISMOS ---
+    elements.automationActionsModal = document.getElementById('automation-actions-modal');
+    elements.automationActionsMessage = document.getElementById('automation-actions-message');
+    elements.automationActionsActivateBtn = document.getElementById('automation-actions-activate-btn');
+    elements.automationActionsRunBtn = document.getElementById('automation-actions-run-btn');
+    elements.automationActionsStopBtn = document.getElementById('automation-actions-stop-btn');
+    elements.automationActionsCancelBtn = document.getElementById('automation-actions-cancel-btn');
 
     // --- 12. Sección: Gestión de Journeys ---
     elements.gestionJourneysSection = document.getElementById('gestion-journeys-section');

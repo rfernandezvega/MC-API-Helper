@@ -448,6 +448,22 @@
     </div>
 </div>
 
+<!-- MODAL: ACCIONES SOBRE AUTOMATISMOS -->
+<div id="automation-actions-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="width: 400px;">
+        <h3>Acciones sobre Automatismos</h3>
+        <p id="automation-actions-message" style="font-size: 14px; margin-bottom: 25px;"></p>
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+            <button id="automation-actions-activate-btn" class="action-button activate-btn">Activar</button>
+            <button id="automation-actions-run-btn" class="action-button">Ejecutar</button>
+            <button id="automation-actions-stop-btn" class="action-button delete-btn">Parar</button>
+        </div>
+        <div class="modal-actions" style="margin-top: 25px;">
+            <button id="automation-actions-cancel-btn" class="action-button cancel-btn">Cancelar</button>
+        </div>
+    </div>
+</div>
+
 <!-- 10. SECCIÓN: GESTIÓN DE AUTOMATISMOS -->
 <div id="gestion-automatismos-section" class="section">
     <div class="section-header">
@@ -457,9 +473,7 @@
             <button id="analyzeAutomationBtn" class="action-button" disabled>Analizar</button>
             <button id="getNotificationsBtn" class="action-button">Cargar Notificaciones</button>
             <button id="downloadAutomationsCsvBtn" class="action-button">Exportar</button>
-            <button id="activateAutomationBtn" class="action-button activate-btn" disabled>Activar</button>
-            <button id="runAutomationBtn" class="action-button" disabled>Ejecutar</button>
-            <button id="stopAutomationBtn" class="action-button delete-btn" disabled>Parar</button>
+            <button id="actionsAutomationBtn" class="action-button delete-btn" disabled>Acciones</button>
             <button id="cloneAutomationBtn" class="action-button" disabled>Clonar</button>            
         </div>
     </div>
@@ -470,6 +484,11 @@
         <select id="automationStatusFilter" class="filter-input">
             <option value="">Todos los estados</option>
         </select>
+        <select id="automationJourneyFilter" class="filter-input">
+            <option value="">Todos</option>
+            <option value="yes">Lanza Journey</option>
+            <option value="no">No lanza Journey</option>
+        </select>
     </div>
     <div class="table-container">
         <table id="automations-table">
@@ -479,8 +498,9 @@
             <th class="sortable-header" data-sort-by="lastRunTime">Última Ejecución</th>
             <th class="sortable-header" data-sort-by="scheduledTime">Próxima Ejecución</th>
             <th class="sortable-header" data-sort-by="status">Estado</th>
-            <th class="sortable-header" data-sort-by="notifications.Error">Notificación Errores</th>
-            <th class="sortable-header" data-sort-by="notifications.Complete">Notificación Ejecuciones</th>
+            <th class="sortable-header" data-sort-by="launchesJourney">Journey</th>
+            <th class="sortable-header col-notif" data-sort-by="notifications.Error">Notificación Errores</th>
+            <th class="sortable-header col-notif" data-sort-by="notifications.Complete">Notificación Ejecuciones</th>
             </tr>
         </thead>
         <tbody id="automations-tbody"></tbody>
