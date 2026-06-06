@@ -327,18 +327,24 @@ function extractDataExtensionsWithSource(contentSources) {
  * @param {number} [maxHeight] - Altura máxima del contenido en px (para scroll). 0 = sin límite.
  */
 function createCollapsibleBlock(title, innerHtml, id, expanded, maxHeight) {
-    const mh = maxHeight || 0;
+    const scrollStyle = maxHeight ? `max-height:${maxHeight}px; overflow-y:auto;` : '';
     return `
-        <div class="analyzer-collapsible ${expanded ? 'active' : ''}" id="container-${id}">
-            <div class="analyzer-collapsible-header">
+        <div id="container-${id}" style="margin-bottom:10px; border-radius:4px;">
+            <div class="content-collapsible-header" style="
+                background-color:${expanded ? '#558ac7' : '#f1f5f9'};
+                color:${expanded ? '#fff' : '#475569'};
+                padding:12px 15px; cursor:pointer; display:flex;
+                justify-content:space-between; align-items:center;
+                font-weight:bold; border:1px solid ${expanded ? '#558ac7' : '#e2e8f0'}; border-radius:4px 4px 0 0;
+                user-select:none; transition:background-color 0.2s;">
                 <span>${title}</span>
-                <span class="analyzer-icon">${expanded ? '▼' : '▶'}</span>
+                <span style="font-size:0.8em;">${expanded ? '▼' : '▶'}</span>
             </div>
-            <div class="analyzer-collapsible-content" data-scroll-height="${mh}"
-                 style="max-height:${expanded ? (mh ? mh + 'px' : 'none') : '0'};
-                        overflow:${expanded ? (mh ? 'auto' : 'visible') : 'hidden'};
-                        padding:${expanded ? '15px' : '0 15px'};
-                        background:#fff; border:1px solid #e2e8f0; border-top:none;">
+            <div class="content-collapsible-body" style="
+                display:${expanded ? 'block' : 'none'};
+                background:#fff;
+                border:1px solid #e2e8f0; border-top:none;
+                border-radius:0 0 4px 4px; ${scrollStyle}">
                 ${innerHtml}
             </div>
         </div>
@@ -349,25 +355,23 @@ function createCollapsibleBlock(title, innerHtml, id, expanded, maxHeight) {
  * Activa los listeners de clic para collapsibles dentro de un contenedor.
  */
 function initCollapsibleListeners(container) {
-    container.querySelectorAll('.analyzer-collapsible-header').forEach(header => {
+    container.querySelectorAll('.content-collapsible-header').forEach(header => {
         header.onclick = function () {
-            const parent = this.parentElement;
-            const content = this.nextElementSibling;
-            const icon = this.querySelector('.analyzer-icon');
-            const isOpen = parent.classList.contains('active');
-            const scrollH = content.dataset.scrollHeight;
+            const body = this.nextElementSibling;
+            const icon = this.querySelector('span:last-child');
+            const isOpen = body.style.display !== 'none';
 
             if (isOpen) {
-                parent.classList.remove('active');
-                content.style.maxHeight = '0';
-                content.style.overflow = 'hidden';
-                content.style.padding = '0 15px';
+                body.style.display = 'none';
+                this.style.backgroundColor = '#f1f5f9';
+                this.style.color = '#475569';
+                this.style.borderColor = '#e2e8f0';
                 icon.textContent = '▶';
             } else {
-                parent.classList.add('active');
-                content.style.maxHeight = scrollH && scrollH !== '0' ? scrollH + 'px' : 'none';
-                content.style.overflow = scrollH && scrollH !== '0' ? 'auto' : 'visible';
-                content.style.padding = '15px';
+                body.style.display = 'block';
+                this.style.backgroundColor = '#558ac7';
+                this.style.color = '#fff';
+                this.style.borderColor = '#558ac7';
                 icon.textContent = '▼';
             }
         };
