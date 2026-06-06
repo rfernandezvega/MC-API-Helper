@@ -101,13 +101,25 @@ export function init() {
     elements.deleteFieldBtn = document.getElementById('deleteField');
 
     // --- 8. Sección: Buscadores ---
+
+    // --- 8a. Pestaña: Data Extensions ---
     elements.deSearchProperty = document.getElementById('deSearchProperty');
     elements.deSearchValue = document.getElementById('deSearchValue');
     elements.searchDEBtn = document.getElementById('searchDEBtn');
     elements.deSearchResultsTbody = document.querySelector('#de-search-results-tbody');
+
+    // --- 8b. Pestaña: Origen de Datos ---
     elements.deNameToFindInput = document.getElementById('deNameToFind');
     elements.findDataSourcesBtn = document.getElementById('findDataSourcesBtn');
     elements.dataSourcesTbody = document.getElementById('data-sources-tbody');
+    elements.dataSourcesTable = document.getElementById('data-sources-table');
+    elements.deSelectionBlock = document.getElementById('de-selection-block');
+    elements.deSelectionTable = document.getElementById('de-selection-table');
+    elements.selectAllDEsCheckbox = document.getElementById('selectAllDEsCheckbox');
+    elements.searchSelectedDEsBtn = document.getElementById('searchSelectedDEsBtn');
+    elements.showSourceQueryCheckbox = document.getElementById('showSourceQueryCheckbox');
+
+    // --- 8c. Pestaña: Clientes ---
     elements.customerSearchValue = document.getElementById('customerSearchValue');
     elements.searchCustomerBtn = document.getElementById('searchCustomerBtn');
     elements.customerSearchTbody = document.getElementById('customer-search-tbody');
@@ -118,33 +130,41 @@ export function init() {
     elements.customerJourneysTbody = document.getElementById('customer-journeys-tbody');
     elements.customerDesResultsBlock = document.getElementById('customer-des-results-block');
     elements.desResultsContainer = document.getElementById('des-results-container');
+
+    // --- 8d. Pestaña: Texto en Queries ---
     elements.querySearchText = document.getElementById('querySearchText');
     elements.searchQueriesByTextBtn = document.getElementById('searchQueriesByTextBtn');
     elements.querySearchResultsTable = document.getElementById('query-search-results-table');
     elements.querySearchResultsTbody = document.querySelector('#query-search-results-tbody');
     elements.showQueryTextCheckbox = document.getElementById('showQueryTextCheckbox');
-    elements.contentSearchValue = document.getElementById('contentSearchValue');
-    elements.searchContentBtn = document.getElementById('searchContentBtn');
-    elements.contentSearchResultsTbody = document.getElementById('content-search-results-tbody');
-    elements.deSelectionBlock = document.getElementById('de-selection-block');
-    elements.deSelectionTable = document.getElementById('de-selection-table');
-    elements.selectAllDEsCheckbox = document.getElementById('selectAllDEsCheckbox');
-    elements.searchSelectedDEsBtn = document.getElementById('searchSelectedDEsBtn');
-    elements.showSourceQueryCheckbox = document.getElementById('showSourceQueryCheckbox'); 
-    elements.activitySearchValue = document.getElementById('activitySearchValue');
-    elements.searchActivityBtn = document.getElementById('searchActivityBtn'); 
-    elements.activityUsageTbody = document.getElementById('activity-usage-tbody'); 
-    elements.dataSourcesTable = document.getElementById('data-sources-table');
-    elements.activityInfoBlock = document.getElementById('activity-info-block');
-    elements.activityResultsBlock = document.getElementById('activity-results-block');
-    elements.infoActivityName = document.getElementById('info-activity-name');
-    elements.infoActivityType = document.getElementById('info-activity-type');
-    elements.infoActivityKey = document.getElementById('info-activity-key');
-    elements.activityTypeSelect = document.getElementById('activityTypeSelect');
+
+    // --- 8e. Pestaña: Texto en Scripts ---
     elements.scriptSearchText = document.getElementById('scriptSearchText');
     elements.searchScriptsByTextBtn = document.getElementById('searchScriptsByTextBtn');
     elements.scriptSearchResultsTbody = document.getElementById('script-search-results-tbody');
     elements.scriptSearchResultsTable = document.getElementById('script-search-results-table');
+
+    // --- 8f. Pestaña: Contenidos ---
+    elements.contentSearchValue = document.getElementById('contentSearchValue');
+    elements.searchContentBtn = document.getElementById('searchContentBtn');
+    elements.contentSearchResultsTbody = document.getElementById('content-search-results-tbody');
+    elements.contentDetailBtn = document.getElementById('contentDetailBtn');
+    elements.contentDetailBlock = document.getElementById('content-detail-block');
+    elements.contentDetailTitle = document.getElementById('content-detail-title');
+    elements.contentTreeWrapper = document.getElementById('content-tree-wrapper');
+    elements.contentComponentsWrapper = document.getElementById('content-components-wrapper');
+    elements.contentDesWrapper = document.getElementById('content-des-wrapper');
+
+    // --- 8g. Pestaña: Actividades ---
+    elements.activityTypeSelect = document.getElementById('activityTypeSelect');
+    elements.activitySearchValue = document.getElementById('activitySearchValue');
+    elements.searchActivityBtn = document.getElementById('searchActivityBtn');
+    elements.activityInfoBlock = document.getElementById('activity-info-block');
+    elements.infoActivityName = document.getElementById('info-activity-name');
+    elements.infoActivityType = document.getElementById('info-activity-type');
+    elements.infoActivityKey = document.getElementById('info-activity-key');
+    elements.activityResultsBlock = document.getElementById('activity-results-block');
+    elements.activityUsageTbody = document.getElementById('activity-usage-tbody');
     elements.activityListTbody = document.getElementById('activity-list-tbody');
     elements.deleteActivityBtn = document.getElementById('deleteActivityBtn');
 

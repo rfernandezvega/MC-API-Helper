@@ -136,3 +136,12 @@ export async function searchContentAssets(searchValue, apiConfig) {
         }
     }
 }
+
+/**
+ * Recupera el detalle completo de un asset por su ID.
+ */
+export async function fetchAssetById(assetId, apiConfig) {
+    const url = `${apiConfig.restUri}asset/v1/content/assets/${assetId}`;
+    const options = { headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } };
+    return executeRestRequest(url, options);
+}

@@ -1961,11 +1961,10 @@
     </div>
 </div>
 
- <!-- 9. SECCIÓN: BUSCADORES -->
+<!-- 9. SECCIÓN: BUSCADORES -->
 <div id="buscadores-section" class="section">
     <div class="section-header"><button class="back-button">← Atrás</button></div>
     <h2>Buscadores</h2>
-    <!-- Contenedor de pestañas para los diferentes tipos de búsqueda -->
     <div class="tabs-container">
     <div class="tab-buttons">
         <button class="tab-button active" data-tab="busqueda-de-tab">Data Extensions</button>
@@ -1977,102 +1976,83 @@
         <button class="tab-button" data-tab="actividades-tab">Actividades</button>
     </div>
 
-    <!-- Pestaña: Búsqueda de Data Extension -->
+    <!-- ============== Pestaña: Búsqueda de Data Extension ============== -->
     <div id="busqueda-de-tab" class="tab-content active config-section-container">
         <div class="config-block">
-            <h3>Parámetros de Búsqueda</h3>
-            <div class="form-group">
-                <label for="deSearchProperty">Buscar por:</label>
-                <select id="deSearchProperty">
-                    <option value="Name">Nombre</option>
-                    <option value="CustomerKey">External Key</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="deSearchValue">Valor:</label>
-                <input type="text" id="deSearchValue" placeholder="Ingresa el valor de búsqueda" maxlength="128">
-            </div>
-            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-                <button id="searchDEBtn" class="action-button">Buscar</button>
+            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
+                <div class="form-group" style="margin:0; min-width:120px;">
+                    <label for="deSearchProperty">Buscar por:</label>
+                    <select id="deSearchProperty" class="filter-input">
+                        <option value="Name">Nombre</option>
+                        <option value="CustomerKey">External Key</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+                    <label for="deSearchValue">Valor:</label>
+                    <input type="text" id="deSearchValue" placeholder="Ingresa el valor de búsqueda" maxlength="128">
+                </div>
+                <button id="searchDEBtn" class="action-button" style="height:36px;">Buscar</button>
             </div>
         </div>
-            <div class="config-block" style="flex-grow: 1;">
-                <h3>Resultados</h3>
-                <div class="table-container">
-                    <table id="de-search-results-table">
-                        <thead>
-                            <tr>
-                                <th>Nombre Data Extension</th>
-                                <th>Ruta de Carpeta</th>
-                            </tr>
-                        </thead>
-                        <tbody id="de-search-results-tbody"></tbody>
-                    </table>
-                </div>
+        <div class="config-block" style="flex-grow:1;">
+            <h3>Resultados</h3>
+            <div class="table-container">
+                <table id="de-search-results-table">
+                    <thead><tr><th>Nombre Data Extension</th><th>Ruta de Carpeta</th></tr></thead>
+                    <tbody id="de-search-results-tbody"></tbody>
+                </table>
             </div>
+        </div>
     </div>
 
-    <!-- Pestaña: Buscador de Orígenes de Datos -->
+    <!-- ============== Pestaña: Buscador de Orígenes de Datos ============== -->
     <div id="origenes-tab" class="tab-content config-section-container">
         <div class="config-block">
-            <h3>Parámetros de Búsqueda</h3>
-            <div class="form-group">
-                <label for="deNameToFind">Nombre de la Data Extension:</label>
-                <input type="text" id="deNameToFind" placeholder="Introduce el nombre exacto de la DE">
-            </div>
-            <div class="form-group checkbox-group" style="justify-content: flex-start;">
-                <label for="showSourceQueryCheckbox">Mostrar Descripción / Query:</label>
-                <input type="checkbox" id="showSourceQueryCheckbox" checked>
-            </div>
-            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-                <button id="findDataSourcesBtn" class="action-button">Buscar Orígenes</button>
+            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
+                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+                    <label for="deNameToFind">Nombre exacto de la Data Extension:</label>
+                    <input type="text" id="deNameToFind" placeholder="Introduce el nombre exacto de la DE">
+                </div>
+                <div class="form-group" style="margin:0; display:flex; align-items:center; gap:6px;">
+                    <input type="checkbox" id="showSourceQueryCheckbox" checked>
+                    <label for="showSourceQueryCheckbox" style="white-space:nowrap;">Mostrar Query</label>
+                </div>
+                <button id="findDataSourcesBtn" class="action-button" style="height:36px;">Buscar Orígenes</button>
             </div>
         </div>
-        <div class="config-block" style="flex-grow: 1;">
+        <div class="config-block" style="flex-grow:1;">
             <h3>Actividades Encontradas</h3>
             <div class="table-container">
                 <table id="data-sources-table">
-                    <thead>
-                        <tr>
-                            <th>Actividad</th><th>Tipo</th><th>Automatización</th>
-                            <th>Paso</th><th>Acción</th><th>Descripción / Query</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Actividad</th><th>Tipo</th><th>Automatización</th><th>Paso</th><th>Acción</th><th>Descripción / Query</th></tr></thead>
                     <tbody id="data-sources-tbody"></tbody>
                 </table>
             </div>
         </div>
     </div>
-    
-    <!-- Pestaña: Buscador de Clientes (Suscriptores) -->
+
+    <!-- ============== Pestaña: Buscador de Clientes ============== -->
     <div id="clientes-tab" class="tab-content config-section-container">
         <div class="config-block">
-            <h3>Parámetros de Búsqueda</h3>
-            <div class="search-container">
-            <div class="search-input-group">
-                <label for="customerSearchValue">Buscar por Subscriber Key o Email:</label>
-                <input type="text" id="customerSearchValue" placeholder="Ingresa el valor a buscar">
-            </div>
-                <button id="searchCustomerBtn" class="action-button">Buscar Cliente</button>
+            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
+                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+                    <label for="customerSearchValue">Subscriber Key o Email:</label>
+                    <input type="text" id="customerSearchValue" placeholder="Ingresa el valor a buscar">
+                </div>
+                <button id="searchCustomerBtn" class="action-button" style="height:36px;">Buscar Cliente</button>
             </div>
         </div>
-        <!-- Bloque de Resultados de la Búsqueda -->
-        <div class="config-block" style="flex-grow: 1;">
-            <div class="config-block-header">
-                <h3>Resultados</h3>
-                <div class="header-actions">
+        <div class="config-block" style="flex-grow:1;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0;">Resultados</h3>
+                <div style="display:flex; gap:8px;">
                     <button id="selectTablesBtn" class="action-button" disabled>Seleccionar Tablas</button>
                     <button id="getCustomerJourneysBtn" class="action-button" disabled>Journeys</button>
                 </div>
             </div>
             <div class="table-container">
                 <table id="customer-search-table">
-                    <thead>
-                        <tr>
-                            <th>Subscriber Key</th><th>Email</th><th>Estado</th>
-                            <th>Fecha Creación</th><th>Fecha Baja</th><th>Es Suscriptor</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Subscriber Key</th><th>Email</th><th>Estado</th><th>Fecha Creación</th><th>Fecha Baja</th><th>Es Suscriptor</th></tr></thead>
                     <tbody id="customer-search-tbody"></tbody>
                 </table>
             </div>
@@ -2082,202 +2062,158 @@
             <h3>Seleccionar Tablas para la Búsqueda</h3>
             <div class="table-container">
                 <table id="de-selection-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 50px; text-align: center;"><input type="checkbox" id="selectAllDEsCheckbox"></th>
-                            <th>Nombre de Tabla</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Las filas se generarán dinámicamente -->
-                    </tbody>
+                    <thead><tr><th style="width:50px; text-align:center;"><input type="checkbox" id="selectAllDEsCheckbox"></th><th>Nombre de Tabla</th></tr></thead>
+                    <tbody></tbody>
                 </table>
             </div>
-            <div class="header-actions" style="justify-content: flex-end; margin-top: 20px;">
+            <div class="header-actions" style="justify-content:flex-end; margin-top:10px;">
                 <button id="searchSelectedDEsBtn" class="action-button">Buscar en Tablas Seleccionadas</button>
             </div>
         </div>
 
-        <!-- Bloque de Resultados de Journeys (oculto por defecto) -->
         <div id="customer-journeys-results-block" class="config-block hidden">
-            <div class="config-block-header">
-                <h3>Journeys del Cliente Seleccionado</h3>
-                <div class="header-actions">
-                    <button id="ejectCustomerFromJourneysBtn" class="action-button delete-btn" disabled>Expulsar</button>
-                </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0;">Journeys del Cliente Seleccionado</h3>
+                <button id="ejectCustomerFromJourneysBtn" class="action-button delete-btn" disabled>Expulsar</button>
             </div>
             <div class="table-container">
                 <table id="customer-journeys-table">
-                    <thead>
-                        <tr>
-                            <th>Nombre del Journey</th><th>ID</th><th>Definition Key</th>
-                            <th>Versión</th><th>Fecha Creación</th><th>Fecha Modificación</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Nombre del Journey</th><th>ID</th><th>Definition Key</th><th>Versión</th><th>Fecha Creación</th><th>Fecha Modificación</th></tr></thead>
                     <tbody id="customer-journeys-tbody"></tbody>
                 </table>
             </div>
         </div>
-        <!-- Bloque de Resultados de DEs (oculto por defecto) -->
+
         <div id="customer-des-results-block" class="config-block hidden">
             <h3>Resultados de Búsqueda en Data Extensions</h3>
-            <div id="des-results-container">
-                <!-- Los resultados se inyectarán aquí dinámicamente -->
-            </div>
+            <div id="des-results-container"></div>
         </div>
     </div>
 
-    <!-- Pestaña: Buscador de Texto en Queries -->
+    <!-- ============== Pestaña: Buscador de Texto en Queries ============== -->
     <div id="queries-tab" class="tab-content config-section-container">
         <div class="config-block">
-            <h3>Parámetros de Búsqueda</h3>
-            <div class="form-group">
-                <label for="querySearchText">Texto a buscar en la Query:</label>
-                <input type="text" id="querySearchText" placeholder="Ej: _Subscribers o Nombre_DE">
-            </div>
-            <div class="form-group checkbox-group" style="justify-content: flex-start;">
-                <label for="showQueryTextCheckbox">Mostrar Query Text:</label>
-                <input type="checkbox" id="showQueryTextCheckbox" checked>
-            </div>
-            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-                <button id="searchQueriesByTextBtn" class="action-button">Buscar en Queries</button>
+            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
+                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+                    <label for="querySearchText">Texto a buscar en la Query:</label>
+                    <input type="text" id="querySearchText" placeholder="Ej: _Subscribers o Nombre_DE">
+                </div>
+                <div class="form-group" style="margin:0; display:flex; align-items:center; gap:6px;">
+                    <input type="checkbox" id="showQueryTextCheckbox" checked>
+                    <label for="showQueryTextCheckbox" style="white-space:nowrap;">Mostrar Query</label>
+                </div>
+                <button id="searchQueriesByTextBtn" class="action-button" style="height:36px;">Buscar en Queries</button>
             </div>
         </div>
-        <div class="config-block" style="flex-grow: 1;">
+        <div class="config-block" style="flex-grow:1;">
             <h3>Queries Encontradas</h3>
             <div class="table-container">
                 <table id="query-search-results-table">
-                    <thead>
-                        <tr>
-                            <th>Nombre de la Query</th><th>Automatización</th>
-                            <th>Paso</th><th>Query Text</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Nombre de la Query</th><th>Automatización</th><th>Paso</th><th>Query Text</th></tr></thead>
                     <tbody id="query-search-results-tbody"></tbody>
                 </table>
             </div>
         </div>
     </div>
-    <!-- Pestaña: Buscador de Texto en Scripts -->
+
+    <!-- ============== Pestaña: Buscador de Texto en Scripts ============== -->
     <div id="script-texto-tab" class="tab-content config-section-container">
         <div class="config-block">
-            <h3>Parámetros de Búsqueda</h3>
-            <div class="form-group">
-                <label for="scriptSearchText">Texto a buscar en el Script (SSJS):</label>
-                <input type="text" id="scriptSearchText" placeholder="Ej: Platform.Function o Nombre_DE">
-            </div>
-            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-                <button id="searchScriptsByTextBtn" class="action-button">Buscar en Scripts</button>
+            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
+                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+                    <label for="scriptSearchText">Texto a buscar en el Script (SSJS):</label>
+                    <input type="text" id="scriptSearchText" placeholder="Ej: Platform.Function o Nombre_DE">
+                </div>
+                <button id="searchScriptsByTextBtn" class="action-button" style="height:36px;">Buscar en Scripts</button>
             </div>
         </div>
-        <div class="config-block" style="flex-grow: 1;">
+        <div class="config-block" style="flex-grow:1;">
             <h3>Scripts Encontrados</h3>
             <div class="table-container">
                 <table id="script-search-results-table">
-                    <thead>
-                        <tr>
-                            <th>Nombre del Script</th>
-                            <th>Automatización</th>
-                            <th>Paso</th>
-                        </tr>
-                    </thead>
-                    <tbody id="script-search-results-tbody">
-                        <tr><td colspan="3">Inicia una búsqueda...</td></tr>
-                    </tbody>
+                    <thead><tr><th>Nombre del Script</th><th>Automatización</th><th>Paso</th></tr></thead>
+                    <tbody id="script-search-results-tbody"><tr><td colspan="3">Inicia una búsqueda...</td></tr></tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <!-- Pestaña: Contenidos -->
+    <!-- ============== Pestaña: Contenidos ============== -->
     <div id="contenido-tab" class="tab-content config-section-container">
         <div class="config-block">
-            <h3>Parámetros de Búsqueda de Contenido</h3>
-            <div class="form-group">
-                <label for="contentSearchValue">Buscar por Nombre o ID:</label>
-                <input type="text" id="contentSearchValue" placeholder="Ingresa el nombre (parcial) o el ID (exacto)">
-            </div>
-            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-                <button id="searchContentBtn" class="action-button">Buscar Contenido</button>
+            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
+                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+                    <label for="contentSearchValue">Buscar por Nombre o ID:</label>
+                    <input type="text" id="contentSearchValue" placeholder="Ingresa el nombre (parcial) o el ID (exacto)">
+                </div>
+                <button id="searchContentBtn" class="action-button" style="height:36px;">Buscar Contenido</button>
             </div>
         </div>
-        <div class="config-block" style="flex-grow: 1;">
-            <h3>Resultados</h3>
+        <div class="config-block" style="flex-grow:1;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0;">Resultados</h3>
+                <button id="contentDetailBtn" class="action-button" disabled>Ver detalle</button>
+            </div>
             <div class="table-container">
                 <table id="content-search-results-table">
-                    <thead>
-                        <tr>
-                            <th>Nombre del Contenido</th>
-                            <th>Tipo</th>
-                            <th>Ruta de Carpeta</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>ID</th><th>Nombre del Contenido</th><th>Tipo</th><th>Ruta de Carpeta</th></tr></thead>
                     <tbody id="content-search-results-tbody"></tbody>
                 </table>
             </div>
+
+            <!-- Detalle (oculto por defecto) -->
+            <div id="content-detail-block" style="display:none; margin-top:20px; border-top:2px solid #558ac7; padding-top:15px;">
+                <h3 id="content-detail-title" style="color:#558ac7; margin-bottom:15px;"></h3>
+                <div id="content-tree-wrapper" style="margin-bottom:10px;"></div>
+                <div id="content-components-wrapper" class="table-container" style="max-height: 350px; overflow-y: auto; margin-bottom:10px; border: 1px solid #ccc;"></div>
+                <div id="content-des-wrapper" style="margin-bottom:10px;"></div>
+            </div>
         </div>
     </div>
-    <!-- Pestaña: Actividades (Mejorada) -->
+
+    <!-- ============== Pestaña: Actividades ============== -->
     <div id="actividades-tab" class="tab-content config-section-container">
         <div class="config-block">
-            <h3>Buscador de Actividades</h3>
-            <p>Busca varias actividades por nombre o External Key (separadas por , ; o |).</p>
-            <div class="form-group">
-                <label for="activityTypeSelect">Tipo de Actividad:</label>
-                <select id="activityTypeSelect" class="filter-input">
-                    <option value="QueryDefinition">SQL Query</option>
-                    <option value="ImportDefinition">Data Copy or Import</option>
-                    <option value="FileTransferActivity">File Transfer</option>
-                    <option value="DataExtractActivity">Data Extract</option>
-                    <option value="EmailSendDefinition">Send Email</option>
-                    <option value="FilterActivity">Filter</option>
-                    <option value="Script">Script (SSJS)</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="activitySearchValue">Nombre(s) o Key(s):</label>
-                <input type="text" id="activitySearchValue" placeholder="Ej: Query1; Query2; Key_3">
-            </div>
-            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
-                <button id="searchActivityBtn" class="action-button">Buscar Actividades</button>
+            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
+                <div class="form-group" style="margin:0; min-width:160px;">
+                    <label for="activityTypeSelect">Tipo de Actividad:</label>
+                    <select id="activityTypeSelect" class="filter-input">
+                        <option value="QueryDefinition">SQL Query</option>
+                        <option value="ImportDefinition">Data Copy or Import</option>
+                        <option value="FileTransferActivity">File Transfer</option>
+                        <option value="DataExtractActivity">Data Extract</option>
+                        <option value="EmailSendDefinition">Send Email</option>
+                        <option value="FilterActivity">Filter</option>
+                        <option value="Script">Script (SSJS)</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+                    <label for="activitySearchValue">Nombre(s) o Key(s):</label>
+                    <input type="text" id="activitySearchValue" placeholder="Ej: Query1; Query2; Key_3">
+                </div>
+                <button id="searchActivityBtn" class="action-button" style="height:36px;">Buscar Actividades</button>
             </div>
         </div>
 
-        <!-- Bloque de Actividades Encontradas (Tabla de selección) -->
         <div id="activity-info-block" class="config-block hidden">
-            <div class="config-block-header">
-                <h3>Actividades Encontradas</h3>
-                <div class="header-actions">
-                    <button id="deleteActivityBtn" class="action-button delete-btn">Borrar Seleccionadas</button>
-                </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0;">Actividades Encontradas</h3>
+                <button id="deleteActivityBtn" class="action-button delete-btn">Borrar Seleccionadas</button>
             </div>
             <div class="table-container">
                 <table id="activity-list-table" class="editable-row-table">
-                    <thead>
-                        <tr>
-                            <th>Nombre</th>
-                            <th>External Key</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Nombre</th><th>External Key</th></tr></thead>
                     <tbody id="activity-list-tbody"></tbody>
                 </table>
             </div>
             <p class="info-text">Usa Ctrl/Cmd + Clic o Shift + Clic para seleccionar varias.</p>
         </div>
 
-        <!-- Tabla de Ubicación (Actualizada con nombre de actividad) -->
         <div id="activity-results-block" class="config-block hidden">
             <h3>Ubicación en Automatismos</h3>
             <div class="table-container">
                 <table id="activity-usage-table">
-                    <thead>
-                        <tr>
-                            <th>Actividad</th>
-                            <th>External Key</th>
-                            <th>Automatización</th>
-                            <th>Paso</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Actividad</th><th>External Key</th><th>Automatización</th><th>Paso</th></tr></thead>
                     <tbody id="activity-usage-tbody"></tbody>
                 </table>
             </div>
