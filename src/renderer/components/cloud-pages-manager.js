@@ -45,6 +45,8 @@ export function init(dependencies) {
     elements.cloudPageNameFilter.addEventListener('input', applyFiltersAndRender);
     elements.cloudPageContentFilter.addEventListener('input', applyFiltersAndRender);
     elements.cloudPageTypeFilter.addEventListener('change', applyFiltersAndRender);
+    elements.cloudPagePublishedFilter.addEventListener('change', applyFiltersAndRender);
+    elements.cloudPageUrlFilter.addEventListener('change', applyFiltersAndRender);
     
     // El ordenamiento también resetea la paginación.
     document.querySelector('#cloudpages-table thead').addEventListener('click', handleSort);
@@ -107,6 +109,8 @@ export function clearCache() {
     elements.cloudPageContentFilter.value = '';
     elements.cloudPageTypeFilter.innerHTML = '<option value="">Todos los tipos</option>';
     elements.cloudPagesTbody.innerHTML = '';
+    elements.cloudPagePublishedFilter.value = '';
+    elements.cloudPageUrlFilter.value = '';
 
     if (elements.cloudPageCountSpan) {
         elements.cloudPageCountSpan.textContent = '';
@@ -227,6 +231,20 @@ function renderFilteredTable() {
     const typeFilter = elements.cloudPageTypeFilter.value;
     if (typeFilter) {
         filtered = filtered.filter(p => p.assetType.displayName === typeFilter);
+    }
+
+    const publishedFilter = elements.cloudPagePublishedFilter.value;
+    if (publishedFilter === 'yes') {
+        filtered = filtered.filter(p => p.publishDate && !p.publishDate.startsWith('0001'));
+    } else if (publishedFilter === 'no') {
+        filtered = filtered.filter(p => !p.publishDate || p.publishDate.startsWith('0001'));
+    }
+
+    const urlFilter = elements.cloudPageUrlFilter.value;
+    if (urlFilter === 'yes') {
+        filtered = filtered.filter(p => p.url && p.url.startsWith('http'));
+    } else if (urlFilter === 'no') {
+        filtered = filtered.filter(p => !p.url || !p.url.startsWith('http'));
     }
     
     currentFilteredList = filtered;
@@ -476,70 +494,70 @@ async function showGetContentsModal() {
 
         // 2. Generar Script dinámico (VERSIÓN CORREGIDA)
         const scriptContent = `(async () => {
-    const baseUrl = "https://content-builder.s${stackNumber}.marketingcloudapps.com/fuelapi/asset/v1/content/assets/";
-    const validTypeIds = [240, 241, 242, 243, 244, 245, 247, 248, 249];
-    const pageSize = 500;
-    let page = 1;
-    let allResults = [];
+            const baseUrl = "https://content-builder.s${stackNumber}.marketingcloudapps.com/fuelapi/asset/v1/content/assets/";
+            const validTypeIds = [240, 241, 242, 243, 244, 245, 247, 248, 249];
+            const pageSize = 500;
+            let page = 1;
+            let allResults = [];
 
-    console.log("🚀 Buscando assets de tipos:", validTypeIds.join(", "));
+            console.log("🚀 Buscando assets de tipos:", validTypeIds.join(", "));
 
-    while (true) {
-        const url = \`\${baseUrl}?$page=\${page}&$pageSize=\${pageSize}&$orderBy=modifiedDate%20desc\`;
-        console.log(\`📄 Consultando página \${page}...\`);
-        const res = await fetch(url);
-        if (!res.ok) { console.error(\`❌ Error en la página \${page}: \${res.status}\`); break; }
-        const data = await res.json();
+            while (true) {
+                const url = \`\${baseUrl}?$page=\${page}&$pageSize=\${pageSize}&$orderBy=modifiedDate%20desc\`;
+                console.log(\`📄 Consultando página \${page}...\`);
+                const res = await fetch(url);
+                if (!res.ok) { console.error(\`❌ Error en la página \${page}: \${res.status}\`); break; }
+                const data = await res.json();
 
-        const items = data.items || [];
-        if (items.length === 0) break;
+                const items = data.items || [];
+                if (items.length === 0) break;
 
-        for (const a of items) {
-            const typeId = a?.assetType?.id;
-            if (!validTypeIds.includes(typeId)) continue;
+                for (const a of items) {
+                    const typeId = a?.assetType?.id;
+                    if (!validTypeIds.includes(typeId)) continue;
 
-            let content = a.content || null;
-            let urlPublica = null;
+                    let content = a.content || null;
+                    let urlPublica = null;
 
-            try {
-                const parsed = JSON.parse(a.content || "{}");
-                if (parsed.url) urlPublica = parsed.url;
-            } catch {}
+                    try {
+                        const parsed = JSON.parse(a.content || "{}");
+                        if (parsed.url) urlPublica = parsed.url;
+                    } catch {}
 
-            if (typeId === 247 && a.meta?.thumbnailRefAssetId) {
-                try {
-                    const subUrl = \`\${baseUrl}\${a.meta.thumbnailRefAssetId}\`;
-                    const subRes = await fetch(subUrl);
-                    if (subRes.ok) {
-                        const subData = await subRes.json();
-                        content = subData?.views?.html?.content || subData.content || content;
-                    } else {
-                        console.warn(\`⚠️ No se pudo obtener el contenido de la landing \${a.id} (\${a.name})\`);
+                    if (typeId === 247 && a.meta?.thumbnailRefAssetId) {
+                        try {
+                            const subUrl = \`\${baseUrl}\${a.meta.thumbnailRefAssetId}\`;
+                            const subRes = await fetch(subUrl);
+                            if (subRes.ok) {
+                                const subData = await subRes.json();
+                                content = subData?.views?.html?.content || subData.content || content;
+                            } else {
+                                console.warn(\`⚠️ No se pudo obtener el contenido de la landing \${a.id} (\${a.name})\`);
+                            }
+                        } catch (e) {
+                            console.warn(\`⚠️ Error al cargar contenido de landing \${a.id}:\`, e);
+                        }
                     }
-                } catch (e) {
-                    console.warn(\`⚠️ Error al cargar contenido de landing \${a.id}:\`, e);
+
+                    allResults.push({
+                        id: a.id,
+                        name: a.name || "(sin nombre)",
+                        assetTypeId: typeId,
+                        assetTypeName: a.assetType?.name || "(desconocido)",
+                        url: urlPublica,
+                        content: content
+                    });
                 }
+
+                if (items.length < pageSize) break;
+                page++;
             }
 
-            allResults.push({
-                id: a.id,
-                name: a.name || "(sin nombre)",
-                assetTypeId: typeId,
-                assetTypeName: a.assetType?.name || "(desconocido)",
-                url: urlPublica,
-                content: content
-            });
-        }
-
-        if (items.length < pageSize) break;
-        page++;
-    }
-
-    const finalJson = { items: allResults };    
-    console.log("✅ JSON generado con", allResults.length, "elementos. Haz click derecho en el siguiente elemento para copiarlo");
-    console.log(finalJson);
-    
-})();`;
+            const finalJson = { items: allResults };    
+            console.log("✅ JSON generado con", allResults.length, "elementos. Haz click derecho en el siguiente elemento para copiarlo");
+            console.log(finalJson);
+            
+        })();`;
 
         elements.cloudPageFetchScript.textContent = scriptContent;
         elements.cloudPageContentsPasteArea.value = '';
