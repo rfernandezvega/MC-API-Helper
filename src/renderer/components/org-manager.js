@@ -133,7 +133,7 @@ export async function loadConfigsIntoSelect() {
     const currentValue = elements.sidebarClientSelect.value || elements.savedConfigsSelect.value;
     elements.savedConfigsSelect.innerHTML = '<option value="">Seleccionar configuración...</option>';
     elements.sidebarClientSelect.innerHTML = '<option value="">Ninguno seleccionado</option>';
-    for (const name in configs) {
+    for (const name of Object.keys(configs).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))) {
         elements.savedConfigsSelect.appendChild(new Option(name, name));
         elements.sidebarClientSelect.appendChild(new Option(name, name));
     }
