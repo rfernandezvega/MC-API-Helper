@@ -158,7 +158,7 @@ async function validateUserInSheet(email, version) {
         await sheets.spreadsheets.values.update({
             spreadsheetId: SPREADSHEET_ID,
             range: `${SHEET_NAME}!D${sheetRowNumber}:F${sheetRowNumber}`,
-            valueInputOption: 'USER_ENTERED',
+            valueInputOption: 'RAW',
             resource: {
                 values: [[currentCount + 1, new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' }), version]],
             },
