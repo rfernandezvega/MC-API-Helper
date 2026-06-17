@@ -669,7 +669,59 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.error("No se pudo obtener la versión de la app:", error);
             }
         })();
+
+		window.electronAPI.onUpdateAvailable((newVersion) => {
+			// Crear banner persistente de actualización
+			const banner = document.createElement('div');
+			banner.id = 'update-banner';
+			banner.innerHTML = `
+				<span>Nueva versión <strong>v${newVersion}</strong> disponible</span>
+				<button id="install-update-btn">Instalar y reiniciar</button>
+			`;
+			banner.style.cssText = `
+				position: fixed;
+				top: 0;
+				left: 0;
+				right: 0;
+				z-index: 99999;
+				background: linear-gradient(135deg, #69a3db 0%, #558ac7 100%);
+				color: white;
+				padding: 10px 20px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: 15px;
+				font-size: 14px;
+				box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+			`;
+
+			// Estilo del botón
+			const style = document.createElement('style');
+			style.textContent = `
+				#install-update-btn {
+					background: white;
+					color: #764ba2;
+					border: none;
+					padding: 6px 16px;
+					border-radius: 4px;
+					font-weight: bold;
+					cursor: pointer;
+					font-size: 13px;
+				}
+				#install-update-btn:hover {
+					background: #f0f0f0;
+				}
+			`;
+			document.head.appendChild(style);
+			document.body.prepend(banner);
+
+			document.getElementById('install-update-btn').addEventListener('click', () => {
+				window.electronAPI.installUpdate();
+			});
+		});
 	}
+
+	
 
 	// Inicia todo el proceso.
 	initializeApp();

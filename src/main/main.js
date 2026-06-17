@@ -86,16 +86,29 @@ app.whenReady().then(() => {
     handleFindInPage(mainWindow); 
 
     autoUpdater.on('update-downloaded', (info) => {
-        const notification = new Notification({
-            title: 'Actualización Lista para Instalar',
-            body: `La versión ${info.version} de MC API Helper está lista. Haz clic para reiniciar e instalar.`,
-            icon: path.join(__dirname, '..', '..', 'icon.ico')
-        });
-        notification.show();
-        notification.on('click', () => {
+        log.info(`Actualización descargada: v${info.version}`);
+
+        // releaseNotes puede ser string (GitHub) o array (otros providers)
+        let notas = '';
+        if (typeof info.releaseNotes === 'string') {
+            notas = info.releaseNotes.replace(/<[^>]+>/g, ''); // Quita HTML si lo hay
+        } else if (Array.isArray(info.releaseNotes)) {
+            notas = info.releaseNotes.map(n => n.note || '').join('\n');
+        }
+
+        dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: 'Actualización disponible',
+            message: `La versión ${info.version} está lista para instalar.`,
+            detail: notas || 'La aplicación se reiniciará para aplicar la actualización.',
+            buttons: ['Instalar ahora'],
+            defaultId: 0,
+            noLink: true
+        }).then(() => {
             autoUpdater.quitAndInstall(false, true);
         });
     });
+
     autoUpdater.checkForUpdates();
 });
 

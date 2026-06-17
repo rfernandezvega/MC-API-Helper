@@ -166,5 +166,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   selectFolder: () => ipcRenderer.invoke('select-folder'),
-  saveMultipleCsvs: (data) => ipcRenderer.invoke('save-multiple-csvs', data)
+  saveMultipleCsvs: (data) => ipcRenderer.invoke('save-multiple-csvs', data),
+  
+  installUpdate: () => ipcRenderer.send('install-update'),
 });
