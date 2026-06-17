@@ -82,16 +82,14 @@ app.whenReady().then(() => {
     initializeGoogleClient();
     createWindow();
 
-    // Registra los listeners de búsqueda después de crear la ventana.
-    handleFindInPage(mainWindow); 
+    handleFindInPage(mainWindow);
 
     autoUpdater.on('update-downloaded', (info) => {
         log.info(`Actualización descargada: v${info.version}`);
 
-        // releaseNotes puede ser string (GitHub) o array (otros providers)
         let notas = '';
         if (typeof info.releaseNotes === 'string') {
-            notas = info.releaseNotes.replace(/<[^>]+>/g, ''); // Quita HTML si lo hay
+            notas = info.releaseNotes.replace(/<[^>]+>/g, '');
         } else if (Array.isArray(info.releaseNotes)) {
             notas = info.releaseNotes.map(n => n.note || '').join('\n');
         }
@@ -105,11 +103,16 @@ app.whenReady().then(() => {
             defaultId: 0,
             noLink: true
         }).then(() => {
-            autoUpdater.quitAndInstall(false, true);
+            autoUpdater.quitAndInstall(true, true);
         });
     });
 
-    autoUpdater.checkForUpdates();
+    // Esperar a que la ventana esté lista antes de buscar actualizaciones
+    mainWindow.webContents.on('did-finish-load', () => {
+        setTimeout(() => {
+            autoUpdater.checkForUpdates();
+        }, 3000); // 3 segundos extra de margen
+    });
 });
 
 app.on('window-all-closed', () => {
