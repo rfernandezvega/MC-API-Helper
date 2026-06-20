@@ -1,0 +1,276 @@
+/* ===================================================================
+   styles/components/cloud-page-detail.css
+   Drawer flotante de detalle de Cloud Page.
+   Se posiciona sobre #main-content (no a full viewport).
+   =================================================================== */
+
+
+/* --- Backdrop semitransparente (full viewport) --- */
+.cp-detail-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.25);
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+.cp-detail-backdrop.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+
+/* --- Drawer (sobre #main-content, no full viewport) ---
+   Layout: .app-container = padding 20px, sidebar 220px, gap 20px
+   → main-content empieza en left: 260px, acaba en right: 20px
+   → bottom: 20px para no tocar el borde de la ventana                 */
+.cp-detail-drawer {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    z-index: 10000;
+    height: calc(100vh - 40px);
+    min-height: 350px;
+    max-height: calc(100vh - 80px);
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.18);
+    display: flex;
+    flex-direction: column;
+    padding: 16px 24px 20px;
+    transform: translateY(calc(100% + 40px));
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+    overflow: hidden;
+}
+.cp-detail-drawer.open {
+    transform: translateY(0);
+}
+
+
+/* --- Pestaña de cierre (centrada arriba del drawer) --- */
+.cp-detail-close-tab {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    background-color: #d6e4f0;
+    color: #5a7da8;
+    border: none;
+    border-radius: 8px 8px 0 0;
+    padding: 3px 20px;
+    font-size: 0.75em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+.cp-detail-close-tab:hover {
+    background-color: #c2d6ea;
+    color: #3d6fa0;
+}
+
+
+/* --- Cabecera del drawer --- */
+.cp-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f0f6fc;
+    flex-shrink: 0;
+}
+.cp-detail-header h2 {
+    margin: 0;
+    padding: 0;
+    font-size: 1.1em;
+    color: #333;
+    border-bottom: none;
+    text-align: left;
+}
+
+
+/* ====================================================================
+   FILA DE DEPENDENCIAS EN COLUMNAS (mismo patrón que .log-blocks-row)
+   ==================================================================== */
+.cp-detail-deps-row {
+    display: flex;
+    gap: 12px;
+    flex-shrink: 0;
+    min-height: 0;
+    margin-top: 12px;
+    max-height: 35%;
+    overflow: hidden;
+}
+
+/* Cada bloque = 1 columna (flex: 1 1 0 como .log-block) */
+.cp-dep-block {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+.cp-dep-block h4 {
+    margin: 0;
+    color: #fff;
+    background: #5a6d7e;
+    font-size: 0.8em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 5px 10px;
+    border-radius: 4px 4px 0 0;
+    flex-shrink: 0;
+}
+.cp-dep-block .dep-items {
+    flex-grow: 1;
+    background-color: #f4f6f8;
+    padding: 6px 0;
+    border-radius: 0 0 4px 4px;
+    overflow-y: auto;
+    font-size: 0.85em;
+    min-height: 0;
+    border: 1px solid #e9ecef;
+    border-top: none;
+}
+.cp-dep-block .dep-items .dep-item {
+    padding: 2px 10px;
+    color: #333;
+    line-height: 1.5;
+}
+
+/* Badges de parámetros/atributos */
+.cp-dep-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 0.75em;
+    margin-right: 6px;
+    font-weight: 600;
+}
+.cp-dep-badge.parametro   { background: #e65100; color: #fff; }
+.cp-dep-badge.atributo    { background: #1565c0; color: #fff; }
+.cp-dep-badge.post-body   { background: #37474f; color: #fff; }
+.cp-dep-badge.query-param { background: #37474f; color: #fff; }
+
+/* Sin dependencias */
+.cp-detail-no-deps {
+    color: #999;
+    font-style: italic;
+    font-size: 0.9em;
+    padding: 8px 0;
+    flex-shrink: 0;
+    margin-top: 12px;
+}
+
+
+/* ====================================================================
+   BLOQUE DE CÓDIGO FUENTE (ancho completo, fondo CLARO)
+   ==================================================================== */
+.cp-detail-code-block {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 12px;
+}
+.cp-detail-code-block .code-header {
+    margin: 0;
+    color: #fff;
+    background: #546e7a;
+    font-size: 0.8em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 5px 10px;
+    border-radius: 4px 4px 0 0;
+    flex-shrink: 0;
+}
+.cp-detail-code-block pre {
+    flex-grow: 1;
+    background-color: #f6f8fa;
+    color: #24292e;
+    padding: 12px 16px;
+    margin: 0;
+    border-radius: 0 0 4px 4px;
+    overflow: auto;
+    font-size: 13px;
+    line-height: 1.6;
+    tab-size: 4;
+    white-space: pre;
+    text-align: left;
+    min-height: 0;
+    border: 1px solid #e1e4e8;
+    border-top: none;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+
+/* ====================================================================
+   SYNTAX HIGHLIGHTING — tema claro (GitHub-style)
+   ==================================================================== */
+
+/* HTML */
+.cp-hl-tag      { color: #22863a; }               /* <div>, </script>, etc. */
+.cp-hl-attr     { color: #6f42c1; }               /* class=, id=, runat= */
+.cp-hl-attr-val { color: #032f62; }               /* "server", "value" */
+
+/* AMPscript */
+.cp-hl-amp-delim { color: #d73a49; font-weight: bold; }  /* %%[ %%] */
+.cp-hl-amp-kw    { color: #d73a49; font-weight: bold; }  /* SET, VAR, IF, THEN, ELSE, ENDIF, FOR, DO, NEXT */
+.cp-hl-amp-fn    { color: #6f42c1; }                     /* Lookup, LookupRows, etc. */
+.cp-hl-amp-var   { color: #e36209; }                     /* @variable */
+
+/* SSJS / JavaScript */
+.cp-hl-js-kw     { color: #d73a49; font-weight: bold; }  /* var, let, const, function, return, if, else, for, try, catch */
+.cp-hl-js-builtin { color: #6f42c1; }                    /* Platform, Write, Variable, HTTP */
+.cp-hl-js-string  { color: #032f62; }                    /* "string", 'string' */
+.cp-hl-js-comment { color: #6a737d; font-style: italic; }/* // comment, /* comment */
+.cp-hl-js-number  { color: #005cc5; }                    /* 123 */
+
+/* Genéricos */
+.cp-hl-string  { color: #032f62; }
+.cp-hl-comment { color: #6a737d; font-style: italic; }
+.cp-hl-number  { color: #005cc5; }
+
+
+/* ====================================================================
+   BOTÓN DE INSPECCIÓN (reemplaza al comm-chevron en Cloud Pages)
+   ==================================================================== */
+.cp-inspect-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    background-color: #e8f0fe;
+    border: 1px solid #b9d4e7;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+    vertical-align: middle;
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+.cp-inspect-btn:hover {
+    background-color: #d0e2f7;
+    border-color: #69a3db;
+}
+.cp-inspect-btn svg {
+    width: 14px;
+    height: 14px;
+    stroke: #558ac7;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.cp-inspect-btn:hover svg {
+    stroke: #3a7fc2;
+}

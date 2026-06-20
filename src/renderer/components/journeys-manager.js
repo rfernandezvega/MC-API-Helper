@@ -289,7 +289,7 @@ export function init(dependencies) {
         const btn = elements.journeyCommsFilter;
         const isActive = btn.dataset.active === 'true';
         btn.dataset.active = isActive ? 'false' : 'true';
-        btn.textContent = isActive ? '☐ Comunicaciones' : '☑ Comunicaciones';
+        btn.textContent = isActive ? 'Comunicaciones' : 'Comunicaciones';
         btn.style.backgroundColor = isActive ? '#f9f9f9' : '#558ac7';
         btn.style.color = isActive ? '' : '#fff';
         btn.style.borderColor = isActive ? '' : '#558ac7';

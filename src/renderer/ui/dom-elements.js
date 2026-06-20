@@ -361,8 +361,15 @@ export function init() {
     elements.cloudPageIdsCancelBtn = document.getElementById('cloudpage-ids-cancel-btn');
     elements.cloudPageIdsImportBtn = document.getElementById('cloudpage-ids-import-btn');
 
-    // --- 21. MODAL DE CONTENIDOS DE CLOUD PAGES ---
-    /*Modal eliminado*/
+    // --- Cloud Page Detail Drawer ---
+    elements.cpDetailDrawer = document.getElementById('cp-detail-drawer');
+    elements.cpDetailBackdrop = document.getElementById('cp-detail-backdrop');
+    elements.cpDetailCloseBtn = document.getElementById('cp-detail-close-btn');
+    elements.cpDetailTitle = document.getElementById('cp-detail-title');
+    elements.cpDetailDeps = document.getElementById('cp-detail-deps');
+    elements.cpDetailCode = document.getElementById('cp-detail-code');
+    elements.cpDetailDownloadBtn = document.getElementById('cp-detail-download-btn');
+
 
     // --- 22. GESTOR DE CONTENIDOS ---
     elements.importNewContentBtn = document.getElementById('importNewContentBtn');

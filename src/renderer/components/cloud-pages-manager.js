@@ -36,7 +36,7 @@ export function init(dependencies) {
 
     // Listener centralizado para el tbody (chevron + enlaces externos)
     elements.cloudPagesTbody.addEventListener('click', (e) => {
-        const chevron = e.target.closest('.comm-chevron');
+        const chevron = e.target.closest('.cp-inspect-btn');
         if (chevron) {
             const cloudpageId = chevron.dataset.cloudpageId;
             if (cloudpageId) {
@@ -88,6 +88,40 @@ export function init(dependencies) {
             currentPage = 1;
             renderFilteredTable();
         }
+    });
+
+    // --- Listeners del Drawer de Detalle ---
+    const openCpDrawer = () => {
+        elements.cpDetailDrawer.classList.add('open');
+        elements.cpDetailBackdrop.classList.add('active');
+    };
+    const closeCpDrawer = () => {
+        elements.cpDetailDrawer.classList.remove('open');
+        elements.cpDetailBackdrop.classList.remove('active');
+    };
+    elements.cpDetailCloseBtn.addEventListener('click', closeCpDrawer);
+    elements.cpDetailBackdrop.addEventListener('click', closeCpDrawer);
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && elements.cpDetailDrawer.classList.contains('open')) {
+            closeCpDrawer();
+        }
+    });
+
+    elements.cpDetailDownloadBtn.addEventListener('click', () => {
+        const clientName = elements.clientNameInput.value.trim() || 'cliente';
+        const pageName = (elements.cpDetailTitle.textContent || 'cloudpage').replace(/\s+/g, '_');
+        const page = fullCloudPageList.find(p => p.name === elements.cpDetailTitle.textContent);
+        if (!page || !page.content) return;
+
+        const blob = new Blob([page.content], { type: 'text/html;charset=utf-8;' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${clientName}_${pageName}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
     });
 }
 
@@ -329,13 +363,12 @@ function renderTable(pages) {
                 ? `<td><a href="${page.url}" class="external-link" title="Abrir URL en el navegador">${page.url}</a></td>` 
                 : `<td>${page.url}</td>`;
             
-            // Chevron si tiene contenido descargado
-            const chevron = page.hasDetailedContent 
-                ? `<span class="comm-chevron" data-cloudpage-id="${page.id}"></span>` 
-                : '';
+            const inspectBtn = page.hasDetailedContent 
+            ? `<span class="cp-inspect-btn" data-cloudpage-id="${page.id}" title="Ver dependencias y código"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>` 
+            : '';
             
             row.innerHTML = `
-                <td>${chevron} ${page.name || '---'}</td>
+                <td>${inspectBtn} ${page.name || '---'}</td>
                 <td>${page.assetType.displayName || '---'}</td>
                 <td>${formatDate(page.modifiedDate)}</td>
                 <td>${page.modifiedByName || '---'}</td>
@@ -353,40 +386,25 @@ function renderTable(pages) {
 }
 
 /**
- * Alterna la fila desplegable que muestra la estructura del contenido de una Cloud Page.
- * Similar al patrón de comunicaciones de Journeys.
+ * Abre un drawer flotante con las dependencias y el código fuente de una Cloud Page.
  * @param {string} cloudpageId - El ID del asset.
  */
 function toggleContentRow(cloudpageId) {
-    const existingRow = document.querySelector(`tr[data-content-for="${cloudpageId}"]`);
-    const mainRow = document.querySelector(`tr[data-cloudpage-id="${cloudpageId}"]`);
-    const chevron = mainRow?.querySelector('.comm-chevron');
-
-    if (existingRow) {
-        existingRow.remove();
-        if (chevron) chevron.classList.remove('open');
-        return;
-    }
-
     const page = currentFilteredList.find(p => String(p.id) === String(cloudpageId));
     if (!page || !page.hasDetailedContent) return;
-
-    const contentRow = document.createElement('tr');
-    contentRow.dataset.contentFor = cloudpageId;
-    contentRow.style.backgroundColor = '#f9f9f9';
-
-    const contentCell = document.createElement('td');
-    contentCell.colSpan = 8;
-    contentCell.style.padding = '15px';
-
-    // Analizar la estructura del contenido
-    const analysis = analyzeContentStructure(page.content, page.name);
-    contentCell.innerHTML = analysis;
-
-    contentRow.appendChild(contentCell);
-    mainRow.parentNode.insertBefore(contentRow, mainRow.nextSibling);
-
-    if (chevron) chevron.classList.add('open');
+ 
+    // Título del drawer
+    elements.cpDetailTitle.textContent = page.name || 'Cloud Page';
+ 
+    // 1. Generar dependencias en columnas
+    elements.cpDetailDeps.innerHTML = buildDependenciesGrid(page.content, page.name);
+ 
+    // 2. Generar visor de código fuente
+    elements.cpDetailCode.innerHTML = buildCodeViewer(page.content);
+ 
+    // 3. Abrir el drawer
+    elements.cpDetailDrawer.classList.add('open');
+    elements.cpDetailBackdrop.classList.add('active');
 }
 
 /**
@@ -663,20 +681,18 @@ function extractWebPageContent(asset) {
 }
 
 /**
- * Analiza el contenido HTML/AMPscript/SSJS de una Cloud Page y genera un resumen visual
- * con dependencias: DEs, parámetros, atributos, Content Blocks, Triggered Sends, URLs y Redirects.
- * @param {string} content - El contenido completo.
+ * Analiza el contenido de una Cloud Page y devuelve HTML con las dependencias
+ * distribuidas en columnas (estilo panel de logs: flex 1 1 0).
+ * @param {string} content - El contenido completo HTML/AMPscript/SSJS.
  * @param {string} pageName - Nombre de la página para contexto.
- * @returns {string} HTML con el resumen estructurado.
+ * @returns {string} HTML con bloques de dependencias en columnas.
  */
-function analyzeContentStructure(content, pageName) {
-    if (!content) return '<em style="color:#999;">Sin contenido disponible</em>';
-
-    let html = '';
-    const sectionHeader = (title) => `<div style="font-size:0.8em; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:#fff; background:#5a6d7e; padding:5px 10px; margin:12px 0 6px 0;">${title}</div>`;
-    const item = (text) => `<div style="padding:2px 10px; font-size:0.85em; color:#333;">${text}</div>`;
-    const badge = (label, bg, color) => `<span style="background:${bg};color:${color};padding:1px 6px;border-radius:3px;font-size:0.75em;margin-right:6px;display:inline-block;">${label}</span>`;
-
+function buildDependenciesGrid(content, pageName) {
+    if (!content) return '<div class="cp-detail-no-deps">Sin contenido disponible</div>';
+ 
+    const esc = (str) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const sections = [];
+ 
     // --- 1. Data Extensions ---
     const deRefs = new Map();
     const deFunctions = [
@@ -684,139 +700,236 @@ function analyzeContentStructure(content, pageName) {
         'InsertData', 'UpdateData', 'UpsertData', 'DeleteData', 'InsertDE', 'UpdateDE', 'UpsertDE'
     ];
     for (const fn of deFunctions) {
-        const regex = new RegExp(fn + '\\s*\\(\\s*["\']([^"\']+)["\']', 'gi');
-        for (const m of content.matchAll(regex)) {
+        for (const m of content.matchAll(new RegExp(fn + '\\s*\\(\\s*["\']([^"\']+)["\']', 'gi'))) {
             if (!deRefs.has(m[1])) deRefs.set(m[1], new Set());
             deRefs.get(m[1]).add(fn);
         }
     }
-    // SSJS: DataExtension.Init("nombre")
-    const deInitMatches = content.matchAll(/DataExtension\.Init\s*\(\s*["']([^"']+)["']\s*\)/gi);
-    for (const m of deInitMatches) {
+    for (const m of content.matchAll(/DataExtension\.Init\s*\(\s*["']([^"']+)["']\s*\)/gi)) {
         if (!deRefs.has(m[1])) deRefs.set(m[1], new Set());
         deRefs.get(m[1]).add('DataExtension.Init');
     }
-
-    // SSJS: Rows.Lookup en DE inicializada (menos común pero existe)
-    const rowsLookupMatches = content.matchAll(/\.Rows\.(?:Lookup|Add|Update|Remove)\s*\(/gi);
-    // Estas no llevan nombre de DE directamente, solo se detectan si hay Init previo
-
     if (deRefs.size > 0) {
-        html += sectionHeader('Data Extensions referenciadas');
+        const items = [];
         for (const [deName, functions] of deRefs) {
-            html += item(`<strong>${deName}</strong> <span style="color:#999;">— ${Array.from(functions).join(', ')}</span>`);
+            items.push(`<strong>${esc(deName)}</strong> <span style="color:#999;">— ${Array.from(functions).join(', ')}</span>`);
         }
+        sections.push({ title: 'Data Extensions referenciadas', items });
     }
-
+ 
     // --- 2. Parámetros y Atributos ---
-    const requestParams = new Set();
-    for (const m of content.matchAll(/RequestParameter\s*\(\s*["']([^"']+)["']\s*\)/gi)) requestParams.add(m[1]);
-    const attributeValues = new Set();
-    for (const m of content.matchAll(/AttributeValue\s*\(\s*["']([^"']+)["']\s*\)/gi)) attributeValues.add(m[1]);
-
-    if (requestParams.size > 0 || attributeValues.size > 0) {
-        html += sectionHeader('Parámetros y Atributos esperados');
-        for (const p of requestParams) html += item(`${badge('Parámetro', '#e65100', '#fff')} ${p}`);
-        for (const a of attributeValues) html += item(`${badge('Atributo', '#1565c0', '#fff')} ${a}`);
+    const params = new Set();
+    for (const m of content.matchAll(/RequestParameter\s*\(\s*["']([^"']+)["']\s*\)/gi)) params.add(m[1]);
+    const attrs = new Set();
+    for (const m of content.matchAll(/AttributeValue\s*\(\s*["']([^"']+)["']\s*\)/gi)) attrs.add(m[1]);
+    if (params.size > 0 || attrs.size > 0) {
+        const items = [];
+        for (const p of params) items.push(`<span class="cp-dep-badge parametro">Parámetro</span> ${esc(p)}`);
+        for (const a of attrs) items.push(`<span class="cp-dep-badge atributo">Atributo</span> ${esc(a)}`);
+        sections.push({ title: 'Parámetros y Atributos', items });
     }
-
-    // --- 3. Content Blocks ---
-    const contentBlocks = [];
-    for (const m of content.matchAll(/ContentBlockByKey\s*\(\s*["']([^"']+)["']\s*\)/gi)) contentBlocks.push(`ContentBlockByKey("${m[1]}")`);
-    for (const m of content.matchAll(/ContentBlockById\s*\(\s*["']?(\d+)["']?\s*\)/gi)) contentBlocks.push(`ContentBlockById(${m[1]})`);
-    for (const m of content.matchAll(/ContentBlockByName\s*\(\s*["']([^"']+)["']\s*\)/gi)) contentBlocks.push(`ContentBlockByName("${m[1]}")`);
-
-    if (contentBlocks.length > 0) {
-        html += sectionHeader('Content Blocks');
-        for (const cb of contentBlocks) html += item(cb);
+ 
+    // --- 3. Entradas SSJS ---
+    const ssjsItems = [];
+    if (/Platform\.Request\.GetPostData\s*\(/i.test(content)) {
+        ssjsItems.push(`<span class="cp-dep-badge post-body">POST Body</span> Platform.Request.GetPostData()`);
     }
-
-    // --- 4. Triggered Sends ---
-    const tsMatches = [...content.matchAll(/interaction\/v1\/events/gi)];
-    if (tsMatches.length > 0) {
-        html += sectionHeader('Triggered Sends (Journey Entry Events)');
-        const triggeredSends = new Set();
-        for (const m of content.matchAll(/["']EventDefinitionKey["']\s*:\s*["']([^"']+)["']/gi)) triggeredSends.add(m[1]);
-        for (const m of content.matchAll(/eventDefinitionKey['"]\s*:\s*["']([^"']+)["']/gi)) triggeredSends.add(m[1]);
-        for (const m of content.matchAll(/(?:var\s+)?eventKey\s*=\s*["']([^"']+)["']/gi)) triggeredSends.add(m[1]);
-
-        if (triggeredSends.size > 0) {
-            for (const ts of triggeredSends) html += item(`EventDefinitionKey: <strong>${ts}</strong>`);
+    for (const m of content.matchAll(/(?:Request\.)?GetQueryStringParameter\s*\(\s*["']([^"']+)["']\s*\)/gi)) {
+        ssjsItems.push(`<span class="cp-dep-badge query-param">Query Param</span> ${esc(m[1])}`);
+    }
+    if (ssjsItems.length > 0) {
+        sections.push({ title: 'Entradas de datos (SSJS)', items: ssjsItems });
+    }
+ 
+    // --- 4. Content Blocks ---
+    const cbs = [];
+    for (const m of content.matchAll(/ContentBlockByKey\s*\(\s*["']([^"']+)["']\s*\)/gi)) cbs.push(`ContentBlockByKey("${esc(m[1])}")`);
+    for (const m of content.matchAll(/ContentBlockById\s*\(\s*["']?(\d+)["']?\s*\)/gi)) cbs.push(`ContentBlockById(${m[1]})`);
+    for (const m of content.matchAll(/ContentBlockByName\s*\(\s*["']([^"']+)["']\s*\)/gi)) cbs.push(`ContentBlockByName("${esc(m[1])}")`);
+    if (cbs.length > 0) {
+        sections.push({ title: 'Content Blocks', items: cbs });
+    }
+ 
+    // --- 5. Triggered Sends ---
+    if ([...content.matchAll(/interaction\/v1\/events/gi)].length > 0) {
+        const tsItems = [];
+        const tsKeys = new Set();
+        for (const m of content.matchAll(/["']EventDefinitionKey["']\s*:\s*["']([^"']+)["']/gi)) tsKeys.add(m[1]);
+        for (const m of content.matchAll(/eventDefinitionKey['"]\s*:\s*["']([^"']+)["']/gi)) tsKeys.add(m[1]);
+        for (const m of content.matchAll(/(?:var\s+)?eventKey\s*=\s*["']([^"']+)["']/gi)) tsKeys.add(m[1]);
+        if (tsKeys.size > 0) {
+            for (const ts of tsKeys) tsItems.push(`EventDefinitionKey: <strong>${esc(ts)}</strong>`);
         } else {
-            html += item(`Llamada a <code>interaction/v1/events</code> detectada (EventDefinitionKey no extraíble)`);
+            tsItems.push(`Llamada a <code>interaction/v1/events</code> detectada`);
         }
+        sections.push({ title: 'Triggered Sends', items: tsItems });
     }
-
-    // --- 5. HTTP.Post URLs ---
-    const httpPostUrls = new Set();
-    for (const m of content.matchAll(/HTTP\.Post\s*\(\s*["']([^"']+)["']/gi)) httpPostUrls.add(m[1]);
+ 
+    // --- 6. HTTP.Post URLs ---
+    const httpUrls = new Set();
+    for (const m of content.matchAll(/HTTP\.Post\s*\(\s*["']([^"']+)["']/gi)) httpUrls.add(m[1]);
     for (const m of content.matchAll(/HTTP\.Post\s*\(\s*(@\w+|[\w]+Url|[\w]+URL)\b/gi)) {
         const varName = m[1].replace('@', '');
         const varAssign = content.match(new RegExp(`(?:SET\\s+@${varName}|var\\s+${varName})\\s*=\\s*["']([^"']+)["']`, 'i'));
-        httpPostUrls.add(varAssign ? `${m[1]} → ${varAssign[1]}` : `${m[1]} (variable no resuelta)`);
+        httpUrls.add(varAssign ? `${m[1]} → ${varAssign[1]}` : `${m[1]} (variable no resuelta)`);
     }
-    if (httpPostUrls.size > 0) {
-        html += sectionHeader('HTTP.Post URLs');
-        for (const u of httpPostUrls) html += item(u);
+    if (httpUrls.size > 0) {
+        sections.push({ title: 'HTTP.Post URLs', items: [...httpUrls].map(u => esc(u)) });
     }
-
-    // --- 6. Redirecciones y Cloud Pages ---
-    const redirectRefs = [];
+ 
+    // --- 7. Redirecciones ---
+    const redirects = [];
     for (const m of content.matchAll(/CloudPagesURL\s*\(\s*(\d+)\s*\)/gi)) {
         const id = m[1];
         const resolved = fullCloudPageList.find(p => String(p.id) === id || String(p.pageId) === id);
-        redirectRefs.push(resolved ? `CloudPagesURL(${id}) → "${resolved.name}"` : `CloudPagesURL(${id})`);
+        redirects.push(resolved ? `CloudPagesURL(${id}) → "${esc(resolved.name)}"` : `CloudPagesURL(${id})`);
     }
-    for (const m of content.matchAll(/(?:Redirect|RedirectTo)\s*\(\s*["']([^"']+)["']\s*\)/gi)) redirectRefs.push(m[1]);
+    for (const m of content.matchAll(/(?:Redirect|RedirectTo)\s*\(\s*["']([^"']+)["']\s*\)/gi)) redirects.push(esc(m[1]));
     for (const m of content.matchAll(/(https:\/\/cloud\.[^\s"'<)]+)/gi)) {
         const matched = fullCloudPageList.find(p => p.url === m[1]);
-        redirectRefs.push(matched ? `${m[1]} → "${matched.name}"` : m[1]);
+        redirects.push(matched ? `${esc(m[1])} → "${esc(matched.name)}"` : esc(m[1]));
     }
-    if (redirectRefs.length > 0) {
-        html += sectionHeader('Redirecciones / Cloud Pages referenciadas');
-        for (const r of redirectRefs) html += item(r);
+    if (redirects.length > 0) {
+        sections.push({ title: 'Redirecciones / Cloud Pages', items: redirects });
     }
-
-    // --- 7. Objetos de Salesforce (AMPscript embebido en SSJS) ---
-    const sfObjects = new Map(); // nombre → Set de operaciones
-    const sfOps = [
+ 
+    // --- 8. Objetos Salesforce ---
+    const sfObjects = new Map();
+    for (const op of [
         { fn: 'CreateSalesforceObject', label: 'Create' },
         { fn: 'RetrieveSalesforceObjects', label: 'Retrieve' },
         { fn: 'UpdateSingleSalesforceObject', label: 'Update' },
         { fn: 'DeleteSalesforceObject', label: 'Delete' }
-    ];
-    for (const op of sfOps) {
-        const regex = new RegExp(op.fn + '\\s*\\(\\s*["\']([^"\']+)["\']', 'gi');
-        for (const m of content.matchAll(regex)) {
+    ]) {
+        for (const m of content.matchAll(new RegExp(op.fn + '\\s*\\(\\s*["\']([^"\']+)["\']', 'gi'))) {
             if (!sfObjects.has(m[1])) sfObjects.set(m[1], new Set());
             sfObjects.get(m[1]).add(op.label);
         }
     }
     if (sfObjects.size > 0) {
-        html += sectionHeader('Objetos Salesforce referenciados');
+        const items = [];
         for (const [objName, ops] of sfObjects) {
-            html += item(`<strong>${objName}</strong> <span style="color:#999;">— ${Array.from(ops).join(', ')}</span>`);
+            items.push(`<strong>${esc(objName)}</strong> <span style="color:#999;">— ${Array.from(ops).join(', ')}</span>`);
         }
+        sections.push({ title: 'Objetos Salesforce', items });
     }
-
-    // --- 8. Entradas SSJS (GetPostData, GetQueryStringParameter) ---
-    const ssjsInputs = [];
-    if (/Platform\.Request\.GetPostData\s*\(/i.test(content)) {
-        ssjsInputs.push({ type: 'POST Body', value: 'Platform.Request.GetPostData()' });
+ 
+    // --- Sin dependencias ---
+    if (sections.length === 0) {
+        return '<div class="cp-detail-no-deps">No se detectaron dependencias en el contenido.</div>';
     }
-    const qspMatches = content.matchAll(/(?:Request\.)?GetQueryStringParameter\s*\(\s*["']([^"']+)["']\s*\)/gi);
-    for (const m of qspMatches) {
-        ssjsInputs.push({ type: 'Query Param', value: m[1] });
+ 
+    // --- Renderizar bloques en columnas ---
+    let html = '';
+    for (const section of sections) {
+        html += `
+            <div class="cp-dep-block">
+                <h4>${section.title}</h4>
+                <div class="dep-items">
+                    ${section.items.map(text => `<div class="dep-item">${text}</div>`).join('')}
+                </div>
+            </div>`;
     }
-    if (ssjsInputs.length > 0) {
-        html += sectionHeader('Entradas de datos (SSJS)');
-        for (const input of ssjsInputs) {
-            html += item(`${badge(input.type, '#37474f', '#fff')} ${input.value}`);
-        }
-    }
-
-    if (!html) html = '<em style="color:#999;">No se detectaron dependencias en el contenido.</em>';
     return html;
+}
+
+/**
+ * Genera el HTML del visor de código fuente.
+ * El código se muestra alineado a la izquierda con indentación preservada.
+ * @param {string} content - El código fuente de la Cloud Page.
+ * @returns {string} HTML con el bloque de código.
+ */
+function buildCodeViewer(content) {
+    if (!content) return '';
+ 
+    const formatted = formatCodeWithIndentation(content);
+    const highlighted = highlightCloudPageCode(formatted);
+
+    return `
+        <div class="code-header">Código</div>
+        <pre><code>${highlighted}</code></pre>`;
+}
+ 
+ 
+/**
+ * Formatea código HTML/AMPscript/SSJS con indentación correcta.
+ * Si el código ya tiene saltos de línea, limpia la indentación base.
+ * Si es una línea larga, intenta formatearlo con saltos e indentación.
+ * @param {string} code - Código fuente sin formatear.
+ * @returns {string} Código con indentación aplicada.
+ */
+function formatCodeWithIndentation(code) {
+    if (!code) return '';
+ 
+    // Normalizar saltos de línea
+    let normalized = code.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+ 
+    const lines = normalized.split('\n');
+    if (lines.length > 3) {
+        // El código ya tiene estructura — limpiar indentación base
+        return cleanExistingIndentation(lines);
+    }
+ 
+    // Una sola línea larga — intentar dar formato
+    return beautifyInlineCode(normalized);
+}
+ 
+ 
+/**
+ * Limpia la indentación de código que ya tiene saltos de línea.
+ * Quita la indentación base común a todas las líneas.
+ * @param {string[]} lines - Líneas del código.
+ * @returns {string} Código con indentación limpia.
+ */
+function cleanExistingIndentation(lines) {
+    let minIndent = Infinity;
+    for (const line of lines) {
+        if (line.trim().length === 0) continue;
+        const leading = line.match(/^(\s*)/)[1].length;
+        if (leading < minIndent) minIndent = leading;
+    }
+    if (minIndent === Infinity) minIndent = 0;
+ 
+    return lines.map(line => {
+        if (line.trim().length === 0) return '';
+        return line.substring(minIndent);
+    }).join('\n');
+}
+ 
+ 
+/**
+ * Da formato básico a código que viene en una sola línea.
+ * Inserta saltos de línea e indentación por etiquetas HTML.
+ * @param {string} code - Código inline.
+ * @returns {string} Código formateado.
+ */
+function beautifyInlineCode(code) {
+    let result = code;
+ 
+    // Saltos después de etiquetas HTML
+    result = result.replace(/>\s*</g, '>\n<');
+ 
+    // Saltos después de punto y coma (fuera de strings)
+    result = result.replace(/;(?=\s*[^\s"'])/g, ';\n');
+ 
+    const lines = result.split('\n');
+    let indent = 0;
+    const tab = '    ';
+    const formatted = [];
+ 
+    const openTags = /^<(?:div|table|tr|td|th|thead|tbody|tfoot|ul|ol|li|form|select|head|body|html|section|header|footer|nav|main|article|aside|script|style)\b/i;
+    const closeTags = /^<\/(?:div|table|tr|td|th|thead|tbody|tfoot|ul|ol|li|form|select|head|body|html|section|header|footer|nav|main|article|aside|script|style)\b/i;
+ 
+    for (let line of lines) {
+        line = line.trim();
+        if (!line) continue;
+ 
+        if (closeTags.test(line)) indent = Math.max(0, indent - 1);
+        formatted.push(tab.repeat(indent) + line);
+        if (openTags.test(line) && !line.includes('/>') && !/<\/\w+>\s*$/.test(line)) indent++;
+    }
+ 
+    return formatted.join('\n');
 }
 
 /**
@@ -852,4 +965,84 @@ function extractFullAssetContent(asset) {
     }
     
     return fullContent;
+}
+
+
+/**
+ * Aplica syntax highlighting a código mixto de Cloud Pages (HTML + AMPscript + SSJS).
+ * Usa UNA SOLA regex con alternación (mismo patrón que highlightJSHtml) para evitar
+ * que unas sustituciones corrompan los spans de las anteriores.
+ * @param {string} code - Código ya formateado con indentación.
+ * @returns {string} HTML con spans de colores.
+ */
+function highlightCloudPageCode(code) {
+    if (!code) return '';
+
+    // 1. Escapar HTML
+    let escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    // 2. Lista de funciones AMPscript (para el grupo de captura)
+    const ampFns = 'Lookup|LookupRows|LookupOrderedRows|LookupRowsCS|ClaimRow'
+        + '|InsertData|InsertDE|UpdateData|UpdateDE|UpsertData|UpsertDE'
+        + '|DeleteData|DeleteDE|DataExtensionRowCount'
+        + '|RequestParameter|AttributeValue|CloudPagesURL'
+        + '|Redirect|RedirectTo|Now|Format|Concat|Trim|Length'
+        + '|Substring|Replace|IndexOf|Row|Field|RowCount'
+        + '|BuildRowsetFromString|BuildRowsetFromXML'
+        + '|ContentBlockByKey|ContentBlockById|ContentBlockByName'
+        + '|CreateSalesforceObject|RetrieveSalesforceObjects'
+        + '|UpdateSingleSalesforceObject|DeleteSalesforceObject'
+        + '|RaiseError|IIF|IsNull|ProperCase|Uppercase|Lowercase'
+        + '|Base64Encode|Base64Decode|SHA256|SHA512|MD5'
+        + '|DateAdd|DateDiff|DatePart|FormatDate|SystemDateToLocalDate'
+        + '|TreatAsContent|TreatAsContentArea|RegExMatch'
+        + '|CreateObject|SetObjectProperty|AddObjectArrayItem'
+        + '|InvokeCreate|InvokeUpdate|InvokeRetrieve|InvokeDelete'
+        + '|Add|Multiply|Divide|Subtract|Mod|GUID';
+
+    // 3. UNA SOLA regex con grupos de captura numerados.
+    //    El orden importa: lo más específico primero.
+    const pattern = new RegExp(
+        '(\\/\\*[\\s\\S]*?\\*\\/)'                              // g1: comentario multilínea
+        + '|(\\/\\/[^\\n]*)'                                    // g2: comentario de línea
+        + '|(&lt;!--[\\s\\S]*?--&gt;)'                          // g3: comentario HTML
+        + '|(%%\\[|%%\\]|%%=|=%%)'                               // g4: delimitadores AMPscript
+        + "|('[^']*?')"                                          // g5: string comilla simple
+        + '|("[^"]*?")'                                          // g6: string comilla doble
+        + '|(@\\w+)'                                             // g7: variable AMPscript
+        + '|\\b(SET|VAR|THEN|ELSEIF|ENDIF|NEXT|OUTPUT)\\b'      // g8: keywords solo AMPscript
+        + '|\\b(' + ampFns + ')(?=\\s*\\()'                      // g9: funciones AMPscript
+        + '|\\b(var|let|const|function|return|if|else|for|while|do|switch|case|break|continue|try|catch|finally|throw|new|typeof|this|null|undefined|true|false|AND|OR|NOT|IF|ELSE|FOR|DO)\\b' // g10: keywords JS + compartidas
+        + '|\\b(Platform|Write|Variable|HTTP|DataExtension|Rows|GetValue)\\b' // g11: builtins SSJS
+        + '|(&lt;\\/?[a-zA-Z][\\w-]*)'                          // g12: etiqueta HTML <tag o </tag
+        + '|(\\/?&gt;)'                                          // g13: cierre de etiqueta > o />
+        + '|(\\b\\d+\\.?\\d*\\b)',                               // g14: números
+        'gi'
+    );
+
+    // 4. Una sola pasada: cada token se captura una vez, sin reprocessar.
+    return escaped.replace(pattern, function(match,
+        comMulti, comSingle, comHtml,
+        ampDelim, strSingle, strDouble,
+        ampVar, ampKw, ampFn,
+        jsKw, jsBuiltin,
+        htmlTag, htmlClose,
+        number
+    ) {
+        if (comMulti)   return `<span class="cp-hl-comment">${match}</span>`;
+        if (comSingle)  return `<span class="cp-hl-comment">${match}</span>`;
+        if (comHtml)    return `<span class="cp-hl-comment">${match}</span>`;
+        if (ampDelim)   return `<span class="cp-hl-amp-delim">${match}</span>`;
+        if (strSingle)  return `<span class="cp-hl-string">${match}</span>`;
+        if (strDouble)  return `<span class="cp-hl-string">${match}</span>`;
+        if (ampVar)     return `<span class="cp-hl-amp-var">${match}</span>`;
+        if (ampKw)      return `<span class="cp-hl-amp-kw">${match}</span>`;
+        if (ampFn)      return `<span class="cp-hl-amp-fn">${match}</span>`;
+        if (jsKw)       return `<span class="cp-hl-js-kw">${match}</span>`;
+        if (jsBuiltin)  return `<span class="cp-hl-js-builtin">${match}</span>`;
+        if (htmlTag)    return `<span class="cp-hl-tag">${match}</span>`;
+        if (htmlClose)  return `<span class="cp-hl-tag">${match}</span>`;
+        if (number)     return `<span class="cp-hl-number">${match}</span>`;
+        return match;
+    });
 }
