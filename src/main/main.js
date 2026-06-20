@@ -82,21 +82,37 @@ app.whenReady().then(() => {
     initializeGoogleClient();
     createWindow();
 
-    // Registra los listeners de búsqueda después de crear la ventana.
-    handleFindInPage(mainWindow); 
+    handleFindInPage(mainWindow);
 
     autoUpdater.on('update-downloaded', (info) => {
-        const notification = new Notification({
-            title: 'Actualización Lista para Instalar',
-            body: `La versión ${info.version} de MC API Helper está lista. Haz clic para reiniciar e instalar.`,
-            icon: path.join(__dirname, '..', '..', 'icon.ico')
-        });
-        notification.show();
-        notification.on('click', () => {
-            autoUpdater.quitAndInstall(false, true);
+        log.info(`Actualización descargada: v${info.version}`);
+
+        let notas = '';
+        if (typeof info.releaseNotes === 'string') {
+            notas = info.releaseNotes.replace(/<[^>]+>/g, '');
+        } else if (Array.isArray(info.releaseNotes)) {
+            notas = info.releaseNotes.map(n => n.note || '').join('\n');
+        }
+
+        dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: 'Actualización disponible',
+            message: `La versión ${info.version} está lista para instalar.`,
+            detail: notas || 'La aplicación se reiniciará para aplicar la actualización.',
+            buttons: ['Instalar ahora'],
+            defaultId: 0,
+            noLink: true
+        }).then(() => {
+            autoUpdater.quitAndInstall(true, true);
         });
     });
-    autoUpdater.checkForUpdates();
+
+    // Esperar a que la ventana esté lista antes de buscar actualizaciones
+    mainWindow.webContents.on('did-finish-load', () => {
+        setTimeout(() => {
+            autoUpdater.checkForUpdates();
+        }, 3000); // 3 segundos extra de margen
+    });
 });
 
 app.on('window-all-closed', () => {
@@ -158,7 +174,7 @@ async function validateUserInSheet(email, version) {
         await sheets.spreadsheets.values.update({
             spreadsheetId: SPREADSHEET_ID,
             range: `${SHEET_NAME}!D${sheetRowNumber}:F${sheetRowNumber}`,
-            valueInputOption: 'USER_ENTERED',
+            valueInputOption: 'RAW',
             resource: {
                 values: [[currentCount + 1, new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' }), version]],
             },

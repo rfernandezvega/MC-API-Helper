@@ -442,13 +442,27 @@ document.addEventListener('DOMContentLoaded', function () {
 			});
 		});
 
-		// Listeners para componentes de UI genéricos (log, pestañas, menús desplegables).
-		elements.toggleLogBtn.addEventListener('click', async () => { 
-			const isCollapsed = elements.appContainer.classList.toggle('log-collapsed');
-			// Guardamos la preferencia en el archivo de ajustes
-			const settings = await window.electronAPI.getSettings();
-			settings.logCollapsed = isCollapsed;
-			await window.electronAPI.saveSettings(settings);
+		// --- Listeners del Log Drawer ---
+		const openLogDrawer = () => {
+			elements.logDrawer.classList.add('open');
+			elements.logDrawerBackdrop.classList.add('active');
+			elements.toggleLogBtn.classList.add('hidden');
+		};
+		const closeLogDrawer = () => {
+			elements.logDrawer.classList.remove('open');
+			elements.logDrawerBackdrop.classList.remove('active');
+			elements.toggleLogBtn.classList.remove('hidden');
+		};
+
+		elements.toggleLogBtn.addEventListener('click', openLogDrawer);
+		elements.closeLogBtn.addEventListener('click', closeLogDrawer);
+		elements.logDrawerBackdrop.addEventListener('click', closeLogDrawer);
+
+		// Cerrar el drawer con Escape
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && elements.logDrawer.classList.contains('open')) {
+				closeLogDrawer();
+			}
 		});
 		
 		// Este listener gestiona TODOS los sistemas de pestañas de la aplicación.
@@ -569,12 +583,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Inicializa todos los módulos de funcionalidades.
 	 */
 	async function startFullApp(licenseResult) {
-		//Restaura el estado colapsado del log desde el archivo de ajustes
 		const userSettings = await window.electronAPI.getSettings();
-
-		if (userSettings.logCollapsed === true) {
-			elements.appContainer.classList.add('log-collapsed');
-		}
 
         // --- INICIALIZACIÓN DE MÓDULOS ---
 		fieldsTable.init();
@@ -663,13 +672,65 @@ document.addEventListener('DOMContentLoaded', function () {
                 const version = await window.electronAPI.getAppVersion();
                 const versionElement = document.getElementById('app-version');
                 if (versionElement) {
-                    versionElement.textContent = `${version}`;
+                    versionElement.textContent = `v${version}`;
                 }
             } catch (error) {
                 console.error("No se pudo obtener la versión de la app:", error);
             }
         })();
+
+		window.electronAPI.onUpdateAvailable((newVersion) => {
+			// Crear banner persistente de actualización
+			const banner = document.createElement('div');
+			banner.id = 'update-banner';
+			banner.innerHTML = `
+				<span>Nueva versión <strong>v${newVersion}</strong> disponible</span>
+				<button id="install-update-btn">Instalar y reiniciar</button>
+			`;
+			banner.style.cssText = `
+				position: fixed;
+				top: 0;
+				left: 0;
+				right: 0;
+				z-index: 99999;
+				background: linear-gradient(135deg, #69a3db 0%, #558ac7 100%);
+				color: white;
+				padding: 10px 20px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: 15px;
+				font-size: 14px;
+				box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+			`;
+
+			// Estilo del botón
+			const style = document.createElement('style');
+			style.textContent = `
+				#install-update-btn {
+					background: white;
+					color: #764ba2;
+					border: none;
+					padding: 6px 16px;
+					border-radius: 4px;
+					font-weight: bold;
+					cursor: pointer;
+					font-size: 13px;
+				}
+				#install-update-btn:hover {
+					background: #f0f0f0;
+				}
+			`;
+			document.head.appendChild(style);
+			document.body.prepend(banner);
+
+			document.getElementById('install-update-btn').addEventListener('click', () => {
+				window.electronAPI.installUpdate();
+			});
+		});
 	}
+
+	
 
 	// Inicia todo el proceso.
 	initializeApp();

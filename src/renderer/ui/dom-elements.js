@@ -38,8 +38,11 @@ export function init() {
     elements.tabContents = document.querySelectorAll('.tab-content');
     elements.collapsibleHeaders = document.querySelectorAll('.collapsible-header');
 
-    // --- 3. Panel de Logs (Lateral Derecho) ---
+    // --- 3. Panel de Logs (Drawer inferior) ---
     elements.toggleLogBtn = document.getElementById('toggleLogBtn');
+    elements.closeLogBtn = document.getElementById('closeLogBtn');
+    elements.logDrawer = document.getElementById('log-sidebar');
+    elements.logDrawerBackdrop = document.getElementById('log-drawer-backdrop');
     elements.logHeaderTitle = document.getElementById('log-header-title');
     elements.logMessagesEl = document.getElementById('log-messages');
     elements.logRequestEl = document.getElementById('log-request');
@@ -101,13 +104,25 @@ export function init() {
     elements.deleteFieldBtn = document.getElementById('deleteField');
 
     // --- 8. Sección: Buscadores ---
+
+    // --- 8a. Pestaña: Data Extensions ---
     elements.deSearchProperty = document.getElementById('deSearchProperty');
     elements.deSearchValue = document.getElementById('deSearchValue');
     elements.searchDEBtn = document.getElementById('searchDEBtn');
     elements.deSearchResultsTbody = document.querySelector('#de-search-results-tbody');
+
+    // --- 8b. Pestaña: Origen de Datos ---
     elements.deNameToFindInput = document.getElementById('deNameToFind');
     elements.findDataSourcesBtn = document.getElementById('findDataSourcesBtn');
     elements.dataSourcesTbody = document.getElementById('data-sources-tbody');
+    elements.dataSourcesTable = document.getElementById('data-sources-table');
+    elements.deSelectionBlock = document.getElementById('de-selection-block');
+    elements.deSelectionTable = document.getElementById('de-selection-table');
+    elements.selectAllDEsCheckbox = document.getElementById('selectAllDEsCheckbox');
+    elements.searchSelectedDEsBtn = document.getElementById('searchSelectedDEsBtn');
+    elements.showSourceQueryCheckbox = document.getElementById('showSourceQueryCheckbox');
+
+    // --- 8c. Pestaña: Clientes ---
     elements.customerSearchValue = document.getElementById('customerSearchValue');
     elements.searchCustomerBtn = document.getElementById('searchCustomerBtn');
     elements.customerSearchTbody = document.getElementById('customer-search-tbody');
@@ -118,33 +133,41 @@ export function init() {
     elements.customerJourneysTbody = document.getElementById('customer-journeys-tbody');
     elements.customerDesResultsBlock = document.getElementById('customer-des-results-block');
     elements.desResultsContainer = document.getElementById('des-results-container');
+
+    // --- 8d. Pestaña: Texto en Queries ---
     elements.querySearchText = document.getElementById('querySearchText');
     elements.searchQueriesByTextBtn = document.getElementById('searchQueriesByTextBtn');
     elements.querySearchResultsTable = document.getElementById('query-search-results-table');
     elements.querySearchResultsTbody = document.querySelector('#query-search-results-tbody');
     elements.showQueryTextCheckbox = document.getElementById('showQueryTextCheckbox');
-    elements.contentSearchValue = document.getElementById('contentSearchValue');
-    elements.searchContentBtn = document.getElementById('searchContentBtn');
-    elements.contentSearchResultsTbody = document.getElementById('content-search-results-tbody');
-    elements.deSelectionBlock = document.getElementById('de-selection-block');
-    elements.deSelectionTable = document.getElementById('de-selection-table');
-    elements.selectAllDEsCheckbox = document.getElementById('selectAllDEsCheckbox');
-    elements.searchSelectedDEsBtn = document.getElementById('searchSelectedDEsBtn');
-    elements.showSourceQueryCheckbox = document.getElementById('showSourceQueryCheckbox'); 
-    elements.activitySearchValue = document.getElementById('activitySearchValue');
-    elements.searchActivityBtn = document.getElementById('searchActivityBtn'); 
-    elements.activityUsageTbody = document.getElementById('activity-usage-tbody'); 
-    elements.dataSourcesTable = document.getElementById('data-sources-table');
-    elements.activityInfoBlock = document.getElementById('activity-info-block');
-    elements.activityResultsBlock = document.getElementById('activity-results-block');
-    elements.infoActivityName = document.getElementById('info-activity-name');
-    elements.infoActivityType = document.getElementById('info-activity-type');
-    elements.infoActivityKey = document.getElementById('info-activity-key');
-    elements.activityTypeSelect = document.getElementById('activityTypeSelect');
+
+    // --- 8e. Pestaña: Texto en Scripts ---
     elements.scriptSearchText = document.getElementById('scriptSearchText');
     elements.searchScriptsByTextBtn = document.getElementById('searchScriptsByTextBtn');
     elements.scriptSearchResultsTbody = document.getElementById('script-search-results-tbody');
     elements.scriptSearchResultsTable = document.getElementById('script-search-results-table');
+
+    // --- 8f. Pestaña: Contenidos ---
+    elements.contentSearchValue = document.getElementById('contentSearchValue');
+    elements.searchContentBtn = document.getElementById('searchContentBtn');
+    elements.contentSearchResultsTbody = document.getElementById('content-search-results-tbody');
+    elements.contentDetailBtn = document.getElementById('contentDetailBtn');
+    elements.contentDetailBlock = document.getElementById('content-detail-block');
+    elements.contentDetailTitle = document.getElementById('content-detail-title');
+    elements.contentTreeWrapper = document.getElementById('content-tree-wrapper');
+    elements.contentComponentsWrapper = document.getElementById('content-components-wrapper');
+    elements.contentDesWrapper = document.getElementById('content-des-wrapper');
+
+    // --- 8g. Pestaña: Actividades ---
+    elements.activityTypeSelect = document.getElementById('activityTypeSelect');
+    elements.activitySearchValue = document.getElementById('activitySearchValue');
+    elements.searchActivityBtn = document.getElementById('searchActivityBtn');
+    elements.activityInfoBlock = document.getElementById('activity-info-block');
+    elements.infoActivityName = document.getElementById('info-activity-name');
+    elements.infoActivityType = document.getElementById('info-activity-type');
+    elements.infoActivityKey = document.getElementById('info-activity-key');
+    elements.activityResultsBlock = document.getElementById('activity-results-block');
+    elements.activityUsageTbody = document.getElementById('activity-usage-tbody');
     elements.activityListTbody = document.getElementById('activity-list-tbody');
     elements.deleteActivityBtn = document.getElementById('deleteActivityBtn');
 
@@ -166,9 +189,8 @@ export function init() {
     elements.automationNameFilter = document.getElementById('automationNameFilter');
     elements.automationStatusFilter = document.getElementById('automationStatusFilter');
     elements.refreshAutomationsTableBtn = document.getElementById('refreshAutomationsTableBtn');
-    elements.activateAutomationBtn = document.getElementById('activateAutomationBtn');
-    elements.runAutomationBtn = document.getElementById('runAutomationBtn');
-    elements.stopAutomationBtn = document.getElementById('stopAutomationBtn');
+    elements.actionsAutomationBtn = document.getElementById('actionsAutomationBtn');
+    elements.automationJourneyFilter = document.getElementById('automationJourneyFilter');
     elements.cloneAutomationBtn = document.getElementById('cloneAutomationBtn');
     elements.automationCountSpan = document.getElementById('automationCount');
     elements.downloadAutomationsCsvBtn = document.getElementById('downloadAutomationsCsvBtn');
@@ -179,6 +201,14 @@ export function init() {
     elements.totalPagesAutomations = document.getElementById('totalPagesAutomations');
     elements.getNotificationsBtn = document.getElementById('getNotificationsBtn');
     elements.analyzeAutomationBtn = document.getElementById('analyzeAutomationBtn');
+
+    // --- 11b. MODAL: ACCIONES SOBRE AUTOMATISMOS ---
+    elements.automationActionsModal = document.getElementById('automation-actions-modal');
+    elements.automationActionsMessage = document.getElementById('automation-actions-message');
+    elements.automationActionsActivateBtn = document.getElementById('automation-actions-activate-btn');
+    elements.automationActionsRunBtn = document.getElementById('automation-actions-run-btn');
+    elements.automationActionsStopBtn = document.getElementById('automation-actions-stop-btn');
+    elements.automationActionsCancelBtn = document.getElementById('automation-actions-cancel-btn');
 
     // --- 12. Sección: Gestión de Journeys ---
     elements.gestionJourneysSection = document.getElementById('gestion-journeys-section');
@@ -242,6 +272,8 @@ export function init() {
     elements.pageInputCloudPages = document.getElementById('pageInputCloudPages');
     elements.totalPagesCloudPages = document.getElementById('totalPagesCloudPages');
     elements.cloudPageCountSpan = document.getElementById('cloudpage-count');
+    elements.cloudPagePublishedFilter = document.getElementById('cloudPagePublishedFilter');
+    elements.cloudPageUrlFilter = document.getElementById('cloudPageUrlFilter');
 
     // --- 15. Sección: Clonador de Automatismos ---
     elements.automationClonerSection = document.getElementById('automation-cloner-section');
@@ -330,14 +362,7 @@ export function init() {
     elements.cloudPageIdsImportBtn = document.getElementById('cloudpage-ids-import-btn');
 
     // --- 21. MODAL DE CONTENIDOS DE CLOUD PAGES ---
-    elements.getCloudPageContentsBtn = document.getElementById('getCloudPageContentsBtn');
-    elements.cloudPageContentsModal = document.getElementById('cloudpage-contents-modal-overlay');
-    elements.cloudPageCbLink = document.getElementById('cloudpage-cb-link');
-    elements.cloudPageFetchScript = document.getElementById('cloudpage-fetch-script');
-    elements.cloudPageCopyScriptBtn = document.getElementById('cloudpage-copy-script-btn');
-    elements.cloudPageContentsPasteArea = document.getElementById('cloudpage-contents-paste-area');
-    elements.cloudPageContentsCancelBtn = document.getElementById('cloudpage-contents-cancel-btn');
-    elements.cloudPageContentsImportBtn = document.getElementById('cloudpage-contents-import-btn');
+    /*Modal eliminado*/
 
     // --- 22. GESTOR DE CONTENIDOS ---
     elements.importNewContentBtn = document.getElementById('importNewContentBtn');

@@ -19,10 +19,14 @@ export async function fetchAllCloudPages(apiConfig) {
         "query": {
             "property": "assetType.id",
             "simpleOperator": "in",
-            "values": [240, 241, 242, 243, 244, 245, 247, 248, 249]
+            "values": [205, 240, 241, 242, 243, 244, 245, 247, 248, 249]
         },
         "sort": [{ "property": "id", "direction": "ASC" }],
-        "fields": ["id", "name", "assetType", "modifiedDate", "category", "content", "meta"]
+        "fields": [
+            "id", "name", "assetType", "modifiedDate", "category", 
+            "content", "meta", "views", "memberId", "customerKey", 
+            "status", "modifiedBy"
+        ]
     };
 
     do {
@@ -135,4 +139,16 @@ export async function searchContentAssets(searchValue, apiConfig) {
             throw error;
         }
     }
+}
+
+/**
+ * Recupera el detalle completo de un asset por su ID.
+ */
+export async function fetchAssetById(assetId, apiConfig) {
+    const url = `${apiConfig.restUri}asset/v1/content/assets/${assetId}`;
+    const options = {
+        method: 'GET',
+        headers: { "Authorization": `Bearer ${apiConfig.accessToken}` }
+    };
+    return await executeRestRequest(url, options);
 }

@@ -3,6 +3,11 @@
 // ===================================================================
 import { executeSoapRequest } from './api-core.js';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isSystemUser = (name, userName) =>
+    name.trim().toLowerCase().endsWith('app user') &&
+    UUID_REGEX.test(userName.trim());
+
 /**
  * Extrae a todos los usuarios de la instancia mediante SOAP y aplana su información base y sus roles.
  * Omite los roles ocultos de sistema ("Individual role for").
@@ -61,15 +66,17 @@ export async function fetchAllUsers(apiConfig) {
             }))
             .filter(r => !r.name.includes("Individual role for"));
  
-        if (filteredRoles.length === 0 && rawRoles.length > 0) return;
+        const userName = directChild(node, 'UserID') || '';
+        const name     = directChild(node, 'Name')   || '';
+        if (isSystemUser(name, userName)) return;
  
         const isApiRaw = partnerProp(node, 'isAPIUser') || partnerProp(node, 'IsAPIUser') || directChild(node, 'IsAPIUser') || 'false';
  
         users.push({
             id:           directChild(node, 'ID') || "---",
-            name:         directChild(node, 'Name') || "Sin Nombre",
+            name:         name || "Sin Nombre",
             email:        partnerProp(node, 'email') || partnerProp(node, 'Email') || directChild(node, 'Email') || "---",
-            userName:     directChild(node, 'UserID') || "---",
+            userName:     userName || "---",
             customerKey:  directChild(node, 'CustomerKey') || "---",
             isActive:     directChild(node, 'ActiveFlag') === 'true',
             isApi:        isApiRaw.toLowerCase() === 'true',

@@ -29,23 +29,22 @@ body {
 /* Layout principal de 3 columnas con CSS Grid */
 .app-container {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 360px;
+  grid-template-columns: 220px minmax(0, 1fr);
   gap: 20px;
   padding: 20px;
   min-height: 100vh;
-  transition: grid-template-columns 0.35s ease-in-out;
   align-items: start;
 }
 
 /* Estilo base para los 3 paneles principales (barras laterales y contenido) */
-#macros-sidebar, #main-content, #log-sidebar {
+#macros-sidebar, #main-content {
   background-color: #fff;
   border-radius: 10px;
   padding: 20px;
 }
 
 /* Evita que el contenido de las barras laterales se desborde visualmente */
-#macros-sidebar, #log-sidebar { 
+#macros-sidebar { 
   overflow: hidden; 
 }
 
@@ -157,67 +156,165 @@ body {
   background-color: #69a3db; 
   color: #fff; 
 }
-/* --- 2.2. Barra Derecha (Log) --- */
-#log-sidebar { 
-  display: flex; 
-  flex-direction: column; 
-  height: calc(100vh - 40px); 
+/* --- 2.2. Log Drawer (Panel inferior flotante) --- */
+
+/* Pestaña sutil centrada en el borde inferior */
+.log-tab {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background-color: #d6e4f0;
+  color: #5a7da8;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  padding: 3px 20px;
+  font-size: 0.75em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, opacity 0.2s;
+}
+.log-tab:hover {
+  background-color: #c2d6ea;
+  color: #3d6fa0;
 }
 
-.log-header {
-  display: flex; justify-content: space-between; align-items: center;
+/* Ocultar cuando el drawer está abierto */
+.log-tab.hidden { opacity: 0; pointer-events: none; }
+
+/* Backdrop semitransparente */
+.log-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.25);
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.log-drawer-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* El drawer en sí */
+.log-drawer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10000;
+  height: 45vh;
+  min-height: 280px;
+  max-height: 70vh;
+  background-color: #fff;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px 20px;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+  overflow: hidden;
+}
+.log-drawer.open {
+  transform: translateY(0);
+  overflow: visible;
+}
+
+
+/* Cabecera del drawer */
+.log-drawer .log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
   border-bottom: 2px solid #f0f6fc;
+  flex-shrink: 0;
 }
-
-.log-header h2 { 
-  padding-bottom: 10px; 
-  margin-bottom: 0; 
-  border-bottom: none; 
-  transition: color 0.2s; 
+.log-drawer .log-header h2 {
+  margin: 0;
+  padding: 0;
+  font-size: 1.1em;
+  color: #333;
+  border-bottom: none;
 }
 
 #log-header-title {
   cursor: pointer;
+  transition: color 0.2s;
 }
 #log-header-title:hover {
-  color: #558ac7; /* Un azul un poco más oscuro al pasar el ratón */
+  color: #558ac7;
+}
+/* Pestaña para cerrar el drawer (centrada arriba) */
+.log-close-tab {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background-color: #d6e4f0;
+  color: #5a7da8;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  padding: 3px 20px;
+  font-size: 0.75em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+.log-close-tab:hover {
+  background-color: #c2d6ea;
+  color: #3d6fa0;
+}
+/* Contenedor horizontal de los 3 bloques */
+.log-blocks-row {
+  display: flex;
+  gap: 12px;
+  flex-grow: 1;
+  min-height: 0;
+  margin-top: 12px;
 }
 
-#toggleLogBtn {
-  background: transparent; border: none; border-radius: 50%; width: 28px;
-  height: 28px; cursor: pointer; position: relative;
-}
-#toggleLogBtn::after {
-  content: ''; display: inline-block; width: 8px; height: 8px; border-bottom: 2px solid #6c757d;
-  border-right: 2px solid #6c757d; transition: transform 0.3s, border-color 0.2s;
-  position: absolute; top: 8px; left: 6px; transform: rotate(-45deg);
-}
-#toggleLogBtn:hover::after { border-color: #dc3545; }
-
-.log-block { 
-  margin-top: 15px; 
-  display: flex; 
-  flex-direction: column; 
-  min-height: 0; 
-}
-#log-message-block { flex: 0 1 25%; }
-#log-request-block, #log-response-block { flex: 1 1 37.5%; }
-
-.log-block h4 { 
-  margin: 0 0 8px 0; 
-  color: #558ac7; 
-}
-.log-block pre {
-  flex-grow: 1; background-color: #e9ecef; padding: 10px; border-radius: 5px;
-  margin: 0; overflow-y: auto; white-space: pre-wrap; word-break: break-all;
-  font-size: 0.8em; height: 100%;
+/* Cada bloque ocupa 1/3 del ancho */
+.log-drawer .log-block {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
 }
 
-/* Estilos para cuando el log está colapsado */
-.app-container.log-collapsed { grid-template-columns: 220px minmax(0, 1fr) 65px; }
-.app-container.log-collapsed .log-header h2, .app-container.log-collapsed .log-block { display: none; }
-.app-container.log-collapsed #toggleLogBtn::after { transform: rotate(135deg); left: 10px; }
-.app-container.log-collapsed #toggleLogBtn:hover::after { border-color: #28a745; }
+.log-drawer .log-block h4 {
+  margin: 0 0 8px 0;
+  color: #558ac7;
+  font-size: 0.9em;
+  flex-shrink: 0;
+}
+
+.log-drawer .log-block pre {
+  flex-grow: 1;
+  background-color: #f4f6f8;
+  padding: 10px;
+  border-radius: 6px;
+  margin: 0;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 0.8em;
+  min-height: 0;
+  border: 1px solid #e9ecef;
+}
 
 
 /* ==========================================================

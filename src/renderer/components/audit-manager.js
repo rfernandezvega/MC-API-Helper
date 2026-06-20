@@ -87,9 +87,15 @@ export function init(dependencies) {
         });
     });
 
-    elements.stackKeyInput?.addEventListener('change', updateDeScript);
-    elements.stackKeyInput?.addEventListener('input',  updateDeScript);
-    setTimeout(updateDeScript, 200);
+    let lastSeenStack = '';
+    setInterval(() => {
+        const current = elements.stackKeyInput?.value?.trim() || '';
+        if (current !== lastSeenStack) {
+            lastSeenStack = current;
+            updateDeScript();
+        }
+    }, 1000);
+    setTimeout(updateDeScript, 300);
 }
 
 // Renderizar el script copiable con el stack dinámico del cliente
@@ -100,101 +106,111 @@ export function init(dependencies) {
 
     if (!link || !pre) return;
 
-    // Variables para dinamizar el script
-    let finalStack = 's50'; // Valor por defecto
-    let mcBaseUrl = 'https://mc.s50.marketingcloudapps.com';
-
-    // Si el stack no es válido
+    // Si el stack no es válido, no renderizar script con URL errónea
     if (!stackKey || stackKey === 'No disponible' || stackKey === '') {
         link.href = "#";
         link.style.color = "#888"; 
         link.style.opacity = "0.6";
-    } else {
-        const stackNum = stackKey.toLowerCase().replace('s', '');
-        finalStack = 's' + stackNum;
-        mcBaseUrl = `https://mc.${finalStack}.marketingcloudapps.com`;
-        
-        link.href = `${mcBaseUrl}/contactsmeta/fuelapi/data-internal/v1/customobjects/category/`;
-        link.style.color = "#0070d2"; 
-        link.style.opacity = "1";
+        pre.textContent = '⚠️ Stack no disponible. Haz login o realiza cualquier acción con la API para que se detecte el stack automáticamente.';
+        pre._scriptContent = '';
+        return;
     }
+
+    const stackNum = stackKey.toLowerCase().replace('s', '');
+    const finalStack = 's' + stackNum;
+    const mcBaseUrl = `https://mc.${finalStack}.marketingcloudapps.com`;
+
+    link.href = `${mcBaseUrl}/contactsmeta/fuelapi/data-internal/v1/customobjects/category/`;
+    link.style.color = "#0070d2"; 
+    link.style.opacity = "1";
 
     // El script que se copia a la consola
     const script = `(async () => {
-    console.log("🚀 Iniciando extracción de Data Extensions en ${finalStack}...");
-    const baseUrl = "${mcBaseUrl}";
-    const allDEs = [];
+        console.log("🚀 Iniciando extracción de Data Extensions en ${finalStack}...");
+        const baseUrl = "${mcBaseUrl}";
+        const allDEs = [];
 
-    async function fetchApi(url) {
-        try { 
-            const r = await fetch(url); 
-            if (!r.ok) throw new Error('HTTP ' + r.status); 
-            return await r.json(); 
-        } catch (err) { 
-            console.error('❌ Error en', url, err); 
-            return null; 
-        }
-    }
-
-    async function processFolder(folderId, folderName) {
-        console.log('📂 Procesando:', folderName);
-        let page = 1, pageSize = 200, hasMore = true;
-        while (hasMore) {
-            const deUrl = \`\${baseUrl}/contactsmeta/fuelapi/data-internal/v1/customobjects/category/\${folderId}?retrievalType=1&$page=\${page}&$pagesize=\${pageSize}&$orderBy=modifiedDate%20DESC\`;
-            const data = await fetchApi(deUrl);
-            if (data && data.items && data.items.length > 0) {
-                data.items.forEach(item => {
-                    allDEs.push({ 
-                        name: item.name, 
-                        key: item.key, 
-                        description: item.description, 
-                        categoryId: item.categoryId, 
-                        folderPath: folderName, 
-                        isSendable: item.isSendable, 
-                        isTestable: item.isTestable, 
-                        createdByName: item.createdByName, 
-                        createdDate: item.createdDate, 
-                        modifiedByName: item.modifiedByName, 
-                        modifiedDate: item.modifiedDate, 
-                        dataRetentionProperties: item.dataRetentionProperties, 
-                        fieldCount: item.fieldCount, 
-                        rowCount: item.rowCount 
-                    });
-                });
-                if (data.items.length < pageSize) hasMore = false; else page++;
-            } else hasMore = false;
-        }
-        const childrenUrl = \`\${baseUrl}/contactsmeta/fuelapi/legacy/v1/beta/folder/\${folderId}/children?Localization=true&$top=1000&$skip=0\`;
-        const children = await fetchApi(childrenUrl);
-        if (children && children.entry) {
-            for (const child of children.entry) {
-                await processFolder(child.id, \`\${folderName} > \${child.name}\`);
+        async function fetchApi(url) {
+            try { 
+                const r = await fetch(url); 
+                if (!r.ok) throw new Error('HTTP ' + r.status); 
+                return await r.json(); 
+            } catch (err) { 
+                console.error('❌ Error en', url, err); 
+                return null; 
             }
         }
-    }
 
-    const rootUrl = \`\${baseUrl}/contactsmeta/fuelapi/legacy/v1/beta/folder?$where=allowedtypes%20in%20(%27synchronizeddataextension%27,%20%27dataextension%27,%20%27shared_data%27,%20%27salesforcedataextension%27,%20%27recyclebin%27)&Localization=true\`;
-    const root = await fetchApi(rootUrl);
-    
-    if (root && root.entry) {
-        const deRoot = root.entry.find(f => f.type === 'dataextension');
-        if (deRoot) {
-            await processFolder(deRoot.id, deRoot.name);
-            const json = JSON.stringify(allDEs, null, 2);
-            
-            const modal = document.createElement('div');
-            modal.style.cssText = 'position:fixed;top:10%;left:20%;width:60%;height:70%;background:#fff;border:2px solid #0070d2;border-radius:8px;z-index:999999;padding:20px;box-shadow:0 0 20px rgba(0,0,0,.5);display:flex;flex-direction:column;font-family:sans-serif;';
-            modal.innerHTML = \`
-                <h2 style="margin-top:0;color:#0070d2;">Extracción finalizada — \${allDEs.length} DEs</h2>
-                <textarea style="flex-grow:1;font-family:monospace;font-size:11px;padding:8px;border:1px solid #ccc;margin-bottom:12px;" id="de-out">\${json}</textarea>
-                <div style="display:flex;gap:10px;">
-                    <button onclick="navigator.clipboard.writeText(document.getElementById('de-out').value);this.textContent='✅ Copiado';setTimeout(()=>this.textContent='Copiar al portapapeles',2000);" style="background:#0070d2;color:#fff;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;font-weight:bold;">Copiar al portapapeles</button>
-                    <button onclick="this.closest('div').parentElement.remove();" style="background:#f4f6f9;border:1px solid #ccc;padding:10px 20px;border-radius:4px;cursor:pointer;">Cerrar</button>
-                </div>\`;
-            document.body.appendChild(modal);
+        async function processFolder(folderId, folderName) {
+            console.log('📂 Procesando:', folderName);
+            let page = 1, pageSize = 200, hasMore = true;
+            while (hasMore) {
+                const deUrl = \`\${baseUrl}/contactsmeta/fuelapi/data-internal/v1/customobjects/category/\${folderId}?retrievalType=1&$page=\${page}&$pagesize=\${pageSize}&$orderBy=modifiedDate%20DESC\`;
+                const data = await fetchApi(deUrl);
+                if (data && data.items && data.items.length > 0) {
+                    data.items.forEach(item => {
+                        allDEs.push({ 
+                            name: item.name, 
+                            key: item.key, 
+                            description: item.description, 
+                            categoryId: item.categoryId, 
+                            folderPath: folderName, 
+                            isSendable: item.isSendable, 
+                            isTestable: item.isTestable, 
+                            createdByName: item.createdByName, 
+                            createdDate: item.createdDate, 
+                            modifiedByName: item.modifiedByName, 
+                            modifiedDate: item.modifiedDate, 
+                            dataRetentionProperties: item.dataRetentionProperties, 
+                            fieldCount: item.fieldCount, 
+                            rowCount: item.rowCount 
+                        });
+                    });
+                    if (data.items.length < pageSize) hasMore = false; else page++;
+                } else hasMore = false;
+            }
+            const childrenUrl = \`\${baseUrl}/contactsmeta/fuelapi/legacy/v1/beta/folder/\${folderId}/children?Localization=true&$top=1000&$skip=0\`;
+            const children = await fetchApi(childrenUrl);
+            if (children && children.entry) {
+                for (const child of children.entry) {
+                    await processFolder(child.id, \`\${folderName} > \${child.name}\`);
+                }
+            }
         }
-    }
-})();`;
+
+        const rootUrl = \`\${baseUrl}/contactsmeta/fuelapi/legacy/v1/beta/folder?$where=allowedtypes%20in%20(%27synchronizeddataextension%27,%20%27dataextension%27,%20%27shared_data%27,%20%27salesforcedataextension%27,%20%27recyclebin%27)&Localization=true\`;
+        const root = await fetchApi(rootUrl);
+        
+        if (root && root.entry) {
+            const deRoot = root.entry.find(f => f.type === 'dataextension');
+            if (deRoot) {
+                await processFolder(deRoot.id, deRoot.name);
+                const json = JSON.stringify(allDEs, null, 2);
+                
+                const modal = document.createElement('div');
+                modal.style.cssText = 'position:fixed;top:10%;left:20%;width:60%;height:70%;background:#fff;border:2px solid #0070d2;border-radius:8px;z-index:999999;padding:20px;box-shadow:0 0 20px rgba(0,0,0,.5);display:flex;flex-direction:column;font-family:sans-serif;';
+                modal.innerHTML = \`
+                    <h2 style="margin-top:0;color:#0070d2;">Extracción finalizada — \${allDEs.length} Data Extensions</h2>
+                    <p>Copia el JSON de abajo y pégalo en MC API Helper.</p>
+                    <div style="display:flex;gap:8px;margin-bottom:10px;">
+                        <button id="de-copy-btn" style="padding:8px 16px;background:#0070d2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">Copiar JSON</button>
+                        <button id="de-close-btn" style="padding:8px 16px;background:#ccc;color:#333;border:none;border-radius:4px;cursor:pointer;">Cerrar</button>
+                    </div>
+                    <textarea id="de-json-area" style="flex:1;font-size:11px;font-family:monospace;resize:none;border:1px solid #ccc;border-radius:4px;padding:8px;">\${json}</textarea>
+                \`;
+                document.body.appendChild(modal);
+                document.getElementById('de-copy-btn').onclick = () => {
+                    navigator.clipboard.writeText(json).then(() => {
+                        const btn = document.getElementById('de-copy-btn');
+                        btn.textContent = '✅ Copiado';
+                        btn.style.background = '#2e844a';
+                        setTimeout(() => { btn.textContent = 'Copiar JSON'; btn.style.background = '#0070d2'; }, 2000);
+                    });
+                };
+                document.getElementById('de-close-btn').onclick = () => modal.remove();
+            } else { console.error('❌ No se encontró la carpeta raíz de Data Extensions.'); }
+        } else { console.error('❌ No se pudo obtener el árbol de carpetas.'); }
+    })();`;
 
     pre.textContent = script;
     pre._scriptContent = script;
@@ -522,6 +538,7 @@ async function auditUsers(apiConfig) {
         if (u.userName) usersById[u.userName] = u;
     });
 
+    let noRolesCount = 0;
     let activeCount = 0, inactiveCount = 0, apiCheckCount = 0;
     let inactiveOver3Months = 0, activeUsersForLogin = 0;
     const loginByYear = {};
@@ -540,6 +557,8 @@ async function auditUsers(apiConfig) {
     registerDrill('users_api_no',      'Sin check API User',                ['Nombre', 'Usuario', 'Email', 'Estado']);
     registerDrill('users_inactive_3m', 'Sin actividad reciente (>3 meses)', ['Nombre', 'Usuario', 'Email', 'Último Login']);
     registerDrill('users_login_old',   'Login en años anteriores',          ['Nombre', 'Usuario', 'Email', 'Último Login']);
+    registerDrill('users_no_roles', 'Usuarios sin roles asignados', ['Nombre', 'Usuario', 'Email', 'Estado', 'API User']);
+
 
     users.forEach(u => {
         const uLogin   = formatDate(u.lastLogin);
@@ -586,6 +605,10 @@ async function auditUsers(apiConfig) {
             registerDrill(dKey, `Usuarios con rol: ${r.name}`, ['Nombre', 'Usuario', 'Email', 'Estado']);
             addDrillRow(dKey, [u.name, u.userName, u.email, uState]);
         });
+        if ((u.roles || []).length === 0) {
+            noRolesCount++;
+            addDrillRow('users_no_roles', [u.name, u.userName, u.email, uState, uApi]);
+        }
     });
 
     const inactiveOver3Pct = activeUsersForLogin > 0
@@ -597,6 +620,8 @@ async function auditUsers(apiConfig) {
         `El ${inactiveOver3Pct}% de los usuarios activos llevan más de 3 meses sin conectarse. Valorar deshabilitar esas cuentas para reducir la superficie de acceso.`));
     if (inactivePct > 40) callouts.push(buildCallout('warning', 'Alta proporción de cuentas inactivas',
         `El ${inactivePct}% de las cuentas están deshabilitadas. Puede indicar limpieza de instancia pendiente.`));
+    if (noRolesCount > 0) callouts.push(buildCallout('info', 'Usuarios sin roles asignados',
+        `${noRolesCount} usuario${noRolesCount > 1 ? 's' : ''} no tienen ningún rol asignado. Revisar si son cuentas activas que necesitan configuración.`));
 
     const loginBars = Object.keys(loginByYear)
         .sort((a, b) => { if (a === 'Más antiguos') return 1; if (b === 'Más antiguos') return -1; return parseInt(b) - parseInt(a); })
@@ -617,6 +642,7 @@ async function auditUsers(apiConfig) {
         { value: inactiveCount,       label: 'Inactivos',            color: '#bdc3c7', drillKey: 'users_inactive' },
         { value: apiCheckCount,       label: 'Con check "API User"', color: '#9b59b6', drillKey: 'users_api' },
         { value: inactiveOver3Months, label: 'Sin login >3 meses',   color: inactiveOver3Pct > 20 ? '#e74c3c' : '#f39c12', drillKey: 'users_inactive_3m' },
+        { value: noRolesCount, label: 'Sin roles asignados', color: noRolesCount > 0 ? '#e67e22' : '#bdc3c7', drillKey: 'users_no_roles' },
     ];
 
     const cards = [
@@ -627,6 +653,10 @@ async function auditUsers(apiConfig) {
         { title: 'Check "API User"', help: 'Usuarios con el check API habilitado en su perfil.', bars: [
             { label: 'Con check API', value: apiCheckCount,         total, color: '#9b59b6', drillKey: 'users_api' },
             { label: 'Sin check API', value: total - apiCheckCount, total, color: '#3498db', drillKey: 'users_api_no' },
+        ]},
+        { title: 'Usuarios sin roles', help: 'Usuarios que no tienen ningún rol asignado. Pueden ser cuentas huérfanas o pendientes de configurar.', bars: [
+            { label: 'Con roles',    value: total - noRolesCount, total, color: '#27ae60' },
+            { label: 'Sin roles',    value: noRolesCount,         total, color: '#e67e22', drillKey: 'users_no_roles' },
         ]},
         { title: 'Actividad de login (usuarios activos)', help: `Base: ${activeUsersForLogin} activos. Último login registrado para detectar cuentas realmente en uso.`, bars: loginBars },
         { title: 'Top roles asignados', help: 'Roles más frecuentes para evaluar la distribución de permisos.', bars:
@@ -1453,7 +1483,8 @@ async function auditDataExtensions(jsonText) {
     registerDrill('de_no_desc',      'Sin Descripción',                    ['Nombre', 'Key', 'Carpeta', 'Creado por', 'Modificado por']);
     registerDrill('de_sendable',     'Sendable',                           ['Nombre', 'Key', 'Carpeta', 'Filas']);
     registerDrill('de_testable',     'Testable',                           ['Nombre', 'Key', 'Carpeta', 'Filas']);
-    registerDrill('de_retention',    'Con Data Retention',                 ['Nombre', 'Key', 'Tipo Retención', 'Borrar al final', 'Reset en Import']);
+    registerDrill('de_retention',    'Con Data Retention',                 ['Nombre', 'Key', 'Política de Retención', 'Borrar al final', 'Reset en Import']);
+    registerDrill('de_no_retention', 'Sin Data Retention',                 ['Nombre', 'Key', 'Carpeta', 'Filas', 'Creado por']);  
     registerDrill('de_over1m',       'Con más de 1M de registros',         ['Nombre', 'Key', 'Carpeta', 'Filas']);
     registerDrill('de_empty',        'DEs sin registros (vacías)',          ['Nombre', 'Key', 'Carpeta', 'Creado por']);
     registerDrill('de_test_name',    'DEs con nombre de prueba/test',       ['Nombre', 'Key', 'Carpeta', 'Filas', 'Creado por']);
@@ -1495,12 +1526,29 @@ async function auditDataExtensions(jsonText) {
         // Data Retention
         const ret = d.dataRetentionProperties;
         if (ret) {
-            const hasRetention = ret.isDeleteAtEndOfRetentionPeriod || ret.isRowBasedRetention;
+            const hasRetention = ret.isDeleteAtEndOfRetentionPeriod || ret.isRowBasedRetention || (ret.dataRetentionPeriodLength > 0) || !!ret.retainUntil;
             if (hasRetention) {
                 retentionCount++;
-                const retType = ret.isRowBasedRetention ? 'Por fila (Row-based)' : 'Al final del período';
+                const UNIT_MAP = { 3: 'days', 4: 'weeks', 5: 'months', 6: 'years' };
+                let retType;
+                if (ret.dataRetentionPeriodLength > 0 && ret.dataRetentionPeriodUnitOfMeasure) {
+                    const scope = ret.isRowBasedRetention ? 'Delete_Individual_Records' : 'Delete_All_Records';
+                    const unit = UNIT_MAP[ret.dataRetentionPeriodUnitOfMeasure] || 'unknown';
+                    retType = `${scope}_After_${ret.dataRetentionPeriodLength}_${unit}`;
+                } else if (ret.retainUntil) {
+                    const scope = ret.isRowBasedRetention ? 'Individual' : 'All';
+                    retType = `Retain_Until_Date_(${scope})`;
+                } else {
+                    retType = ret.isRowBasedRetention ? 'Row_Based_(sin período)' : 'All_Records_(sin período)';
+                }
                 retentionTypes[retType] = (retentionTypes[retType] || 0) + 1;
+                // Drill por tipo específico de retención
+                const retDrillKey = `de_ret_${retType.replace(/[^a-z0-9]/gi, '')}`;
+                if (!auditDrillData[retDrillKey]) registerDrill(retDrillKey, retType, ['Nombre', 'Key', 'Carpeta', 'Filas', 'Borrar al final', 'Reset en Import']);
+                addDrillRow(retDrillKey, [d.name, d.key, folder, rows, ret.isDeleteAtEndOfRetentionPeriod?'Sí':'No', ret.isResetRetentionPeriodOnImport?'Sí':'No']);
                 addDrillRow('de_retention', [d.name, d.key, retType, ret.isDeleteAtEndOfRetentionPeriod?'Sí':'No', ret.isResetRetentionPeriodOnImport?'Sí':'No']);
+            } else {
+                addDrillRow('de_no_retention', [d.name, d.key, folder, rows, createdBy]);
             }
         }
 
@@ -1577,10 +1625,10 @@ async function auditDataExtensions(jsonText) {
             { label: 'Sendable', value: sendableCount, total, color: '#27ae60', drillKey: 'de_sendable' },
             { label: 'Testable', value: testableCount, total, color: '#3498db', drillKey: 'de_testable' },
         ]},
-        { title: 'Data Retention', help: 'DEs con política de retención de datos activa.', bars: [
+        { title: 'Data Retention', help: 'DEs con política de retención de datos activa. Desglose por tipo de política.', bars: [
             { label: 'Con retención',   value: retentionCount,         total, color: '#9b59b6', drillKey: 'de_retention' },
-            { label: 'Sin retención',   value: total - retentionCount, total, color: '#bdc3c7' },
-            ...Object.entries(retentionTypes).map(([label, value]) => ({ label, value, total: retentionCount || 1 })),
+            { label: 'Sin retención',   value: total - retentionCount, total, color: '#bdc3c7', drillKey: 'de_no_retention' },
+            ...Object.entries(retentionTypes).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value, total: retentionCount || 1, color: label.startsWith('Delete_Individual') ? '#e67e22' : label.startsWith('Delete_All') ? '#8e44ad' : '#3498db', drillKey: `de_ret_${label.replace(/[^a-z0-9]/gi, '')}` })),
         ]},
         // Faltaba texto en "help:" y la variable label en el map.
         { title: 'DEs sin registros (vacías)', help: 'Data Extensions que actualmente no tienen ningún registro. Pueden ser de uso esporádico o candidatas a revisión.', bars: [
@@ -1591,7 +1639,7 @@ async function auditDataExtensions(jsonText) {
             { label: 'Nombre normal',       value: total - testNameCount, total, color: '#27ae60' },
             { label: 'Contiene test/prueba',value: testNameCount,         total, color: '#e67e22', drillKey: 'de_test_name' },
         ]},
-        { title: 'Carpetas con más de 15 DEs', help: 'Carpetas que concentran muchas DEs. Haz clic para ver su contenido.', wide: true, bars:
+        { title: 'Carpetas con más de 15 DEs', help: 'Carpetas que concentran muchas DEs.', wide: true, bars:
             bigFolderBars.length > 0 ? bigFolderBars : [{ label: 'Ninguna supera el umbral', value: 0, total: 1, color: '#27ae60' }]
         },
     ];

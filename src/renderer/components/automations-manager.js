@@ -19,6 +19,7 @@ let getAuthenticatedConfig;
 let showAutomationClonerView;
 let showAutomationAnalyzerView;
 
+let isNotifColumnsVisible = false;
 let lastSelectedIndex = -1;
 
 // --- 2. LÓGICA DE RENDERIZADO Y FILTRADO ---
@@ -50,6 +51,13 @@ function renderFilteredTable() {
         filtered = filtered.filter(auto => auto.status === statusFilter);
     }
 
+    const journeyFilter = elements.automationJourneyFilter.value;
+    if (journeyFilter === 'yes') {
+        filtered = filtered.filter(auto => auto.launchesJourney);
+    } else if (journeyFilter === 'no') {
+        filtered = filtered.filter(auto => !auto.launchesJourney);
+    }
+
     currentFilteredList = filtered; // Guardamos la lista filtrada
     updateAutomationCount(); // Actualizamos el contador
     
@@ -67,23 +75,24 @@ function renderTable(automations) {
 
     elements.automationsTbody.innerHTML = '';
     if (paginatedItems.length === 0) {
-        elements.automationsTbody.innerHTML = '<tr><td colspan="6">No hay automatismos para mostrar.</td></tr>';
+        elements.automationsTbody.innerHTML = '<tr><td colspan="7">No hay automatismos para mostrar.</td></tr>';
     } else {
         paginatedItems.forEach(auto => {
             const row = document.createElement('tr');
             row.dataset.automationId = auto.id;
 
-            // Obtenemos los valores de notificaciones si existen
             const errorNotif = auto.notifications?.Error ?? '---';
             const completeNotif = auto.notifications?.Complete ?? '---';
+            const journeyIcon = auto.launchesJourney ? 'Sí' : 'No';
 
-             row.innerHTML = `
+            row.innerHTML = `
                 <td>${auto.name || 'Sin Nombre'}</td>
                 <td>${formatDate(auto.lastRunTime)}</td>
                 <td>${formatDate(auto.scheduledTime)}</td>
                 <td>${auto.status || '---'}</td>
-                <td class="notif-cell">${errorNotif}</td>
-                <td class="notif-cell">${completeNotif}</td>
+                <td style="text-align:center;">${journeyIcon}</td>
+                <td class="col-notif">${errorNotif}</td>
+                <td class="col-notif">${completeNotif}</td>
             `;
             elements.automationsTbody.appendChild(row);
         });
@@ -93,6 +102,7 @@ function renderTable(automations) {
     updatePaginationUI(automations.length);
     updateSortIndicators();
     updateButtonsState();
+    updateNotifColumnsVisibility();
 }
 
 // --- 3. FUNCIONES PÚBLICAS (API del Módulo) ---
@@ -107,9 +117,8 @@ export function init(dependencies) {
     showAutomationAnalyzerView = dependencies.showAutomationAnalyzerView;
 
     elements.downloadAutomationsCsvBtn.addEventListener('click', downloadAutomationsCsv);
-    elements.activateAutomationBtn.addEventListener('click', () => performAction('activate'));
-    elements.runAutomationBtn.addEventListener('click', () => performAction('run'));
-    elements.stopAutomationBtn.addEventListener('click', () => performAction('pause'));
+    elements.actionsAutomationBtn.addEventListener('click', showAutomationActionsModal);
+    elements.automationJourneyFilter.addEventListener('change', applyFiltersAndRender);
     elements.cloneAutomationBtn.addEventListener('click', () => inspectAndShowCloner());
     elements.refreshAutomationsTableBtn.addEventListener('click', refreshData);
     elements.getNotificationsBtn.addEventListener('click', loadNotificationsForVisibleRows);
@@ -199,6 +208,8 @@ export function clearCache() {
     elements.automationNameFilter.value = '';
     elements.automationStatusFilter.innerHTML = '<option value="">Todos los estados</option>';
     elements.automationsTbody.innerHTML = '';
+    elements.automationJourneyFilter.value = '';
+    isNotifColumnsVisible = false;
 }
 
 // --- 4. LÓGICA INTERNA DEL MÓDULO ---
@@ -223,6 +234,27 @@ async function fetchData() {
         mcApiService.setLogger(logger);
         
         fullAutomationList = await mcApiService.fetchAllAutomations(apiConfig);
+
+        // Filtrar automatismos de sistema (empiezan por el MID)
+        let mid = elements.businessUnitInput?.value?.trim();
+        if (!mid) {
+            try {
+                const clientName = elements.clientNameInput?.value?.trim();
+                const configs = await window.electronAPI.loadGlobalConfigs();
+                if (clientName && configs?.[clientName]) mid = configs[clientName].businessUnit;
+            } catch (e) {}
+        }
+        if (mid) {
+            fullAutomationList = fullAutomationList.filter(a => !a.name.startsWith(mid));
+        }
+
+        // Calcular si cada automatismo lanza un journey (objectTypeId 952)
+        fullAutomationList.forEach(auto => {
+            auto.launchesJourney = (auto.processes || []).some(proc =>
+                (proc.workerCounts || []).some(wc => wc.objectTypeId === 952)
+            );
+        });
+
         populateStatusFilter(fullAutomationList);
     } catch (error) {
         logger.logMessage(`Error al cargar Automatismos: ${error.message}`);
@@ -278,6 +310,59 @@ async function performAction(actionName) {
         logger.endLogBuffering();
         await refreshData();
     }
+}
+
+/**
+ * Muestra el modal de acciones sobre automatismos (Activar/Ejecutar/Parar).
+ */
+function showAutomationActionsModal() {
+    const selectedRows = document.querySelectorAll('#automations-table tbody tr.selected');
+    if (selectedRows.length === 0) return;
+
+    const modal = elements.automationActionsModal;
+    elements.automationActionsMessage.textContent = `Has seleccionado ${selectedRows.length} automatismo(s). ¿Qué acción deseas realizar?`;
+
+    // Calcular estados para habilitar/deshabilitar botones del modal
+    const selectedAutomations = Array.from(selectedRows)
+        .map(row => fullAutomationList.find(auto => auto.id === row.dataset.automationId))
+        .filter(Boolean);
+    const statuses = [...new Set(selectedAutomations.map(a => a.status?.toLowerCase()))];
+    const isSingleStatus = statuses.length === 1;
+    const singleStatus = statuses[0];
+
+    elements.automationActionsActivateBtn.disabled = !(isSingleStatus && ['pausedschedule', 'stopped'].includes(singleStatus));
+    elements.automationActionsRunBtn.disabled = !(isSingleStatus && ['pausedschedule', 'stopped'].includes(singleStatus));
+    elements.automationActionsStopBtn.disabled = !(isSingleStatus && ['scheduled', 'ready'].includes(singleStatus));
+
+    // Limpiar listeners previos clonando botones
+    const cloneAndReplace = (el) => {
+        const newEl = el.cloneNode(true);
+        el.parentNode.replaceChild(newEl, el);
+        return newEl;
+    };
+
+    const activateBtn = cloneAndReplace(elements.automationActionsActivateBtn);
+    const runBtn = cloneAndReplace(elements.automationActionsRunBtn);
+    const stopBtn = cloneAndReplace(elements.automationActionsStopBtn);
+    const cancelBtn = cloneAndReplace(elements.automationActionsCancelBtn);
+
+    // Actualizar referencias
+    elements.automationActionsActivateBtn = activateBtn;
+    elements.automationActionsRunBtn = runBtn;
+    elements.automationActionsStopBtn = stopBtn;
+    elements.automationActionsCancelBtn = cancelBtn;
+
+    // Re-aplicar disabled después de clonar
+    activateBtn.disabled = !(isSingleStatus && ['pausedschedule', 'stopped'].includes(singleStatus));
+    runBtn.disabled = !(isSingleStatus && ['pausedschedule', 'stopped'].includes(singleStatus));
+    stopBtn.disabled = !(isSingleStatus && ['scheduled', 'ready'].includes(singleStatus));
+
+    activateBtn.addEventListener('click', () => { modal.style.display = 'none'; performAction('activate'); });
+    runBtn.addEventListener('click', () => { modal.style.display = 'none'; performAction('run'); });
+    stopBtn.addEventListener('click', () => { modal.style.display = 'none'; performAction('pause'); });
+    cancelBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+
+    modal.style.display = 'flex';
 }
 
 /**
@@ -371,9 +456,6 @@ function handleSort(e) {
 /**
  * Ordena un array de datos basándose en la columna y dirección actuales.
  */
-/**
- * Ordena un array de datos basándose en la columna y dirección actuales.
- */
 function sortData(dataToSort) {
     const direction = currentSortDirection === 'asc' ? 1 : -1;
     
@@ -426,41 +508,28 @@ function populateStatusFilter(automations) {
 function updateButtonsState() {
     const selectedRows = document.querySelectorAll('#automations-table tbody tr.selected');
     if (selectedRows.length === 0) {
-        elements.activateAutomationBtn.disabled = true;
-        elements.runAutomationBtn.disabled = true;
-        elements.stopAutomationBtn.disabled = true;
+        elements.actionsAutomationBtn.disabled = true;
         elements.cloneAutomationBtn.disabled = true;
+        elements.analyzeAutomationBtn.disabled = true;
         return;
     }
 
+    elements.analyzeAutomationBtn.disabled = (selectedRows.length !== 1);
     elements.cloneAutomationBtn.disabled = true;
 
-    elements.analyzeAutomationBtn.disabled = (selectedRows.length !== 1);
-
     if (selectedRows.length === 1) {
-        // Buscamos el automatismo completo en nuestra lista de datos
         const selectedAutomation = fullAutomationList.find(auto => auto.id === selectedRows[0].dataset.automationId);
-        // Habilitamos el botón SOLO si el automatismo existe y su estado NO es 'Building'
         if (selectedAutomation && selectedAutomation.status !== 'Building') {
             elements.cloneAutomationBtn.disabled = false;
         }
     }
 
-    const selectedAutomations = Array.from(selectedRows).map(row => fullAutomationList.find(auto => auto.id === row.dataset.automationId)).filter(Boolean);
+    // Validar compatibilidad de estados para acciones masivas
+    const selectedAutomations = Array.from(selectedRows)
+        .map(row => fullAutomationList.find(auto => auto.id === row.dataset.automationId))
+        .filter(Boolean);
     const statuses = [...new Set(selectedAutomations.map(auto => auto.status))];
-    
-    if (statuses.length > 1) {
-        elements.activateAutomationBtn.disabled = true;
-        elements.runAutomationBtn.disabled = true;
-        elements.stopAutomationBtn.disabled = true;
-        return;
-    }
-
-    const singleStatus = statuses[0]?.toLowerCase();
-    elements.activateAutomationBtn.disabled = !['pausedschedule', 'stopped'].includes(singleStatus);
-    elements.runAutomationBtn.disabled = !['pausedschedule', 'stopped'].includes(singleStatus);
-    elements.stopAutomationBtn.disabled = !['scheduled', 'ready'].includes(singleStatus);
-    
+    elements.actionsAutomationBtn.disabled = (statuses.length > 1);
 }
 
 /**
@@ -484,6 +553,16 @@ function updateSortIndicators() {
         if (header.dataset.sortBy === currentSortColumn) {
             header.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
         }
+    });
+}
+
+/**
+ * Muestra u oculta las columnas de notificaciones según el flag.
+ */
+function updateNotifColumnsVisibility() {
+    const display = isNotifColumnsVisible ? '' : 'none';
+    document.querySelectorAll('#automations-table .col-notif').forEach(el => {
+        el.style.display = display;
     });
 }
 
@@ -518,7 +597,7 @@ function downloadAutomationsCsv() {
     }
 
     // Cabeceras base
-    let headers = ['Nombre', 'Última Ejecución', 'Próxima Ejecución', 'Estado'];
+    let headers = ['Nombre', 'Última Ejecución', 'Próxima Ejecución', 'Estado', 'Lanza Journey'];
     
     // Comprobar si algún elemento tiene notificaciones para añadir cabeceras
     const hasNotifs = currentFilteredList.some(a => a.notifications);
@@ -534,7 +613,8 @@ function downloadAutomationsCsv() {
             `"${auto.name || ''}"`,
             `"${formatDate(auto.lastRunTime)}"`,
             `"${formatDate(auto.scheduledTime)}"`,
-            `"${auto.status || ''}"`
+            `"${auto.status || ''}"`,
+            `"${auto.launchesJourney ? 'Sí' : 'No'}"`
         ];
 
         if (hasNotifs) {
@@ -609,6 +689,8 @@ async function loadNotificationsForVisibleRows() {
         await Promise.all(promises);
         logger.logMessage("Notificaciones cargadas correctamente.");
         
+        isNotifColumnsVisible = true;
+
         // Volvemos a renderizar la tabla para mostrar los nuevos datos
         renderFilteredTable();
 

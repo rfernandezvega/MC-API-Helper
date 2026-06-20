@@ -172,8 +172,11 @@ function renderUserTable() {
             statusFilter === 'all' ||
             (statusFilter === 'active' && u.isActive) ||
             (statusFilter === 'inactive' && !u.isActive);
+        const hasNoRolesFilter = selectedRoles.has('__NO_ROLES__');
+        const otherRoles = [...selectedRoles].filter(r => r !== '__NO_ROLES__');
         const roleMatch = selectedRoles.size === 0 ||
-            [...selectedRoles].every(r => u.roles.some(ur => ur.name === r));
+            (hasNoRolesFilter && (u.roles || []).length === 0) ||
+            (otherRoles.length > 0 && otherRoles.every(r => u.roles.some(ur => ur.name === r)));
         return nameMatch && statusMatch && roleMatch;
     });
 
@@ -275,6 +278,23 @@ function buildRoleFilterDropdown() {
         lbl.appendChild(document.createTextNode(role));
         list.appendChild(lbl);
     });
+
+    const hasNoRoleUsers = usersMasterList.some(u => (u.roles || []).length === 0);
+    if (hasNoRoleUsers) {
+        const sep = document.createElement('div');
+        sep.style.cssText = 'border-top:1px solid #e0e0e0; margin:4px 0;';
+        list.appendChild(sep);
+
+        const lbl = document.createElement('label');
+        lbl.className = 'um-dropdown-item';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.value = '__NO_ROLES__';
+        cb.addEventListener('change', updateRoleFilter);
+        lbl.appendChild(cb);
+        lbl.appendChild(document.createTextNode('Sin rol asignado'));
+        list.appendChild(lbl);
+    }
+
     updateRoleDropdownLabel();
 }
 
