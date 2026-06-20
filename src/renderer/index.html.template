@@ -105,14 +105,29 @@
     <!-- VIEWS WILL BE INJECTED HERE -->
   </main> 
 
-  <!-- ========================================================== -->
-  <!-- BARRA LATERAL DERECHA (LOG) -->
-  <!-- ========================================================== -->
-  <aside id="log-sidebar">
-    <div class="log-header">
-      <h2 id="log-header-title">Log de Eventos</h2>
-      <button id="toggleLogBtn" title="Colapsar/Expandir Log"></button>
-    </div>
+</div> <!-- FIN .app-container -->
+
+<!-- ========================================================== -->
+<!-- BOTÓN FLOTANTE DE LOG + DRAWER INFERIOR -->
+<!-- ========================================================== -->
+<button id="toggleLogBtn" class="log-tab" title="Abrir Log de Eventos">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="6 15 12 9 18 15"></polyline>
+  </svg>
+  <span>Log</span>
+</button>
+
+<aside id="log-sidebar" class="log-drawer">
+  <button id="closeLogBtn" class="log-close-tab">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="6 9 12 15 18 9"></polyline>
+    </svg>
+    <span>Log</span>
+  </button>
+  <div class="log-header">
+    <h2 id="log-header-title">Log de Eventos</h2>
+  </div>
+  <div class="log-blocks-row">
     <div id="log-message-block" class="log-block">
       <h4>Mensajes</h4>
       <pre><code id="log-messages">Esperando acciones...</code></pre>
@@ -125,9 +140,9 @@
       <h4>Respuestas API</h4>
       <pre><code id="log-response"></code></pre>
     </div>
-  </aside>
-
-</div> <!-- FIN .app-container -->
+  </div>
+</aside>
+<div id="log-drawer-backdrop" class="log-drawer-backdrop"></div>
 
 <!-- ========================================================== -->
 <!-- START: MODALES GLOBALES (parte inferior) -->

@@ -442,13 +442,27 @@ document.addEventListener('DOMContentLoaded', function () {
 			});
 		});
 
-		// Listeners para componentes de UI genéricos (log, pestañas, menús desplegables).
-		elements.toggleLogBtn.addEventListener('click', async () => { 
-			const isCollapsed = elements.appContainer.classList.toggle('log-collapsed');
-			// Guardamos la preferencia en el archivo de ajustes
-			const settings = await window.electronAPI.getSettings();
-			settings.logCollapsed = isCollapsed;
-			await window.electronAPI.saveSettings(settings);
+		// --- Listeners del Log Drawer ---
+		const openLogDrawer = () => {
+			elements.logDrawer.classList.add('open');
+			elements.logDrawerBackdrop.classList.add('active');
+			elements.toggleLogBtn.classList.add('hidden');
+		};
+		const closeLogDrawer = () => {
+			elements.logDrawer.classList.remove('open');
+			elements.logDrawerBackdrop.classList.remove('active');
+			elements.toggleLogBtn.classList.remove('hidden');
+		};
+
+		elements.toggleLogBtn.addEventListener('click', openLogDrawer);
+		elements.closeLogBtn.addEventListener('click', closeLogDrawer);
+		elements.logDrawerBackdrop.addEventListener('click', closeLogDrawer);
+
+		// Cerrar el drawer con Escape
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && elements.logDrawer.classList.contains('open')) {
+				closeLogDrawer();
+			}
 		});
 		
 		// Este listener gestiona TODOS los sistemas de pestañas de la aplicación.
@@ -569,12 +583,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * Inicializa todos los módulos de funcionalidades.
 	 */
 	async function startFullApp(licenseResult) {
-		//Restaura el estado colapsado del log desde el archivo de ajustes
 		const userSettings = await window.electronAPI.getSettings();
-
-		if (userSettings.logCollapsed === true) {
-			elements.appContainer.classList.add('log-collapsed');
-		}
 
         // --- INICIALIZACIÓN DE MÓDULOS ---
 		fieldsTable.init();
@@ -663,7 +672,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const version = await window.electronAPI.getAppVersion();
                 const versionElement = document.getElementById('app-version');
                 if (versionElement) {
-                    versionElement.textContent = `${version}`;
+                    versionElement.textContent = `v${version}`;
                 }
             } catch (error) {
                 console.error("No se pudo obtener la versión de la app:", error);

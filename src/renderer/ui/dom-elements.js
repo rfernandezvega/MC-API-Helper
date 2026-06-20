@@ -38,8 +38,11 @@ export function init() {
     elements.tabContents = document.querySelectorAll('.tab-content');
     elements.collapsibleHeaders = document.querySelectorAll('.collapsible-header');
 
-    // --- 3. Panel de Logs (Lateral Derecho) ---
+    // --- 3. Panel de Logs (Drawer inferior) ---
     elements.toggleLogBtn = document.getElementById('toggleLogBtn');
+    elements.closeLogBtn = document.getElementById('closeLogBtn');
+    elements.logDrawer = document.getElementById('log-sidebar');
+    elements.logDrawerBackdrop = document.getElementById('log-drawer-backdrop');
     elements.logHeaderTitle = document.getElementById('log-header-title');
     elements.logMessagesEl = document.getElementById('log-messages');
     elements.logRequestEl = document.getElementById('log-request');
