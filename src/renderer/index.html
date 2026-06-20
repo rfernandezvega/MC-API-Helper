@@ -2594,7 +2594,7 @@
         <input type="text" id="journeyDEFilter" class="filter-input" placeholder="Buscar por Data Extension...">
         <input type="text" id="journeyFieldsFilter" class="filter-input" placeholder="Campos en entrada ( , ; | )...">
         <button type="button" id="journeyCommsFilter" class="filter-input" style="cursor: pointer; text-align: center; min-width: 140px; transition: all 0.2s; padding: 8px 12px; background-color: #f9f9f9;">
-            ☐ Comunicaciones
+            Comunicaciones
         </button>
     </div>
     <div class="table-container">
@@ -2627,16 +2627,129 @@
 <!-- 1. PANTALLA DE BIENVENIDA (MENÚ PRINCIPAL) -->
 <div id="main-menu" class="main-menu-container" style="display: flex;">
     <div class="menu-group">
-    <h3>Panel Principal</h3>
-    <div class="menu-buttons-container">
-        <!--<img src="assets/welcome2.gif" alt="Animación de bienvenida" class="welcome-gif">-->
-        <p class="info-text">
-        Para empezar, configura un cliente en "Configuración de APIs". 
-        Al pulsar en login (o seleccionándolo si ya estaba guardado) se iniciará el proceso de autenticación. 
-        Una vez iniciada sesión en un cliente, podrás utilizar las funcionalidades de la aplicación.
-        </p>
-        
+        <h3>Panel Principal</h3>
+        <div class="menu-buttons-container">
+            <p class="info-text">
+                Para empezar, configura un cliente en "Configuración de APIs". 
+                Al pulsar en login (o seleccionándolo si ya estaba guardado) se iniciará el proceso de autenticación. 
+                Una vez iniciada sesión en un cliente, podrás utilizar las funcionalidades de la aplicación.
+            </p>
+        </div>
     </div>
+
+    <!-- CHANGELOG / NOVEDADES -->
+    <div class="menu-group changelog-group">
+        <h3>Novedades</h3>
+        <div class="changelog-list">
+
+            <!-- ======================== v2.4.4 ======================== -->
+            <details class="changelog-entry" open>
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.5.0</span>
+                    <span class="changelog-date">20 Jun 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Drawer de detalle en Cloud Pages con dependencias en columnas y visor de código con syntax highlighting.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Botón de descarga del código fuente de Cloud Pages.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Panel de Logs. Ahora se encuentra en la parte inferior para aprovechar el espacio y no tarda en cargar si hay mucho contenido.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.4.3 ======================== -->
+            <details class="changelog-entry">
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.4.3</span>
+                    <span class="changelog-date">17 Junio 2026</span>
+                </summary>
+                
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Al abrir la app ahora se comprueba si hay una nueva versión y se descarga. Es entonces cuando se muestra un aviso con la opción de instalar.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Optimización del proceso de comprobación de actualizaciones al inicio.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.3.0 ======================== -->
+            <details class="changelog-entry">
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.3.0</span>
+                    <span class="changelog-date">8 Junio 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag fix">Fix</span> Corregido bug por el cual la versión de la app se registraba incorrectamente (aparecían versiones tipo 2.1.2001).</li>
+                    <li><span class="changelog-tag fix">Fix</span> Corregido bug en la vista de usuarios que en algunos clientes no mostraba todos cuando no tenían roles asignados.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> La lista de selección de clientes muestra los nombres en orden alfabético.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Actualizada la vista de documentación con el resumen de todas las funcionalidades disponibles.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> En Automatismos, los botones Activar/Ejecutar/Parar se agrupan bajo un único botón "Acciones" con modal.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Las columnas de Notificación de Errores y Ejecuciones en Automatismos están ocultas por defecto. Se muestran al pulsar "Cargar Notificaciones".</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Nueva columna "Journey" en Automatismos que indica si el automatismo lanza un Journey, con filtro desplegable.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Los automatismos de sistema (los que empiezan por el MID del cliente) se ocultan automáticamente.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Dos nuevos filtros en Cloud Pages: Publicación y URL.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Nueva columna "Modificado por" en Cloud Pages.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Cloud Pages se ordena por defecto por fecha de modificación más reciente.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> El contenido de las Cloud Pages se recupera directamente por API sin necesidad de script en consola. Eliminado el botón "Recuperar Contenidos".</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Desplegable de análisis por Cloud Page: DEs referenciadas, parámetros, atributos, Content Blocks, Triggered Sends, HTTP.Post URLs y redirecciones.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Diseño compactado en Buscadores: campos y botones en una única fila horizontal.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Análisis de contenidos en Buscadores: árbol de estructura, tabla de componentes, DEs referenciadas y dependencias entre bloques.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.2.0 ======================== -->
+            <details class="changelog-entry">
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.2.0</span>
+                    <span class="changelog-date">3 Junio 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Nuevo filtro en Journeys que permite filtrar qué Journeys utilizan un campo (o varios a la vez) en su evento de entrada, ya sea porque lo traen o porque se usa como filtro.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.1.1 ======================== -->
+            <details class="changelog-entry">
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.1.1</span>
+                    <span class="changelog-date">26 Mayo 2025</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag improved">Mejora</span> La app tiene menos zoom, pensado para quienes la usan desde portátil.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Refactorización completa de la integración con Marketing Cloud.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> En Journeys, las acciones estándar (Parar, Borrar, Pausar, Reanudar) se agrupan bajo el botón "Acciones".</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Nuevas acciones masivas en Journeys: Pausar y Reanudar.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Nueva visualización de comunicaciones en Journeys: se muestran como desplegable bajo la fila, con info del Triggered Send (envíos, pausas, errores).</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Visualización de errores en Journeys: consultar errores y warnings de actividades Salesforce y Emails, con descarga detallada por contacto.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Nueva vista de Auditoría con métricas de Usuarios, Automatismos, Journeys, Cloud Pages, Send Management y Data Extensions. Permite consultar detalle, descargar secciones en CSV e informe completo.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.0.0 ======================== -->
+            <details class="changelog-entry">
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.0.0</span>
+                    <span class="changelog-date">23 Abril 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag improved">Mejora</span> Cambio en la forma de guardar los datos de clientes para evitar pérdidas de credenciales entre versiones.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> La vista de Journeys solo muestra las columnas de comunicaciones o Data Extensions si se usan esas acciones.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Filtro de actividades con multipicklist en el análisis de un Journey.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Contador añadido a la vista de usuarios.</li>
+                </ul>
+            </details>
+
+            <!-- PLANTILLA para copiar y pegar en cada nueva versión:
+            <details class="changelog-entry" open>
+                <summary class="changelog-version">
+                    <span class="changelog-badge">vX.X.X</span>
+                    <span class="changelog-date">DD Mes AAAA</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Descripción.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Descripción.</li>
+                    <li><span class="changelog-tag fix">Fix</span> Descripción.</li>
+                </ul>
+            </details>
+            -->
+
+        </div>
     </div>
 </div>
 
