@@ -403,3 +403,15 @@
 <script type="module" src="app.js"></script>
 </body>
 </html>
+
+<!-- MODAL ESPECÍFICA PARA CONTENIDOS -->
+<div id="checkbox-select-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 id="checkbox-select-title">Seleccionar opciones</h3>
+        <div id="checkbox-select-options" style="padding: 10px 0;"></div>
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button id="checkbox-select-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="checkbox-select-ok-btn" class="action-button activate-btn">Aceptar</button>
+        </div>
+    </div>
+</div>

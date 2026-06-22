@@ -674,7 +674,7 @@
     </button>
     <div class="cp-detail-header">
         <h2 id="content-detail-title">Detalle de Contenido</h2>
-        <button id="content-detail-download-btn" class="action-button" title="Descargar código fuente">Descargar</button>
+        <button id="content-detail-download-btn" class="action-button" title="Descargar contenido">Descargar</button>
     </div>
     <div id="content-detail-code" class="cp-detail-code-block"></div>
 </aside>
@@ -2138,6 +2138,7 @@
                 <div id="content-tree-wrapper" style="margin-bottom:10px;"></div>
                 <div id="content-components-wrapper" style="margin-bottom:10px;"></div>
                 <div id="content-des-wrapper" style="margin-bottom:10px;"></div>
+                <div id="content-code-wrapper" style="margin-bottom:10px;"></div>
             </div>
         </div>
     </div>
@@ -2625,18 +2626,24 @@
         <h3>Novedades</h3>
         <div class="changelog-list">
 
-            <!-- ======================== v2.4.4 ======================== -->
+            <!-- ======================== v2.5.0 ======================== -->
             <details class="changelog-entry" open>
                 <summary class="changelog-version">
                     <span class="changelog-badge">v2.5.0</span>
-                    <span class="changelog-date">20 Junio 2026</span>
+                    <span class="changelog-date">23 Junio 2026</span>
                 </summary>
                 <ul class="changelog-items">
-                    <li><span class="changelog-tag new">Nuevo</span> Panel en vista inicial con changelog.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Panel de novedades en la pantalla principal con el historial de versiones.</li>
                     <li><span class="changelog-tag new">Nuevo</span> Vista de detalle en Cloud Pages con dependencias en columnas y visor de código.</li>
-                    <li><span class="changelog-tag new">Nuevo</span> Botón de descarga del código fuente de Cloud Pages.</li>
-                    <li><span class="changelog-tag improved">Mejora</span> Vista de contenidos ya no requiere script. Ahora se descarga todo desde la propia app y se añade pestaña de Whatsapps.</li>
-                    <li><span class="changelog-tag improved">Mejora</span> Panel de Logs. Ahora se encuentra en la parte inferior para aprovechar el espacio y no tarda en cargar si hay mucho contenido.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Botón de descarga del contenido de Cloud Pages.</li>
+                   <li><span class="changelog-tag new">Nuevo</span> 
+                        La vista de Contenidos ahora obtiene los datos directamente por API (botón Refrescar), sin necesidad de ejecutar el script en la consola del navegador.
+                        Al pulsar Refrescar en Contenidos, se puede elegir qué tipos descargar mediante un selector con checkboxes.
+                    </li>
+                    <li><span class="changelog-tag new">Nuevo</span> La vista de Contenidos soporta Whatsapps.                    
+                    <li><span class="changelog-tag new">Nuevo</span> Cada contenido de la vista de Contenidos tiene una vista de detalle para ver el código.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Refresco automático de token durante descargas largas de contenidos para evitar errores de expiración.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Cabeceras fijas en las tablas del Gestor de Contenidos, anchos de columna proporcionados y tooltip en celdas con texto largo.</li>
                 </ul>
             </details>
 
@@ -3379,3 +3386,15 @@
 <script type="module" src="app.js"></script>
 </body>
 </html>
+
+<!-- MODAL ESPECÍFICA PARA CONTENIDOS -->
+<div id="checkbox-select-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 id="checkbox-select-title">Seleccionar opciones</h3>
+        <div id="checkbox-select-options" style="padding: 10px 0;"></div>
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button id="checkbox-select-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="checkbox-select-ok-btn" class="action-button activate-btn">Aceptar</button>
+        </div>
+    </div>
+</div>

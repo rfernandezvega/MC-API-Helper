@@ -28,6 +28,11 @@ export function init() {
     elements.journeyFlowContent = document.getElementById('journey-flow-content');
     elements.closeFlowBtn = document.getElementById('close-flow-btn');
     elements.copyFlowBtn = document.getElementById('copyFlowBtn');
+    elements.checkboxSelectModal = document.getElementById('checkbox-select-modal');
+    elements.checkboxSelectTitle = document.getElementById('checkbox-select-title');
+    elements.checkboxSelectOptions = document.getElementById('checkbox-select-options');
+    elements.checkboxSelectOkBtn = document.getElementById('checkbox-select-ok-btn');
+    elements.checkboxSelectCancelBtn = document.getElementById('checkbox-select-cancel-btn');
 
     // --- 2. Navegación y Barras Laterales ---
     elements.mainMenu = document.getElementById('main-menu');
@@ -157,6 +162,7 @@ export function init() {
     elements.contentTreeWrapper = document.getElementById('content-tree-wrapper');
     elements.contentComponentsWrapper = document.getElementById('content-components-wrapper');
     elements.contentDesWrapper = document.getElementById('content-des-wrapper');
+    elements.contentCodeWrapper = document.getElementById('content-code-wrapper');
 
     // --- 8g. Pestaña: Actividades ---
     elements.activityTypeSelect = document.getElementById('activityTypeSelect');

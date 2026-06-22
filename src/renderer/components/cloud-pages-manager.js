@@ -5,6 +5,8 @@ import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
+import { formatCodeWithIndentation, highlightCloudPageCode, buildCodeViewer } from '../ui/code-utils.js';
+
 
 // --- 1. ESTADO DEL MÓDULO ---
 
@@ -833,104 +835,8 @@ function buildDependenciesGrid(content, pageName) {
     return html;
 }
 
-/**
- * Genera el HTML del visor de código fuente.
- * El código se muestra alineado a la izquierda con indentación preservada.
- * @param {string} content - El código fuente de la Cloud Page.
- * @returns {string} HTML con el bloque de código.
- */
-function buildCodeViewer(content) {
-    if (!content) return '';
- 
-    const formatted = formatCodeWithIndentation(content);
-    const highlighted = highlightCloudPageCode(formatted);
 
-    return `
-        <div class="code-header">Código</div>
-        <pre><code>${highlighted}</code></pre>`;
-}
  
- 
-/**
- * Formatea código HTML/AMPscript/SSJS con indentación correcta.
- * Si el código ya tiene saltos de línea, limpia la indentación base.
- * Si es una línea larga, intenta formatearlo con saltos e indentación.
- * @param {string} code - Código fuente sin formatear.
- * @returns {string} Código con indentación aplicada.
- */
-function formatCodeWithIndentation(code) {
-    if (!code) return '';
- 
-    // Normalizar saltos de línea
-    let normalized = code.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
- 
-    const lines = normalized.split('\n');
-    if (lines.length > 3) {
-        // El código ya tiene estructura — limpiar indentación base
-        return cleanExistingIndentation(lines);
-    }
- 
-    // Una sola línea larga — intentar dar formato
-    return beautifyInlineCode(normalized);
-}
- 
- 
-/**
- * Limpia la indentación de código que ya tiene saltos de línea.
- * Quita la indentación base común a todas las líneas.
- * @param {string[]} lines - Líneas del código.
- * @returns {string} Código con indentación limpia.
- */
-function cleanExistingIndentation(lines) {
-    let minIndent = Infinity;
-    for (const line of lines) {
-        if (line.trim().length === 0) continue;
-        const leading = line.match(/^(\s*)/)[1].length;
-        if (leading < minIndent) minIndent = leading;
-    }
-    if (minIndent === Infinity) minIndent = 0;
- 
-    return lines.map(line => {
-        if (line.trim().length === 0) return '';
-        return line.substring(minIndent);
-    }).join('\n');
-}
- 
- 
-/**
- * Da formato básico a código que viene en una sola línea.
- * Inserta saltos de línea e indentación por etiquetas HTML.
- * @param {string} code - Código inline.
- * @returns {string} Código formateado.
- */
-function beautifyInlineCode(code) {
-    let result = code;
- 
-    // Saltos después de etiquetas HTML
-    result = result.replace(/>\s*</g, '>\n<');
- 
-    // Saltos después de punto y coma (fuera de strings)
-    result = result.replace(/;(?=\s*[^\s"'])/g, ';\n');
- 
-    const lines = result.split('\n');
-    let indent = 0;
-    const tab = '    ';
-    const formatted = [];
- 
-    const openTags = /^<(?:div|table|tr|td|th|thead|tbody|tfoot|ul|ol|li|form|select|head|body|html|section|header|footer|nav|main|article|aside|script|style)\b/i;
-    const closeTags = /^<\/(?:div|table|tr|td|th|thead|tbody|tfoot|ul|ol|li|form|select|head|body|html|section|header|footer|nav|main|article|aside|script|style)\b/i;
- 
-    for (let line of lines) {
-        line = line.trim();
-        if (!line) continue;
- 
-        if (closeTags.test(line)) indent = Math.max(0, indent - 1);
-        formatted.push(tab.repeat(indent) + line);
-        if (openTags.test(line) && !line.includes('/>') && !/<\/\w+>\s*$/.test(line)) indent++;
-    }
- 
-    return formatted.join('\n');
-}
 
 /**
  * Extrae el contenido completo de un asset, combinando el HTML principal 
@@ -965,84 +871,4 @@ function extractFullAssetContent(asset) {
     }
     
     return fullContent;
-}
-
-
-/**
- * Aplica syntax highlighting a código mixto de Cloud Pages (HTML + AMPscript + SSJS).
- * Usa UNA SOLA regex con alternación (mismo patrón que highlightJSHtml) para evitar
- * que unas sustituciones corrompan los spans de las anteriores.
- * @param {string} code - Código ya formateado con indentación.
- * @returns {string} HTML con spans de colores.
- */
-function highlightCloudPageCode(code) {
-    if (!code) return '';
-
-    // 1. Escapar HTML
-    let escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-    // 2. Lista de funciones AMPscript (para el grupo de captura)
-    const ampFns = 'Lookup|LookupRows|LookupOrderedRows|LookupRowsCS|ClaimRow'
-        + '|InsertData|InsertDE|UpdateData|UpdateDE|UpsertData|UpsertDE'
-        + '|DeleteData|DeleteDE|DataExtensionRowCount'
-        + '|RequestParameter|AttributeValue|CloudPagesURL'
-        + '|Redirect|RedirectTo|Now|Format|Concat|Trim|Length'
-        + '|Substring|Replace|IndexOf|Row|Field|RowCount'
-        + '|BuildRowsetFromString|BuildRowsetFromXML'
-        + '|ContentBlockByKey|ContentBlockById|ContentBlockByName'
-        + '|CreateSalesforceObject|RetrieveSalesforceObjects'
-        + '|UpdateSingleSalesforceObject|DeleteSalesforceObject'
-        + '|RaiseError|IIF|IsNull|ProperCase|Uppercase|Lowercase'
-        + '|Base64Encode|Base64Decode|SHA256|SHA512|MD5'
-        + '|DateAdd|DateDiff|DatePart|FormatDate|SystemDateToLocalDate'
-        + '|TreatAsContent|TreatAsContentArea|RegExMatch'
-        + '|CreateObject|SetObjectProperty|AddObjectArrayItem'
-        + '|InvokeCreate|InvokeUpdate|InvokeRetrieve|InvokeDelete'
-        + '|Add|Multiply|Divide|Subtract|Mod|GUID';
-
-    // 3. UNA SOLA regex con grupos de captura numerados.
-    //    El orden importa: lo más específico primero.
-    const pattern = new RegExp(
-        '(\\/\\*[\\s\\S]*?\\*\\/)'                              // g1: comentario multilínea
-        + '|(\\/\\/[^\\n]*)'                                    // g2: comentario de línea
-        + '|(&lt;!--[\\s\\S]*?--&gt;)'                          // g3: comentario HTML
-        + '|(%%\\[|%%\\]|%%=|=%%)'                               // g4: delimitadores AMPscript
-        + "|('[^']*?')"                                          // g5: string comilla simple
-        + '|("[^"]*?")'                                          // g6: string comilla doble
-        + '|(@\\w+)'                                             // g7: variable AMPscript
-        + '|\\b(SET|VAR|THEN|ELSEIF|ENDIF|NEXT|OUTPUT)\\b'      // g8: keywords solo AMPscript
-        + '|\\b(' + ampFns + ')(?=\\s*\\()'                      // g9: funciones AMPscript
-        + '|\\b(var|let|const|function|return|if|else|for|while|do|switch|case|break|continue|try|catch|finally|throw|new|typeof|this|null|undefined|true|false|AND|OR|NOT|IF|ELSE|FOR|DO)\\b' // g10: keywords JS + compartidas
-        + '|\\b(Platform|Write|Variable|HTTP|DataExtension|Rows|GetValue)\\b' // g11: builtins SSJS
-        + '|(&lt;\\/?[a-zA-Z][\\w-]*)'                          // g12: etiqueta HTML <tag o </tag
-        + '|(\\/?&gt;)'                                          // g13: cierre de etiqueta > o />
-        + '|(\\b\\d+\\.?\\d*\\b)',                               // g14: números
-        'gi'
-    );
-
-    // 4. Una sola pasada: cada token se captura una vez, sin reprocessar.
-    return escaped.replace(pattern, function(match,
-        comMulti, comSingle, comHtml,
-        ampDelim, strSingle, strDouble,
-        ampVar, ampKw, ampFn,
-        jsKw, jsBuiltin,
-        htmlTag, htmlClose,
-        number
-    ) {
-        if (comMulti)   return `<span class="cp-hl-comment">${match}</span>`;
-        if (comSingle)  return `<span class="cp-hl-comment">${match}</span>`;
-        if (comHtml)    return `<span class="cp-hl-comment">${match}</span>`;
-        if (ampDelim)   return `<span class="cp-hl-amp-delim">${match}</span>`;
-        if (strSingle)  return `<span class="cp-hl-string">${match}</span>`;
-        if (strDouble)  return `<span class="cp-hl-string">${match}</span>`;
-        if (ampVar)     return `<span class="cp-hl-amp-var">${match}</span>`;
-        if (ampKw)      return `<span class="cp-hl-amp-kw">${match}</span>`;
-        if (ampFn)      return `<span class="cp-hl-amp-fn">${match}</span>`;
-        if (jsKw)       return `<span class="cp-hl-js-kw">${match}</span>`;
-        if (jsBuiltin)  return `<span class="cp-hl-js-builtin">${match}</span>`;
-        if (htmlTag)    return `<span class="cp-hl-tag">${match}</span>`;
-        if (htmlClose)  return `<span class="cp-hl-tag">${match}</span>`;
-        if (number)     return `<span class="cp-hl-number">${match}</span>`;
-        return match;
-    });
 }

@@ -3,6 +3,7 @@ import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
+import { formatCodeWithIndentation, highlightCloudPageCode } from '../ui/code-utils.js';
 
 // --- 1. ESTADO ---
 let getAuthenticatedConfig;
@@ -102,6 +103,15 @@ async function showContentDetail() {
             'content-des',
             true,
             400
+        );
+        // Código fuente (asset principal + componentes)
+        const codeHtml = buildCodeBlocks(fullAsset, components);
+        elements.contentCodeWrapper.innerHTML = createCollapsibleBlock(
+            'Contenido',
+            codeHtml,
+            'content-code',
+            false,
+            600
         );
 
         // Activar todos los collapsibles
@@ -497,4 +507,38 @@ function buildDEsTable(des) {
     });
     html += '</tbody></table>';
     return html;
+}
+
+/**
+ * Construye el HTML con el código de cada componente con syntax highlighting.
+ */
+function buildCodeBlocks(mainAsset, components) {
+    const blocks = [];
+
+    // Código del asset principal
+    const mainCode = mainAsset.views?.html?.content || mainAsset.content || '';
+    if (mainCode) {
+        const highlighted = highlightCloudPageCode(formatCodeWithIndentation(mainCode));
+        blocks.push(`
+            <div style="padding:8px 12px; font-weight:bold; font-size:0.85em; color:#558ac7; border-bottom:1px solid #e2e8f0;">
+                ${escapeHtml(mainAsset.name)} (Principal)
+            </div>
+            <pre style="background:#f6f8fa; color:#24292e; padding:12px 16px; margin:0; font-size:13px; line-height:1.6; tab-size:4; white-space:pre; overflow:auto; max-height:400px; font-family:'Consolas','Monaco','Courier New',monospace; border-bottom:2px solid #e2e8f0;"><code>${highlighted}</code></pre>
+        `);
+    }
+
+    // Código de cada componente hijo
+    for (const comp of components) {
+        if (!comp.content) continue;
+        const highlighted = highlightCloudPageCode(formatCodeWithIndentation(comp.content));
+        blocks.push(`
+            <div style="padding:8px 12px; font-weight:bold; font-size:0.85em; color:#558ac7; border-bottom:1px solid #e2e8f0;">
+                ${escapeHtml(comp.name)} (${escapeHtml(comp.type)})
+            </div>
+            <pre style="background:#f6f8fa; color:#24292e; padding:12px 16px; margin:0; font-size:13px; line-height:1.6; tab-size:4; white-space:pre; overflow:auto; max-height:400px; font-family:'Consolas','Monaco','Courier New',monospace; border-bottom:2px solid #e2e8f0;"><code>${highlighted}</code></pre>
+        `);
+    }
+
+    if (blocks.length === 0) return '<p style="padding:12px; color:#999;">No se encontró código fuente.</p>';
+    return blocks.join('');
 }

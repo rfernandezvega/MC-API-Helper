@@ -1,7 +1,7 @@
 // ===================================================================
 // Fichero: api-content.js
 // ===================================================================
-import { executeRestRequest, logger } from './api-core.js';
+import { executeRestRequest, logger, setSilentResponses } from './api-core.js';
 import { getFolderPath } from './api-helpers.js';
 
 /**
@@ -162,13 +162,17 @@ export async function fetchAssetById(assetId, apiConfig) {
  * @param {function} onProgress - Callback para actualizar la UI con el progreso.
  * @returns {Promise<Array>} Lista de contenidos transformados.
  */
-export async function fetchAllContentAssets(contentTypesConfig, getAuthenticatedConfig, onProgress) {
+export async function fetchAllContentAssets(contentTypesConfig, getAuthenticatedConfig, onProgress, onGroupComplete) {
     const emailTypeIds = [207, 208, 209];
     const jsonMessageTypeIds = [230];
     const pageSize = 50;
     let allResults = [];
 
     let apiConfig = await getAuthenticatedConfig();
+
+    // Silenciar log de respuestas para evitar acumular GBs en el buffer
+    setSilentResponses(true);
+
     let requestCount = 0;
     const REFRESH_EVERY = 10; // cada 10 llamadas, verificar token
 
@@ -238,12 +242,22 @@ export async function fetchAllContentAssets(contentTypesConfig, getAuthenticated
             logger.logMessage(`  ${group.name} — Pág ${page}: ${pageItems.length} items (${groupCount}/${totalCount})`);
             page++;
 
+            // Guardar cada 500 items
+            if (onGroupComplete && groupCount % 500 === 0) {
+                await onGroupComplete(allResults);
+            }
+
         } while (groupCount < totalCount && totalCount > 0);
 
         logger.logMessage(`✓ ${group.name}: ${groupCount} contenidos.`);
+
+        if (onGroupComplete) await onGroupComplete(allResults);
     }
 
     logger.logMessage(`Total: ${allResults.length} contenidos obtenidos.`);
+
+    setSilentResponses(false);
+
     return allResults;
 }
 
@@ -275,9 +289,16 @@ function transformAsset(a, emailTypeIds, jsonMessageTypeIds) {
         item.content = a?.views?.html?.content ?? a.content ?? null;
 
     } else if (jsonMessageTypeIds.includes(item.assetTypeId)) {
-        const pushData = a?.views?.push?.meta?.options?.customBlockData;
-        const smsData = a?.views?.sMS?.meta?.options?.customBlockData;
-        const waData = a?.views?.whatsAppTemplate?.meta?.options?.customBlockData;
+        const viewKeys = Object.keys(a?.views || {});
+        const findView = (name) => viewKeys.find(k => k.toLowerCase() === name.toLowerCase());
+
+        const pushKey = findView('push');
+        const smsKey = findView('sms') || findView('sMS');
+        const waKey = findView('whatsAppTemplate') || findView('whatsapptemplate');
+
+        const pushData = pushKey ? a.views[pushKey]?.meta?.options?.customBlockData : null;
+        const smsData = smsKey ? a.views[smsKey]?.meta?.options?.customBlockData : null;
+        const waData = waKey ? a.views[waKey]?.meta?.options?.customBlockData : null;
         const customData = pushData || smsData || waData;
 
         // Tipo por channel
@@ -301,6 +322,6 @@ function transformAsset(a, emailTypeIds, jsonMessageTypeIds) {
     if (jsonMessageTypeIds.includes(item.assetTypeId)) {
         item.content = null;
     }
-    
+
     return item;
 }

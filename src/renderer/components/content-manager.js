@@ -6,6 +6,7 @@ import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
+import { formatCodeWithIndentation, highlightCloudPageCode, buildCodeViewer } from '../ui/code-utils.js';
 
 // --- CONFIGURACIÓN CENTRAL DE LA VISTA ---
 const CONTENT_TYPES_CONFIG = [
@@ -14,12 +15,12 @@ const CONTENT_TYPES_CONFIG = [
         displayName: 'Emails', 
         assetTypeIds: [207, 208, 209],
         headers: [
-            { key: 'id', label: 'ID', width: '8%' },
-            { key: 'name', label: 'Nombre', width: '30%' },
-            { key: 'assetTypeName', label: 'Tipo', width: '15%' },
-            { key: 'modifiedDate', label: 'Modificado', width: '15%' },
+            { key: 'id', label: 'ID', width: '4%' },
+            { key: 'name', label: 'Nombre', width: '20%' },
+            { key: 'assetTypeName', label: 'Tipo', width: '9%' },
+            { key: 'modifiedDate', label: 'Modificado', width: '10%' },
             { key: 'templateName', label: 'Plantilla', width: '17%' },
-            { key: 'attributes', label: 'Atributos', width: '15%' }
+            { key: 'attributes', label: 'Atributos', width: '37%' }
         ]
     },
     { 
@@ -107,7 +108,14 @@ export function init(dependencies) {
     setupEventListeners();
 
     // Botón Refrescar → obtiene datos de la API y machaca la caché
-    elements.refreshContentBtn.addEventListener('click', fetchContentData);
+    elements.refreshContentBtn.addEventListener('click', async () => {
+        const options = CONTENT_TYPES_CONFIG.map(t => ({ id: t.id, label: t.displayName }));
+        const selected = await ui.showCheckboxSelectModal('¿Qué contenidos descargar?', options);
+        if (!selected) return;
+
+        const selectedConfig = CONTENT_TYPES_CONFIG.filter(t => selected.includes(t.id));
+        fetchContentData(selectedConfig);
+    });
 
     // Exportar → descarga CSV de la pestaña activa
     elements.exportContentCsvBtn.addEventListener('click', () => {
@@ -190,7 +198,7 @@ export function clearCache() {
 
 // --- OBTENCIÓN DE DATOS POR API ---
 
-async function fetchContentData() {
+async function fetchContentData(typesToFetch) {
     const clientName = elements.clientNameInput.value.trim();
     if (!clientName) {
         ui.showCustomAlert("Selecciona un cliente primero.");
@@ -204,20 +212,16 @@ async function fetchContentData() {
         mcApiService.setLogger(logger);
 
         const contents = await mcApiService.fetchAllContentAssets(
-            CONTENT_TYPES_CONFIG,
+            typesToFetch,
             getAuthenticatedConfig,
-            (msg) => ui.blockUI(msg)
+            (msg) => ui.blockUI(msg),
+            async (partialResults) => {
+                await window.electronAPI.saveClientContents({ clientName, contents: partialResults });
+                logger.logMessage(`💾 Caché guardada: ${partialResults.length} contenidos.`);
+            }
         );
+
         fullContentList = contents;
-        logger.logMessage(`Obtenidos ${fullContentList.length} contenidos. Guardando en caché...`);
-
-        const saveResult = await window.electronAPI.saveClientContents({ clientName, contents: fullContentList });
-        if (saveResult.success) {
-            logger.logMessage(`Caché actualizada correctamente.`);
-        } else {
-            logger.logMessage(`⚠️ Error al guardar caché: ${saveResult.error}`);
-        }
-
         renderAllTabs();
         ui.showCustomAlert(`Se han obtenido ${fullContentList.length} contenidos para "${clientName}".`);
 
@@ -499,7 +503,7 @@ function openContentDetail(contentId) {
     const highlighted = highlightCloudPageCode(formatted);
 
     elements.contentDetailCode.innerHTML = metaHtml + `
-        <div class="code-header">Código Fuente</div>
+        <div class="code-header">Contenido</div>
         <pre><code>${highlighted}</code></pre>`;
 
     elements.contentDetailDrawer.classList.add('open');
@@ -612,107 +616,4 @@ function formatCsvCell(value) {
         return `"${s.replace(/"/g, '""')}"`;
     }
     return `"${s}"`;
-}
-
-// --- FORMATEO Y SYNTAX HIGHLIGHTING DE CÓDIGO ---
-// (Mismas funciones que cloud-pages-manager.js — si prefieres,
-//  extráelas a un fichero compartido e impórtalas en ambos módulos)
-
-function formatCodeWithIndentation(code) {
-    if (!code) return '';
-    let normalized = code.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    const lines = normalized.split('\n');
-    if (lines.length > 3) return cleanExistingIndentation(lines);
-    return beautifyInlineCode(normalized);
-}
-
-function cleanExistingIndentation(lines) {
-    let minIndent = Infinity;
-    for (const line of lines) {
-        if (line.trim().length === 0) continue;
-        const leading = line.match(/^(\s*)/)[1].length;
-        if (leading < minIndent) minIndent = leading;
-    }
-    if (minIndent === Infinity) minIndent = 0;
-    return lines.map(l => l.trim().length === 0 ? '' : l.substring(minIndent)).join('\n');
-}
-
-function beautifyInlineCode(code) {
-    let result = code.replace(/>\s*</g, '>\n<').replace(/;(?=\s*[^\s"'])/g, ';\n');
-    const lines = result.split('\n');
-    let indent = 0;
-    const tab = '    ';
-    const formatted = [];
-    const openRe = /^<(?:div|table|tr|td|th|thead|tbody|tfoot|ul|ol|li|form|select|head|body|html|section|header|footer|nav|main|article|aside|script|style)\b/i;
-    const closeRe = /^<\/(?:div|table|tr|td|th|thead|tbody|tfoot|ul|ol|li|form|select|head|body|html|section|header|footer|nav|main|article|aside|script|style)\b/i;
-    for (let line of lines) {
-        line = line.trim();
-        if (!line) continue;
-        if (closeRe.test(line)) indent = Math.max(0, indent - 1);
-        formatted.push(tab.repeat(indent) + line);
-        if (openRe.test(line) && !line.includes('/>') && !/<\/\w+>\s*$/.test(line)) indent++;
-    }
-    return formatted.join('\n');
-}
-
-function highlightCloudPageCode(code) {
-    if (!code) return '';
-    let s = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-    const ampFns = 'Lookup|LookupRows|LookupOrderedRows|LookupRowsCS|ClaimRow'
-        + '|InsertData|InsertDE|UpdateData|UpdateDE|UpsertData|UpsertDE'
-        + '|DeleteData|DeleteDE|DataExtensionRowCount'
-        + '|RequestParameter|AttributeValue|CloudPagesURL'
-        + '|Redirect|RedirectTo|Now|Format|Concat|Trim|Length'
-        + '|Substring|Replace|IndexOf|Row|Field|RowCount'
-        + '|BuildRowsetFromString|BuildRowsetFromXML'
-        + '|ContentBlockByKey|ContentBlockById|ContentBlockByName'
-        + '|CreateSalesforceObject|RetrieveSalesforceObjects'
-        + '|UpdateSingleSalesforceObject|DeleteSalesforceObject'
-        + '|RaiseError|IIF|IsNull|ProperCase|Uppercase|Lowercase'
-        + '|Base64Encode|Base64Decode|SHA256|SHA512|MD5'
-        + '|DateAdd|DateDiff|DatePart|FormatDate|SystemDateToLocalDate'
-        + '|TreatAsContent|TreatAsContentArea|RegExMatch'
-        + '|CreateObject|SetObjectProperty|AddObjectArrayItem'
-        + '|InvokeCreate|InvokeUpdate|InvokeRetrieve|InvokeDelete'
-        + '|Add|Multiply|Divide|Subtract|Mod|GUID';
-
-    const pattern = new RegExp(
-        '(\\/\\*[\\s\\S]*?\\*\\/)'
-        + '|(\\/\\/[^\\n]*)'
-        + '|(&lt;!--[\\s\\S]*?--&gt;)'
-        + '|(%%\\[|%%\\]|%%=|=%%)'
-        + "|('[^']*?')"
-        + '|("[^"]*?")'
-        + '|(@\\w+)'
-        + '|\\b(SET|VAR|THEN|ELSEIF|ENDIF|NEXT|OUTPUT)\\b'
-        + '|\\b(' + ampFns + ')(?=\\s*\\()'
-        + '|\\b(var|let|const|function|return|if|else|for|while|do|switch|case|break|continue|try|catch|finally|throw|new|typeof|this|null|undefined|true|false|AND|OR|NOT|IF|ELSE|FOR|DO)\\b'
-        + '|\\b(Platform|Write|Variable|HTTP|DataExtension|Rows|GetValue)\\b'
-        + '|(&lt;\\/?[a-zA-Z][\\w-]*)'
-        + '|(\\/?&gt;)'
-        + '|(\\b\\d+\\.?\\d*\\b)',
-        'gi'
-    );
-
-    return s.replace(pattern, function(match,
-        comMulti, comSingle, comHtml, ampDelim, strSingle, strDouble,
-        ampVar, ampKw, ampFn, jsKw, jsBuiltin, htmlTag, htmlClose, number
-    ) {
-        if (comMulti)   return `<span class="cp-hl-comment">${match}</span>`;
-        if (comSingle)  return `<span class="cp-hl-comment">${match}</span>`;
-        if (comHtml)    return `<span class="cp-hl-comment">${match}</span>`;
-        if (ampDelim)   return `<span class="cp-hl-amp-delim">${match}</span>`;
-        if (strSingle)  return `<span class="cp-hl-string">${match}</span>`;
-        if (strDouble)  return `<span class="cp-hl-string">${match}</span>`;
-        if (ampVar)     return `<span class="cp-hl-amp-var">${match}</span>`;
-        if (ampKw)      return `<span class="cp-hl-amp-kw">${match}</span>`;
-        if (ampFn)      return `<span class="cp-hl-amp-fn">${match}</span>`;
-        if (jsKw)       return `<span class="cp-hl-js-kw">${match}</span>`;
-        if (jsBuiltin)  return `<span class="cp-hl-js-builtin">${match}</span>`;
-        if (htmlTag)    return `<span class="cp-hl-tag">${match}</span>`;
-        if (htmlClose)  return `<span class="cp-hl-tag">${match}</span>`;
-        if (number)     return `<span class="cp-hl-number">${match}</span>`;
-        return match;
-    });
 }

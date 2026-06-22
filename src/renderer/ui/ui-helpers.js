@@ -928,3 +928,57 @@ export function showJourneyPauseModal(count, onConfirm, onCancel) {
     
     modal.style.display = 'flex';
 }
+
+/**
+ * Muestra un modal con checkboxes para seleccionar opciones.
+ * @param {string} title - Título del modal.
+ * @param {Array<{id: string, label: string}>} options - Opciones disponibles.
+ * @returns {Promise<string[]|null>} Array de IDs seleccionados, o null si cancela.
+ */
+export function showCheckboxSelectModal(title, options) {
+    return new Promise(resolve => {
+        elements.checkboxSelectTitle.textContent = title;
+
+        // Generar checkboxes: "Todos" + cada opción
+        elements.checkboxSelectOptions.innerHTML = `
+            <label style="display:flex; align-items:center; gap:8px; padding:6px 0; font-weight:bold; border-bottom:1px solid #eee; margin-bottom:4px; cursor:pointer;">
+                <input type="checkbox" id="chk-select-all" checked style="width:16px; height:16px;"> Todos
+            </label>
+            ${options.map(o => `
+                <label style="display:flex; align-items:center; gap:8px; padding:4px 0; cursor:pointer;">
+                    <input type="checkbox" class="chk-select-item" value="${o.id}" checked style="width:16px; height:16px;"> ${o.label}
+                </label>
+            `).join('')}
+        `;
+
+        // Toggle "Todos"
+        const selectAll = elements.checkboxSelectOptions.querySelector('#chk-select-all');
+        const items = elements.checkboxSelectOptions.querySelectorAll('.chk-select-item');
+        selectAll.addEventListener('change', () => {
+            items.forEach(chk => chk.checked = selectAll.checked);
+        });
+        items.forEach(chk => {
+            chk.addEventListener('change', () => {
+                selectAll.checked = [...items].every(c => c.checked);
+            });
+        });
+
+        manageModalZIndex(elements.checkboxSelectModal);
+        elements.checkboxSelectModal.style.display = 'flex';
+
+        const cleanup = (value) => {
+            elements.checkboxSelectModal.style.display = 'none';
+            resolve(value);
+        };
+
+        elements.checkboxSelectOkBtn.onclick = () => {
+            const selected = [...items].filter(c => c.checked).map(c => c.value);
+            if (selected.length === 0) return;
+            cleanup(selected);
+        };
+        elements.checkboxSelectCancelBtn.onclick = () => cleanup(null);
+        elements.checkboxSelectModal.onclick = (e) => {
+            if (e.target === elements.checkboxSelectModal) cleanup(null);
+        };
+    });
+}
