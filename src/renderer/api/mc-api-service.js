@@ -8,6 +8,7 @@
 // Exportaciones del núcleo (Logs y Helpers)
 export { setLogger } from './api-core.js';
 export { folderPathCache, getFolderPath } from './api-helpers.js';
+export { fetchAllContentAssets } from './api-content.js';
 
 // Exportaciones de los submódulos funcionales
 export * from './api-activities.js';

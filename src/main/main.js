@@ -16,6 +16,8 @@ const path = require('path');
 const axios = require('axios');
 const keytar = require('keytar'); // Librería para el llavero seguro
 
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=2048');
+
 const appVersion = require(path.join(__dirname, '..', '..', 'package.json')).version;
 
 

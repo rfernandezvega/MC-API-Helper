@@ -152,3 +152,155 @@ export async function fetchAssetById(assetId, apiConfig) {
     };
     return await executeRestRequest(url, options);
 }
+
+ 
+/**
+ * Recupera todos los contenidos de Content Builder dividiendo las peticiones por tipo de asset.
+ * Así cada query ataca un subset más pequeño y el usuario ve progreso real.
+ * @param {Array} contentTypesConfig - El array CONTENT_TYPES_CONFIG con los grupos de tipos.
+ * @param {object} apiConfig - Configuración autenticada de la API.
+ * @param {function} onProgress - Callback para actualizar la UI con el progreso.
+ * @returns {Promise<Array>} Lista de contenidos transformados.
+ */
+export async function fetchAllContentAssets(contentTypesConfig, getAuthenticatedConfig, onProgress) {
+    const emailTypeIds = [207, 208, 209];
+    const jsonMessageTypeIds = [230];
+    const pageSize = 50;
+    let allResults = [];
+
+    let apiConfig = await getAuthenticatedConfig();
+    let requestCount = 0;
+    const REFRESH_EVERY = 10; // cada 10 llamadas, verificar token
+
+    async function ensureFreshToken() {
+        requestCount++;
+        if (requestCount % REFRESH_EVERY === 0) {
+            logger.logMessage('⟳ Verificando token...');
+            apiConfig = await getAuthenticatedConfig();
+        }
+    }
+
+    // Deduplicar los grupos de tipos para no repetir el 230
+    const typeGroups = [];
+    const seen = new Set();
+    for (const config of contentTypesConfig) {
+        const key = config.assetTypeIds.join(',');
+        if (!seen.has(key)) {
+            seen.add(key);
+            typeGroups.push({ name: config.displayName, ids: config.assetTypeIds });
+        }
+    }
+
+    for (let g = 0; g < typeGroups.length; g++) {
+        const group = typeGroups[g];
+        let page = 1;
+        let totalCount = 0;
+        let groupCount = 0;
+
+        if (onProgress) onProgress(`Descargando ${group.name}...`);
+        logger.logMessage(`Consultando tipo "${group.name}" (IDs: ${group.ids.join(', ')})...`);
+
+        const queryBody = {
+            "query": {
+                "property": "assetType.id",
+                "simpleOperator": "in",
+                "values": group.ids
+            },
+            "sort": [{ "property": "id", "direction": "ASC" }],
+            "fields": [
+                "id", "name", "assetType", "createdDate", "modifiedDate",
+                "content", "views", "category"
+            ]
+        };
+
+        do {
+            await ensureFreshToken();
+
+            const url = `${apiConfig.restUri}asset/v1/content/assets/query`;
+            const body = { ...queryBody, page: { page: page, pageSize: pageSize } };
+            const options = {
+                method: 'POST',
+                headers: { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" },
+                body: JSON.stringify(body)
+            };
+
+            const data = await executeRestRequest(url, options);
+            const pageItems = data.items || [];
+
+            for (const raw of pageItems) {
+                allResults.push(transformAsset(raw, emailTypeIds, jsonMessageTypeIds));
+            }
+
+            groupCount += pageItems.length;
+            totalCount = data.count;
+
+            if (onProgress) onProgress(`Descargando ${group.name}... ${groupCount}/${totalCount}`);
+            logger.logMessage(`  ${group.name} — Pág ${page}: ${pageItems.length} items (${groupCount}/${totalCount})`);
+            page++;
+
+        } while (groupCount < totalCount && totalCount > 0);
+
+        logger.logMessage(`✓ ${group.name}: ${groupCount} contenidos.`);
+    }
+
+    logger.logMessage(`Total: ${allResults.length} contenidos obtenidos.`);
+    return allResults;
+}
+
+/**
+ * Transforma un asset crudo de la API al formato plano que usa content-manager.
+ */
+function transformAsset(a, emailTypeIds, jsonMessageTypeIds) {
+    const item = {
+        id: a.id,
+        name: a.name,
+        assetTypeId: a.assetType?.id,
+        assetTypeName: a.assetType?.displayName,
+        createdDate: a.createdDate,
+        modifiedDate: a.modifiedDate,
+        content: a.content
+    };
+
+    if (emailTypeIds.includes(item.assetTypeId)) {
+        const attrs = a?.data?.email?.attributes
+            ?.filter(attr => attr.value)
+            .map(attr => `${attr.order}: ${attr.value}`)
+            .join('\n') || null;
+
+        item.templateId = a?.views?.html?.template?.id ?? null;
+        item.templateName = a?.views?.html?.template?.name ?? null;
+        item.attributes = attrs;
+        item.subject = a?.views?.subjectline?.content ?? null;
+        item.preheader = a?.views?.preheader?.content ?? null;
+        item.content = a?.views?.html?.content ?? a.content ?? null;
+
+    } else if (jsonMessageTypeIds.includes(item.assetTypeId)) {
+        const pushData = a?.views?.push?.meta?.options?.customBlockData;
+        const smsData = a?.views?.sMS?.meta?.options?.customBlockData;
+        const waData = a?.views?.whatsAppTemplate?.meta?.options?.customBlockData;
+        const customData = pushData || smsData || waData;
+
+        // Tipo por channel
+        item.type = customData?.channel || null;
+
+        item.title = customData?.['display:title'] ?? null;
+        item.subtitle = customData?.['display:subtitle'] ?? null;
+        item.message = customData?.['display:message'] ?? a.content ?? null;
+
+        // Push tiene openBehavior
+        item.actionType = customData?.['openBehavior:actionType']?.label ?? null;
+        item.actionUrl = customData?.['openBehavior:action'] ?? null;
+
+        // Push tiene media
+        item.media = [
+            customData?.['display:media:image:url'] ? `Imagen: ${customData['display:media:image:url']}` : null,
+            customData?.['display:media:video:url'] ? `Video: ${customData['display:media:video:url']}` : null
+        ].filter(Boolean).join('\n') || null;
+    }
+
+    if (jsonMessageTypeIds.includes(item.assetTypeId)) {
+        item.content = null;
+    }
+    
+    return item;
+}

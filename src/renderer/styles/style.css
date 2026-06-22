@@ -19,6 +19,7 @@
 @import url("components/users-manager.css");
 @import url("components/erd-generator.css");
 @import url("components/cloud-page-detail.css");
+@import url("components/content-manager.css");
 
 /* 
    NOTA: No es necesario crear un CSS para cada vista si no tiene

@@ -371,20 +371,19 @@ export function init() {
     elements.cpDetailDownloadBtn = document.getElementById('cp-detail-download-btn');
 
 
-    // --- 22. GESTOR DE CONTENIDOS ---
-    elements.importNewContentBtn = document.getElementById('importNewContentBtn');
+   // --- 22. GESTOR DE CONTENIDOS ---
+    elements.refreshContentBtn = document.getElementById('refreshContentBtn');
+    elements.exportContentCsvBtn = document.getElementById('exportContentCsvBtn');
     elements.contentManagerFilter = document.getElementById('contentManagerFilter');
     elements.contentManagerTabButtons = document.getElementById('content-manager-tab-buttons');
     elements.contentManagerTabContent = document.getElementById('content-manager-tab-content');
-
-    // Modal de importación de contenidos (sin cambios en sus IDs)
-    elements.contentManagerModal = document.getElementById('content-manager-modal-overlay');
-    elements.contentManagerCbLink = document.getElementById('content-manager-cb-link');
-    elements.contentManagerCopyScriptBtn = document.getElementById('content-manager-copy-script-btn');
-    elements.contentManagerFetchScript = document.getElementById('content-manager-fetch-script');
-    elements.contentManagerPasteArea = document.getElementById('content-manager-paste-area');
-    elements.contentManagerCancelBtn = document.getElementById('content-manager-cancel-btn');
-    elements.contentManagerImportBtn = document.getElementById('content-manager-import-btn');
+    // Drawer de detalle
+    elements.contentDetailDrawer = document.getElementById('content-detail-drawer');
+    elements.contentDetailBackdrop = document.getElementById('content-detail-backdrop');
+    elements.contentDetailCloseBtn = document.getElementById('content-detail-close-btn');
+    elements.contentDetailTitle = document.getElementById('content-detail-title');
+    elements.contentDetailCode = document.getElementById('content-detail-code');
+    elements.contentDetailDownloadBtn = document.getElementById('content-detail-download-btn');
 
     // --- 23. MODAL PARADA DE JOURNEYS ---
     elements.journeyStopModal = document.getElementById('journey-stop-modal');

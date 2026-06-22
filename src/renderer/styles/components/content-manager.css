@@ -1,0 +1,27 @@
+#gestion-contenidos-section .table-scroll-wrapper {
+    max-height: calc(100vh - 320px);
+    overflow-y: auto;
+}
+
+#gestion-contenidos-section thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+#gestion-contenidos-section table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+#gestion-contenidos-section td,
+#gestion-contenidos-section th {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#gestion-contenidos-section td:first-child,
+#gestion-contenidos-section td:nth-child(3),
+#gestion-contenidos-section td:nth-child(4) {
+    white-space: nowrap;
+}
