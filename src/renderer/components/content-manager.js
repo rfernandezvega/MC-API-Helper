@@ -17,10 +17,21 @@ const CONTENT_TYPES_CONFIG = [
         headers: [
             { key: 'id', label: 'ID', width: '4%' },
             { key: 'name', label: 'Nombre', width: '20%' },
-            { key: 'assetTypeName', label: 'Tipo', width: '9%' },
+            { key: 'assetTypeName', label: 'Tipo', width: '13%' },
             { key: 'modifiedDate', label: 'Modificado', width: '10%' },
             { key: 'templateName', label: 'Plantilla', width: '17%' },
-            { key: 'attributes', label: 'Atributos', width: '37%' }
+            { key: 'attributes', label: 'Atributos', width: '33%' }
+        ]
+    },
+    {
+        id: 'plantillas',
+        displayName: 'Plantillas',
+        assetTypeIds: [4],
+        headers: [
+            { key: 'id', label: 'ID', width: '10%' },
+            { key: 'name', label: 'Nombre', width: '50%' },
+            { key: 'modifiedDate', label: 'Modificado', width: '25%' },
+            { key: 'assetTypeName', label: 'Tipo', width: '15%' }
         ]
     },
     { 
@@ -62,7 +73,7 @@ const CONTENT_TYPES_CONFIG = [
     { 
         id: 'bloques', 
         displayName: 'Bloques', 
-        assetTypeIds: [212, 223], 
+        assetTypeIds: [195, 197, 212, 223, 201], 
         headers: [
             { key: 'id', label: 'ID', width: '10%' },
             { key: 'name', label: 'Nombre', width: '45%' },
@@ -423,6 +434,13 @@ function renderTableForTab(tabId, sourceData) {
                     <td>${formatDate(item.modifiedDate)}</td>
                     <td title="${escapeHtml(item.templateName) || ''}">${item.templateName || '---'}</td>
                     <td title="${escapeHtml(item.attributes) || ''}">${attributesHtml}</td>
+                </tr>`;
+            } else if (tabId === 'plantillas') {
+                return `<tr>
+                    <td>${item.id || '---'}</td>
+                    <td>${inspectBtnHtml(item)}${item.name || '---'}</td>
+                    <td>${formatDate(item.modifiedDate)}</td>
+                    <td>${item.assetTypeName || '---'}</td>
                 </tr>`;
             } else if (tabId === 'push') {
                 const actionHtml = item.actionType ? `${item.actionType}: ${item.actionUrl || ''}` : '---';

@@ -162,7 +162,11 @@ export function init() {
     elements.contentTreeWrapper = document.getElementById('content-tree-wrapper');
     elements.contentComponentsWrapper = document.getElementById('content-components-wrapper');
     elements.contentDesWrapper = document.getElementById('content-des-wrapper');
-    elements.contentCodeWrapper = document.getElementById('content-code-wrapper');
+    elements.finderCodeDrawer = document.getElementById('finder-code-drawer');
+    elements.finderCodeBackdrop = document.getElementById('finder-code-backdrop');
+    elements.finderCodeCloseBtn = document.getElementById('finder-code-close-btn');
+    elements.finderCodeTitle = document.getElementById('finder-code-title');
+    elements.finderCodeContent = document.getElementById('finder-code-content');
 
     // --- 8g. Pestaña: Actividades ---
     elements.activityTypeSelect = document.getElementById('activityTypeSelect');

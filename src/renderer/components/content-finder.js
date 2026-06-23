@@ -10,6 +10,9 @@ let getAuthenticatedConfig;
 let cachedResults = [];
 let selectedAssetId = null;
 
+let currentDetailAsset = null;
+let currentDetailComponents = [];
+
 // --- 2. INIT ---
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
@@ -23,6 +26,28 @@ export function init(dependencies) {
         row.classList.add('selected');
         selectedAssetId = row.dataset.assetId;
         elements.contentDetailBtn.disabled = false;
+    });
+
+    // Click en botón de código dentro de la tabla de componentes
+    elements.contentComponentsWrapper.addEventListener('click', (e) => {
+        const btn = e.target.closest('.cp-inspect-btn');
+        if (!btn) return;
+        const index = parseInt(btn.dataset.compIndex, 10);
+        if (isNaN(index) || !currentDetailComponents[index]) return;
+        openFinderCodeDrawer(currentDetailComponents[index]);
+    });
+
+    // Drawer de código
+    const closeFinderDrawer = () => {
+        elements.finderCodeDrawer.classList.remove('open');
+        elements.finderCodeBackdrop.classList.remove('active');
+    };
+    elements.finderCodeCloseBtn.addEventListener('click', closeFinderDrawer);
+    elements.finderCodeBackdrop.addEventListener('click', closeFinderDrawer);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && elements.finderCodeDrawer.classList.contains('open')) {
+            closeFinderDrawer();
+        }
     });
 }
 
@@ -75,6 +100,20 @@ async function showContentDetail() {
         // 1. Componentes hijos (slots/blocks) + ContentBlockBy* en código
         const components = await extractComponents(fullAsset, apiConfig, 0);
 
+        const mainContent = fullAsset.views?.html?.content || fullAsset.content || null;
+        if (mainContent) {
+            components.unshift({
+                id: fullAsset.id,
+                name: fullAsset.name,
+                rawName: fullAsset.name,
+                type: selected.type,
+                path: selected.path,
+                content: mainContent,
+                referencedBy: null,
+                depth: 0
+            });
+        }
+
         // 2. DEs referenciadas, con indicación de qué bloque las usa
         const allContentSources = collectContentSources(fullAsset, components);
         const referencedDEs = extractDataExtensionsWithSource(allContentSources);
@@ -91,7 +130,7 @@ async function showContentDetail() {
             `Componentes (${components.length})`,
             componentsHtml,
             'content-components',
-            true,
+            false,
             500
         );
 
@@ -101,22 +140,17 @@ async function showContentDetail() {
             `Data Extensions referenciadas (${referencedDEs.length})`,
             desHtml,
             'content-des',
-            true,
+            false,
             400
         );
-        // Código fuente (asset principal + componentes)
-        const codeHtml = buildCodeBlocks(fullAsset, components);
-        elements.contentCodeWrapper.innerHTML = createCollapsibleBlock(
-            'Contenido',
-            codeHtml,
-            'content-code',
-            false,
-            600
-        );
-
+        
         // Activar todos los collapsibles
         initCollapsibleListeners(elements.contentDetailBlock);
         elements.contentDetailBlock.style.display = '';
+
+        // Guardar datos para el drawer de código
+        currentDetailAsset = fullAsset;
+        currentDetailComponents = components;
 
     } catch (error) {
         logger.logMessage(`Error en detalle: ${error.message}`);
@@ -130,19 +164,38 @@ async function showContentDetail() {
 async function extractComponents(asset, apiConfig, depth, parentName) {
     const components = [];
 
-    // A. Template
+    // A. Template (obtener detalle completo para tener content y ruta)
+    const templateId = asset.views?.html?.template?.id;
     const templateName = asset.views?.html?.template?.name;
-    if (templateName && depth === 0) {
-        components.push({
-            id: asset.views.html.template.id || '---',
-            name: templateName,
-            rawName: templateName,
-            type: 'Template',
-            path: '---',
-            content: null,
-            referencedBy: null,
-            depth: 0
-        });
+    if (templateName && depth === 0 && templateId) {
+        try {
+            logger.logMessage(`→ Obteniendo template ${templateId}...`);
+            const templateAsset = await mcApiService.fetchAssetById(templateId, apiConfig);
+            const templatePath = templateAsset.category?.id
+                ? await mcApiService.getFolderPath(templateAsset.category.id, apiConfig) : '---';
+            components.push({
+                id: templateId,
+                name: templateName,
+                rawName: templateName,
+                type: 'Template',
+                path: templatePath || 'Content Builder',
+                content: templateAsset.content || null,
+                referencedBy: null,
+                depth: 0
+            });
+        } catch (err) {
+            logger.logMessage(`✗ Error obteniendo template ${templateId}: ${err.message}`);
+            components.push({
+                id: templateId || '---',
+                name: templateName,
+                rawName: templateName,
+                type: 'Template',
+                path: '---',
+                content: null,
+                referencedBy: null,
+                depth: 0
+            });
+        }
     }
 
     // B. Slots / Blocks
@@ -460,6 +513,7 @@ function buildComponentsTable(components) {
         return '<p style="color:#888;">No se encontraron componentes hijos.</p>';
     }
     const thStyle = 'position:sticky; top:0; z-index:2; background:#6faad8; color:#fff; padding:8px;';
+    
     let html = `<table style="width:100%; border-collapse:collapse;">
         <thead><tr>
             <th style="${thStyle}">ID</th>
@@ -468,13 +522,17 @@ function buildComponentsTable(components) {
             <th style="${thStyle}">Ruta</th>
             <th style="${thStyle}">Referenciado por</th>
         </tr></thead><tbody>`;
-    components.forEach(c => {
+    components.forEach((c, index) => {
         const refBy = c.referencedBy ? `<small style="color:#888;">${c.referencedBy}</small>` : '---';
         const bgColor = c.depth === 0 ? '#eef3f8' : '#ffffff';
         const paddingLeft = 8 + (c.depth * 16);
+        const codeBtn = c.content
+            ? `<span class="cp-inspect-btn" data-comp-index="${index}" title="Ver código"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span> `
+            : '';
+        
         html += `<tr style="background-color:${bgColor};">
             <td>${c.id}</td>
-            <td style="padding-left:${paddingLeft}px;">${c.name}</td>
+            <td style="padding-left:${paddingLeft}px;">${codeBtn}${c.name}</td>
             <td>${c.type}</td>
             <td>${c.path}</td>
             <td>${refBy}</td>
@@ -509,36 +567,21 @@ function buildDEsTable(des) {
     return html;
 }
 
-/**
- * Construye el HTML con el código de cada componente con syntax highlighting.
- */
-function buildCodeBlocks(mainAsset, components) {
-    const blocks = [];
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
 
-    // Código del asset principal
-    const mainCode = mainAsset.views?.html?.content || mainAsset.content || '';
-    if (mainCode) {
-        const highlighted = highlightCloudPageCode(formatCodeWithIndentation(mainCode));
-        blocks.push(`
-            <div style="padding:8px 12px; font-weight:bold; font-size:0.85em; color:#558ac7; border-bottom:1px solid #e2e8f0;">
-                ${escapeHtml(mainAsset.name)} (Principal)
-            </div>
-            <pre style="background:#f6f8fa; color:#24292e; padding:12px 16px; margin:0; font-size:13px; line-height:1.6; tab-size:4; white-space:pre; overflow:auto; max-height:400px; font-family:'Consolas','Monaco','Courier New',monospace; border-bottom:2px solid #e2e8f0;"><code>${highlighted}</code></pre>
-        `);
-    }
+function openFinderCodeDrawer(comp) {
+    if (!comp || !comp.content) return;
 
-    // Código de cada componente hijo
-    for (const comp of components) {
-        if (!comp.content) continue;
-        const highlighted = highlightCloudPageCode(formatCodeWithIndentation(comp.content));
-        blocks.push(`
-            <div style="padding:8px 12px; font-weight:bold; font-size:0.85em; color:#558ac7; border-bottom:1px solid #e2e8f0;">
-                ${escapeHtml(comp.name)} (${escapeHtml(comp.type)})
-            </div>
-            <pre style="background:#f6f8fa; color:#24292e; padding:12px 16px; margin:0; font-size:13px; line-height:1.6; tab-size:4; white-space:pre; overflow:auto; max-height:400px; font-family:'Consolas','Monaco','Courier New',monospace; border-bottom:2px solid #e2e8f0;"><code>${highlighted}</code></pre>
-        `);
-    }
+    elements.finderCodeTitle.textContent = comp.name || 'Código Fuente';
 
-    if (blocks.length === 0) return '<p style="padding:12px; color:#999;">No se encontró código fuente.</p>';
-    return blocks.join('');
+    const highlighted = highlightCloudPageCode(formatCodeWithIndentation(comp.content));
+    elements.finderCodeContent.innerHTML = `
+        <div class="code-header">Código Fuente</div>
+        <pre><code>${highlighted}</code></pre>`;
+
+    elements.finderCodeDrawer.classList.add('open');
+    elements.finderCodeBackdrop.classList.add('active');
 }
