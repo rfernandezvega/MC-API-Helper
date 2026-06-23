@@ -516,6 +516,7 @@ function buildComponentsTable(components) {
     
     let html = `<table style="width:100%; border-collapse:collapse;">
         <thead><tr>
+            <th style="${thStyle} width:40px;"></th>
             <th style="${thStyle}">ID</th>
             <th style="${thStyle}">Nombre</th>
             <th style="${thStyle}">Tipo</th>
@@ -527,12 +528,13 @@ function buildComponentsTable(components) {
         const bgColor = c.depth === 0 ? '#eef3f8' : '#ffffff';
         const paddingLeft = 8 + (c.depth * 16);
         const codeBtn = c.content
-            ? `<span class="cp-inspect-btn" data-comp-index="${index}" title="Ver código"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span> `
+            ? `<span class="cp-inspect-btn" data-comp-index="${index}" title="Ver código"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>`
             : '';
         
         html += `<tr style="background-color:${bgColor};">
+            <td style="text-align:center;">${codeBtn}</td>
             <td>${c.id}</td>
-            <td style="padding-left:${paddingLeft}px;">${codeBtn}${c.name}</td>
+            <td style="padding-left:${paddingLeft}px;">${c.name}</td>
             <td>${c.type}</td>
             <td>${c.path}</td>
             <td>${refBy}</td>
@@ -584,4 +586,31 @@ function openFinderCodeDrawer(comp) {
 
     elements.finderCodeDrawer.classList.add('open');
     elements.finderCodeBackdrop.classList.add('active');
+}
+
+/**
+ * Navega al buscador de contenidos, busca un asset por ID y muestra su detalle.
+ * Llamada desde content-manager para inspeccionar un contenido.
+ * @param {number|string} assetId - ID del asset a buscar.
+ */
+export async function searchAndShowDetail(assetId) {
+    // Poner el ID en el input y lanzar búsqueda
+    elements.contentSearchValue.value = String(assetId);
+    
+    // Activar la pestaña de Contenidos dentro de Buscadores
+    const tabBtn = document.querySelector('[data-tab="contenido-tab"]');
+    if (tabBtn) tabBtn.click();
+
+    // Buscar
+    await searchContent();
+
+    // Auto-seleccionar el resultado
+    const row = [...elements.contentSearchResultsTbody.querySelectorAll('tr')]
+        .find(r => r.dataset.assetId === String(assetId));
+    if (row) {
+        row.classList.add('selected');
+        selectedAssetId = String(assetId);
+        elements.contentDetailBtn.disabled = false;
+        await showContentDetail();
+    }
 }

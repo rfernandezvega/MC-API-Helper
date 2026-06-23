@@ -7,6 +7,7 @@ import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import { formatCodeWithIndentation, highlightCloudPageCode, buildCodeViewer } from '../ui/code-utils.js';
+import { searchAndShowDetail } from './content-finder.js';
 
 // --- CONFIGURACIÓN CENTRAL DE LA VISTA ---
 const CONTENT_TYPES_CONFIG = [
@@ -15,11 +16,12 @@ const CONTENT_TYPES_CONFIG = [
         displayName: 'Emails', 
         assetTypeIds: [207, 208, 209],
         headers: [
+            { key: '_actions', label: '', width: '8%' },
             { key: 'id', label: 'ID', width: '4%' },
-            { key: 'name', label: 'Nombre', width: '20%' },
-            { key: 'assetTypeName', label: 'Tipo', width: '13%' },
+            { key: 'name', label: 'Nombre', width: '17%' },
+            { key: 'assetTypeName', label: 'Tipo', width: '12%' },
             { key: 'modifiedDate', label: 'Modificado', width: '10%' },
-            { key: 'templateName', label: 'Plantilla', width: '17%' },
+            { key: 'templateName', label: 'Plantilla', width: '16%' },
             { key: 'attributes', label: 'Atributos', width: '33%' }
         ]
     },
@@ -28,9 +30,10 @@ const CONTENT_TYPES_CONFIG = [
         displayName: 'Plantillas',
         assetTypeIds: [4],
         headers: [
+            { key: '_actions', label: '', width: '8%' },
             { key: 'id', label: 'ID', width: '10%' },
-            { key: 'name', label: 'Nombre', width: '50%' },
-            { key: 'modifiedDate', label: 'Modificado', width: '25%' },
+            { key: 'name', label: 'Nombre', width: '44%' },
+            { key: 'modifiedDate', label: 'Modificado', width: '23%' },
             { key: 'assetTypeName', label: 'Tipo', width: '15%' }
         ]
     },
@@ -40,8 +43,9 @@ const CONTENT_TYPES_CONFIG = [
         assetTypeIds: [230],
         filter: (item) => item.type === 'push', 
         headers: [
-            { key: 'id', label: 'ID', width: '10%' },
-            { key: 'name', label: 'Nombre', width: '35%' },
+            { key: '_actions', label: '', width: '8%' },
+            { key: 'id', label: 'ID', width: '8%' },
+            { key: 'name', label: 'Nombre', width: '29%' },
             { key: 'modifiedDate', label: 'Modificado', width: '15%' },
             { key: 'title', label: 'Título', width: '15%' },
             { key: 'subtitle', label: 'Subtítulo', width: '10%' },
@@ -54,8 +58,9 @@ const CONTENT_TYPES_CONFIG = [
         assetTypeIds: [230],
         filter: (item) => item.type === 'sms', 
         headers: [
-            { key: 'id', label: 'ID', width: '15%' },
-            { key: 'name', label: 'Nombre', width: '55%' },
+            { key: '_actions', label: '', width: '8%' },
+            { key: 'id', label: 'ID', width: '12%' },
+            { key: 'name', label: 'Nombre', width: '50%' },
             { key: 'modifiedDate', label: 'Modificado', width: '30%' }
         ]
     },
@@ -65,8 +70,9 @@ const CONTENT_TYPES_CONFIG = [
         assetTypeIds: [230],
         filter: (item) => item.type === 'whatsapptemplate', 
         headers: [
-            { key: 'id', label: 'ID', width: '15%' },
-            { key: 'name', label: 'Nombre', width: '55%' },
+            { key: '_actions', label: '', width: '8%' },
+            { key: 'id', label: 'ID', width: '12%' },
+            { key: 'name', label: 'Nombre', width: '50%' },
             { key: 'modifiedDate', label: 'Modificado', width: '30%' }
         ]
     },
@@ -75,8 +81,9 @@ const CONTENT_TYPES_CONFIG = [
         displayName: 'Bloques', 
         assetTypeIds: [195, 197, 212, 223, 201], 
         headers: [
-            { key: 'id', label: 'ID', width: '10%' },
-            { key: 'name', label: 'Nombre', width: '45%' },
+            { key: '_actions', label: '', width: '8%' },
+            { key: 'id', label: 'ID', width: '8%' },
+            { key: 'name', label: 'Nombre', width: '39%' },
             { key: 'assetTypeName', label: 'Tipo', width: '20%' },
             { key: 'modifiedDate', label: 'Modificado', width: '25%' }
         ]
@@ -86,8 +93,9 @@ const CONTENT_TYPES_CONFIG = [
         displayName: 'Code Snippet',
         assetTypeIds: [220],
         headers: [
-            { key: 'id', label: 'ID', width: '15%' },
-            { key: 'name', label: 'Nombre', width: '55%' },
+            { key: '_actions', label: '', width: '8%' },
+            { key: 'id', label: 'ID', width: '12%' },
+            { key: 'name', label: 'Nombre', width: '50%' },
             { key: 'modifiedDate', label: 'Modificado', width: '30%' }
         ]
     },
@@ -96,8 +104,9 @@ const CONTENT_TYPES_CONFIG = [
         displayName: 'Otros',
         assetTypeIds: [235], 
         headers: [
-            { key: 'id', label: 'ID', width: '10%' },
-            { key: 'name', label: 'Nombre', width: '45%' },
+            { key: '_actions', label: '', width: '8%' },
+            { key: 'id', label: 'ID', width: '8%' },
+            { key: 'name', label: 'Nombre', width: '39%' },
             { key: 'assetTypeName', label: 'Tipo', width: '20%' },
             { key: 'modifiedDate', label: 'Modificado', width: '25%' }
         ]
@@ -319,6 +328,16 @@ function setupEventListeners() {
             return;
         }
 
+        const analyzeBtn = e.target.closest('.cp-analyze-btn');
+        if (analyzeBtn) {
+            const contentId = analyzeBtn.dataset.contentId;
+            if (contentId) {
+                document.querySelector('.macro-item[data-macro="buscadores"]').click();
+                searchAndShowDetail(contentId);
+            }
+            return;
+        }
+
         const target = e.target;
         if (target.matches('.action-button') && target.id.startsWith('download-')) {
             const tabId = target.id.replace('download-', '').replace('-csv', '');
@@ -365,6 +384,8 @@ function setupEventListeners() {
             renderAllTabs();
         }
     });
+
+    
 }
 
 // --- RENDERIZADO ---
@@ -393,10 +414,12 @@ function renderAllTabs() {
 /**
  * Genera el HTML del botón de inspección si el item tiene contenido.
  */
-function inspectBtnHtml(item) {
-    const hasCode = item.content || item.message;
-    if (!hasCode) return '';
-    return `<span class="cp-inspect-btn" data-content-id="${item.id}" title="Ver código"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span> `;
+function actionBtnsHtml(item) {
+    const codeBtn = (item.content || item.message)
+        ? `<span class="cp-inspect-btn" data-content-id="${item.id}" title="Ver código"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>`
+        : '';
+    const analyzeBtn = `<span class="cp-analyze-btn" data-content-id="${item.id}" title="Analizar en Buscadores"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#558ac7;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>`;
+    return `${codeBtn} ${analyzeBtn}`;
 }
 
 function renderTableForTab(tabId, sourceData) {
@@ -425,11 +448,14 @@ function renderTableForTab(tabId, sourceData) {
         tbody.innerHTML = `<tr><td colspan="${tabConfig.headers.length}">No se encontraron resultados.</td></tr>`;
     } else {
         tbody.innerHTML = paginatedItems.map(item => {
+            const actions = `<td style="text-align:center; white-space:nowrap;">${actionBtnsHtml(item)}</td>`;
+
             if (tabId === 'emails') {
                 const attributesHtml = item.attributes ? item.attributes.replace(/\n/g, '<br>') : '---';
                 return `<tr>
+                    ${actions}
                     <td>${item.id || '---'}</td>
-                    <td>${inspectBtnHtml(item)}${item.name || '---'}</td>
+                    <td>${item.name || '---'}</td>
                     <td>${item.assetTypeName || '---'}</td>
                     <td>${formatDate(item.modifiedDate)}</td>
                     <td title="${escapeHtml(item.templateName) || ''}">${item.templateName || '---'}</td>
@@ -437,16 +463,18 @@ function renderTableForTab(tabId, sourceData) {
                 </tr>`;
             } else if (tabId === 'plantillas') {
                 return `<tr>
+                    ${actions}
                     <td>${item.id || '---'}</td>
-                    <td>${inspectBtnHtml(item)}${item.name || '---'}</td>
+                    <td>${item.name || '---'}</td>
                     <td>${formatDate(item.modifiedDate)}</td>
                     <td>${item.assetTypeName || '---'}</td>
                 </tr>`;
             } else if (tabId === 'push') {
                 const actionHtml = item.actionType ? `${item.actionType}: ${item.actionUrl || ''}` : '---';
                 return `<tr>
+                    ${actions}
                     <td>${item.id || '---'}</td>
-                    <td>${inspectBtnHtml(item)}${item.name || '---'}</td>
+                    <td>${item.name || '---'}</td>
                     <td>${formatDate(item.modifiedDate)}</td>
                     <td title="${escapeHtml(item.title) || ''}">${item.title || '---'}</td>
                     <td title="${escapeHtml(item.subtitle) || ''}">${item.subtitle || '---'}</td>
@@ -454,33 +482,38 @@ function renderTableForTab(tabId, sourceData) {
                 </tr>`;
             } else if (tabId === 'sms') {
                 return `<tr>
+                    ${actions}
                     <td>${item.id || '---'}</td>
-                    <td>${inspectBtnHtml(item)}${item.name || '---'}</td>
+                    <td>${item.name || '---'}</td>
                     <td>${formatDate(item.modifiedDate)}</td>
                 </tr>`;
             } else if (tabId === 'whatsapp') {
                 return `<tr>
+                    ${actions}
                     <td>${item.id || '---'}</td>
-                    <td>${inspectBtnHtml(item)}${item.name || '---'}</td>
+                    <td>${item.name || '---'}</td>
                     <td>${formatDate(item.modifiedDate)}</td>
                 </tr>`;
             } else if (tabId === 'bloques') {
                 return `<tr>
+                    ${actions}
                     <td>${item.id || '---'}</td>
-                    <td>${inspectBtnHtml(item)}${item.name || '---'}</td>
+                    <td>${item.name || '---'}</td>
                     <td>${item.assetTypeName || '---'}</td>
                     <td>${formatDate(item.modifiedDate)}</td>
                 </tr>`;
             } else if (tabId === 'codesnippet') {
                 return `<tr>
+                    ${actions}
                     <td>${item.id || '---'}</td>
-                    <td>${inspectBtnHtml(item)}${item.name || '---'}</td>
+                    <td>${item.name || '---'}</td>
                     <td>${formatDate(item.modifiedDate)}</td>
                 </tr>`;
             } else if (tabId === 'otros') {
                 return `<tr>
+                    ${actions}
                     <td>${item.id || '---'}</td>
-                    <td>${inspectBtnHtml(item)}${item.name || '---'}</td>
+                    <td>${item.name || '---'}</td>
                     <td>${item.assetTypeName || '---'}</td>
                     <td>${formatDate(item.modifiedDate)}</td>
                 </tr>`;
