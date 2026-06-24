@@ -10,6 +10,29 @@ import { formatCodeWithIndentation, highlightCloudPageCode, buildCodeViewer } fr
 import { searchAndShowDetail } from './content-finder.js';
 
 // --- CONFIGURACIÓN CENTRAL DE LA VISTA ---
+// ===================================================================
+// MAPA DE ASSET TYPE IDs
+// ===================================================================
+// ID   | Nombre técnico         | Tipo                    | Pestaña
+// -----|------------------------|-------------------------|----------
+//   4  | template               | Template                | Plantillas
+// 193  | htmlemail              | HTML Email (legacy)     | Bloques
+// 195  | contentarea            | Content Area            | Bloques
+// 196  | textblock              | Text Block              | Bloques
+// 197  | htmlblock              | HTML Block              | Bloques
+// 199  | imageblock             | Image Block             | Bloques
+// 201  | buttonblock            | Button Block            | Bloques
+// 207  | templatebasedemail     | Template-Based Email    | Emails
+// 208  | htmlemail              | HTML Email              | Emails
+// 209  | textonlyemail          | Text-Only Email         | Emails
+// 212  | freeformblock          | Free Form Block         | Bloques
+// 213  | layoutblock            | Layout Block            | Bloques
+// 220  | codesnippetblock       | Code Snippet Block      | Code Snippet
+// 223  | referenceblock         | Reference Block         | Bloques
+// 224  | smartcaptureblock      | Smart Capture Block     | Bloques
+// 230  | jsonmessage            | JSON Message            | Push / SMS / WhatsApp
+// 235  | jsonmessagetemplate    | JSON Message Template   | Otros
+// ===================================================================
 const CONTENT_TYPES_CONFIG = [
     { 
         id: 'emails', 
@@ -79,7 +102,7 @@ const CONTENT_TYPES_CONFIG = [
     { 
         id: 'bloques', 
         displayName: 'Bloques', 
-        assetTypeIds: [195, 197, 212, 223, 201], 
+        assetTypeIds: [195, 197, 212, 223, 201, 193, 196, 213, 199, 224], 
         headers: [
             { key: '_actions', label: '', width: '8%' },
             { key: 'id', label: 'ID', width: '8%' },
