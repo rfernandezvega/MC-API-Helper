@@ -13,6 +13,8 @@ let selectedAssetId = null;
 let currentDetailAsset = null;
 let currentDetailComponents = [];
 
+let currentDrawerContent = null;
+
 // --- 2. INIT ---
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
@@ -48,6 +50,20 @@ export function init(dependencies) {
         if (e.key === 'Escape' && elements.finderCodeDrawer.classList.contains('open')) {
             closeFinderDrawer();
         }
+    });
+
+    elements.finderCodeDownloadBtn.addEventListener('click', () => {
+        const clientName = elements.clientNameInput.value.trim() || 'cliente';
+        const contentName = (elements.finderCodeTitle.textContent || 'contenido').replace(/\s+/g, '_');
+        if (!currentDrawerContent) return;
+        const blob = new Blob([currentDrawerContent], { type: 'text/html;charset=utf-8;' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${clientName}_${contentName}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
     });
 }
 
@@ -100,7 +116,30 @@ async function showContentDetail() {
         // 1. Componentes hijos (slots/blocks) + ContentBlockBy* en código
         const components = await extractComponents(fullAsset, apiConfig, 0);
 
-        const mainContent = fullAsset.views?.html?.content || fullAsset.content || null;
+        // Contenido principal: intentar ensamblar (emails), luego push/sms/wa, luego content directo
+        let mainContent = assembleFullContent(fullAsset, components) || null;
+
+        // Push / SMS / WhatsApp → mensaje del customBlockData
+        if (!mainContent) {
+            const viewKeys = Object.keys(fullAsset.views || {});
+            const findView = (name) => viewKeys.find(k => k.toLowerCase() === name.toLowerCase());
+            const pushKey = findView('push');
+            const smsKey = findView('sms') || findView('sMS');
+            const waKey = findView('whatsAppTemplate') || findView('whatsapptemplate');
+            const viewKey = pushKey || smsKey || waKey;
+
+            if (viewKey) {
+                mainContent = fullAsset.views[viewKey]?.meta?.options?.customBlockData?.['display:message']
+                    || fullAsset.views[viewKey]?.content
+                    || null;
+            }
+        }
+
+        // Fallback: content directo (templates, bloques, snippets, otros)
+        if (!mainContent) {
+            mainContent = fullAsset.content || null;
+        }
+
         if (mainContent) {
             components.unshift({
                 id: fullAsset.id,
@@ -214,34 +253,58 @@ async function extractComponents(asset, apiConfig, depth, parentName) {
 
             for (const blockKey in blocks) {
                 const block = blocks[blockKey];
-                const childId = block.meta?.options?.id;
-                const childType = block.meta?.options?.assetType?.displayName;
-                if (!childId) continue;
+                const refId = block.meta?.options?.id;
+                const blockType = block.assetType?.displayName || block.assetType?.name || '---';
 
-                try {
-                    logger.logMessage(`${'  '.repeat(depth)}→ Obteniendo componente ID ${childId}...`);
-                    const childAsset = await mcApiService.fetchAssetById(childId, apiConfig);
-                    const childPath = childAsset.category?.id
-                        ? await mcApiService.getFolderPath(childAsset.category.id, apiConfig) : '---';
+                if (refId) {
+                    // A. Reference block → fetch the referenced asset
+                    try {
+                        logger.logMessage(`${'  '.repeat(depth)}→ Obteniendo componente ID ${refId}...`);
+                        const childAsset = await mcApiService.fetchAssetById(refId, apiConfig);
+                        const childPath = childAsset.category?.id
+                            ? await mcApiService.getFolderPath(childAsset.category.id, apiConfig) : '---';
+
+                        components.push({
+                            id: refId,
+                            name: childAsset.name || '---',
+                            rawName: childAsset.name || '---',
+                            type: childAsset.assetType?.displayName || blockType,
+                            path: childPath || 'Content Builder',
+                            content: childAsset.content || null,
+                            referencedBy: parentName || (slotLabel ? `Slot: ${slotLabel}` : null),
+                            depth: depth
+                        });
+
+                        const subComps = await extractComponents(childAsset, apiConfig, depth + 1, childAsset.name);
+                        components.push(...subComps);
+
+                    } catch (err) {
+                        logger.logMessage(`${'  '.repeat(depth)}✗ Error obteniendo asset ${refId}: ${err.message}`);
+                        components.push({ id: refId, name: `Error (${refId})`, rawName: `Error (${refId})`, type: blockType, path: '---', content: null, referencedBy: parentName, depth: depth });
+                    }
+
+                } else if (block.content) {
+                    // B. Inline block → content embedded directly in the slot
+                    const inlineId = block.id || '---';
+                    const inlineName = block.name || block.fileProperties?.fileName || `Bloque inline (${blockKey})`;
+                    let inlinePath = '---';
+
+                    if (block.category?.id) {
+                        try {
+                            inlinePath = await mcApiService.getFolderPath(block.category.id, apiConfig);
+                        } catch {}
+                    }
 
                     components.push({
-                        id: childId,
-                        name: childAsset.name || '---',
-                        rawName: childAsset.name || '---',
-                        type: childType || childAsset.assetType?.displayName || '---',
-                        path: childPath || 'Content Builder',
-                        content: childAsset.content || null,
+                        id: inlineId,
+                        name: inlineName,
+                        rawName: inlineName,
+                        type: blockType,
+                        path: inlinePath || 'Content Builder',
+                        content: block.content,
                         referencedBy: parentName || (slotLabel ? `Slot: ${slotLabel}` : null),
                         depth: depth
                     });
-
-                    // Recursivo
-                    const subComps = await extractComponents(childAsset, apiConfig, depth + 1, childAsset.name);
-                    components.push(...subComps);
-
-                } catch (err) {
-                    logger.logMessage(`${'  '.repeat(depth)}✗ Error obteniendo asset ${childId}: ${err.message}`);
-                    components.push({ id: childId, name: `Error (${childId})`, rawName: `Error (${childId})`, type: childType || '?', path: '---', content: null, referencedBy: parentName, depth: depth });
                 }
             }
         }
@@ -577,6 +640,7 @@ function escapeHtml(str) {
 function openFinderCodeDrawer(comp) {
     if (!comp || !comp.content) return;
 
+    currentDrawerContent = comp.content;
     elements.finderCodeTitle.textContent = comp.name || 'Código Fuente';
 
     const highlighted = highlightCloudPageCode(formatCodeWithIndentation(comp.content));
@@ -613,4 +677,60 @@ export async function searchAndShowDetail(assetId) {
         elements.contentDetailBtn.disabled = false;
         await showContentDetail();
     }
+}
+
+/**
+ * Ensambla el HTML completo de un asset, reemplazando los placeholders
+ * de slots y bloques con su contenido real.
+ * @param {object} asset - El asset completo devuelto por la API.
+ * @returns {string} El HTML ensamblado.
+ */
+function assembleFullContent(asset, components) {
+    let html = asset.views?.html?.content || asset.content || '';
+    if (!html) return '';
+
+    const slots = asset.views?.html?.slots;
+    if (slots) {
+        for (const slotKey in slots) {
+            const slot = slots[slotKey];
+            let slotHtml = slot.content || '';
+
+            const blocks = slot.blocks;
+            if (blocks) {
+                for (const blockKey in blocks) {
+                    const block = blocks[blockKey];
+                    const blockContent = block.content || '';
+                    const blockRegex = new RegExp(
+                        `<div[^>]*data-type=["']block["'][^>]*data-key=["']${blockKey}["'][^>]*>\\s*</div>`,
+                        'gi'
+                    );
+                    slotHtml = slotHtml.replace(blockRegex, blockContent);
+                }
+            }
+
+            const slotRegex = new RegExp(
+                `<div[^>]*data-type=["']slot["'][^>]*data-key=["']${slotKey}["'][^>]*>[\\s\\S]*?</div>`,
+                'gi'
+            );
+            html = html.replace(slotRegex, slotHtml);
+        }
+    }
+
+    // Resolver ContentBlockByID/Key/Name con los componentes ya descargados
+    if (components && components.length > 0) {
+        html = html.replace(/%%=ContentBlockby[Ii][Dd]\s*\(\s*["']?(\d+)["']?\s*\)=%%/gi, (match, id) => {
+            const comp = components.find(c => String(c.id) === String(id) && c.content);
+            return comp ? comp.content : match;
+        });
+        html = html.replace(/%%=ContentBlockby[Kk]ey\s*\(\s*["']([^"']+)["']\s*\)=%%/gi, (match, key) => {
+            const comp = components.find(c => c.rawName === key && c.content);
+            return comp ? comp.content : match;
+        });
+        html = html.replace(/%%=ContentBlockby[Nn]ame\s*\(\s*["']([^"']+)["']\s*\)=%%/gi, (match, name) => {
+            const comp = components.find(c => c.rawName === name && c.content);
+            return comp ? comp.content : match;
+        });
+    }
+
+    return html;
 }

@@ -167,6 +167,7 @@ export function init() {
     elements.finderCodeCloseBtn = document.getElementById('finder-code-close-btn');
     elements.finderCodeTitle = document.getElementById('finder-code-title');
     elements.finderCodeContent = document.getElementById('finder-code-content');
+    elements.finderCodeDownloadBtn = document.getElementById('finder-code-download-btn');
 
     // --- 8g. Pestaña: Actividades ---
     elements.activityTypeSelect = document.getElementById('activityTypeSelect');
