@@ -13,7 +13,63 @@ import { getFolderPath } from './api-helpers.js';
  * @returns {Promise<Array>} Lista con IDs y la ruta completa precalculada de cada resultado.
  */
 export async function findDataFolders(folderName, contentType, apiConfig) {
-    const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataFolder</ObjectType><Properties>Name</Properties><Properties>ID</Properties><Properties>ParentFolder.ID</Properties><Properties>ContentType</Properties><Filter xsi:type="ComplexFilterPart"><LeftOperand xsi:type="SimpleFilterPart"><Property>Name</Property><SimpleOperator>like</SimpleOperator><Value>%${folderName}%</Value></LeftOperand><LogicalOperator>AND</LogicalOperator><RightOperand xsi:type="SimpleFilterPart"><Property>ContentType</Property><SimpleOperator>equals</SimpleOperator><Value>${contentType}</Value></RightOperand></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+    // Soportar un tipo o varios
+    const types = Array.isArray(contentType) ? contentType : [contentType];
+
+    let contentTypeFilter;
+    if (types.length === 1) {
+        contentTypeFilter = `
+            <RightOperand xsi:type="SimpleFilterPart">
+                <Property>ContentType</Property>
+                <SimpleOperator>equals</SimpleOperator>
+                <Value>${types[0]}</Value>
+            </RightOperand>`;
+    } else {
+        contentTypeFilter = `
+            <RightOperand xsi:type="ComplexFilterPart">
+                <LeftOperand xsi:type="SimpleFilterPart">
+                    <Property>ContentType</Property>
+                    <SimpleOperator>equals</SimpleOperator>
+                    <Value>${types[0]}</Value>
+                </LeftOperand>
+                <LogicalOperator>OR</LogicalOperator>
+                <RightOperand xsi:type="SimpleFilterPart">
+                    <Property>ContentType</Property>
+                    <SimpleOperator>equals</SimpleOperator>
+                    <Value>${types[1]}</Value>
+                </RightOperand>
+            </RightOperand>`;
+    }
+
+    const soapPayload = `
+        <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+            <s:Header>
+                <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+                <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+                <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+            </s:Header>
+            <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+                <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+                    <RetrieveRequest>
+                        <ObjectType>DataFolder</ObjectType>
+                        <Properties>Name</Properties>
+                        <Properties>ID</Properties>
+                        <Properties>ParentFolder.ID</Properties>
+                        <Properties>ContentType</Properties>
+                        <Filter xsi:type="ComplexFilterPart">
+                            <LeftOperand xsi:type="SimpleFilterPart">
+                                <Property>Name</Property>
+                                <SimpleOperator>like</SimpleOperator>
+                                <Value>%${folderName}%</Value>
+                            </LeftOperand>
+                            <LogicalOperator>AND</LogicalOperator>
+                            ${contentTypeFilter}
+                        </Filter>
+                    </RetrieveRequest>
+                </RetrieveRequestMsg>
+            </s:Body>
+        </s:Envelope>`;
+
     const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(responseText, "application/xml");
