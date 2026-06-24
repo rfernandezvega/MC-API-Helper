@@ -197,19 +197,20 @@ async function fetchData() {
         // 3. Separar Web Pages (205) como fuente de contenido y el resto como elementos visibles
         logger.logMessage("Separando Web Pages (contenido) de Cloud Pages (visibles)...");
 
-        const webPagesByIdMap = new Map();   // id → asset 205 (para thumbnailRefAssetId)
-        const webPagesByNameMap = new Map(); // nombre normalizado → asset 205 (para landing pages viejas)
-
+        const webPagesByIdMap = new Map();
+        const webPagesByNameMap = new Map();
         const visibleAssets = [];
 
         for (const asset of assetsWithFolders) {
             if (asset.assetType.id === 205) {
-                // Extraer contenido del 205 (views + slots)
-                const content205 = extractFullAssetContent(asset);
-                webPagesByIdMap.set(asset.id, content205);
-                // Guardar también por nombre (lowercase) para matching de LPs viejas
+                const meta205 = {
+                    content: extractFullAssetContent(asset),
+                    modifiedByName: asset.modifiedBy?.name || null,
+                    modifiedDate: asset.modifiedDate || null
+                };
+                webPagesByIdMap.set(asset.id, meta205);
                 const normalizedName = (asset.name || '').toLowerCase().trim();
-                if (normalizedName) webPagesByNameMap.set(normalizedName, content205);
+                if (normalizedName) webPagesByNameMap.set(normalizedName, meta205);
             } else {
                 visibleAssets.push(asset);
             }
@@ -221,19 +222,28 @@ async function fetchData() {
         fullCloudPageList = visibleAssets.map(apiPage => {
             const cachedPage = cachedPagesMap.get(apiPage.id);
 
-            // Resolver contenido para Landing Pages (247)
             let extractedContent = apiPage.content || '';
+            let resolvedModifiedBy = null;
+            let resolvedModifiedDate = null;
+
             if (apiPage.assetType.id === 247) {
-                // Intentar por thumbnailRefAssetId (landing pages nuevas)
+                let meta205 = null;
                 const refId = apiPage.meta?.thumbnailRefAssetId;
+
                 if (refId && webPagesByIdMap.has(refId)) {
-                    extractedContent = webPagesByIdMap.get(refId);
+                    meta205 = webPagesByIdMap.get(refId);
                 } else {
-                    // Intentar por nombre (landing pages viejas sin thumbnailRefAssetId)
                     const normalizedName = (apiPage.name || '').toLowerCase().trim();
                     if (webPagesByNameMap.has(normalizedName)) {
-                        extractedContent = webPagesByNameMap.get(normalizedName);
+                        meta205 = webPagesByNameMap.get(normalizedName);
                     }
+                }
+
+                if (meta205) {
+                    extractedContent = meta205.content;
+                    // Para LPs, el 205 es el contenido real — usar siempre su modifiedBy
+                    resolvedModifiedBy = meta205.modifiedByName;
+                    resolvedModifiedDate = meta205.modifiedDate;
                 }
             }
 
@@ -245,7 +255,8 @@ async function fetchData() {
                 publishDate: apiPage.meta?.cloudPages?.publishDate || null,
                 pageId: cachedPage?.pageId || null,
                 content: finalContent,
-                modifiedByName: apiPage.modifiedBy?.name || '---',
+                modifiedByName: resolvedModifiedBy || apiPage.modifiedBy?.name || '---',
+                modifiedDate: resolvedModifiedDate || apiPage.modifiedDate,
                 hasDetailedContent: !!finalContent && !finalContent.trim().startsWith('{')
             };
         });
@@ -422,7 +433,7 @@ function handleSort(e) {
         currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
     } else {
         currentSortColumn = newSortColumn;
-        currentSortDirection = 'asc';
+        currentSortDirection = newSortColumn.includes('Date') ? 'desc' : 'asc';
     }
     currentPage = 1; // Al reordenar, siempre volvemos a la página 1
     renderFilteredTable();
