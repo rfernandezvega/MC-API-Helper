@@ -388,6 +388,7 @@ export function init() {
     elements.contentManagerFilter = document.getElementById('contentManagerFilter');
     elements.contentManagerTabButtons = document.getElementById('content-manager-tab-buttons');
     elements.contentManagerTabContent = document.getElementById('content-manager-tab-content');
+    elements.contentTotalCount = document.getElementById('content-total-count');
     // Drawer de detalle
     elements.contentDetailDrawer = document.getElementById('content-detail-drawer');
     elements.contentDetailBackdrop = document.getElementById('content-detail-backdrop');

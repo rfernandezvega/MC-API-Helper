@@ -14,7 +14,10 @@
 
     <!-- Contenedor de Pestañas que se llenará dinámicamente -->
     <div class="tabs-container">
-        <div id="content-manager-tab-buttons" class="tab-buttons"></div>
+        <div id="content-manager-tab-buttons" class="tab-buttons" style="display:flex; width:100%; border-bottom:2px solid #e2e8f0;">
+            <!-- tabs dinámicos van aquí -->
+            <span id="content-total-count" style="font-size:0.85em; color:#999; margin-left:auto; padding:0 4px 4px 0; white-space:nowrap;"></span>
+        </div>
         <div id="content-manager-tab-content"></div>
     </div>
 </div>

@@ -216,6 +216,7 @@ async function extractComponents(asset, apiConfig, depth, parentName) {
                 id: templateId,
                 name: templateName,
                 rawName: templateName,
+                customerKey: templateAsset.customerKey || null,
                 type: 'Template',
                 path: templatePath || 'Content Builder',
                 content: templateAsset.content || null,
@@ -228,6 +229,7 @@ async function extractComponents(asset, apiConfig, depth, parentName) {
                 id: templateId || '---',
                 name: templateName,
                 rawName: templateName,
+                customerKey: null,
                 type: 'Template',
                 path: '---',
                 content: null,
@@ -257,7 +259,7 @@ async function extractComponents(asset, apiConfig, depth, parentName) {
                 const blockType = block.assetType?.displayName || block.assetType?.name || '---';
 
                 if (refId) {
-                    // A. Reference block → fetch the referenced asset
+                    // Reference block → fetch the referenced asset
                     try {
                         logger.logMessage(`${'  '.repeat(depth)}→ Obteniendo componente ID ${refId}...`);
                         const childAsset = await mcApiService.fetchAssetById(refId, apiConfig);
@@ -268,6 +270,7 @@ async function extractComponents(asset, apiConfig, depth, parentName) {
                             id: refId,
                             name: childAsset.name || '---',
                             rawName: childAsset.name || '---',
+                            customerKey: childAsset.customerKey || null,
                             type: childAsset.assetType?.displayName || blockType,
                             path: childPath || 'Content Builder',
                             content: childAsset.content || null,
@@ -280,11 +283,11 @@ async function extractComponents(asset, apiConfig, depth, parentName) {
 
                     } catch (err) {
                         logger.logMessage(`${'  '.repeat(depth)}✗ Error obteniendo asset ${refId}: ${err.message}`);
-                        components.push({ id: refId, name: `Error (${refId})`, rawName: `Error (${refId})`, type: blockType, path: '---', content: null, referencedBy: parentName, depth: depth });
+                        components.push({ id: refId, name: `Error (${refId})`, rawName: `Error (${refId})`, customerKey: null, type: blockType, path: '---', content: null, referencedBy: parentName, depth: depth });
                     }
 
                 } else if (block.content) {
-                    // B. Inline block → content embedded directly in the slot
+                    // Inline block → content embedded directly in the slot
                     const inlineId = block.id || '---';
                     const inlineName = block.name || block.fileProperties?.fileName || `Bloque inline (${blockKey})`;
                     let inlinePath = '---';
@@ -299,6 +302,7 @@ async function extractComponents(asset, apiConfig, depth, parentName) {
                         id: inlineId,
                         name: inlineName,
                         rawName: inlineName,
+                        customerKey: block.customerKey || null,
                         type: blockType,
                         path: inlinePath || 'Content Builder',
                         content: block.content,
@@ -335,6 +339,7 @@ async function extractComponents(asset, apiConfig, depth, parentName) {
                         id: resolvedAsset.id,
                         name: resolvedAsset.name,
                         rawName: resolvedAsset.name,
+                        customerKey: resolvedAsset.customerKey || null,
                         type: resolvedAsset.assetType?.displayName || '---',
                         path: refPath || 'Content Builder',
                         content: resolvedAsset.content || null,
@@ -346,6 +351,7 @@ async function extractComponents(asset, apiConfig, depth, parentName) {
                 } else {
                     components.push({
                         id: '---', name: `${ref.value} (no encontrado)`, rawName: ref.value,
+                        customerKey: null,
                         type: `ContentBlockBy${ref.type}`, path: '---', content: null,
                         referencedBy: `${sourceName} → ContentBlockBy${ref.type}`, depth: depth + 1
                     });
@@ -723,7 +729,7 @@ function assembleFullContent(asset, components) {
             return comp ? comp.content : match;
         });
         html = html.replace(/%%=ContentBlockby[Kk]ey\s*\(\s*["']([^"']+)["']\s*\)=%%/gi, (match, key) => {
-            const comp = components.find(c => c.rawName === key && c.content);
+            const comp = components.find(c => c.customerKey === key && c.content);
             return comp ? comp.content : match;
         });
         html = html.replace(/%%=ContentBlockby[Nn]ame\s*\(\s*["']([^"']+)["']\s*\)=%%/gi, (match, name) => {

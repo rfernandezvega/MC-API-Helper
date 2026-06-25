@@ -39,13 +39,13 @@ const CONTENT_TYPES_CONFIG = [
         displayName: 'Emails', 
         assetTypeIds: [207, 208, 209],
         headers: [
-            { key: '_actions', label: '', width: '8%' },
-            { key: 'id', label: 'ID', width: '4%' },
+            { key: '_actions', label: '', width: '10%' },
+            { key: 'id', label: 'ID', width: '7%' },
             { key: 'name', label: 'Nombre', width: '17%' },
             { key: 'assetTypeName', label: 'Tipo', width: '12%' },
             { key: 'modifiedDate', label: 'Modificado', width: '10%' },
             { key: 'templateName', label: 'Plantilla', width: '16%' },
-            { key: 'attributes', label: 'Atributos', width: '33%' }
+            { key: 'attributes', label: 'Atributos', width: '24%' }
         ]
     },
     {
@@ -215,6 +215,7 @@ export async function view() {
         const result = await window.electronAPI.loadClientContents(clientName);
         if (result.success && result.contents) {
             fullContentList = result.contents;
+            enrichEmailsWithResolvedContent(fullContentList);
             logger.logMessage(`Cargados ${fullContentList.length} contenidos desde caché para "${clientName}".`);
         } else {
             logger.logMessage(`No hay contenidos en caché para "${clientName}". Pulsa Refrescar para obtenerlos.`);
@@ -264,6 +265,8 @@ async function fetchContentData(typesToFetch) {
             }
         );
 
+        enrichEmailsWithResolvedContent(contents);
+
         fullContentList = contents;
         renderAllTabs();
         ui.showCustomAlert(`Se han obtenido ${fullContentList.length} contenidos para "${clientName}".`);
@@ -297,7 +300,7 @@ function createDynamicTabs() {
         const button = document.createElement('button');
         button.className = `tab-button ${isActive ? 'active' : ''}`;
         button.dataset.tab = `tab-content-${tab.id}`;
-        button.textContent = tab.displayName;
+        button.innerHTML = `<span class="tab-count" data-tab-count="${tab.id}" style="font-size:0.75em; color:#999; font-weight:normal;">0</span><br>${tab.displayName}`;
         buttonsContainer.appendChild(button);
 
         const contentDiv = document.createElement('div');
@@ -326,6 +329,13 @@ function createDynamicTabs() {
         `;
         contentContainer.appendChild(contentDiv);
     });
+
+    // Re-añadir el contador total
+    const totalSpan = document.createElement('span');
+    totalSpan.id = 'content-total-count';
+    totalSpan.style.cssText = 'font-size:0.85em; color:#999; margin-left:auto; align-self:flex-end; padding-bottom:6px; white-space:nowrap;';
+    buttonsContainer.appendChild(totalSpan);
+    elements.contentTotalCount = totalSpan;
 }
 
 function setupEventListeners() {
@@ -335,11 +345,12 @@ function setupEventListeners() {
     });
 
     elements.contentManagerTabButtons.addEventListener('click', (e) => {
-        if (!e.target.matches('.tab-button')) return;
+        const tabBtn = e.target.closest('.tab-button');
+        if (!tabBtn) return;
         elements.contentManagerTabButtons.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
         elements.contentManagerTabContent.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-        e.target.classList.add('active');
-        document.getElementById(e.target.dataset.tab).classList.add('active');
+        tabBtn.classList.add('active');
+        document.getElementById(tabBtn.dataset.tab).classList.add('active');
     });
 
     elements.contentManagerTabContent.addEventListener('click', (e) => {
@@ -348,6 +359,14 @@ function setupEventListeners() {
         if (inspectBtn) {
             const contentId = inspectBtn.dataset.contentId;
             if (contentId) openContentDetail(contentId);
+            return;
+        }
+
+        // Botón de código resuelto
+        const resolveBtn = e.target.closest('.cp-resolve-btn');
+        if (resolveBtn) {
+            const contentId = resolveBtn.dataset.contentId;
+            if (contentId) openResolvedDetail(contentId);
             return;
         }
 
@@ -421,6 +440,7 @@ function renderAllTabs() {
         filteredList = fullContentList.filter(item => {
             return (item.name && item.name.toLowerCase().includes(filterText)) ||
                    (item.content && item.content.toLowerCase().includes(filterText)) ||
+                   (item.resolvedContent && item.resolvedContent.toLowerCase().includes(filterText)) ||
                    (item.subject && item.subject.toLowerCase().includes(filterText)) ||
                    (item.preheader && item.preheader.toLowerCase().includes(filterText)) ||
                    (item.attributes && item.attributes.toLowerCase().includes(filterText)) ||
@@ -432,17 +452,35 @@ function renderAllTabs() {
     }
 
     CONTENT_TYPES_CONFIG.forEach(tab => renderTableForTab(tab.id, filteredList));
+    
+    // Actualizar contadores de cada pestaña
+    CONTENT_TYPES_CONFIG.forEach(tab => {
+        const count = tabsState[tab.id]?.currentFilteredList?.length || 0;
+        const countSpan = document.querySelector(`[data-tab-count="${tab.id}"]`);
+        if (countSpan) countSpan.textContent = count;
+    });
+
+    // Total
+    if (elements.contentTotalCount) {
+        elements.contentTotalCount.textContent = `Total: ${filteredList.length}`;
+    }
 }
 
 /**
  * Genera el HTML del botón de inspección si el item tiene contenido.
  */
 function actionBtnsHtml(item) {
-    const codeBtn = (item.content || item.message)
-        ? `<span class="cp-inspect-btn" data-content-id="${item.id}" title="Ver código"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>`
-        : '';
-    const analyzeBtn = `<span class="cp-analyze-btn" data-content-id="${item.id}" title="Analizar en Buscadores"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#558ac7;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>`;
-    return `${codeBtn} ${analyzeBtn}`;
+    const hasCode = item.content || item.message;
+    let html = '';
+    if (hasCode) {
+        html += `<span class="cp-inspect-btn" data-content-id="${item.id}" title="Ver código"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>`;
+    }
+    // Botón de código resuelto solo para emails
+    if (hasCode && [207, 208, 209].includes(item.assetTypeId)) {
+        html += `<span class="cp-resolve-btn" data-content-id="${item.id}" title="Ver código resuelto"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#2e7d32;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg></span>`;
+    }
+    html += `<span class="cp-analyze-btn" data-content-id="${item.id}" title="Analizar en Buscadores"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#558ac7;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>`;
+    return html;
 }
 
 function renderTableForTab(tabId, sourceData) {
@@ -690,4 +728,88 @@ function formatCsvCell(value) {
         return `"${s.replace(/"/g, '""')}"`;
     }
     return `"${s}"`;
+}
+
+function openResolvedDetail(contentId) {
+    const item = fullContentList.find(c => String(c.id) === String(contentId));
+    if (!item || !item.content) return;
+
+    // Crear mapa de bloques por ID
+    const blockMap = new Map();
+    for (const block of fullContentList) {
+        if (block.id && block.content && ![207, 208, 209].includes(block.assetTypeId)) {
+            blockMap.set(String(block.id), block.content);
+        }
+    }
+
+    // Resolver ContentBlockByID/Key/Name
+    let resolved = item.content;
+    resolved = resolved.replace(/%%=ContentBlockby[Ii][Dd]\s*\(\s*["']?(\d+)["']?\s*\)=%%/gi, (match, id) => {
+        return blockMap.get(id) || match;
+    });
+    resolved = resolved.replace(/%%=ContentBlockby[Kk]ey\s*\(\s*["']([^"']+)["']\s*\)=%%/gi, (match, key) => {
+        const found = fullContentList.find(c => c.customerKey === key && c.content);
+        return found ? found.content : match;
+    });
+    resolved = resolved.replace(/%%=ContentBlockby[Nn]ame\s*\(\s*["']([^"']+)["']\s*\)=%%/gi, (match, name) => {
+        const found = fullContentList.find(c => c.name === name && c.content);
+        return found ? found.content : match;
+    });
+
+    elements.contentDetailTitle.textContent = item.name || 'Contenido';
+
+    let metaHtml = '';
+    if (item.subject || item.preheader) {
+        metaHtml = `<div class="cp-detail-deps-row">`;
+        if (item.subject) {
+            metaHtml += `<div class="cp-dep-block"><h4>Asunto</h4><div class="dep-items"><div class="dep-item">${escapeHtml(item.subject)}</div></div></div>`;
+        }
+        if (item.preheader) {
+            metaHtml += `<div class="cp-dep-block"><h4>Preheader</h4><div class="dep-items"><div class="dep-item">${escapeHtml(item.preheader)}</div></div></div>`;
+        }
+        metaHtml += `</div>`;
+    }
+
+    const formatted = formatCodeWithIndentation(resolved);
+    const highlighted = highlightCloudPageCode(formatted);
+
+    elements.contentDetailCode.innerHTML = metaHtml + `
+        <div class="code-header">Código Resuelto</div>
+        <pre><code>${highlighted}</code></pre>`;
+
+    elements.contentDetailDrawer.classList.add('open');
+    elements.contentDetailBackdrop.classList.add('active');
+}
+
+function enrichEmailsWithResolvedContent(contents) {
+    const blockMapById = new Map();
+    const blockMapByKey = new Map();
+    const blockMapByName = new Map();
+
+    for (const item of contents) {
+        if (!item.content || [207, 208, 209].includes(item.assetTypeId)) continue;
+        if (item.id) blockMapById.set(String(item.id), item.content);
+        if (item.customerKey) blockMapByKey.set(item.customerKey, item.content);
+        if (item.name) blockMapByName.set(item.name, item.content);
+    }
+
+    for (const item of contents) {
+        if (![207, 208, 209].includes(item.assetTypeId)) continue;
+        if (!item.content) continue;
+
+        let resolved = item.content;
+        resolved = resolved.replace(/%%=ContentBlockby[Ii][Dd]\s*\(\s*["']?(\d+)["']?\s*\)=%%/gi, (match, id) => {
+            return blockMapById.get(id) || match;
+        });
+        resolved = resolved.replace(/%%=ContentBlockby[Kk]ey\s*\(\s*["']([^"']+)["']\s*\)=%%/gi, (match, key) => {
+            return blockMapByKey.get(key) || match;
+        });
+        resolved = resolved.replace(/%%=ContentBlockby[Nn]ame\s*\(\s*["']([^"']+)["']\s*\)=%%/gi, (match, name) => {
+            return blockMapByName.get(name) || match;
+        });
+
+        if (resolved !== item.content) {
+            item.resolvedContent = resolved;
+        }
+    }
 }

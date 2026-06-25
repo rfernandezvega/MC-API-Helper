@@ -16,13 +16,13 @@
 
 #gestion-contenidos-section td,
 #gestion-contenidos-section th {
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 #gestion-contenidos-section td:first-child,
-#gestion-contenidos-section td:nth-child(3),
-#gestion-contenidos-section td:nth-child(4) {
+#gestion-contenidos-section td:nth-child(2) {
     white-space: nowrap;
 }
 
@@ -43,4 +43,23 @@
 .cp-analyze-btn:hover {
     background-color: #dce8f7;
     border-color: #69a3db;
+}
+
+.cp-resolve-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    background-color: #e8f5e9;
+    border: 1px solid #a5d6a7;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+.cp-resolve-btn:hover {
+    background-color: #c8e6c9;
+    border-color: #66bb6a;
 }

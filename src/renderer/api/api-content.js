@@ -213,7 +213,7 @@ export async function fetchAllContentAssets(contentTypesConfig, getAuthenticated
             "sort": [{ "property": "id", "direction": "ASC" }],
             "fields": [
                 "id", "name", "assetType", "createdDate", "modifiedDate",
-                "content", "views", "category"
+                "content", "views", "category", "customerKey"
             ]
         };
 
@@ -268,6 +268,7 @@ function transformAsset(a, emailTypeIds, jsonMessageTypeIds) {
     const item = {
         id: a.id,
         name: a.name,
+        customerKey: a.customerKey || null,
         assetTypeId: a.assetType?.id,
         assetTypeName: a.assetType?.displayName,
         createdDate: a.createdDate,
@@ -286,7 +287,21 @@ function transformAsset(a, emailTypeIds, jsonMessageTypeIds) {
         item.attributes = attrs;
         item.subject = a?.views?.subjectline?.content ?? null;
         item.preheader = a?.views?.preheader?.content ?? null;
-        item.content = a?.views?.html?.content ?? a.content ?? null;
+        let fullContent = a?.views?.html?.content || '';
+        const slots = a?.views?.html?.slots;
+        if (slots) {
+            for (const slotKey in slots) {
+                const blocks = slots[slotKey]?.blocks;
+                if (blocks) {
+                    for (const blockKey in blocks) {
+                        if (blocks[blockKey].content) {
+                            fullContent += '\n' + blocks[blockKey].content;
+                        }
+                    }
+                }
+            }
+        }
+        item.content = fullContent || a.content || null;
 
     } else if (jsonMessageTypeIds.includes(item.assetTypeId)) {
         const viewKeys = Object.keys(a?.views || {});
