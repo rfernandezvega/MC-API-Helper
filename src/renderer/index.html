@@ -623,12 +623,32 @@
     </div>
 </div>
 
+<!-- ===================== DRAWER DE DETALLE DE CLOUD PAGE ===================== -->
+<div id="cp-detail-backdrop" class="cp-detail-backdrop"></div>
+<aside id="cp-detail-drawer" class="cp-detail-drawer">
+    <button id="cp-detail-close-btn" class="cp-detail-close-tab">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+        <span>Cerrar</span>
+    </button>
+    <div class="cp-detail-header">
+        <h2 id="cp-detail-title">Detalle de Cloud Page</h2>
+        <button id="cp-detail-download-btn" class="action-button" title="Descargar código fuente">Descargar código</button>
+    </div>
+    <!-- Dependencias en columnas -->
+    <div id="cp-detail-deps" class="cp-detail-deps-row"></div>
+    <!-- Código fuente a ancho completo -->
+    <div id="cp-detail-code" class="cp-detail-code-block"></div>
+</aside>
+
 <!-- 17. SECCIÓN: GESTOR DE CONTENIDOS -->
 <div id="gestion-contenidos-section" class="section">
     <div class="section-header">
         <button class="back-button">← Atrás</button>
         <div class="header-actions">
-            <button id="importNewContentBtn" class="action-button">Importar</button>
+            <button id="refreshContentBtn" class="action-button">Refrescar</button>
+            <button id="exportContentCsvBtn" class="action-button">Exportar</button>
         </div>
     </div>
     
@@ -638,44 +658,26 @@
 
     <!-- Contenedor de Pestañas que se llenará dinámicamente -->
     <div class="tabs-container">
-        <!-- Los botones de las pestañas se insertarán aquí con JS -->
         <div id="content-manager-tab-buttons" class="tab-buttons"></div>
-
-        <!-- El contenido de las pestañas (tablas, etc.) se insertará aquí con JS -->
         <div id="content-manager-tab-content"></div>
     </div>
 </div>
 
-<!-- ===================== MODAL PARA EL GESTOR DE CONTENIDOS ===================== -->
-<div id="content-manager-modal-overlay" class="modal-overlay" style="display: none;">
-    <div class="modal-content modal-lg">
-        <h3>Recuperar Contenidos de Content Builder</h3>
-        <p>Para empezar, necesitas extraer todos los contenidos de la instancia. Sigue estos pasos:</p>
-        <ol style="line-height: 1.6;">
-            <li>En tu navegador, ve a Content Builder y haz clic en el siguiente enlace para asegurar que estás en el dominio correcto: <br>
-                <a href="#" id="content-manager-cb-link" class="external-link" style="word-break: break-all;">Generando enlace...</a>
-            </li>
-            <li>Abre las herramientas de desarrollador (con F12) y ve a la pestaña <b>Consola</b>.</li>
-            <li>Copia el script de abajo, pégalo en la consola y presiona Enter.</li>
-        </ol>
-        
-        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <label style="font-weight: bold;">Script para la consola:</label>
-                <button id="content-manager-copy-script-btn" class="action-button" style="padding: 5px 10px; font-size: 0.9em;">Copiar Código</button>
-            </div>
-            <pre id="content-manager-fetch-script" style="background-color: #e9ecef; padding: 10px; border-radius: 5px; max-height: 150px; overflow-y: auto; font-size: 0.85em;"></pre>
-        </div>
-
-        <p>4. Al finalizar, haz clic derecho sobre el objeto que aparecerá en la consola, selecciona <b>"Copy object"</b> y pégalo en el cuadro de abajo. <b>Paciencia, </b>va a tardar un rato en aparecer.</p>
-        <textarea id="content-manager-paste-area" placeholder="Pega aquí el objeto copiado desde la consola..." style="width: 100%; height: 150px; margin-top: 10px;"></textarea>
-        
-        <div class="modal-actions">
-            <button id="content-manager-cancel-btn" class="action-button cancel-btn">Cancelar</button>
-            <button id="content-manager-import-btn" class="action-button activate-btn">Importar</button>
-        </div>
+<!-- ===================== DRAWER DE DETALLE DE CONTENIDO ===================== -->
+<div id="content-detail-backdrop" class="cp-detail-backdrop"></div>
+<aside id="content-detail-drawer" class="cp-detail-drawer">
+    <button id="content-detail-close-btn" class="cp-detail-close-tab">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+        <span>Cerrar</span>
+    </button>
+    <div class="cp-detail-header">
+        <h2 id="content-detail-title">Detalle de Contenido</h2>
+        <button id="content-detail-download-btn" class="action-button" title="Descargar contenido">Descargar</button>
     </div>
-</div>
+    <div id="content-detail-code" class="cp-detail-code-block"></div>
+</aside>
 
 <!-- 2. SECCIÓN: DOCUMENTACIÓN -->
 <div id="documentacion-section" class="section">
@@ -2139,6 +2141,21 @@
             </div>
         </div>
     </div>
+    <!-- Drawer de código para el buscador de contenidos -->
+    <div id="finder-code-backdrop" class="cp-detail-backdrop"></div>
+    <aside id="finder-code-drawer" class="cp-detail-drawer">
+        <button id="finder-code-close-btn" class="cp-detail-close-tab">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+            <span>Cerrar</span>
+        </button>
+        <div class="cp-detail-header">
+            <h2 id="finder-code-title">Código Fuente</h2>
+            <button id="finder-code-download-btn" class="action-button" title="Descargar código fuente">Descargar</button>
+        </div>
+        <div id="finder-code-content" class="cp-detail-code-block"></div>
+    </aside>
 
     <!-- ============== Pestaña: Actividades ============== -->
     <div id="actividades-tab" class="tab-content config-section-container">
@@ -2575,7 +2592,7 @@
         <input type="text" id="journeyDEFilter" class="filter-input" placeholder="Buscar por Data Extension...">
         <input type="text" id="journeyFieldsFilter" class="filter-input" placeholder="Campos en entrada ( , ; | )...">
         <button type="button" id="journeyCommsFilter" class="filter-input" style="cursor: pointer; text-align: center; min-width: 140px; transition: all 0.2s; padding: 8px 12px; background-color: #f9f9f9;">
-            ☐ Comunicaciones
+            Comunicaciones
         </button>
     </div>
     <div class="table-container">
@@ -2608,16 +2625,153 @@
 <!-- 1. PANTALLA DE BIENVENIDA (MENÚ PRINCIPAL) -->
 <div id="main-menu" class="main-menu-container" style="display: flex;">
     <div class="menu-group">
-    <h3>Panel Principal</h3>
-    <div class="menu-buttons-container">
-        <!--<img src="assets/welcome2.gif" alt="Animación de bienvenida" class="welcome-gif">-->
-        <p class="info-text">
-        Para empezar, configura un cliente en "Configuración de APIs". 
-        Al pulsar en login (o seleccionándolo si ya estaba guardado) se iniciará el proceso de autenticación. 
-        Una vez iniciada sesión en un cliente, podrás utilizar las funcionalidades de la aplicación.
-        </p>
-        
+        <h3>Panel Principal</h3>
+        <div class="menu-buttons-container">
+            <p class="info-text">
+                Para empezar, configura un cliente en "Configuración de APIs". 
+                Al pulsar en login (o seleccionándolo si ya estaba guardado) se iniciará el proceso de autenticación. 
+                Una vez iniciada sesión en un cliente, podrás utilizar las funcionalidades de la aplicación.
+            </p>
+        </div>
     </div>
+
+    <!-- CHANGELOG / NOVEDADES -->
+    <div class="menu-group changelog-group">
+        <h3>Novedades</h3>
+        <div class="changelog-list">
+            <!-- ======================== v2.5.1 ======================== -->
+            <details class="changelog-entry" open>
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.5.1</span>
+                    <span class="changelog-date">25 Junio 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag fix">Fix</span> Corregido bug por el cual no se mostraba correctamente el detalle de contenidos en el buscador de contenidos.</li>
+                    <li><span class="changelog-tag fix">Fix</span> Corregido bug por el cual se mostraba quién habia creado una Cloud en lugar de quién la ha modificado.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> La vista de Contenidos ahora muestra plantillas y más tipos de bloques (Dynamic Block, Free Form Block, HTML Block...).</li>
+                    <li><span class="changelog-tag new">Nuevo</span> La vista de Contenidos ahora permite seleccionar un contenido y pulsar un botón para ver el detalle con sus dependencias en la sección de Buscadores.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> El Buscador de Contenidos ahora muestra en los detalle el contenido buscado. 
+                        Además para los emails ensambla todo el email por lo que se puede ver el código completo con todos sus componentes, sean inline o referenciados, sin tener que ir uno a uno.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Al visualizar el código en Buscador de Contenidos en la vista de detalles, se ha incluido la opción de Descarga.</li>
+               </ul>
+            </details>
+
+            <!-- ======================== v2.5.0 ======================== -->
+            <details class="changelog-entry">
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.5.0</span>
+                    <span class="changelog-date">23 Junio 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Panel de novedades en la pantalla principal con el historial de versiones.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Vista de detalle en Cloud Pages con dependencias en columnas y visor de código.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Botón de descarga del contenido de Cloud Pages.</li>
+                   <li><span class="changelog-tag new">Nuevo</span> 
+                        La vista de Contenidos ahora obtiene los datos directamente por API (botón Refrescar), sin necesidad de ejecutar el script en la consola del navegador.
+                        Al pulsar Refrescar en Contenidos, se puede elegir qué tipos descargar mediante un selector con checkboxes.
+                    </li>
+                    <li><span class="changelog-tag new">Nuevo</span> La vista de Contenidos soporta Whatsapps.                    
+                    <li><span class="changelog-tag new">Nuevo</span> Cada contenido de la vista de Contenidos tiene una vista de detalle para ver el código.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Refresco automático de token durante descargas largas de contenidos para evitar errores de expiración.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Cabeceras fijas en las tablas del Gestor de Contenidos, anchos de columna proporcionados y tooltip en celdas con texto largo.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.4.3 ======================== -->
+            <details class="changelog-entry">
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.4.3</span>
+                    <span class="changelog-date">17 Junio 2026</span>
+                </summary>
+                
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Al abrir la app ahora se comprueba si hay una nueva versión y se descarga. Es entonces cuando se muestra un aviso con la opción de instalar.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Optimización del proceso de comprobación de actualizaciones al inicio.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.3.0 ======================== -->
+            <details class="changelog-entry">
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.3.0</span>
+                    <span class="changelog-date">8 Junio 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag fix">Fix</span> Corregido bug por el cual la versión de la app se registraba incorrectamente (aparecían versiones tipo 2.1.2001).</li>
+                    <li><span class="changelog-tag fix">Fix</span> Corregido bug en la vista de usuarios que en algunos clientes no mostraba todos cuando no tenían roles asignados.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> La lista de selección de clientes muestra los nombres en orden alfabético.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Actualizada la vista de documentación con el resumen de todas las funcionalidades disponibles.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> En Automatismos, los botones Activar/Ejecutar/Parar se agrupan bajo un único botón "Acciones" con modal.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Las columnas de Notificación de Errores y Ejecuciones en Automatismos están ocultas por defecto. Se muestran al pulsar "Cargar Notificaciones".</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Nueva columna "Journey" en Automatismos que indica si el automatismo lanza un Journey, con filtro desplegable.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Los automatismos de sistema (los que empiezan por el MID del cliente) se ocultan automáticamente.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Dos nuevos filtros en Cloud Pages: Publicación y URL.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Nueva columna "Modificado por" en Cloud Pages.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Cloud Pages se ordena por defecto por fecha de modificación más reciente.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> El contenido de las Cloud Pages se recupera directamente por API sin necesidad de script en consola. Eliminado el botón "Recuperar Contenidos".</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Desplegable de análisis por Cloud Page: DEs referenciadas, parámetros, atributos, Content Blocks, Triggered Sends, HTTP.Post URLs y redirecciones.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Diseño compactado en Buscadores: campos y botones en una única fila horizontal.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Análisis de contenidos en Buscadores: árbol de estructura, tabla de componentes, DEs referenciadas y dependencias entre bloques.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.2.0 ======================== -->
+            <details class="changelog-entry">
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.2.0</span>
+                    <span class="changelog-date">3 Junio 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Nuevo filtro en Journeys que permite filtrar qué Journeys utilizan un campo (o varios a la vez) en su evento de entrada, ya sea porque lo traen o porque se usa como filtro.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.1.1 ======================== -->
+            <details class="changelog-entry">
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.1.1</span>
+                    <span class="changelog-date">26 Mayo 2025</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag improved">Mejora</span> La app tiene menos zoom, pensado para quienes la usan desde portátil.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Refactorización completa de la integración con Marketing Cloud.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> En Journeys, las acciones estándar (Parar, Borrar, Pausar, Reanudar) se agrupan bajo el botón "Acciones".</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Nuevas acciones masivas en Journeys: Pausar y Reanudar.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Nueva visualización de comunicaciones en Journeys: se muestran como desplegable bajo la fila, con info del Triggered Send (envíos, pausas, errores).</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Visualización de errores en Journeys: consultar errores y warnings de actividades Salesforce y Emails, con descarga detallada por contacto.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Nueva vista de Auditoría con métricas de Usuarios, Automatismos, Journeys, Cloud Pages, Send Management y Data Extensions. Permite consultar detalle, descargar secciones en CSV e informe completo.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.0.0 ======================== -->
+            <details class="changelog-entry">
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.0.0</span>
+                    <span class="changelog-date">23 Abril 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag improved">Mejora</span> Cambio en la forma de guardar los datos de clientes para evitar pérdidas de credenciales entre versiones.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> La vista de Journeys solo muestra las columnas de comunicaciones o Data Extensions si se usan esas acciones.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Filtro de actividades con multipicklist en el análisis de un Journey.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Contador añadido a la vista de usuarios.</li>
+                </ul>
+            </details>
+
+            <!-- PLANTILLA para copiar y pegar en cada nueva versión:
+            <details class="changelog-entry" open>
+                <summary class="changelog-version">
+                    <span class="changelog-badge">vX.X.X</span>
+                    <span class="changelog-date">DD Mes AAAA</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Descripción.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Descripción.</li>
+                    <li><span class="changelog-tag fix">Fix</span> Descripción.</li>
+                </ul>
+            </details>
+            -->
+
+        </div>
     </div>
 </div>
 
@@ -3262,3 +3416,15 @@
 <script type="module" src="app.js"></script>
 </body>
 </html>
+
+<!-- MODAL ESPECÍFICA PARA CONTENIDOS -->
+<div id="checkbox-select-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 id="checkbox-select-title">Seleccionar opciones</h3>
+        <div id="checkbox-select-options" style="padding: 10px 0;"></div>
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button id="checkbox-select-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="checkbox-select-ok-btn" class="action-button activate-btn">Aceptar</button>
+        </div>
+    </div>
+</div>

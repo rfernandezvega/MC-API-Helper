@@ -25,7 +25,7 @@ const state = {
  */
 async function selectDEFolderForDoc() {
     // Llama al modal de selección de carpetas que ya es global.
-    const selectedFolder = await ui.showFolderSelectorModal('dataextension', { getAuthenticatedConfig, mcApiService, logger });
+    const selectedFolder = await ui.showFolderSelectorModal(['dataextension', 'synchronizeddataextension'], { getAuthenticatedConfig, mcApiService, logger });
 
     if (selectedFolder) {
         // Guarda el ID de la carpeta en el estado interno del módulo.

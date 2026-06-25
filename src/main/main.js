@@ -16,6 +16,8 @@ const path = require('path');
 const axios = require('axios');
 const keytar = require('keytar'); // Librería para el llavero seguro
 
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=2048');
+
 const appVersion = require(path.join(__dirname, '..', '..', 'package.json')).version;
 
 
@@ -367,14 +369,14 @@ ipcMain.handle('save-client-contents-to-file', (event, { clientName, contents })
     try {
         // Obtiene la ruta estándar para guardar datos de la aplicación
         const userDataPath = app.getPath('userData');
-        // Crea una subcarpeta 'ClientCloudPages' si no existe
-        const contentsDirPath = path.join(userDataPath, 'ClientCloudPages');
+        // Crea una subcarpeta 'ClientContents' si no existe
+        const contentsDirPath = path.join(userDataPath, 'ClientContents');
         if (!fs.existsSync(contentsDirPath)) {
             fs.mkdirSync(contentsDirPath);
         }
-        // Guarda los contenidos en un fichero llamado como el cliente (ej: Atresmedia.json)
+        // Guarda los contenidos en un fichero llamado como el cliente
         const filePath = path.join(contentsDirPath, `${clientName}.json`);
-        fs.writeFileSync(filePath, JSON.stringify(contents, null, 2));
+        fs.writeFileSync(filePath, JSON.stringify(contents));
         return { success: true };
     } catch (error) {
         console.error('Error al guardar contenidos en fichero:', error);
@@ -385,7 +387,7 @@ ipcMain.handle('save-client-contents-to-file', (event, { clientName, contents })
 ipcMain.handle('load-client-contents-from-file', (event, clientName) => {
     try {
         const userDataPath = app.getPath('userData');
-        const filePath = path.join(userDataPath, 'ClientCloudPages', `${clientName}.json`);
+        const filePath = path.join(userDataPath, 'ClientContents', `${clientName}.json`);
         // Comprueba si el fichero existe
         if (fs.existsSync(filePath)) {
             const fileContents = fs.readFileSync(filePath, 'utf-8');

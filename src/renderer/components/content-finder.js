@@ -3,11 +3,17 @@ import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
+import { formatCodeWithIndentation, highlightCloudPageCode } from '../ui/code-utils.js';
 
 // --- 1. ESTADO ---
 let getAuthenticatedConfig;
 let cachedResults = [];
 let selectedAssetId = null;
+
+let currentDetailAsset = null;
+let currentDetailComponents = [];
+
+let currentDrawerContent = null;
 
 // --- 2. INIT ---
 export function init(dependencies) {
@@ -22,6 +28,42 @@ export function init(dependencies) {
         row.classList.add('selected');
         selectedAssetId = row.dataset.assetId;
         elements.contentDetailBtn.disabled = false;
+    });
+
+    // Click en botón de código dentro de la tabla de componentes
+    elements.contentComponentsWrapper.addEventListener('click', (e) => {
+        const btn = e.target.closest('.cp-inspect-btn');
+        if (!btn) return;
+        const index = parseInt(btn.dataset.compIndex, 10);
+        if (isNaN(index) || !currentDetailComponents[index]) return;
+        openFinderCodeDrawer(currentDetailComponents[index]);
+    });
+
+    // Drawer de código
+    const closeFinderDrawer = () => {
+        elements.finderCodeDrawer.classList.remove('open');
+        elements.finderCodeBackdrop.classList.remove('active');
+    };
+    elements.finderCodeCloseBtn.addEventListener('click', closeFinderDrawer);
+    elements.finderCodeBackdrop.addEventListener('click', closeFinderDrawer);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && elements.finderCodeDrawer.classList.contains('open')) {
+            closeFinderDrawer();
+        }
+    });
+
+    elements.finderCodeDownloadBtn.addEventListener('click', () => {
+        const clientName = elements.clientNameInput.value.trim() || 'cliente';
+        const contentName = (elements.finderCodeTitle.textContent || 'contenido').replace(/\s+/g, '_');
+        if (!currentDrawerContent) return;
+        const blob = new Blob([currentDrawerContent], { type: 'text/html;charset=utf-8;' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${clientName}_${contentName}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
     });
 }
 
@@ -74,6 +116,43 @@ async function showContentDetail() {
         // 1. Componentes hijos (slots/blocks) + ContentBlockBy* en código
         const components = await extractComponents(fullAsset, apiConfig, 0);
 
+        // Contenido principal: intentar ensamblar (emails), luego push/sms/wa, luego content directo
+        let mainContent = assembleFullContent(fullAsset, components) || null;
+
+        // Push / SMS / WhatsApp → mensaje del customBlockData
+        if (!mainContent) {
+            const viewKeys = Object.keys(fullAsset.views || {});
+            const findView = (name) => viewKeys.find(k => k.toLowerCase() === name.toLowerCase());
+            const pushKey = findView('push');
+            const smsKey = findView('sms') || findView('sMS');
+            const waKey = findView('whatsAppTemplate') || findView('whatsapptemplate');
+            const viewKey = pushKey || smsKey || waKey;
+
+            if (viewKey) {
+                mainContent = fullAsset.views[viewKey]?.meta?.options?.customBlockData?.['display:message']
+                    || fullAsset.views[viewKey]?.content
+                    || null;
+            }
+        }
+
+        // Fallback: content directo (templates, bloques, snippets, otros)
+        if (!mainContent) {
+            mainContent = fullAsset.content || null;
+        }
+
+        if (mainContent) {
+            components.unshift({
+                id: fullAsset.id,
+                name: fullAsset.name,
+                rawName: fullAsset.name,
+                type: selected.type,
+                path: selected.path,
+                content: mainContent,
+                referencedBy: null,
+                depth: 0
+            });
+        }
+
         // 2. DEs referenciadas, con indicación de qué bloque las usa
         const allContentSources = collectContentSources(fullAsset, components);
         const referencedDEs = extractDataExtensionsWithSource(allContentSources);
@@ -90,7 +169,7 @@ async function showContentDetail() {
             `Componentes (${components.length})`,
             componentsHtml,
             'content-components',
-            true,
+            false,
             500
         );
 
@@ -100,13 +179,17 @@ async function showContentDetail() {
             `Data Extensions referenciadas (${referencedDEs.length})`,
             desHtml,
             'content-des',
-            true,
+            false,
             400
         );
-
+        
         // Activar todos los collapsibles
         initCollapsibleListeners(elements.contentDetailBlock);
         elements.contentDetailBlock.style.display = '';
+
+        // Guardar datos para el drawer de código
+        currentDetailAsset = fullAsset;
+        currentDetailComponents = components;
 
     } catch (error) {
         logger.logMessage(`Error en detalle: ${error.message}`);
@@ -120,19 +203,38 @@ async function showContentDetail() {
 async function extractComponents(asset, apiConfig, depth, parentName) {
     const components = [];
 
-    // A. Template
+    // A. Template (obtener detalle completo para tener content y ruta)
+    const templateId = asset.views?.html?.template?.id;
     const templateName = asset.views?.html?.template?.name;
-    if (templateName && depth === 0) {
-        components.push({
-            id: asset.views.html.template.id || '---',
-            name: templateName,
-            rawName: templateName,
-            type: 'Template',
-            path: '---',
-            content: null,
-            referencedBy: null,
-            depth: 0
-        });
+    if (templateName && depth === 0 && templateId) {
+        try {
+            logger.logMessage(`→ Obteniendo template ${templateId}...`);
+            const templateAsset = await mcApiService.fetchAssetById(templateId, apiConfig);
+            const templatePath = templateAsset.category?.id
+                ? await mcApiService.getFolderPath(templateAsset.category.id, apiConfig) : '---';
+            components.push({
+                id: templateId,
+                name: templateName,
+                rawName: templateName,
+                type: 'Template',
+                path: templatePath || 'Content Builder',
+                content: templateAsset.content || null,
+                referencedBy: null,
+                depth: 0
+            });
+        } catch (err) {
+            logger.logMessage(`✗ Error obteniendo template ${templateId}: ${err.message}`);
+            components.push({
+                id: templateId || '---',
+                name: templateName,
+                rawName: templateName,
+                type: 'Template',
+                path: '---',
+                content: null,
+                referencedBy: null,
+                depth: 0
+            });
+        }
     }
 
     // B. Slots / Blocks
@@ -151,34 +253,58 @@ async function extractComponents(asset, apiConfig, depth, parentName) {
 
             for (const blockKey in blocks) {
                 const block = blocks[blockKey];
-                const childId = block.meta?.options?.id;
-                const childType = block.meta?.options?.assetType?.displayName;
-                if (!childId) continue;
+                const refId = block.meta?.options?.id;
+                const blockType = block.assetType?.displayName || block.assetType?.name || '---';
 
-                try {
-                    logger.logMessage(`${'  '.repeat(depth)}→ Obteniendo componente ID ${childId}...`);
-                    const childAsset = await mcApiService.fetchAssetById(childId, apiConfig);
-                    const childPath = childAsset.category?.id
-                        ? await mcApiService.getFolderPath(childAsset.category.id, apiConfig) : '---';
+                if (refId) {
+                    // A. Reference block → fetch the referenced asset
+                    try {
+                        logger.logMessage(`${'  '.repeat(depth)}→ Obteniendo componente ID ${refId}...`);
+                        const childAsset = await mcApiService.fetchAssetById(refId, apiConfig);
+                        const childPath = childAsset.category?.id
+                            ? await mcApiService.getFolderPath(childAsset.category.id, apiConfig) : '---';
+
+                        components.push({
+                            id: refId,
+                            name: childAsset.name || '---',
+                            rawName: childAsset.name || '---',
+                            type: childAsset.assetType?.displayName || blockType,
+                            path: childPath || 'Content Builder',
+                            content: childAsset.content || null,
+                            referencedBy: parentName || (slotLabel ? `Slot: ${slotLabel}` : null),
+                            depth: depth
+                        });
+
+                        const subComps = await extractComponents(childAsset, apiConfig, depth + 1, childAsset.name);
+                        components.push(...subComps);
+
+                    } catch (err) {
+                        logger.logMessage(`${'  '.repeat(depth)}✗ Error obteniendo asset ${refId}: ${err.message}`);
+                        components.push({ id: refId, name: `Error (${refId})`, rawName: `Error (${refId})`, type: blockType, path: '---', content: null, referencedBy: parentName, depth: depth });
+                    }
+
+                } else if (block.content) {
+                    // B. Inline block → content embedded directly in the slot
+                    const inlineId = block.id || '---';
+                    const inlineName = block.name || block.fileProperties?.fileName || `Bloque inline (${blockKey})`;
+                    let inlinePath = '---';
+
+                    if (block.category?.id) {
+                        try {
+                            inlinePath = await mcApiService.getFolderPath(block.category.id, apiConfig);
+                        } catch {}
+                    }
 
                     components.push({
-                        id: childId,
-                        name: childAsset.name || '---',
-                        rawName: childAsset.name || '---',
-                        type: childType || childAsset.assetType?.displayName || '---',
-                        path: childPath || 'Content Builder',
-                        content: childAsset.content || null,
+                        id: inlineId,
+                        name: inlineName,
+                        rawName: inlineName,
+                        type: blockType,
+                        path: inlinePath || 'Content Builder',
+                        content: block.content,
                         referencedBy: parentName || (slotLabel ? `Slot: ${slotLabel}` : null),
                         depth: depth
                     });
-
-                    // Recursivo
-                    const subComps = await extractComponents(childAsset, apiConfig, depth + 1, childAsset.name);
-                    components.push(...subComps);
-
-                } catch (err) {
-                    logger.logMessage(`${'  '.repeat(depth)}✗ Error obteniendo asset ${childId}: ${err.message}`);
-                    components.push({ id: childId, name: `Error (${childId})`, rawName: `Error (${childId})`, type: childType || '?', path: '---', content: null, referencedBy: parentName, depth: depth });
                 }
             }
         }
@@ -450,19 +576,26 @@ function buildComponentsTable(components) {
         return '<p style="color:#888;">No se encontraron componentes hijos.</p>';
     }
     const thStyle = 'position:sticky; top:0; z-index:2; background:#6faad8; color:#fff; padding:8px;';
+    
     let html = `<table style="width:100%; border-collapse:collapse;">
         <thead><tr>
+            <th style="${thStyle} width:40px;"></th>
             <th style="${thStyle}">ID</th>
             <th style="${thStyle}">Nombre</th>
             <th style="${thStyle}">Tipo</th>
             <th style="${thStyle}">Ruta</th>
             <th style="${thStyle}">Referenciado por</th>
         </tr></thead><tbody>`;
-    components.forEach(c => {
+    components.forEach((c, index) => {
         const refBy = c.referencedBy ? `<small style="color:#888;">${c.referencedBy}</small>` : '---';
         const bgColor = c.depth === 0 ? '#eef3f8' : '#ffffff';
         const paddingLeft = 8 + (c.depth * 16);
+        const codeBtn = c.content
+            ? `<span class="cp-inspect-btn" data-comp-index="${index}" title="Ver código"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>`
+            : '';
+        
         html += `<tr style="background-color:${bgColor};">
+            <td style="text-align:center;">${codeBtn}</td>
             <td>${c.id}</td>
             <td style="padding-left:${paddingLeft}px;">${c.name}</td>
             <td>${c.type}</td>
@@ -496,5 +629,108 @@ function buildDEsTable(des) {
         </tr>`;
     });
     html += '</tbody></table>';
+    return html;
+}
+
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function openFinderCodeDrawer(comp) {
+    if (!comp || !comp.content) return;
+
+    currentDrawerContent = comp.content;
+    elements.finderCodeTitle.textContent = comp.name || 'Código Fuente';
+
+    const highlighted = highlightCloudPageCode(formatCodeWithIndentation(comp.content));
+    elements.finderCodeContent.innerHTML = `
+        <div class="code-header">Código Fuente</div>
+        <pre><code>${highlighted}</code></pre>`;
+
+    elements.finderCodeDrawer.classList.add('open');
+    elements.finderCodeBackdrop.classList.add('active');
+}
+
+/**
+ * Navega al buscador de contenidos, busca un asset por ID y muestra su detalle.
+ * Llamada desde content-manager para inspeccionar un contenido.
+ * @param {number|string} assetId - ID del asset a buscar.
+ */
+export async function searchAndShowDetail(assetId) {
+    // Poner el ID en el input y lanzar búsqueda
+    elements.contentSearchValue.value = String(assetId);
+    
+    // Activar la pestaña de Contenidos dentro de Buscadores
+    const tabBtn = document.querySelector('[data-tab="contenido-tab"]');
+    if (tabBtn) tabBtn.click();
+
+    // Buscar
+    await searchContent();
+
+    // Auto-seleccionar el resultado
+    const row = [...elements.contentSearchResultsTbody.querySelectorAll('tr')]
+        .find(r => r.dataset.assetId === String(assetId));
+    if (row) {
+        row.classList.add('selected');
+        selectedAssetId = String(assetId);
+        elements.contentDetailBtn.disabled = false;
+        await showContentDetail();
+    }
+}
+
+/**
+ * Ensambla el HTML completo de un asset, reemplazando los placeholders
+ * de slots y bloques con su contenido real.
+ * @param {object} asset - El asset completo devuelto por la API.
+ * @returns {string} El HTML ensamblado.
+ */
+function assembleFullContent(asset, components) {
+    let html = asset.views?.html?.content || asset.content || '';
+    if (!html) return '';
+
+    const slots = asset.views?.html?.slots;
+    if (slots) {
+        for (const slotKey in slots) {
+            const slot = slots[slotKey];
+            let slotHtml = slot.content || '';
+
+            const blocks = slot.blocks;
+            if (blocks) {
+                for (const blockKey in blocks) {
+                    const block = blocks[blockKey];
+                    const blockContent = block.content || '';
+                    const blockRegex = new RegExp(
+                        `<div[^>]*data-type=["']block["'][^>]*data-key=["']${blockKey}["'][^>]*>\\s*</div>`,
+                        'gi'
+                    );
+                    slotHtml = slotHtml.replace(blockRegex, blockContent);
+                }
+            }
+
+            const slotRegex = new RegExp(
+                `<div[^>]*data-type=["']slot["'][^>]*data-key=["']${slotKey}["'][^>]*>[\\s\\S]*?</div>`,
+                'gi'
+            );
+            html = html.replace(slotRegex, slotHtml);
+        }
+    }
+
+    // Resolver ContentBlockByID/Key/Name con los componentes ya descargados
+    if (components && components.length > 0) {
+        html = html.replace(/%%=ContentBlockby[Ii][Dd]\s*\(\s*["']?(\d+)["']?\s*\)=%%/gi, (match, id) => {
+            const comp = components.find(c => String(c.id) === String(id) && c.content);
+            return comp ? comp.content : match;
+        });
+        html = html.replace(/%%=ContentBlockby[Kk]ey\s*\(\s*["']([^"']+)["']\s*\)=%%/gi, (match, key) => {
+            const comp = components.find(c => c.rawName === key && c.content);
+            return comp ? comp.content : match;
+        });
+        html = html.replace(/%%=ContentBlockby[Nn]ame\s*\(\s*["']([^"']+)["']\s*\)=%%/gi, (match, name) => {
+            const comp = components.find(c => c.rawName === name && c.content);
+            return comp ? comp.content : match;
+        });
+    }
+
     return html;
 }

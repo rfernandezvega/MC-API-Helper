@@ -28,6 +28,11 @@ export function init() {
     elements.journeyFlowContent = document.getElementById('journey-flow-content');
     elements.closeFlowBtn = document.getElementById('close-flow-btn');
     elements.copyFlowBtn = document.getElementById('copyFlowBtn');
+    elements.checkboxSelectModal = document.getElementById('checkbox-select-modal');
+    elements.checkboxSelectTitle = document.getElementById('checkbox-select-title');
+    elements.checkboxSelectOptions = document.getElementById('checkbox-select-options');
+    elements.checkboxSelectOkBtn = document.getElementById('checkbox-select-ok-btn');
+    elements.checkboxSelectCancelBtn = document.getElementById('checkbox-select-cancel-btn');
 
     // --- 2. Navegación y Barras Laterales ---
     elements.mainMenu = document.getElementById('main-menu');
@@ -157,6 +162,12 @@ export function init() {
     elements.contentTreeWrapper = document.getElementById('content-tree-wrapper');
     elements.contentComponentsWrapper = document.getElementById('content-components-wrapper');
     elements.contentDesWrapper = document.getElementById('content-des-wrapper');
+    elements.finderCodeDrawer = document.getElementById('finder-code-drawer');
+    elements.finderCodeBackdrop = document.getElementById('finder-code-backdrop');
+    elements.finderCodeCloseBtn = document.getElementById('finder-code-close-btn');
+    elements.finderCodeTitle = document.getElementById('finder-code-title');
+    elements.finderCodeContent = document.getElementById('finder-code-content');
+    elements.finderCodeDownloadBtn = document.getElementById('finder-code-download-btn');
 
     // --- 8g. Pestaña: Actividades ---
     elements.activityTypeSelect = document.getElementById('activityTypeSelect');
@@ -361,23 +372,29 @@ export function init() {
     elements.cloudPageIdsCancelBtn = document.getElementById('cloudpage-ids-cancel-btn');
     elements.cloudPageIdsImportBtn = document.getElementById('cloudpage-ids-import-btn');
 
-    // --- 21. MODAL DE CONTENIDOS DE CLOUD PAGES ---
-    /*Modal eliminado*/
+    // --- Cloud Page Detail Drawer ---
+    elements.cpDetailDrawer = document.getElementById('cp-detail-drawer');
+    elements.cpDetailBackdrop = document.getElementById('cp-detail-backdrop');
+    elements.cpDetailCloseBtn = document.getElementById('cp-detail-close-btn');
+    elements.cpDetailTitle = document.getElementById('cp-detail-title');
+    elements.cpDetailDeps = document.getElementById('cp-detail-deps');
+    elements.cpDetailCode = document.getElementById('cp-detail-code');
+    elements.cpDetailDownloadBtn = document.getElementById('cp-detail-download-btn');
 
-    // --- 22. GESTOR DE CONTENIDOS ---
-    elements.importNewContentBtn = document.getElementById('importNewContentBtn');
+
+   // --- 22. GESTOR DE CONTENIDOS ---
+    elements.refreshContentBtn = document.getElementById('refreshContentBtn');
+    elements.exportContentCsvBtn = document.getElementById('exportContentCsvBtn');
     elements.contentManagerFilter = document.getElementById('contentManagerFilter');
     elements.contentManagerTabButtons = document.getElementById('content-manager-tab-buttons');
     elements.contentManagerTabContent = document.getElementById('content-manager-tab-content');
-
-    // Modal de importación de contenidos (sin cambios en sus IDs)
-    elements.contentManagerModal = document.getElementById('content-manager-modal-overlay');
-    elements.contentManagerCbLink = document.getElementById('content-manager-cb-link');
-    elements.contentManagerCopyScriptBtn = document.getElementById('content-manager-copy-script-btn');
-    elements.contentManagerFetchScript = document.getElementById('content-manager-fetch-script');
-    elements.contentManagerPasteArea = document.getElementById('content-manager-paste-area');
-    elements.contentManagerCancelBtn = document.getElementById('content-manager-cancel-btn');
-    elements.contentManagerImportBtn = document.getElementById('content-manager-import-btn');
+    // Drawer de detalle
+    elements.contentDetailDrawer = document.getElementById('content-detail-drawer');
+    elements.contentDetailBackdrop = document.getElementById('content-detail-backdrop');
+    elements.contentDetailCloseBtn = document.getElementById('content-detail-close-btn');
+    elements.contentDetailTitle = document.getElementById('content-detail-title');
+    elements.contentDetailCode = document.getElementById('content-detail-code');
+    elements.contentDetailDownloadBtn = document.getElementById('content-detail-download-btn');
 
     // --- 23. MODAL PARADA DE JOURNEYS ---
     elements.journeyStopModal = document.getElementById('journey-stop-modal');

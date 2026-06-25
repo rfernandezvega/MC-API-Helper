@@ -3,6 +3,8 @@
 // Descripción: Funciones base de red (SOAP/REST) y gestión de logs.
 // ===================================================================
 
+let silenceResponses = false;
+
 export let logger = {
     logApiCall: () => {}, 
     logApiResponse: () => {}
@@ -16,6 +18,10 @@ export function setLogger(loggerInstance) {
     if (loggerInstance && loggerInstance.logApiCall && loggerInstance.logApiResponse) {
         logger = loggerInstance;
     }
+}
+
+export function setSilentResponses(silent) {
+    silenceResponses = silent;
 }
 
 /**
@@ -55,7 +61,10 @@ export async function executeRestRequest(url, options = {}) {
     logger.logApiCall({ endpoint: url, options });
     const response = await fetch(url, options);
     const responseText = await response.text();
-    logger.logApiResponse({ status: response.status, body: responseText });
+    
+    if (!silenceResponses) {
+        logger.logApiResponse({ status: response.status, body: responseText });
+    }
 
     if (!response.ok) {
         let errorMsg = responseText;

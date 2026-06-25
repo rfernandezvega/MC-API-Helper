@@ -44,3 +44,85 @@
     justify-content: center;
     gap: 15px;
 }
+
+/* --- Bloque de Changelog --- */
+.changelog-group {
+    margin-top: 20px;
+    max-height: calc(100vh - 320px);
+    overflow-y: auto;
+}
+
+.changelog-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Cada versión es un <details> colapsable */
+.changelog-entry {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.changelog-version {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+    background-color: #f8f9fa;
+    font-weight: 600;
+    font-size: 0.9em;
+    color: #333;
+    list-style: none;
+    transition: background-color 0.2s;
+}
+.changelog-version::-webkit-details-marker { display: none; }
+.changelog-version:hover { background-color: #edf2f7; }
+
+.changelog-badge {
+    background-color: #69a3db;
+    color: #fff;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.changelog-date {
+    color: #999;
+    font-weight: 400;
+    font-size: 0.85em;
+    margin-left: auto;
+}
+
+/* Lista de cambios dentro de cada versión */
+.changelog-items {
+    margin: 0;
+    padding: 10px 14px 12px 18px;
+    list-style: none;
+    background-color: #fff;
+    border-top: 1px solid #e9ecef;
+}
+.changelog-items li {
+    padding: 4px 0;
+    font-size: 0.88em;
+    color: #444;
+    line-height: 1.5;
+}
+
+/* Tags: Nuevo / Mejora / Fix */
+.changelog-tag {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 3px;
+    font-size: 0.75em;
+    font-weight: 700;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+.changelog-tag.new      { background-color: #d4edda; color: #155724; }
+.changelog-tag.improved { background-color: #cce5ff; color: #004085; }
+.changelog-tag.fix      { background-color: #fff3cd; color: #856404; }
