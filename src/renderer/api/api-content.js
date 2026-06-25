@@ -287,22 +287,27 @@ function transformAsset(a, emailTypeIds, jsonMessageTypeIds) {
         item.attributes = attrs;
         item.subject = a?.views?.subjectline?.content ?? null;
         item.preheader = a?.views?.preheader?.content ?? null;
+
+        // Contenido principal + bloques de slots
         let fullContent = a?.views?.html?.content || '';
+        const slotBlockIds = [];
         const slots = a?.views?.html?.slots;
         if (slots) {
             for (const slotKey in slots) {
                 const blocks = slots[slotKey]?.blocks;
                 if (blocks) {
                     for (const blockKey in blocks) {
-                        if (blocks[blockKey].content) {
-                            fullContent += '\n' + blocks[blockKey].content;
-                        }
+                        const block = blocks[blockKey];
+                        if (block.content) fullContent += '\n' + block.content;
+                        // Recoger IDs de bloques arrastrados
+                        const refId = block.meta?.options?.id || block.id;
+                        if (refId) slotBlockIds.push(String(refId));
                     }
                 }
             }
         }
         item.content = fullContent || a.content || null;
-
+        item.slotBlockIds = slotBlockIds.length > 0 ? slotBlockIds : null;
     } else if (jsonMessageTypeIds.includes(item.assetTypeId)) {
         const viewKeys = Object.keys(a?.views || {});
         const findView = (name) => viewKeys.find(k => k.toLowerCase() === name.toLowerCase());

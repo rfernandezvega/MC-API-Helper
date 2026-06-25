@@ -142,6 +142,8 @@ const ITEMS_PER_PAGE = 15;
 let fullContentList = [];
 let getAuthenticatedConfig;
 let tabsState = {};
+let unusedFilter = false;
+let unusedIds = new Set();
 
 // --- FUNCIONES PÚBLICAS ---
 
@@ -198,6 +200,21 @@ export function init(dependencies) {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(a.href);
+    });
+
+    elements.unusedContentBtn.addEventListener('click', () => {
+        unusedFilter = !unusedFilter;
+        elements.unusedContentBtn.style.backgroundColor = unusedFilter ? '#28a745' : '';
+        elements.unusedContentBtn.textContent = unusedFilter ? 'Mostrar Todos' : 'Sin Uso';
+
+        if (unusedFilter) {
+            unusedIds = findUnusedContentIds();
+            logger.logMessage(`Contenidos sin uso detectados: ${unusedIds.size}`);
+        } else {
+            unusedIds.clear();
+        }
+
+        renderAllTabs();
     });
 }
 
@@ -438,16 +455,27 @@ function renderAllTabs() {
 
     if (filterText) {
         filteredList = fullContentList.filter(item => {
-            return (item.name && item.name.toLowerCase().includes(filterText)) ||
-                   (item.content && item.content.toLowerCase().includes(filterText)) ||
-                   (item.resolvedContent && item.resolvedContent.toLowerCase().includes(filterText)) ||
-                   (item.subject && item.subject.toLowerCase().includes(filterText)) ||
-                   (item.preheader && item.preheader.toLowerCase().includes(filterText)) ||
-                   (item.attributes && item.attributes.toLowerCase().includes(filterText)) ||
-                   (item.title && item.title.toLowerCase().includes(filterText)) ||
-                   (item.subtitle && item.subtitle.toLowerCase().includes(filterText)) ||
-                   (item.templateName && item.templateName.toLowerCase().includes(filterText)) ||
-                   (item.message && item.message.toLowerCase().includes(filterText));
+            return (item.id && String(item.id).includes(filterText)) ||
+                    (item.name && item.name.toLowerCase().includes(filterText)) ||
+                    (item.content && item.content.toLowerCase().includes(filterText)) ||
+                    (item.resolvedContent && item.resolvedContent.toLowerCase().includes(filterText)) ||
+                    (item.subject && item.subject.toLowerCase().includes(filterText)) ||
+                    (item.preheader && item.preheader.toLowerCase().includes(filterText)) ||
+                    (item.attributes && item.attributes.toLowerCase().includes(filterText)) ||
+                    (item.title && item.title.toLowerCase().includes(filterText)) ||
+                    (item.subtitle && item.subtitle.toLowerCase().includes(filterText)) ||
+                    (item.templateName && item.templateName.toLowerCase().includes(filterText)) ||
+                    (item.message && item.message.toLowerCase().includes(filterText));
+        });
+    }
+
+    // Filtro de contenidos sin uso
+    if (unusedFilter && unusedIds.size > 0) {
+        filteredList = filteredList.filter(item => {
+            // Emails, push, sms, wa: siempre mostrar (no aplica)
+            if ([207, 208, 209, 230].includes(item.assetTypeId)) return false;
+            // Bloques, snippets, plantillas: solo los no referenciados
+            return unusedIds.has(item.id);
         });
     }
 
@@ -812,4 +840,79 @@ function enrichEmailsWithResolvedContent(contents) {
             item.resolvedContent = resolved;
         }
     }
+}
+
+function findUnusedContentIds() {
+    // 1. Recoger todas las referencias desde emails, push, sms, whatsapp
+    const referencedIds = new Set();
+    const referencedKeys = new Set();
+    const referencedNames = new Set();
+    const referencedTemplates = new Set();
+
+    for (const item of fullContentList) {
+        // Solo buscar referencias en contenidos "consumidores" (emails, push, sms, wa)
+        if (![207, 208, 209, 230].includes(item.assetTypeId)) continue;
+
+        const searchIn = [item.content, item.resolvedContent, item.message].filter(Boolean).join('\n');
+        if (!searchIn) continue;
+
+        // ContentBlockByID
+        for (const m of searchIn.matchAll(/ContentBlockby[Ii][Dd]\s*\(\s*["']?(\d+)["']?\s*\)/gi)) {
+            referencedIds.add(m[1]);
+        }
+        // ContentBlockByKey
+        for (const m of searchIn.matchAll(/ContentBlockby[Kk]ey\s*\(\s*["']([^"']+)["']\s*\)/gi)) {
+            referencedKeys.add(m[1]);
+        }
+        // ContentBlockByName
+        for (const m of searchIn.matchAll(/ContentBlockby[Nn]ame\s*\(\s*["']([^"']+)["']\s*\)/gi)) {
+            referencedNames.add(m[1]);
+        }
+        // Template usada
+        if (item.templateName) {
+            referencedTemplates.add(item.templateName);
+        }
+
+        // Bloques arrastrados a slots (meta.options.id)
+        if (item.slotBlockIds) {
+            for (const id of item.slotBlockIds) {
+                referencedIds.add(id);
+            }
+        }
+    }
+
+    // 2. También buscar referencias desde otros bloques (cadena de bloques)
+    for (const item of fullContentList) {
+        if ([207, 208, 209, 230].includes(item.assetTypeId)) continue;
+        if (!item.content) continue;
+
+        for (const m of item.content.matchAll(/ContentBlockby[Ii][Dd]\s*\(\s*["']?(\d+)["']?\s*\)/gi)) {
+            referencedIds.add(m[1]);
+        }
+        for (const m of item.content.matchAll(/ContentBlockby[Kk]ey\s*\(\s*["']([^"']+)["']\s*\)/gi)) {
+            referencedKeys.add(m[1]);
+        }
+        for (const m of item.content.matchAll(/ContentBlockby[Nn]ame\s*\(\s*["']([^"']+)["']\s*\)/gi)) {
+            referencedNames.add(m[1]);
+        }
+    }
+
+    // 3. Encontrar bloques, snippets y plantillas que NO están referenciados
+    const unused = new Set();
+    for (const item of fullContentList) {
+        // Solo evaluar bloques, snippets, plantillas y otros
+        if ([207, 208, 209, 230].includes(item.assetTypeId)) continue;
+
+        const isReferenced =
+            referencedIds.has(String(item.id)) ||
+            (item.customerKey && referencedKeys.has(item.customerKey)) ||
+            (item.name && referencedNames.has(item.name)) ||
+            (item.assetTypeId === 4 && referencedTemplates.has(item.name));
+
+        if (!isReferenced) {
+            unused.add(item.id);
+        }
+    }
+
+    return unused;
 }
