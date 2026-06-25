@@ -63,3 +63,22 @@
     background-color: #c8e6c9;
     border-color: #66bb6a;
 }
+
+.cp-refs-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    background-color: #fff3e0;
+    border: 1px solid #ffcc80;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+.cp-refs-btn:hover {
+    background-color: #ffe0b2;
+    border-color: #ffa726;
+}

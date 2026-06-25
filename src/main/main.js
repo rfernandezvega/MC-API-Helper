@@ -365,18 +365,15 @@ ipcMain.handle('open-csv-file', async (event) => {
     }
 });
 
-ipcMain.handle('save-client-contents-to-file', (event, { clientName, contents }) => {
+ipcMain.handle('save-client-contents-to-file', (event, { clientName, contents, lastRefresh }) => {
     try {
-        // Obtiene la ruta estándar para guardar datos de la aplicación
         const userDataPath = app.getPath('userData');
-        // Crea una subcarpeta 'ClientContents' si no existe
         const contentsDirPath = path.join(userDataPath, 'ClientContents');
         if (!fs.existsSync(contentsDirPath)) {
             fs.mkdirSync(contentsDirPath);
         }
-        // Guarda los contenidos en un fichero llamado como el cliente
         const filePath = path.join(contentsDirPath, `${clientName}.json`);
-        fs.writeFileSync(filePath, JSON.stringify(contents));
+        fs.writeFileSync(filePath, JSON.stringify({ contents, lastRefresh: lastRefresh || new Date().toISOString() }));
         return { success: true };
     } catch (error) {
         console.error('Error al guardar contenidos en fichero:', error);
@@ -388,13 +385,14 @@ ipcMain.handle('load-client-contents-from-file', (event, clientName) => {
     try {
         const userDataPath = app.getPath('userData');
         const filePath = path.join(userDataPath, 'ClientContents', `${clientName}.json`);
-        // Comprueba si el fichero existe
         if (fs.existsSync(filePath)) {
-            const fileContents = fs.readFileSync(filePath, 'utf-8');
-            return { success: true, contents: JSON.parse(fileContents) };
+            const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+            // Soportar formato viejo (array) y nuevo (objeto con contents + lastRefresh)
+            const contents = Array.isArray(raw) ? raw : raw.contents;
+            const lastRefresh = Array.isArray(raw) ? null : raw.lastRefresh;
+            return { success: true, contents, lastRefresh };
         }
-        // Si no existe, no es un error, simplemente no hay datos guardados
-        return { success: true, contents: null };
+        return { success: true, contents: null, lastRefresh: null };
     } catch (error) {
         console.error('Error al cargar contenidos desde fichero:', error);
         return { success: false, error: error.message };

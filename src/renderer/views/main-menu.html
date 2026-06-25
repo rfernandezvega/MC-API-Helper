@@ -15,9 +15,28 @@
     <div class="menu-group changelog-group">
         <h3>Novedades</h3>
         <div class="changelog-list">
+            <!-- ======================== v2.5.3 ======================== -->
+            <details class="changelog-entry" open>
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.5.3</span>
+                    <span class="changelog-date">26 Junio 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Nueva pestaña "Plantillas WA" en Contenidos que muestra las plantillas de WhatsApp con su nombre de template, categoría, idiomas, componentes, tipo de media y fecha de modificación.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Vista de detalle de Plantillas WA y WhatsApp messages con información de plantilla asociada, variables configuradas, botones, footer y mensaje.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Columnas de Plantilla y Botones en la pestaña de Whatsapp.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Botón "Sin Uso" que filtra contenidos no utilizados. Se considera sin uso: bloques que ningún email/push/SMS/WhatsApp referencia ni arrastra, snippets que nadie llama con ContentBlockBy*, plantillas que ningún email usa, plantillas WA sin WhatsApp messages asociados, y bloques referenciados solo por otros bloques que tampoco están en uso.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Icono de referencias en contenidos y plantillas para ver dónde se utilizan (por ID, Key, Name, arrastrado o como template). Solo aparece si el contenido tiene referencias.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> La búsqueda en Contenidos ahora busca también en el contenido resuelto, variables de WhatsApp y botones.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Se muestra la fecha/hora del contenido cacheado junto al total.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> La exportación CSV incluye columnas ocultas (asunto, preheader, mensaje) según el tipo.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Optimización de memoria: transformación al vuelo y limpieza de HTML de preview.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Guardado incremental de caché cada 500 contenidos para evitar pérdida de datos con volumetría alta.</li>
+                </ul>
+            </details>
 
             <!-- ======================== v2.5.2 ======================== -->
-            <details class="changelog-entry" open>
+            <details class="changelog-entry">
                 <summary class="changelog-version">
                     <span class="changelog-badge">v2.5.2</span>
                     <span class="changelog-date">25 Junio 2026</span>

@@ -31,7 +31,7 @@ import { searchAndShowDetail } from './content-finder.js';
 // 223  | referenceblock         | Reference Block         | Bloques
 // 224  | smartcaptureblock      | Smart Capture Block     | Bloques
 // 230  | jsonmessage            | JSON Message            | Push / SMS / WhatsApp
-// 235  | jsonmessagetemplate    | JSON Message Template   | Otros
+// 235  | jsonmessagetemplate    | JSON Message Template   | Plantillas Whatsapp
 // ===================================================================
 const CONTENT_TYPES_CONFIG = [
     { 
@@ -93,10 +93,28 @@ const CONTENT_TYPES_CONFIG = [
         assetTypeIds: [230],
         filter: (item) => item.type === 'whatsapptemplate', 
         headers: [
-            { key: '_actions', label: '', width: '8%' },
-            { key: 'id', label: 'ID', width: '12%' },
-            { key: 'name', label: 'Nombre', width: '50%' },
-            { key: 'modifiedDate', label: 'Modificado', width: '30%' }
+            { key: '_actions', label: '', width: '60px' },
+            { key: 'id', label: 'ID', width: '65px' },
+            { key: 'name', label: 'Nombre', width: '25%' },
+            { key: 'waTemplateName', label: 'Plantilla', width: '20%' },
+            { key: 'waButtons', label: 'Botones', width: '10%' },
+            { key: 'modifiedDate', label: 'Modificado', width: '15%' }
+        ]
+    },
+    {
+        id: 'plantillas_wa',
+        displayName: 'Plantillas Whatsapp',
+        assetTypeIds: [235], 
+        headers: [
+            { key: '_actions', label: '', width: '60px' },
+            { key: 'id', label: 'ID', width: '65px' },
+            { key: 'name', label: 'Nombre', width: '18%' },
+            { key: 'waTemplateName', label: 'Template', width: '15%' },
+            { key: 'waCategory', label: 'Categoría', width: '10%' },
+            { key: 'waLanguages', label: 'Idiomas', width: '8%' },
+            { key: 'waComponents', label: 'Componentes', width: '12%' },
+            { key: 'waMediaType', label: 'Media', width: '6%' },
+            { key: 'modifiedDate', label: 'Modificado', width: '12%' }
         ]
     },
     { 
@@ -121,19 +139,7 @@ const CONTENT_TYPES_CONFIG = [
             { key: 'name', label: 'Nombre', width: '50%' },
             { key: 'modifiedDate', label: 'Modificado', width: '30%' }
         ]
-    },
-    {
-        id: 'otros',
-        displayName: 'Otros',
-        assetTypeIds: [235], 
-        headers: [
-            { key: '_actions', label: '', width: '8%' },
-            { key: 'id', label: 'ID', width: '8%' },
-            { key: 'name', label: 'Nombre', width: '39%' },
-            { key: 'assetTypeName', label: 'Tipo', width: '20%' },
-            { key: 'modifiedDate', label: 'Modificado', width: '25%' }
-        ]
-    }
+    }    
 ];
 
 const ITEMS_PER_PAGE = 15;
@@ -234,11 +240,14 @@ export async function view() {
             fullContentList = result.contents;
             enrichEmailsWithResolvedContent(fullContentList);
             logger.logMessage(`Cargados ${fullContentList.length} contenidos desde caché para "${clientName}".`);
+            renderAllTabs();
+            updateCacheDate(result.lastRefresh);
         } else {
             logger.logMessage(`No hay contenidos en caché para "${clientName}". Pulsa Refrescar para obtenerlos.`);
             fullContentList = [];
+            renderAllTabs();
+            updateCacheDate(null);
         }
-        renderAllTabs();
     } catch (error) {
         logger.logMessage(`Error al cargar contenidos: ${error.message}`);
     } finally {
@@ -277,8 +286,12 @@ async function fetchContentData(typesToFetch) {
             getAuthenticatedConfig,
             (msg) => ui.blockUI(msg),
             async (partialResults) => {
-                await window.electronAPI.saveClientContents({ clientName, contents: partialResults });
-                logger.logMessage(`💾 Caché guardada: ${partialResults.length} contenidos.`);
+                await window.electronAPI.saveClientContents({ 
+                    clientName, 
+                    contents: partialResults,
+                    lastRefresh: new Date().toISOString()
+                });
+                logger.logMessage(`Caché guardada: ${partialResults.length} contenidos.`);
             }
         );
 
@@ -286,6 +299,7 @@ async function fetchContentData(typesToFetch) {
 
         fullContentList = contents;
         renderAllTabs();
+        updateCacheDate(new Date().toISOString());
         ui.showCustomAlert(`Se han obtenido ${fullContentList.length} contenidos para "${clientName}".`);
 
     } catch (error) {
@@ -347,12 +361,18 @@ function createDynamicTabs() {
         contentContainer.appendChild(contentDiv);
     });
 
-    // Re-añadir el contador total
+    // Re-añadir el contador total y fecha
     const totalSpan = document.createElement('span');
     totalSpan.id = 'content-total-count';
     totalSpan.style.cssText = 'font-size:0.85em; color:#999; margin-left:auto; align-self:flex-end; padding-bottom:6px; white-space:nowrap;';
     buttonsContainer.appendChild(totalSpan);
     elements.contentTotalCount = totalSpan;
+
+    const cacheDate = document.createElement('span');
+    cacheDate.id = 'content-cache-date';
+    cacheDate.style.cssText = 'font-size:0.75em; color:#bbb; margin-left:8px; align-self:flex-end; padding-bottom:6px; white-space:nowrap;';
+    buttonsContainer.appendChild(cacheDate);
+    elements.contentCacheDate = cacheDate;
 }
 
 function setupEventListeners() {
@@ -384,6 +404,14 @@ function setupEventListeners() {
         if (resolveBtn) {
             const contentId = resolveBtn.dataset.contentId;
             if (contentId) openResolvedDetail(contentId);
+            return;
+        }
+
+        // Botón de dónde se usa
+        const refsBtn = e.target.closest('.cp-refs-btn');
+        if (refsBtn) {
+            const contentId = refsBtn.dataset.contentId;
+            if (contentId) openReferencesDetail(contentId);
             return;
         }
 
@@ -465,7 +493,9 @@ function renderAllTabs() {
                     (item.title && item.title.toLowerCase().includes(filterText)) ||
                     (item.subtitle && item.subtitle.toLowerCase().includes(filterText)) ||
                     (item.templateName && item.templateName.toLowerCase().includes(filterText)) ||
-                    (item.message && item.message.toLowerCase().includes(filterText));
+                    (item.message && item.message.toLowerCase().includes(filterText)) ||
+                    (item.waParams && item.waParams.toLowerCase().includes(filterText)) || 
+                    (item.waButtons && item.waButtons.toLowerCase().includes(filterText));
         });
     }
 
@@ -492,6 +522,9 @@ function renderAllTabs() {
     if (elements.contentTotalCount) {
         elements.contentTotalCount.textContent = `Total: ${filteredList.length}`;
     }
+
+    // Precalcular qué contenidos tienen referencias
+    updateReferencedFlags();
 }
 
 /**
@@ -503,9 +536,13 @@ function actionBtnsHtml(item) {
     if (hasCode) {
         html += `<span class="cp-inspect-btn" data-content-id="${item.id}" title="Ver código"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>`;
     }
-    // Botón de código resuelto solo para emails
+    // Código resuelto solo para emails
     if (hasCode && [207, 208, 209].includes(item.assetTypeId)) {
         html += `<span class="cp-resolve-btn" data-content-id="${item.id}" title="Ver código resuelto"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#2e7d32;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg></span>`;
+    }
+    // Dónde se usa — solo si tiene referencias
+    if (![207, 208, 209, 230].includes(item.assetTypeId) && item._isReferenced) {
+        html += `<span class="cp-refs-btn" data-content-id="${item.id}" title="Dónde se usa"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#e65100;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></span>`;
     }
     html += `<span class="cp-analyze-btn" data-content-id="${item.id}" title="Analizar en Buscadores"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#558ac7;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>`;
     return html;
@@ -577,10 +614,13 @@ function renderTableForTab(tabId, sourceData) {
                     <td>${formatDate(item.modifiedDate)}</td>
                 </tr>`;
             } else if (tabId === 'whatsapp') {
+                const hasButtons = item.waButtons ? 'Sí' : 'No';
                 return `<tr>
                     ${actions}
                     <td>${item.id || '---'}</td>
                     <td>${item.name || '---'}</td>
+                    <td title="${escapeHtml(item.waTemplateName) || ''}">${item.waTemplateName || '---'}</td>
+                    <td>${hasButtons}</td>
                     <td>${formatDate(item.modifiedDate)}</td>
                 </tr>`;
             } else if (tabId === 'bloques') {
@@ -598,12 +638,17 @@ function renderTableForTab(tabId, sourceData) {
                     <td>${item.name || '---'}</td>
                     <td>${formatDate(item.modifiedDate)}</td>
                 </tr>`;
-            } else if (tabId === 'otros') {
+            } else if (tabId === 'plantillas_wa') {
+                const buttonsHtml = item.waButtons ? `<span title="${escapeHtml(item.waButtons)}">Sí</span>` : 'No';
                 return `<tr>
                     ${actions}
                     <td>${item.id || '---'}</td>
                     <td>${item.name || '---'}</td>
-                    <td>${item.assetTypeName || '---'}</td>
+                    <td title="${escapeHtml(item.waTemplateName) || ''}">${item.waTemplateName || '---'}</td>
+                    <td>${item.waCategory || '---'}</td>
+                    <td>${item.waLanguages || '---'}</td>
+                    <td>${item.waComponents || '---'}</td>
+                    <td>${item.waMediaType || '---'}</td>
                     <td>${formatDate(item.modifiedDate)}</td>
                 </tr>`;
             }
@@ -621,12 +666,88 @@ function openContentDetail(contentId) {
     const item = fullContentList.find(c => String(c.id) === String(contentId));
     if (!item) return;
 
+    elements.contentDetailTitle.textContent = item.name || 'Contenido';
+
+    // WhatsApp Templates (235) — vista especial
+    if (item.assetTypeId === 235) {
+        let metaHtml = '<div class="cp-detail-deps-row">';
+        if (item.waTemplateName) {
+            metaHtml += `<div class="cp-dep-block"><h4>Template</h4><div class="dep-items"><div class="dep-item">${escapeHtml(item.waTemplateName)}</div></div></div>`;
+        }
+        if (item.waCategory) {
+            metaHtml += `<div class="cp-dep-block"><h4>Categoría</h4><div class="dep-items"><div class="dep-item">${item.waCategory}</div></div></div>`;
+        }
+        if (item.waLanguages) {
+            metaHtml += `<div class="cp-dep-block"><h4>Idiomas</h4><div class="dep-items"><div class="dep-item">${item.waLanguages}</div></div></div>`;
+        }
+        if (item.waMediaType) {
+            metaHtml += `<div class="cp-dep-block"><h4>Media</h4><div class="dep-items"><div class="dep-item">${item.waMediaType}</div></div></div>`;
+        }
+        metaHtml += `</div>`;
+
+        if (item.waButtons) {
+            metaHtml += `<div class="cp-detail-deps-row" style="margin-top:8px;">
+                <div class="cp-dep-block"><h4>Botones</h4><div class="dep-items"><div class="dep-item">${escapeHtml(item.waButtons).replace(/\|/g, '<br>')}</div></div></div>
+            </div>`;
+        }
+
+        if (item.waFooter) {
+            metaHtml += `<div class="cp-detail-deps-row" style="margin-top:8px;">
+                <div class="cp-dep-block"><h4>Footer</h4><div class="dep-items"><div class="dep-item">${escapeHtml(item.waFooter)}</div></div></div>
+            </div>`;
+        }
+
+        if (item.waParams) {
+            metaHtml += `<div class="cp-detail-deps-row" style="margin-top:8px;">
+                <div class="cp-dep-block"><h4>Variables</h4><div class="dep-items">${item.waParams.split('\n').map(p => `<div class="dep-item">${escapeHtml(p)}</div>`).join('')}</div></div>
+            </div>`;
+        }
+
+        const msg = item.message || '';
+        elements.contentDetailCode.innerHTML = metaHtml + (msg
+            ? `<div class="code-header">Mensaje</div><pre><code>${escapeHtml(msg)}</code></pre>`
+            : '<div style="padding:12px; color:#999;">Sin mensaje.</div>');
+
+        elements.contentDetailDrawer.classList.add('open');
+        elements.contentDetailBackdrop.classList.add('active');
+        return;
+    }
+
+    // WhatsApp messages (230 con channel whatsapptemplate)
+    if (item.assetTypeId === 230 && item.type === 'whatsapptemplate') {
+        let metaHtml = '<div class="cp-detail-deps-row">';
+        if (item.waTemplateName) {
+            metaHtml += `<div class="cp-dep-block"><h4>Plantilla</h4><div class="dep-items"><div class="dep-item">${escapeHtml(item.waTemplateName)}</div></div></div>`;
+        }
+        metaHtml += `</div>`;
+
+        if (item.waButtons) {
+            metaHtml += `<div class="cp-detail-deps-row" style="margin-top:8px;">
+                <div class="cp-dep-block"><h4>Botones</h4><div class="dep-items"><div class="dep-item">${escapeHtml(item.waButtons).replace(/\|/g, '<br>')}</div></div></div>
+            </div>`;
+        }
+
+        if (item.waParams) {
+            metaHtml += `<div class="cp-detail-deps-row" style="margin-top:8px;">
+                <div class="cp-dep-block"><h4>Variables</h4><div class="dep-items">${item.waParams.split('\n').map(p => `<div class="dep-item">${escapeHtml(p)}</div>`).join('')}</div></div>
+            </div>`;
+        }
+
+        const msg = item.message || '';
+        elements.contentDetailTitle.textContent = item.name || 'WhatsApp';
+        elements.contentDetailCode.innerHTML = metaHtml + (msg
+            ? `<div class="code-header">Mensaje</div><pre><code>${escapeHtml(msg)}</code></pre>`
+            : '<div style="padding:12px; color:#999;">Sin mensaje.</div>');
+
+        elements.contentDetailDrawer.classList.add('open');
+        elements.contentDetailBackdrop.classList.add('active');
+        return;
+    }
+
+    // Resto de contenidos
     const code = item.content || item.message || '';
     if (!code) return;
 
-    elements.contentDetailTitle.textContent = item.name || 'Contenido';
-
-    // Metadatos del email (subject + preheader) antes del código
     let metaHtml = '';
     if (item.subject || item.preheader) {
         metaHtml = `<div class="cp-detail-deps-row">`;
@@ -719,7 +840,11 @@ async function downloadCsvForTab(tabId) {
         ],
         push: [{ key: 'message', label: 'Mensaje' }],
         sms: [{ key: 'message', label: 'Mensaje' }],
-        whatsapp: [{ key: 'message', label: 'Mensaje' }]
+        whatsapp: [{ key: 'message', label: 'Mensaje' }],
+        plantillas_wa: [
+            { key: 'waButtons', label: 'Botones' },
+            { key: 'message', label: 'Mensaje' }
+        ]
     };
 
     const allColumns = [...tabConfig.headers, ...(extraCsvColumns[tabId] || [])];
@@ -843,65 +968,66 @@ function enrichEmailsWithResolvedContent(contents) {
 }
 
 function findUnusedContentIds() {
-    // 1. Recoger todas las referencias desde emails, push, sms, whatsapp
+    const emailTypeIds = [207, 208, 209, 230];
     const referencedIds = new Set();
     const referencedKeys = new Set();
     const referencedNames = new Set();
     const referencedTemplates = new Set();
 
+    // 1. Recoger referencias directas desde emails/push/sms/wa
     for (const item of fullContentList) {
-        // Solo buscar referencias en contenidos "consumidores" (emails, push, sms, wa)
-        if (![207, 208, 209, 230].includes(item.assetTypeId)) continue;
+        if (!emailTypeIds.includes(item.assetTypeId)) continue;
 
-        const searchIn = [item.content, item.resolvedContent, item.message].filter(Boolean).join('\n');
-        if (!searchIn) continue;
-
-        // ContentBlockByID
-        for (const m of searchIn.matchAll(/ContentBlockby[Ii][Dd]\s*\(\s*["']?(\d+)["']?\s*\)/gi)) {
-            referencedIds.add(m[1]);
+        const searchIn = [item.content, item.resolvedContent, item.message, item.waParams].filter(Boolean).join('\n');
+        if (searchIn) {
+            for (const m of searchIn.matchAll(/ContentBlockby[Ii][Dd]\s*\(\s*["']?(\d+)["']?\s*\)/gi)) referencedIds.add(m[1]);
+            for (const m of searchIn.matchAll(/ContentBlockby[Kk]ey\s*\(\s*["']([^"']+)["']\s*\)/gi)) referencedKeys.add(m[1]);
+            for (const m of searchIn.matchAll(/ContentBlockby[Nn]ame\s*\(\s*["']([^"']+)["']\s*\)/gi)) referencedNames.add(m[1]);
         }
-        // ContentBlockByKey
-        for (const m of searchIn.matchAll(/ContentBlockby[Kk]ey\s*\(\s*["']([^"']+)["']\s*\)/gi)) {
-            referencedKeys.add(m[1]);
-        }
-        // ContentBlockByName
-        for (const m of searchIn.matchAll(/ContentBlockby[Nn]ame\s*\(\s*["']([^"']+)["']\s*\)/gi)) {
-            referencedNames.add(m[1]);
-        }
-        // Template usada
-        if (item.templateName) {
-            referencedTemplates.add(item.templateName);
-        }
-
-        // Bloques arrastrados a slots (meta.options.id)
+        if (item.templateName) referencedTemplates.add(item.templateName);
         if (item.slotBlockIds) {
-            for (const id of item.slotBlockIds) {
-                referencedIds.add(id);
+            for (const id of item.slotBlockIds) referencedIds.add(id);
+        }
+
+        // Plantilla WhatsApp referenciada
+        if (item.waTemplateRefId) {
+            referencedIds.add(item.waTemplateRefId);
+        }
+    }
+
+    // 2. Propagar cadena: desde los bloques referenciados, buscar sus hijos
+    let changed = true;
+    while (changed) {
+        changed = false;
+        for (const item of fullContentList) {
+            if (emailTypeIds.includes(item.assetTypeId)) continue;
+            if (!item.content) continue;
+
+            const isReferenced =
+                referencedIds.has(String(item.id)) ||
+                (item.customerKey && referencedKeys.has(item.customerKey)) ||
+                (item.name && referencedNames.has(item.name)) ||
+                (item.assetTypeId === 4 && referencedTemplates.has(item.name));
+
+            if (!isReferenced) continue;
+
+            // Este bloque está en uso → buscar qué referencia él
+            for (const m of item.content.matchAll(/ContentBlockby[Ii][Dd]\s*\(\s*["']?(\d+)["']?\s*\)/gi)) {
+                if (!referencedIds.has(m[1])) { referencedIds.add(m[1]); changed = true; }
+            }
+            for (const m of item.content.matchAll(/ContentBlockby[Kk]ey\s*\(\s*["']([^"']+)["']\s*\)/gi)) {
+                if (!referencedKeys.has(m[1])) { referencedKeys.add(m[1]); changed = true; }
+            }
+            for (const m of item.content.matchAll(/ContentBlockby[Nn]ame\s*\(\s*["']([^"']+)["']\s*\)/gi)) {
+                if (!referencedNames.has(m[1])) { referencedNames.add(m[1]); changed = true; }
             }
         }
     }
 
-    // 2. También buscar referencias desde otros bloques (cadena de bloques)
-    for (const item of fullContentList) {
-        if ([207, 208, 209, 230].includes(item.assetTypeId)) continue;
-        if (!item.content) continue;
-
-        for (const m of item.content.matchAll(/ContentBlockby[Ii][Dd]\s*\(\s*["']?(\d+)["']?\s*\)/gi)) {
-            referencedIds.add(m[1]);
-        }
-        for (const m of item.content.matchAll(/ContentBlockby[Kk]ey\s*\(\s*["']([^"']+)["']\s*\)/gi)) {
-            referencedKeys.add(m[1]);
-        }
-        for (const m of item.content.matchAll(/ContentBlockby[Nn]ame\s*\(\s*["']([^"']+)["']\s*\)/gi)) {
-            referencedNames.add(m[1]);
-        }
-    }
-
-    // 3. Encontrar bloques, snippets y plantillas que NO están referenciados
+    // 3. Marcar como sin uso los que no están referenciados
     const unused = new Set();
     for (const item of fullContentList) {
-        // Solo evaluar bloques, snippets, plantillas y otros
-        if ([207, 208, 209, 230].includes(item.assetTypeId)) continue;
+        if (emailTypeIds.includes(item.assetTypeId)) continue;
 
         const isReferenced =
             referencedIds.has(String(item.id)) ||
@@ -909,10 +1035,125 @@ function findUnusedContentIds() {
             (item.name && referencedNames.has(item.name)) ||
             (item.assetTypeId === 4 && referencedTemplates.has(item.name));
 
-        if (!isReferenced) {
-            unused.add(item.id);
-        }
+        if (!isReferenced) unused.add(item.id);
     }
 
     return unused;
+}
+
+function openReferencesDetail(contentId) {
+    const item = fullContentList.find(c => String(c.id) === String(contentId));
+    if (!item) return;
+
+    const id = String(item.id);
+    const key = item.customerKey || '';
+    const name = item.name || '';
+
+    // Buscar quién referencia este componente
+    const references = [];
+    for (const other of fullContentList) {
+        if (other.id === item.id) continue;
+        const searchIn = [other.content, other.resolvedContent, other.message].filter(Boolean).join('\n');
+        if (!searchIn) continue;
+
+        let refType = null;
+
+        // Por ID
+        const idRegex = new RegExp(`ContentBlockby[Ii][Dd]\\s*\\(\\s*["']?${id}["']?\\s*\\)`, 'gi');
+        if (idRegex.test(searchIn)) refType = `ContentBlockByID(${id})`;
+
+        // Por Key
+        if (!refType && key) {
+            const keyRegex = new RegExp(`ContentBlockby[Kk]ey\\s*\\(\\s*["']${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']\\s*\\)`, 'gi');
+            if (keyRegex.test(searchIn)) refType = `ContentBlockByKey("${key}")`;
+        }
+
+        // Por Name
+        if (!refType && name) {
+            const nameRegex = new RegExp(`ContentBlockby[Nn]ame\\s*\\(\\s*["']${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']\\s*\\)`, 'gi');
+            if (nameRegex.test(searchIn)) refType = `ContentBlockByName("${name}")`;
+        }
+
+        // Por slotBlockIds (arrastrado)
+        if (!refType && other.slotBlockIds && other.slotBlockIds.includes(id)) {
+            refType = 'Bloque arrastrado';
+        }
+
+        // Por template
+        if (!refType && item.assetTypeId === 4 && other.templateName === name) {
+            refType = 'Template';
+        }
+
+        // WhatsApp message (230) que usa esta plantilla WA (235)
+        if (!refType && item.assetTypeId === 235 && other.waTemplateRefId === id) {
+            refType = 'Plantilla WhatsApp';
+        }
+
+        if (refType) {
+            references.push({
+                id: other.id,
+                name: other.name,
+                type: other.assetTypeName || '---',
+                refType: refType
+            });
+        }
+    }
+
+    // Renderizar en el drawer
+    elements.contentDetailTitle.textContent = `Dónde se usa: ${item.name}`;
+
+    let html = '';
+    if (references.length === 0) {
+        html = '<div style="padding:20px; color:#999; text-align:center;">Este componente no está referenciado por ningún otro contenido.</div>';
+    } else {
+        html = `<div style="padding:8px 12px; font-size:0.85em; color:#666; border-bottom:1px solid #e2e8f0;">${references.length} referencia${references.length !== 1 ? 's' : ''} encontrada${references.length !== 1 ? 's' : ''}</div>`;
+        html += `<div style="overflow:auto; flex-grow:1;"><table style="width:100%; border-collapse:collapse;">
+            <thead><tr>
+                <th style="position:sticky; top:0; z-index:2; background:#5a6d7e; color:#fff; padding:8px; text-align:left;">ID</th>
+                <th style="position:sticky; top:0; z-index:2; background:#5a6d7e; color:#fff; padding:8px; text-align:left;">Nombre</th>
+                <th style="position:sticky; top:0; z-index:2; background:#5a6d7e; color:#fff; padding:8px; text-align:left;">Tipo</th>
+                <th style="position:sticky; top:0; z-index:2; background:#5a6d7e; color:#fff; padding:8px; text-align:left;">Cómo se referencia</th>
+            </tr></thead><tbody>`;
+        for (const ref of references) {
+            html += `<tr style="border-bottom:1px solid #eee;">
+                <td style="padding:6px 8px;">${ref.id}</td>
+                <td style="padding:6px 8px;">${escapeHtml(ref.name)}</td>
+                <td style="padding:6px 8px;">${escapeHtml(ref.type)}</td>
+                <td style="padding:6px 8px; font-size:0.85em; color:#888;">${escapeHtml(ref.refType)}</td>
+            </tr>`;
+        }
+        html += '</tbody></table></div>';
+    }
+
+    elements.contentDetailCode.innerHTML = html;
+    elements.contentDetailDrawer.classList.add('open');
+    elements.contentDetailBackdrop.classList.add('active');
+}
+
+function updateCacheDate(dateString) {
+    if (!elements.contentCacheDate) return;
+    if (!dateString) {
+        elements.contentCacheDate.textContent = '';
+        return;
+    }
+    const date = new Date(dateString);
+    elements.contentCacheDate.textContent = `Última descarga: ${date.toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })}`;
+}
+
+function updateReferencedFlags() {
+    const referencedIds = new Set();
+
+    for (const item of fullContentList) {
+        const searchIn = [item.content, item.resolvedContent, item.message, item.waParams].filter(Boolean).join('\n');
+        if (searchIn) {
+            for (const m of searchIn.matchAll(/ContentBlockby[Ii][Dd]\s*\(\s*["']?(\d+)["']?\s*\)/gi)) referencedIds.add(m[1]);
+        }
+        if (item.slotBlockIds) item.slotBlockIds.forEach(id => referencedIds.add(id));
+        if (item.templateId) referencedIds.add(String(item.templateId));
+        if (item.waTemplateRefId) referencedIds.add(item.waTemplateRefId);
+    }
+
+    for (const item of fullContentList) {
+        item._isReferenced = referencedIds.has(String(item.id));
+    }
 }

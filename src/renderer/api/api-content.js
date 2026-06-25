@@ -337,10 +337,103 @@ function transformAsset(a, emailTypeIds, jsonMessageTypeIds) {
             customData?.['display:media:image:url'] ? `Imagen: ${customData['display:media:image:url']}` : null,
             customData?.['display:media:video:url'] ? `Video: ${customData['display:media:video:url']}` : null
         ].filter(Boolean).join('\n') || null;
+
+        // Referencia a plantilla WhatsApp
+        if (customData?.template?.id) {
+            item.waTemplateRefId = String(customData.template.id);
+        }
+
+        // Parámetros de variables (mensaje + título)
+        const msgParams = customData?.['display:message:parameters'];
+        const titleParams = customData?.['display:title:parameters'];
+        const allParams = [];
+        
+        if (msgParams) {
+            for (const [key, param] of Object.entries(msgParams)) {
+                allParams.push(`\${${key}} → ${param['display:argument'] || '---'} (${param['display:argument:format'] || 'text'})`);
+            }
+        }
+        if (titleParams) {
+            for (const [key, param] of Object.entries(titleParams)) {
+                allParams.push(`Media \${${key}} → ${param['display:argument'] || '---'} (${param['display:argument:format'] || 'text'})`);
+            }
+        }
+        item.waParams = allParams.length > 0 ? allParams.join('\n') : null;
+
+        // Info de la plantilla WA (nombre y botones)
+        item.waTemplateName = customData?.templateName || null;
+
+        const selectedTemplate = customData?.selectedTemplate;
+        if (selectedTemplate?.['display:buttons']) {
+            item.waButtons = Object.values(selectedTemplate['display:buttons'])
+                .filter(b => b.title)
+                .map(b => `${b.title || '---'} (${b.actionType || '---'}${b.value ? ': ' + b.value : ''})`)
+                .join(' | ');
+        }
     }
 
     if (jsonMessageTypeIds.includes(item.assetTypeId)) {
         item.content = null;
+    }
+
+    // WhatsApp Templates (235)
+    if (item.assetTypeId === 235) {
+        const viewKeys = Object.keys(a?.views || {});
+        const waViewKey = viewKeys.find(k => k.toLowerCase().includes('whatsapp'));
+        const customData = waViewKey ? a.views[waViewKey]?.meta?.options?.customBlockData : null;
+
+        if (customData) {
+            item.waTemplateName = customData.templateName || null;
+            item.waCategory = customData.category || null;
+
+            // Idiomas
+            const langs = customData['display:languages:approved'] || [];
+            item.waLanguages = langs.join(', ') || null;
+
+            // Buscar contenido del primer idioma
+            const langContent = customData['display:languages:content'];
+            const firstLang = langContent ? langContent[Object.keys(langContent)[0]] : null;
+
+            if (firstLang) {
+                // Componentes
+                item.waComponents = (firstLang['display:components'] || []).join(', ') || null;
+
+                // Mensaje
+                item.message = firstLang['display:message'] || null;
+
+                // Botones
+                const buttons = firstLang['display:buttons'];
+                if (buttons) {
+                    item.waButtons = Object.values(buttons).map(b => 
+                        `${b.title || '---'} (${b.actionType || '---'}${b.value ? ': ' + b.value : ''})`
+                    ).join(' | ');
+
+                    const footer = firstLang['display:footer'] || firstLang['display:buttons']?.['display:footer'];
+                    item.waFooter = footer || null;
+                }
+
+                // Parámetros del primer idioma
+                const msgParams = firstLang['display:message:parameters'];
+                const titleParams = firstLang['display:title:parameters'];
+                const allParams = [];
+                
+                if (msgParams) {
+                    for (const [key, param] of Object.entries(msgParams)) {
+                        allParams.push(`\${${key}} → ${param['display:argument'] || '---'} (${param['display:argument:format'] || 'text'})`);
+                    }
+                }
+                if (titleParams) {
+                    for (const [key, param] of Object.entries(titleParams)) {
+                        allParams.push(`Header \${${key}} → ${param['display:argument'] || '---'} (${param['display:argument:format'] || 'text'})`);
+                    }
+                }
+                item.waParams = allParams.length > 0 ? allParams.join('\n') : null;
+
+                // Tiene imagen
+                const titleFormat = firstLang['display:title:format'];
+                item.waMediaType = titleFormat ? titleFormat : null;
+            }
+        }
     }
 
     return item;
