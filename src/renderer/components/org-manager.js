@@ -103,6 +103,7 @@ async function logout() {
             delete configs[clientName];
             await window.electronAPI.saveGlobalConfigs(configs);
             window.electronAPI.logout(clientName);
+            await window.electronAPI.deleteClientCache(clientName);
             await loadConfigsIntoSelect();
         }
     } finally { logger.endLogBuffering(); }

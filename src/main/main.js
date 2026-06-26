@@ -314,6 +314,26 @@ ipcMain.on('open-external-link', (event, url) => {
     }
 });
 
+ipcMain.handle('delete-client-cache', (event, clientName) => {
+    try {
+        const userDataPath = app.getPath('userData');
+        const files = [
+            path.join(userDataPath, 'ClientContents', `${clientName}.json`),
+            path.join(userDataPath, 'CalendarCache', `${clientName}.json`),
+            path.join(userDataPath, 'ClientCache', `audit_${clientName}.json`),
+            path.join(userDataPath, 'ClientCache', `cloudpages_${clientName}.json`)
+        ];
+        for (const filePath of files) {
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        }
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
 ipcMain.handle('save-csv-file', async (event, data) => {
     const { content, defaultName } = data;
     // Obtenemos la ventana actual para que el diálogo de guardado sea modal a ella
