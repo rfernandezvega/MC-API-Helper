@@ -360,16 +360,28 @@ function transformAsset(a, emailTypeIds, jsonMessageTypeIds) {
         }
         item.waParams = allParams.length > 0 ? allParams.join('\n') : null;
 
-        // Info de la plantilla WA (nombre y botones)
-        item.waTemplateName = customData?.templateName || null;
-
-        const selectedTemplate = customData?.selectedTemplate;
-        if (selectedTemplate?.['display:buttons']) {
-            item.waButtons = Object.values(selectedTemplate['display:buttons'])
-                .filter(b => b.title)
-                .map(b => `${b.title || '---'} (${b.actionType || '---'}${b.value ? ': ' + b.value : ''})`)
-                .join(' | ');
+        // URL real de la imagen si existe
+        if (titleParams) {
+            const firstParam = Object.values(titleParams)[0];
+            if (firstParam?.['display:argument:format'] === 'link' && firstParam?.['display:argument']) {
+                item.waMediaUrl = firstParam['display:argument'];
+            }
         }
+
+        // Media type y botones desde selectedTemplate o customData directo
+        const selectedTemplate = customData?.selectedTemplate;
+        item.waMediaType = customData?.['display:title:format'] || selectedTemplate?.['display:title:format'] || null;
+        if (selectedTemplate) {
+            if (selectedTemplate['display:buttons']) {
+                item.waButtons = Object.values(selectedTemplate['display:buttons'])
+                    .filter(b => b.title)
+                    .map(b => `${b.title || '---'} (${b.actionType || '---'}${b.value ? ': ' + b.value : ''})`)
+                    .join(' | ');
+            }
+        }
+
+        // Nombre de la plantilla WA
+        item.waTemplateName = customData?.templateName || null;
     }
 
     if (jsonMessageTypeIds.includes(item.assetTypeId)) {

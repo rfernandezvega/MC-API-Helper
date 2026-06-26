@@ -407,6 +407,7 @@ function setupEventListeners() {
             return;
         }
 
+
         // Botón de dónde se usa
         const refsBtn = e.target.closest('.cp-refs-btn');
         if (refsBtn) {
@@ -704,9 +705,10 @@ function openContentDetail(contentId) {
         }
 
         const msg = item.message || '';
-        elements.contentDetailCode.innerHTML = metaHtml + (msg
-            ? `<div class="code-header">Mensaje</div><pre><code>${escapeHtml(msg)}</code></pre>`
-            : '<div style="padding:12px; color:#999;">Sin mensaje.</div>');
+        const previewHtml = msg ? buildWhatsAppBubble(item) : '';
+        elements.contentDetailCode.innerHTML = metaHtml
+            + (previewHtml ? `<div style="margin-top:12px;"><div class="code-header">Preview</div>${previewHtml}</div>` : '')
+            + (msg ? `<div style="margin-top:12px;"><div class="code-header">Mensaje</div><pre><code>${escapeHtml(msg)}</code></pre></div>` : '');
 
         elements.contentDetailDrawer.classList.add('open');
         elements.contentDetailBackdrop.classList.add('active');
@@ -735,9 +737,10 @@ function openContentDetail(contentId) {
 
         const msg = item.message || '';
         elements.contentDetailTitle.textContent = item.name || 'WhatsApp';
-        elements.contentDetailCode.innerHTML = metaHtml + (msg
-            ? `<div class="code-header">Mensaje</div><pre><code>${escapeHtml(msg)}</code></pre>`
-            : '<div style="padding:12px; color:#999;">Sin mensaje.</div>');
+        const previewHtml = msg ? buildWhatsAppBubble(item) : '';
+        elements.contentDetailCode.innerHTML = metaHtml
+            + (previewHtml ? `<div class="code-header">Preview</div>${previewHtml}` : '')
+            + (msg ? `<div style="margin-top:12px;"><div class="code-header">Mensaje</div><pre><code>${escapeHtml(msg)}</code></pre></div>` : '');
 
         elements.contentDetailDrawer.classList.add('open');
         elements.contentDetailBackdrop.classList.add('active');
@@ -1156,4 +1159,73 @@ function updateReferencedFlags() {
     for (const item of fullContentList) {
         item._isReferenced = referencedIds.has(String(item.id));
     }
+}
+
+function buildWhatsAppBubble(item) {
+    if (!item || !item.message) return '';
+
+    // Resolver variables en el mensaje
+    let resolvedMsg = escapeHtml(item.message);
+    if (item.waParams) {
+        const params = item.waParams.split('\n');
+        for (const p of params) {
+            const match = p.match(/^\$\{(\d+)\}\s*→\s*(.+?)\s*\(/);
+            if (match) {
+                const varNum = match[1];
+                const value = match[2].trim();
+                resolvedMsg = resolvedMsg.replace(
+                    new RegExp(`\\$\\{${varNum}\\}`, 'g'),
+                    `<span class="wa-var-highlight">${escapeHtml(value)}</span>`
+                );
+            }
+        }
+    }
+
+    // Media
+    let mediaHtml = '';
+    const mediaType = item.waMediaType || null;
+    const mediaUpper = mediaType ? mediaType.toUpperCase() : null;
+    if (mediaUpper === 'IMAGE' && item.waMediaUrl) {
+        mediaHtml = `<div class="wa-bubble-media" style="background-image:url('${item.waMediaUrl}'); background-size:cover; background-position:center;"></div>`;
+    } else if (mediaUpper === 'IMAGE') {
+        mediaHtml = `<div class="wa-bubble-media">📷 IMAGE</div>`;
+    } else if (mediaUpper === 'VIDEO') {
+        mediaHtml = `<div class="wa-bubble-media video">🎬 VIDEO</div>`;
+    }
+
+    // Botones
+    let buttonsHtml = '';
+    if (item.waButtons) {
+        const btns = item.waButtons.split(' | ');
+        buttonsHtml = `<div class="wa-bubble-buttons">`;
+        for (const btn of btns) {
+            const titleMatch = btn.match(/^(.+?)\s*\(/);
+            const title = titleMatch ? titleMatch[1] : btn;
+            const isUrl = btn.includes('URL');
+            const icon = isUrl
+                ? `<svg viewBox="0 0 52 52"><path d="M48.7 2H29.6c-.8 0-1.6.5-1.6 1.3v3c0 .8.7 1.7 1.6 1.7h7.9c.9 0 1.4 1 .7 1.6l-17 17c-.6.6-.6 1.5 0 2.1l2.1 2.1c.6.6 1.5.6 2.1 0l17-17c.6-.6 1.6-.2 1.6.7v7.9c0 .8.8 1.7 1.6 1.7h2.9c.8 0 1.5-.9 1.5-1.7v-19c0-.9-.5-1.4-1.3-1.4z"/><path d="M36.3 25.5L32.9 29c-.6.6-.9 1.3-.9 2.1v11.4c0 .8-.7 1.5-1.5 1.5h-21c-.8 0-1.5-.7-1.5-1.5v-21c0-.8.7-1.5 1.5-1.5H21c.8 0 1.6-.3 2.1-.9l3.4-3.4c.6-.6.2-1.7-.7-1.7H6c-2.2 0-4 1.8-4 4v28c0 2.2 1.8 4 4 4h28c2.2 0 4-1.8 4-4V26.2c0-.9-1.1-1.3-1.7-.7z"/></svg>`
+                : '';
+            buttonsHtml += `<div class="wa-bubble-btn">${icon}${escapeHtml(title)}</div>`;
+        }
+        buttonsHtml += `</div>`;
+    }
+
+    // Footer
+    const footerHtml = item.waFooter
+        ? `<div class="wa-bubble-footer">${escapeHtml(item.waFooter)}</div>`
+        : '';
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+    return `
+        <div class="wa-preview">
+            <div class="wa-bubble">
+                ${mediaHtml}
+                <div class="wa-bubble-body">${resolvedMsg}</div>
+                ${footerHtml}
+                <div class="wa-bubble-time">${timeStr}</div>
+                ${buttonsHtml}
+            </div>
+        </div>`;
 }
