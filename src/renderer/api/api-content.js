@@ -213,7 +213,7 @@ export async function fetchAllContentAssets(contentTypesConfig, getAuthenticated
             "sort": [{ "property": "id", "direction": "ASC" }],
             "fields": [
                 "id", "name", "assetType", "createdDate", "modifiedDate",
-                "content", "views", "category"
+                "content", "views", "category", "customerKey"
             ]
         };
 
@@ -268,6 +268,7 @@ function transformAsset(a, emailTypeIds, jsonMessageTypeIds) {
     const item = {
         id: a.id,
         name: a.name,
+        customerKey: a.customerKey || null,
         assetTypeId: a.assetType?.id,
         assetTypeName: a.assetType?.displayName,
         createdDate: a.createdDate,
@@ -286,8 +287,27 @@ function transformAsset(a, emailTypeIds, jsonMessageTypeIds) {
         item.attributes = attrs;
         item.subject = a?.views?.subjectline?.content ?? null;
         item.preheader = a?.views?.preheader?.content ?? null;
-        item.content = a?.views?.html?.content ?? a.content ?? null;
 
+        // Contenido principal + bloques de slots
+        let fullContent = a?.views?.html?.content || '';
+        const slotBlockIds = [];
+        const slots = a?.views?.html?.slots;
+        if (slots) {
+            for (const slotKey in slots) {
+                const blocks = slots[slotKey]?.blocks;
+                if (blocks) {
+                    for (const blockKey in blocks) {
+                        const block = blocks[blockKey];
+                        if (block.content) fullContent += '\n' + block.content;
+                        // Recoger IDs de bloques arrastrados
+                        const refId = block.meta?.options?.id || block.id;
+                        if (refId) slotBlockIds.push(String(refId));
+                    }
+                }
+            }
+        }
+        item.content = fullContent || a.content || null;
+        item.slotBlockIds = slotBlockIds.length > 0 ? slotBlockIds : null;
     } else if (jsonMessageTypeIds.includes(item.assetTypeId)) {
         const viewKeys = Object.keys(a?.views || {});
         const findView = (name) => viewKeys.find(k => k.toLowerCase() === name.toLowerCase());
@@ -317,10 +337,115 @@ function transformAsset(a, emailTypeIds, jsonMessageTypeIds) {
             customData?.['display:media:image:url'] ? `Imagen: ${customData['display:media:image:url']}` : null,
             customData?.['display:media:video:url'] ? `Video: ${customData['display:media:video:url']}` : null
         ].filter(Boolean).join('\n') || null;
+
+        // Referencia a plantilla WhatsApp
+        if (customData?.template?.id) {
+            item.waTemplateRefId = String(customData.template.id);
+        }
+
+        // Parámetros de variables (mensaje + título)
+        const msgParams = customData?.['display:message:parameters'];
+        const titleParams = customData?.['display:title:parameters'];
+        const allParams = [];
+        
+        if (msgParams) {
+            for (const [key, param] of Object.entries(msgParams)) {
+                allParams.push(`\${${key}} → ${param['display:argument'] || '---'} (${param['display:argument:format'] || 'text'})`);
+            }
+        }
+        if (titleParams) {
+            for (const [key, param] of Object.entries(titleParams)) {
+                allParams.push(`Media \${${key}} → ${param['display:argument'] || '---'} (${param['display:argument:format'] || 'text'})`);
+            }
+        }
+        item.waParams = allParams.length > 0 ? allParams.join('\n') : null;
+
+        // URL real de la imagen si existe
+        if (titleParams) {
+            const firstParam = Object.values(titleParams)[0];
+            if (firstParam?.['display:argument:format'] === 'link' && firstParam?.['display:argument']) {
+                item.waMediaUrl = firstParam['display:argument'];
+            }
+        }
+
+        // Media type y botones desde selectedTemplate o customData directo
+        const selectedTemplate = customData?.selectedTemplate;
+        item.waMediaType = customData?.['display:title:format'] || selectedTemplate?.['display:title:format'] || null;
+        if (selectedTemplate) {
+            if (selectedTemplate['display:buttons']) {
+                item.waButtons = Object.values(selectedTemplate['display:buttons'])
+                    .filter(b => b.title)
+                    .map(b => `${b.title || '---'} (${b.actionType || '---'}${b.value ? ': ' + b.value : ''})`)
+                    .join(' | ');
+            }
+        }
+
+        // Nombre de la plantilla WA
+        item.waTemplateName = customData?.templateName || null;
     }
 
     if (jsonMessageTypeIds.includes(item.assetTypeId)) {
         item.content = null;
+    }
+
+    // WhatsApp Templates (235)
+    if (item.assetTypeId === 235) {
+        const viewKeys = Object.keys(a?.views || {});
+        const waViewKey = viewKeys.find(k => k.toLowerCase().includes('whatsapp'));
+        const customData = waViewKey ? a.views[waViewKey]?.meta?.options?.customBlockData : null;
+
+        if (customData) {
+            item.waTemplateName = customData.templateName || null;
+            item.waCategory = customData.category || null;
+
+            // Idiomas
+            const langs = customData['display:languages:approved'] || [];
+            item.waLanguages = langs.join(', ') || null;
+
+            // Buscar contenido del primer idioma
+            const langContent = customData['display:languages:content'];
+            const firstLang = langContent ? langContent[Object.keys(langContent)[0]] : null;
+
+            if (firstLang) {
+                // Componentes
+                item.waComponents = (firstLang['display:components'] || []).join(', ') || null;
+
+                // Mensaje
+                item.message = firstLang['display:message'] || null;
+
+                // Botones
+                const buttons = firstLang['display:buttons'];
+                if (buttons) {
+                    item.waButtons = Object.values(buttons).map(b => 
+                        `${b.title || '---'} (${b.actionType || '---'}${b.value ? ': ' + b.value : ''})`
+                    ).join(' | ');
+
+                    const footer = firstLang['display:footer'] || firstLang['display:buttons']?.['display:footer'];
+                    item.waFooter = footer || null;
+                }
+
+                // Parámetros del primer idioma
+                const msgParams = firstLang['display:message:parameters'];
+                const titleParams = firstLang['display:title:parameters'];
+                const allParams = [];
+                
+                if (msgParams) {
+                    for (const [key, param] of Object.entries(msgParams)) {
+                        allParams.push(`\${${key}} → ${param['display:argument'] || '---'} (${param['display:argument:format'] || 'text'})`);
+                    }
+                }
+                if (titleParams) {
+                    for (const [key, param] of Object.entries(titleParams)) {
+                        allParams.push(`Header \${${key}} → ${param['display:argument'] || '---'} (${param['display:argument:format'] || 'text'})`);
+                    }
+                }
+                item.waParams = allParams.length > 0 ? allParams.join('\n') : null;
+
+                // Tiene imagen
+                const titleFormat = firstLang['display:title:format'];
+                item.waMediaType = titleFormat ? titleFormat : null;
+            }
+        }
     }
 
     return item;

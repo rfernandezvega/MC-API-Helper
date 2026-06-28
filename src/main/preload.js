@@ -169,4 +169,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveMultipleCsvs: (data) => ipcRenderer.invoke('save-multiple-csvs', data),
   
   installUpdate: () => ipcRenderer.send('install-update'),
+
+  deleteClientCache: (clientName) => ipcRenderer.invoke('delete-client-cache', clientName),
 });

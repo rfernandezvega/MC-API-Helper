@@ -382,12 +382,14 @@ export function init() {
     elements.cpDetailDownloadBtn = document.getElementById('cp-detail-download-btn');
 
 
-   // --- 22. GESTOR DE CONTENIDOS ---
+    // --- 22. GESTOR DE CONTENIDOS ---
     elements.refreshContentBtn = document.getElementById('refreshContentBtn');
+    elements.unusedContentBtn = document.getElementById('unusedContentBtn');
     elements.exportContentCsvBtn = document.getElementById('exportContentCsvBtn');
     elements.contentManagerFilter = document.getElementById('contentManagerFilter');
     elements.contentManagerTabButtons = document.getElementById('content-manager-tab-buttons');
     elements.contentManagerTabContent = document.getElementById('content-manager-tab-content');
+    elements.contentTotalCount = document.getElementById('content-total-count');
     // Drawer de detalle
     elements.contentDetailDrawer = document.getElementById('content-detail-drawer');
     elements.contentDetailBackdrop = document.getElementById('content-detail-backdrop');

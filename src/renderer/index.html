@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Marketing Cloud API Helper</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://cdnjs.cloudflare.com https://unpkg.com https://*.marketingcloudapis.com https://*.exacttarget.com https://www.googleapis.com">    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://cdnjs.cloudflare.com https://unpkg.com https://*.marketingcloudapis.com https://*.exacttarget.com https://www.googleapis.com">    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <script src="https://unpkg.com/docx@8.2.2/build/index.umd.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -648,6 +648,7 @@
         <button class="back-button">← Atrás</button>
         <div class="header-actions">
             <button id="refreshContentBtn" class="action-button">Refrescar</button>
+            <button id="unusedContentBtn" class="action-button">Sin Uso</button>
             <button id="exportContentCsvBtn" class="action-button">Exportar</button>
         </div>
     </div>
@@ -658,7 +659,10 @@
 
     <!-- Contenedor de Pestañas que se llenará dinámicamente -->
     <div class="tabs-container">
-        <div id="content-manager-tab-buttons" class="tab-buttons"></div>
+        <div id="content-manager-tab-buttons" class="tab-buttons" style="display:flex; width:100%; border-bottom:2px solid #e2e8f0;">
+            <!-- tabs dinámicos van aquí -->
+            <span id="content-total-count" style="font-size:0.85em; color:#999; margin-left:auto; padding:0 4px 4px 0; white-space:nowrap;"></span>
+        </div>
         <div id="content-manager-tab-content"></div>
     </div>
 </div>
@@ -2639,10 +2643,41 @@
     <div class="menu-group changelog-group">
         <h3>Novedades</h3>
         <div class="changelog-list">
-            <!-- ======================== v2.5.1 ======================== -->
+            <!-- ======================== v2.5.4 ======================== -->
             <details class="changelog-entry" open>
                 <summary class="changelog-version">
-                    <span class="changelog-badge">v2.5.1</span>
+                    <span class="changelog-badge">v2.5.4</span>
+                    <span class="changelog-date">X Julio 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag fix">Fix</span> Corregido bug por el cual no se borraban las cachés de cliente al hacer logout.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.5.3 ======================== -->
+            <details class="changelog-entry">
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.5.3</span>
+                    <span class="changelog-date">26 Junio 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Nueva pestaña "Plantillas WA" en Contenidos que muestra las plantillas de WhatsApp con su nombre de template, categoría, idiomas, componentes, tipo de media y fecha de modificación.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Vista de detalle de Plantillas WA y WhatsApp messages con información de plantilla asociada, variables configuradas, botones, footer y mensaje.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Columnas de Plantilla y Botones en la pestaña de Whatsapp.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Botón "Sin Uso" que filtra contenidos no utilizados. Se considera sin uso: bloques que ningún email/push/SMS/WhatsApp referencia ni arrastra, snippets que nadie llama con ContentBlockBy*, plantillas que ningún email usa, plantillas WA sin WhatsApp messages asociados, y bloques referenciados solo por otros bloques que tampoco están en uso.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Icono de referencias en contenidos y plantillas para ver dónde se utilizan (por ID, Key, Name, arrastrado o como template). Solo aparece si el contenido tiene referencias.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> La búsqueda en Contenidos ahora busca también en el contenido resuelto, variables de WhatsApp y botones.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Se muestra la fecha/hora del contenido cacheado junto al total.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> La exportación CSV incluye columnas ocultas (asunto, preheader, mensaje) según el tipo.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Optimización de memoria: transformación al vuelo y limpieza de HTML de preview.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Guardado incremental de caché cada 500 contenidos para evitar pérdida de datos con volumetría alta.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.5.2 ======================== -->
+            <details class="changelog-entry">
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.5.2</span>
                     <span class="changelog-date">25 Junio 2026</span>
                 </summary>
                 <ul class="changelog-items">
@@ -2650,9 +2685,12 @@
                     <li><span class="changelog-tag fix">Fix</span> Corregido bug por el cual se mostraba quién habia creado una Cloud en lugar de quién la ha modificado.</li>
                     <li><span class="changelog-tag new">Nuevo</span> La vista de Contenidos ahora muestra plantillas y más tipos de bloques (Dynamic Block, Free Form Block, HTML Block...).</li>
                     <li><span class="changelog-tag new">Nuevo</span> La vista de Contenidos ahora permite seleccionar un contenido y pulsar un botón para ver el detalle con sus dependencias en la sección de Buscadores.</li>
-                    <li><span class="changelog-tag improved">Mejora</span> El Buscador de Contenidos ahora muestra en los detalle el contenido buscado. 
+                    <li><span class="changelog-tag improved">Mejora</span> La vista de Contenidos ahora muestra contadores para saber el número de elementos por categoría.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> La vista de Contenidos, para los emails, ensambla todo el email por lo que se puede ver el código completo con todos sus componentes, sean inline o referenciados. Esto permite que si un texto esta en un componente, se pueda saber que mails hay que refrescar.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> El Buscador de Contenidos ahora muestra en los detalles el contenido buscado. 
                         Además para los emails ensambla todo el email por lo que se puede ver el código completo con todos sus componentes, sean inline o referenciados, sin tener que ir uno a uno.</li>
                     <li><span class="changelog-tag improved">Mejora</span> Al visualizar el código en Buscador de Contenidos en la vista de detalles, se ha incluido la opción de Descarga.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> El buscador de carpetas para documentar Data Extensions ahora buscan tambien en las Synchronized Data Extensions.</li>
                </ul>
             </details>
 
