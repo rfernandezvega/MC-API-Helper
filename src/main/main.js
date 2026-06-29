@@ -385,7 +385,7 @@ ipcMain.handle('open-csv-file', async (event) => {
     }
 });
 
-ipcMain.handle('save-client-contents-to-file', (event, { clientName, contents, lastRefresh }) => {
+ipcMain.handle('save-client-contents-to-file', async (event, { clientName, contents, lastRefresh }) => {
     try {
         const userDataPath = app.getPath('userData');
         const contentsDirPath = path.join(userDataPath, 'ClientContents');
@@ -393,26 +393,81 @@ ipcMain.handle('save-client-contents-to-file', (event, { clientName, contents, l
             fs.mkdirSync(contentsDirPath);
         }
         const filePath = path.join(contentsDirPath, `${clientName}.json`);
-        fs.writeFileSync(filePath, JSON.stringify({ contents, lastRefresh: lastRefresh || new Date().toISOString() }));
-        return { success: true };
+
+        const writeStream = fs.createWriteStream(filePath, { encoding: 'utf-8' });
+        // Primera línea: metadatos
+        writeStream.write(JSON.stringify({ lastRefresh: lastRefresh || new Date().toISOString() }) + '\n');
+        // Una línea por item
+        for (const item of contents) {
+            writeStream.write(JSON.stringify(item) + '\n');
+        }
+        writeStream.end();
+
+        return new Promise((resolve) => {
+            writeStream.on('finish', () => resolve({ success: true }));
+            writeStream.on('error', (err) => resolve({ success: false, error: err.message }));
+        });
     } catch (error) {
         console.error('Error al guardar contenidos en fichero:', error);
         return { success: false, error: error.message };
     }
 });
 
-ipcMain.handle('load-client-contents-from-file', (event, clientName) => {
+ipcMain.handle('load-client-contents-from-file', async (event, clientName) => {
     try {
         const userDataPath = app.getPath('userData');
         const filePath = path.join(userDataPath, 'ClientContents', `${clientName}.json`);
-        if (fs.existsSync(filePath)) {
-            const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-            // Soportar formato viejo (array) y nuevo (objeto con contents + lastRefresh)
-            const contents = Array.isArray(raw) ? raw : raw.contents;
-            const lastRefresh = Array.isArray(raw) ? null : raw.lastRefresh;
-            return { success: true, contents, lastRefresh };
+        if (!fs.existsSync(filePath)) {
+            return { success: true, contents: null, lastRefresh: null };
         }
-        return { success: true, contents: null, lastRefresh: null };
+
+        const fileSize = fs.statSync(filePath).size;
+        console.log(`Cache file size: ${(fileSize / 1024 / 1024).toFixed(2)} MB`);
+
+        const readline = require('readline');
+        const contents = [];
+        let lastRefresh = null;
+        let isFirstLine = true;
+
+        const rl = readline.createInterface({
+            input: fs.createReadStream(filePath, { encoding: 'utf-8' }),
+            crlfDelay: Infinity
+        });
+
+        for await (const line of rl) {
+            if (!line.trim()) continue;
+            try {
+                const parsed = JSON.parse(line);
+                if (isFirstLine) {
+                    // Primera línea puede ser metadatos o un item (formato viejo)
+                    if (parsed.lastRefresh && !parsed.id) {
+                        lastRefresh = parsed.lastRefresh;
+                    } else if (Array.isArray(parsed)) {
+                        // Formato muy viejo: todo en un array
+                        console.log(`Cache items loaded: ${parsed.length}`);
+                        return { success: true, contents: parsed, lastRefresh: null };
+                    } else if (parsed.contents) {
+                        // Formato viejo: { contents: [...], lastRefresh }
+                        console.log(`Cache items loaded: ${parsed.contents.length}`);
+                        return { success: true, contents: parsed.contents, lastRefresh: parsed.lastRefresh };
+                    } else {
+                        contents.push(parsed);
+                    }
+                    isFirstLine = false;
+                } else {
+                    contents.push(parsed);
+                }
+            } catch {}
+        }
+
+        if (contents.length === 0 && fileSize > 0) {
+            console.log('Cache en formato viejo detectada. Requiere refrescar.');
+            return { success: true, contents: null, lastRefresh: null };
+        }
+
+        console.log(`Cache items loaded (NDJSON): ${contents.length}`);
+        return { success: true, contents, lastRefresh };
+
     } catch (error) {
         console.error('Error al cargar contenidos desde fichero:', error);
         return { success: false, error: error.message };
