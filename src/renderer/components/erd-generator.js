@@ -1,227 +1,37 @@
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
+import * as mcApiService from '../api/mc-api-service.js';
+import * as logger from '../ui/logger.js';
 
 let tables = [], relations = [], tableEls = {}, tableMap = {}, activeKey = null, isContactsHidden = false;
 let tableGeom = {};
 let getAuthenticatedConfig;
 
-const scriptText = `/**
- * MC ERD Extractor
- * Ejecutar en la consola del navegador estando en Marketing Cloud.
- * Obtiene el JSON de definiciones de atributos para pegarlo en el ERD Generator.
- */
-(async function mcErdExtractor() {
- 
-  // ── 1. Fetch attribute groups ──────────────────────────────────────────────
-  const BASE = location.origin;
-  const AG_URL = \`\${BASE}/contactsmeta/fuelapi/contacts-internal/v1/attributeGroups/views/defaultView?$page=1&$pageSize=2000\`;
- 
-  console.log('%c[ERD Extractor] Cargando grupos de atributos...', 'color:#69a3db;font-weight:bold');
- 
-  let agData;
-  try {
-    const res = await fetch(AG_URL, { credentials: 'include' });
-    if (!res.ok) throw new Error(\`HTTP \${res.status} \${res.statusText}\`);
-    agData = await res.json();
-  } catch (e) {
-    alert(\`❌ Error al cargar los grupos de atributos:\\n\${e.message}\\n\\nAsegúrate de estar en Marketing Cloud.\`);
-    return;
-  }
- 
-  const groups   = agData.data || [];
-  const schemaID = agData.schemaID;
-  const version  = agData.version;
- 
-  if (!groups.length) {
-    alert('No se encontraron grupos de atributos.');
-    return;
-  }
- 
-  // ── 2. Show picker dialog ──────────────────────────────────────────────────
-  const listItems = groups.map((g, i) => {
-    const name   = g.definitionName?.value || g.definitionKey || 'Sin nombre';
-    const count  = g.attributeCount ?? '?';
-    const tables = (g.attributeSetIdentifiers || []).map(s => s.definitionName?.value || s.definitionKey).join(', ');
-    return \`
-      <label class="erd-item" style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:6px;cursor:pointer;border:1px solid #e2e8f0;margin-bottom:6px;transition:background 0.15s;">
-        <input type="radio" name="erd-group" value="\${i}" style="margin-top:3px;accent-color:#69a3db;">
-        <div>
-          <div style="font-weight:bold;color:#333;font-size:0.88rem;">\${name}</div>
-          <div style="font-size:0.72rem;color:#6c757d;margin-top:2px;">\${count} atributos · \${tables || 'sin tablas'}</div>
-        </div>
-      </label>\`;
-  }).join('');
- 
-  const overlay = document.createElement('div');
-  overlay.id = 'erd-extractor-overlay';
-  overlay.style.cssText = \`
-    position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,0.5);
-    display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;\`;
- 
-  overlay.innerHTML = \`
-    <div style="background:#fff;border-radius:12px;width:min(560px,95vw);max-height:80vh;
-                display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-      <div style="padding:18px 20px;border-bottom:1px solid #e2e8f0;flex-shrink:0;">
-        <div style="font-size:1.1rem;font-weight:bold;color:#69a3db;">ERD Generator · Seleccionar grupo</div>
-        <div style="font-size:0.78rem;color:#6c757d;margin-top:4px;">
-          Elige el grupo de atributos que quieres documentar.
-          Schema: <code style="background:#f0f6fc;padding:1px 5px;border-radius:3px;">\${schemaID}</code> ·
-          Versión: <strong>\${version}</strong>
-        </div>
-      </div>
-      <div style="overflow-y:auto;padding:16px 20px;flex:1;">
-        <input id="erd-search" placeholder="🔍 Buscar grupo..." style="width:100%;padding:8px 10px;border:1px solid #cdd8e3;border-radius:6px;font-size:0.82rem;margin-bottom:12px;outline:none;">
-        <div id="erd-group-list">\${listItems}</div>
-      </div>
-      <div style="padding:14px 20px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:8px;flex-shrink:0;">
-        <button id="erd-cancel" style="background:#6c757d;color:#fff;border:none;border-radius:5px;padding:9px 18px;cursor:pointer;font-weight:bold;font-size:0.82rem;">Cancelar</button>
-        <button id="erd-ok"     style="background:#69a3db;color:#fff;border:none;border-radius:5px;padding:9px 18px;cursor:pointer;font-weight:bold;font-size:0.82rem;">Obtener JSON →</button>
-      </div>
-    </div>\`;
- 
-  document.body.appendChild(overlay);
- 
-  // Hover effect
-  overlay.querySelectorAll('.erd-item').forEach(el => {
-    el.addEventListener('mouseenter', () => el.style.background = '#f0f6fc');
-    el.addEventListener('mouseleave', () => {
-      const radio = el.querySelector('input[type=radio]');
-      el.style.background = radio.checked ? '#e8f3fc' : '';
-    });
-    el.querySelector('input').addEventListener('change', () => {
-      overlay.querySelectorAll('.erd-item').forEach(i => i.style.background = '');
-      el.style.background = '#e8f3fc';
-    });
-  });
- 
-  // Search filter
-  document.getElementById('erd-search').addEventListener('input', function() {
-    const q = this.value.toLowerCase();
-    overlay.querySelectorAll('.erd-item').forEach(el => {
-      el.style.display = el.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
-  });
- 
-  // Cancel
-  document.getElementById('erd-cancel').onclick = () => overlay.remove();
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
- 
-  // ── 3. On confirm ─────────────────────────────────────────────────────────
-  document.getElementById('erd-ok').onclick = async () => {
-    const selected = overlay.querySelector('input[name="erd-group"]:checked');
-    if (!selected) { alert('Selecciona un grupo primero.'); return; }
- 
-    const group     = groups[parseInt(selected.value)];
-    const groupId   = group.definitionID;
-    const groupName = group.definitionName?.value || groupId;
- 
-    const btn = document.getElementById('erd-ok');
-    btn.textContent = '⏳ Cargando...'; btn.disabled = true;
- 
-    // ── 4. Fetch set definitions ─────────────────────────────────────────────
-    const SET_URL = \`\${BASE}/contactsmeta/fuelapi/contacts-internal/v1/attributeGroups/\${groupId}/setDefinitions/views/defaultView\` +
-      \`?nestedPageSize=1000&$pageSize=1000&$page=1\` +
-      \`&schemaVersionNumber=\${version}\` +
-      \`&schemaContextId=\${schemaID}\` +
-      \`&schemaType=Contacts\`;
- 
-    let setData;
-    try {
-      const res = await fetch(SET_URL, { credentials: 'include' });
-      if (!res.ok) throw new Error(\`HTTP \${res.status} \${res.statusText}\`);
-      setData = await res.json();
-    } catch (e) {
-      alert(\`❌ Error al obtener las definiciones:\\n\${e.message}\`);
-      btn.textContent = 'Obtener JSON →'; btn.disabled = false;
-      return;
-    }
- 
-    overlay.remove();
- 
-    // ── 5. Show result dialog ─────────────────────────────────────────────────
-    const jsonStr = JSON.stringify(setData, null, 2);
-    const result  = document.createElement('div');
-    result.style.cssText = \`
-      position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,0.5);
-      display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;\`;
- 
-    result.innerHTML = \`
-      <div style="background:#fff;border-radius:12px;width:min(660px,95vw);max-height:85vh;
-                  display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-        <div style="padding:16px 20px;border-bottom:1px solid #e2e8f0;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;">
-          <div>
-            <div style="font-size:1rem;font-weight:bold;color:#69a3db;">✅ JSON listo · \${groupName}</div>
-            <div style="font-size:0.75rem;color:#6c757d;margin-top:3px;">
-              \${(setData.data||[]).length} entidades · Schema \${schemaID} · v\${version}
-            </div>
-          </div>
-          <button id="erd-close-result" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:#6c757d;padding:4px 8px;">✕</button>
-        </div>
-        <div style="padding:12px 20px;font-size:0.78rem;color:#558ac7;background:#f0f6fc;border-bottom:1px solid #e2e8f0;flex-shrink:0;">
-          📋 Copia este JSON y pégalo en el <strong>ERD Generator</strong>
-        </div>
-        <textarea id="erd-json-out" readonly style="flex:1;margin:0;padding:14px;font-family:Consolas,monospace;font-size:0.7rem;border:none;outline:none;resize:none;color:#333;background:#fafafa;overflow:auto;">\${jsonStr}</textarea>
-        <div style="padding:14px 20px;border-top:1px solid #e2e8f0;display:flex;gap:8px;flex-shrink:0;">
-          <button id="erd-copy-btn" style="background:#69a3db;color:#fff;border:none;border-radius:5px;padding:9px 18px;cursor:pointer;font-weight:bold;font-size:0.82rem;flex:1;">📋 Copiar JSON</button>
-          <button id="erd-dl-btn"   style="background:#28a745;color:#fff;border:none;border-radius:5px;padding:9px 18px;cursor:pointer;font-weight:bold;font-size:0.82rem;">⬇ Descargar .json</button>
-          <button id="erd-close-result2" style="background:#6c757d;color:#fff;border:none;border-radius:5px;padding:9px 18px;cursor:pointer;font-weight:bold;font-size:0.82rem;">Cerrar</button>
-        </div>
-      </div>\`;
- 
-    document.body.appendChild(result);
- 
-    document.getElementById('erd-json-out').addEventListener('focus', function() { this.select(); });
- 
-    document.getElementById('erd-copy-btn').onclick = async () => {
-      try {
-        await navigator.clipboard.writeText(jsonStr);
-        document.getElementById('erd-copy-btn').textContent = '✅ ¡Copiado!';
-        setTimeout(() => { document.getElementById('erd-copy-btn').textContent = '📋 Copiar JSON'; }, 2000);
-      } catch {
-        document.getElementById('erd-json-out').select();
-        document.execCommand('copy');
-        document.getElementById('erd-copy-btn').textContent = '✅ ¡Copiado!';
-        setTimeout(() => { document.getElementById('erd-copy-btn').textContent = '📋 Copiar JSON'; }, 2000);
-      }
-    };
- 
-    document.getElementById('erd-dl-btn').onclick = () => {
-      const blob = new Blob([jsonStr], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = \`erd-\${groupName.replace(/\\s+/g,'-').toLowerCase()}.json\`;
-      a.click();
-    };
- 
-    const closeResult = () => result.remove();
-    document.getElementById('erd-close-result').onclick  = closeResult;
-    document.getElementById('erd-close-result2').onclick = closeResult;
-    result.addEventListener('click', e => { if (e.target === result) closeResult(); });
-  };
- 
-})();`;
+// Datos del modelo de atributos cargados por API
+let setsById = {};        // setId -> setItem (de attributeSetDefinitions)
+let groupsById = {};      // groupId -> { id, name, setIds: [setId] }
+let sortedGroups = [];    // grupos ordenados por nombre, para el listado
+let selectedGroupId = null;
+let loadedClient = null;  // cliente cuyos datos están cargados (para evitar recargas)
 
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
 
-    elements.erdScriptToCopy.textContent = scriptText;
-
-    elements.erdCopyScriptBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(scriptText);
-        ui.showCustomAlert('Script copiado. Pégalo en la consola de Marketing Cloud.');
-    });
-
     elements.erdGenerateBtn.addEventListener('click', generate);
-    
-    // Botón de Reset
+
+    elements.erdRefreshGroupsBtn.addEventListener('click', () => loadModel(true));
+
+    elements.erdGroupSearch.addEventListener('input', () => renderGroupList());
+
+    if (elements.erdHideSystem) elements.erdHideSystem.addEventListener('change', () => renderGroupList());
+
+    // Botón de Reset → vuelve a la selección de grupo
     elements.erdResetBtn.addEventListener('click', () => {
-        elements.erdJsonInput.value = '';
-        elements.erdInputZone.classList.remove('hidden');
+        elements.erdSelectionZone.classList.remove('hidden');
         elements.erdCanvasZone.classList.add('hidden');
         elements.erdResetBtn.classList.add('hidden');
         elements.erdDownloadCsvBtn.classList.add('hidden');
         elements.erdDownloadImgBtn.classList.add('hidden');
-        elements.erdGenerateBtn.parentElement.classList.remove('hidden');
         elements.erdCanvas.querySelectorAll('.erd-tbl').forEach(el => el.remove());
         elements.erdSvgLines.innerHTML = '';
         clearActive();
@@ -230,17 +40,194 @@ export function init(dependencies) {
     elements.erdDownloadImgBtn.addEventListener('click', downloadImage);
     elements.erdDownloadCsvBtn.addEventListener('click', downloadCSV);
 
-    document.addEventListener('keydown', e => { 
-        if(e.key === 'Escape' && !elements.erdCanvasZone.classList.contains('hidden')) clearActive(); 
+    document.addEventListener('keydown', e => {
+        if(e.key === 'Escape' && !elements.erdCanvasZone.classList.contains('hidden')) clearActive();
     });
 }
 
-export function view() {
-    elements.erdSfmcLink.onclick = (e) => {
-        e.preventDefault();
-        const stack = elements.stackKeyInput?.value?.match(/s\d+/i)?.[0]?.toLowerCase() || 'sX';
-        const url = `https://mc.${stack}.marketingcloudapps.com/contactsmeta/fuelapi/contacts-internal/v1/attributeGroups/`;
-        window.electronAPI.openExternalLink(url); 
+export async function view() {
+    // Reset visual a la pantalla de selección
+    elements.erdSelectionZone.classList.remove('hidden');
+    elements.erdCanvasZone.classList.add('hidden');
+    elements.erdResetBtn.classList.add('hidden');
+    elements.erdDownloadCsvBtn.classList.add('hidden');
+    elements.erdDownloadImgBtn.classList.add('hidden');
+
+    const clientName = document.getElementById('clientName')?.value || '';
+    // Recargar solo si cambió de cliente o no hay datos
+    if (loadedClient !== clientName || sortedGroups.length === 0) {
+        await loadModel(false);
+    } else {
+        renderGroupList();
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// CARGA DEL MODELO POR API
+// Flujo: schema (id) → grupos del schema (nombres) → attribute sets (tablas).
+// La pertenencia set→grupo sale de relationships[].leftItem (AttributeGroup).
+// ═══════════════════════════════════════════════════════════
+async function loadModel(force) {
+    const clientName = document.getElementById('clientName')?.value || '';
+    if (!clientName) {
+        ui.showCustomAlert('Selecciona un cliente primero.');
+        return;
+    }
+    if (!force && loadedClient === clientName && sortedGroups.length > 0) {
+        renderGroupList();
+        return;
+    }
+
+    ui.blockUI('Cargando grupos de atributos...');
+    logger.startLogBuffering();
+    try {
+        mcApiService.setLogger(logger);
+        const apiConfig = await getAuthenticatedConfig();
+
+        logger.logMessage('Consultando Attribute Groups (schema + grupos) y Attribute Sets de Contact Builder...');
+        const [groupsRaw, setsRaw] = await Promise.all([
+            mcApiService.fetchAttributeGroups(apiConfig).catch(() => []),
+            mcApiService.fetchAttributeSetDefinitions(apiConfig)
+        ]);
+        logger.logMessage(`Recibidos ${groupsRaw.length} grupos y ${setsRaw.length} attribute sets.`);
+
+        buildModel(groupsRaw, setsRaw);
+        logger.logMessage(`Grupos con entidades: ${sortedGroups.length}.`);
+
+        loadedClient = clientName;
+        selectedGroupId = null;
+        elements.erdGenerateBtn.disabled = true;
+        renderGroupList();
+    } catch (e) {
+        logger.logMessage(`Error al cargar el modelo de atributos: ${e.message}`);
+        ui.showCustomAlert('Error al cargar el modelo de atributos: ' + e.message);
+    } finally {
+        ui.unblockUI();
+        logger.endLogBuffering();
+    }
+}
+
+/**
+ * Indexa sets y grupos. El nombre del grupo viene de attributeGroups (campo `name`),
+ * y la pertenencia de cada set se deduce de su relación AttributeGroup.
+ */
+function buildModel(groupsRaw, setsRaw) {
+    setsById = {};
+    groupsById = {};
+
+    // Info de grupo por id (nombre + si es de sistema)
+    const groupInfoById = {};
+    for (const g of (groupsRaw || [])) {
+        if (g && g.id != null) {
+            groupInfoById[String(g.id)] = {
+                name: g.name || g.fullyQualifiedName || g.key || String(g.id),
+                system: !!g.isSystemDefined
+            };
+        }
+    }
+
+    for (const set of (setsRaw || [])) {
+        const sid = String(set.id);
+        setsById[sid] = set;
+        const gids = new Set();
+        for (const rel of (set.relationships || [])) {
+            if (rel.leftItem?.relationshipType === 'AttributeGroup' && rel.leftItem.identifier != null) {
+                gids.add(String(rel.leftItem.identifier));
+            }
+        }
+        for (const gid of gids) {
+            if (!groupsById[gid]) {
+                const info = groupInfoById[gid];
+                groupsById[gid] = {
+                    id: gid,
+                    name: info?.name || `Grupo ${gid.slice(0, 8)}`,
+                    system: info?.system || false,
+                    setIds: []
+                };
+            }
+            groupsById[gid].setIds.push(sid);
+        }
+    }
+
+    sortedGroups = Object.values(groupsById)
+        .filter(g => g.setIds.length > 0)
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+}
+
+function renderGroupList() {
+    if (sortedGroups.length === 0) {
+        elements.erdGroupList.innerHTML = '<div style="padding:16px; color:#6c757d; text-align:center;">No se han encontrado grupos de atributos. Pulsa "Refrescar".</div>';
+        return;
+    }
+
+    const q = (elements.erdGroupSearch.value || '').toLowerCase().trim();
+    const hideSystem = elements.erdHideSystem?.checked;
+    const list = sortedGroups.filter(g =>
+        (!q || g.name.toLowerCase().includes(q)) &&
+        (!hideSystem || !g.system)
+    );
+
+    if (list.length === 0) {
+        elements.erdGroupList.innerHTML = '<div style="padding:16px; color:#6c757d; text-align:center;">Ningún grupo coincide con el filtro.</div>';
+        return;
+    }
+
+    elements.erdGroupList.innerHTML = list.map(g => {
+        const n = g.setIds.length;
+        const sel = g.id === selectedGroupId;
+        const badge = g.system
+            ? '<span style="font-size:0.65rem; font-weight:bold; color:#fff; background:#9b59b6; border-radius:4px; padding:1px 6px;">Sistema</span>'
+            : '<span style="font-size:0.65rem; font-weight:bold; color:#fff; background:#28a745; border-radius:4px; padding:1px 6px;">Usuario</span>';
+        return `
+        <div class="erd-group-item" data-group-id="${g.id}" style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border-radius:6px; cursor:pointer; border:1px solid ${sel ? '#69a3db' : '#e2e8f0'}; margin-bottom:6px;${sel ? ' background:#e8f3fc;' : ''}">
+            <div style="flex:1;">
+                <div style="display:flex; align-items:center; gap:8px;"><span style="font-weight:bold; color:#333; font-size:0.88rem;">${escapeHtmlErd(g.name)}</span>${badge}</div>
+                <div style="font-size:0.72rem; color:#6c757d; margin-top:2px;">${n} ${n === 1 ? 'entidad' : 'entidades'}</div>
+            </div>
+        </div>`;
+    }).join('');
+
+    elements.erdGroupList.querySelectorAll('.erd-group-item').forEach(el => {
+        el.addEventListener('click', () => {
+            selectedGroupId = el.dataset.groupId;
+            elements.erdGenerateBtn.disabled = false;
+            elements.erdGroupList.querySelectorAll('.erd-group-item').forEach(i => {
+                i.style.background = '';
+                i.style.borderColor = '#e2e8f0';
+            });
+            el.style.background = '#e8f3fc';
+            el.style.borderColor = '#69a3db';
+        });
+    });
+}
+
+function escapeHtmlErd(str) {
+    if (str == null) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/**
+ * Transforma un attribute set del endpoint público al formato que consume parseEntities.
+ */
+function setToEntity(set) {
+    return {
+        definitionID: set.id,
+        definitionName: { value: set.name?.value || set.fullyQualifiedName || set.key || 'Sin nombre' },
+        fullyQualifiedName: set.fullyQualifiedName,
+        definitionKey: set.key,
+        valueDefinitions: (set.attributes || []).map(a => ({
+            definitionID: a.id,
+            definitionKey: a.name?.value || a.key || a.id,
+            dataType: a.dataType,
+            isPrimaryKey: !!a.isPrimaryKey
+        })),
+        relationships: (set.relationships || []).map(r => ({
+            isGroupToSetRelationship: r.leftItem?.relationshipType === 'AttributeGroup',
+            leftRelationshipReferenceType: r.leftRelationshipReferenceType,
+            leftItem: r.leftItem,
+            rightItem: r.rightItem,
+            relationshipAttributes: r.relationshipAttributes
+        }))
     };
 }
 
@@ -252,10 +239,8 @@ function getClientName() {
 // ═══════════════════════════════════════════════════════════
 // LÓGICA MATEMÁTICA Y PARSEO
 // ═══════════════════════════════════════════════════════════
-function parseJSON(raw) {
-  const j = JSON.parse(raw);
-  const entities = Array.isArray(j) ? j : (j.data && Array.isArray(j.data) ? j.data : null);
-  if (!entities) throw new Error('Formato no reconocido.');
+function parseEntities(entities) {
+  if (!entities || !entities.length) throw new Error('Formato no reconocido.');
 
   const hideContacts = elements.erdChkHideContacts.checked;
   const CONTACT_KEY_ATTR_ID = "d801c9a6-f02d-e711-80dc-1402ec819dd8";
@@ -302,11 +287,24 @@ function parseJSON(raw) {
   for (const t of Object.values(byId)) {
     for (const rel of t.rels) {
       if (!rel.relationshipAttributes) continue;
+      // Relación grupo→set hacia Contacts: el lado izquierdo es Contacts (Contact Key)
+      // y el derecho es la tabla. Siempre debe apuntar tabla(FK) → Contacts(PK).
+      const isContactsRel = rel.isGroupToSetRelationship && rel.leftRelationshipReferenceType === 'CustomerData';
       const lc = rel.leftItem?.cardinality  || 'One';
       const rc = rel.rightItem?.cardinality || 'One';
       for (const a of rel.relationshipAttributes) {
         const L = fmap[a.leftAttributeID], R = fmap[a.rightAttributeID];
         if (!L || !R || L.t.id === R.t.id) continue;
+
+        if (isContactsRel) {
+          // R = campo de la tabla (FK) → L = Contacts.Contact Key (PK)
+          R.f.isFK = true;
+          const ck = ['ck', R.t.id, R.f.id, L.t.id, L.f.id].join('|');
+          if (seen.has(ck)) continue; seen.add(ck);
+          relationsArr.push({ fTbl: R.t.id, fFld: R.f.id, fCard: 'Many', tTbl: L.t.id, tFld: L.f.id, tCard: 'One' });
+          continue;
+        }
+
         L.f.isFK = true; R.f.isRef = true;
         const k = [L.t.id, L.f.id, R.t.id, R.f.id].join('|');
         if (seen.has(k)) continue; seen.add(k);
@@ -458,20 +456,33 @@ function tCenter(tid) {
 // INTERFAZ Y RENDER
 // ═══════════════════════════════════════════════════════════
 function generate() {
-  const raw = elements.erdJsonInput.value.trim();
-  if (!raw) return ui.showCustomAlert('Pega el JSON extraído primero.');
+  const group = groupsById[selectedGroupId];
+  if (!group) return ui.showCustomAlert('Selecciona un grupo de atributos primero.');
   try {
-    const p = parseJSON(raw); 
+    // Sets del grupo + las tablas relacionadas (set-to-set), aunque estén en otro grupo,
+    // para que ninguna relación se quede sin su otro extremo.
+    const ids = new Set(group.setIds.map(String));
+    for (const sid of group.setIds) {
+      const set = setsById[sid];
+      for (const rel of (set?.relationships || [])) {
+        if (rel.leftItem?.relationshipType === 'AttributeSet' && rel.rightItem?.relationshipType === 'AttributeSet') {
+          const a = String(rel.leftItem.identifier), b = String(rel.rightItem.identifier);
+          if (setsById[a]) ids.add(a);
+          if (setsById[b]) ids.add(b);
+        }
+      }
+    }
+    const entities = [...ids].map(id => setsById[id]).filter(Boolean).map(setToEntity);
+    const p = parseEntities(entities);
     tables = p.tablesArr; relations = p.relationsArr; isContactsHidden = p.hideContacts;
-    if (!tables.length) return ui.showCustomAlert('No se encontraron entidades.');
-    
-    elements.erdInputZone.classList.add('hidden');
-    elements.erdGenerateBtn.parentElement.classList.add('hidden');
+    if (!tables.length) return ui.showCustomAlert('Este grupo no tiene entidades con relaciones para diagramar.');
+
+    elements.erdSelectionZone.classList.add('hidden');
     elements.erdCanvasZone.classList.remove('hidden');
     elements.erdResetBtn.classList.remove('hidden');
     elements.erdDownloadCsvBtn.classList.remove('hidden');
     elements.erdDownloadImgBtn.classList.remove('hidden');
-    
+
     renderERD();
   } catch(e) { ui.showCustomAlert(e.message); }
 }

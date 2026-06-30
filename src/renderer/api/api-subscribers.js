@@ -134,3 +134,80 @@ export async function searchContactByKey(contactKey, apiConfig) {
         createdDate: createdDate, unsubscribedDate: '---', isSubscriber: false
     }];
 }
+
+// ===================================================================
+// ===== CONTACT BUILDER: ATTRIBUTE MODEL (para el Generador ERD) =====
+// ===================================================================
+
+/**
+ * Recupera el ID del schema de Contactos (necesario para listar los attribute groups).
+ * @param {object} apiConfig - Configuración autenticada de la API.
+ * @returns {Promise<string|null>} El ID del schema o null.
+ */
+export async function fetchContactsSchemaId(apiConfig) {
+    const url = `${apiConfig.restUri}contacts/v1/schema`;
+    const data = await executeRestRequest(url, { headers: { Authorization: `Bearer ${apiConfig.accessToken}` } });
+    return data.items?.[0]?.id || data.id || null;
+}
+
+// Helper interno: pagina un endpoint de grupos.
+async function _fetchGroupsPaginated(apiConfig, baseUrl) {
+    let all = [];
+    let page = 1;
+    let count = 0;
+    const pageSize = 50;
+    do {
+        const url = `${baseUrl}?$page=${page}&$pageSize=${pageSize}`;
+        const data = await executeRestRequest(url, { headers: { Authorization: `Bearer ${apiConfig.accessToken}` } });
+        const items = data.items || [];
+        all = all.concat(items);
+        count = data.count || all.length;
+        page++;
+    } while (all.length < count && count > 0);
+    return all;
+}
+
+/**
+ * Recupera los Attribute Groups (con su nombre y flag de sistema) de Contact Builder.
+ * Intenta el flujo por schema (schema → schemas/{id}/attributeGroups) y, si no obtiene
+ * resultados, prueba el endpoint sin schema.
+ * @param {object} apiConfig - Configuración autenticada de la API.
+ * @returns {Promise<Array>} Lista de attribute groups (items).
+ */
+export async function fetchAttributeGroups(apiConfig) {
+    // 1) Vía schema (flujo confirmado)
+    let schemaId = null;
+    try { schemaId = await fetchContactsSchemaId(apiConfig); } catch { /* ignore */ }
+    if (schemaId) {
+        try {
+            const groups = await _fetchGroupsPaginated(apiConfig, `${apiConfig.restUri}contacts/v1/schemas/${schemaId}/attributeGroups`);
+            if (groups.length) return groups;
+        } catch { /* ignore */ }
+    }
+    // 2) Fallback sin schema
+    try {
+        return await _fetchGroupsPaginated(apiConfig, `${apiConfig.restUri}contacts/v1/attributeGroups`);
+    } catch { /* ignore */ }
+    return [];
+}
+
+/**
+ * Recupera todas las definiciones de Attribute Sets de Contact Builder, gestionando paginación.
+ * @param {object} apiConfig - Configuración autenticada de la API.
+ * @returns {Promise<Array>} Lista completa de attribute sets (items).
+ */
+export async function fetchAttributeSetDefinitions(apiConfig) {
+    let all = [];
+    let page = 1;
+    let count = 0;
+    const pageSize = 50;
+    do {
+        const url = `${apiConfig.restUri}contacts/v1/attributeSetDefinitions?$page=${page}&$pageSize=${pageSize}`;
+        const data = await executeRestRequest(url, { headers: { Authorization: `Bearer ${apiConfig.accessToken}` } });
+        const items = data.items || [];
+        all = all.concat(items);
+        count = data.count || all.length;
+        page++;
+    } while (all.length < count && count > 0);
+    return all;
+}

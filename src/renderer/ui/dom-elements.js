@@ -451,20 +451,21 @@ export function init() {
 
     // --- 27. GENERADOR ERD ---
     elements.erdSection = document.getElementById('erd-generator-section');
-    elements.erdCopyScriptBtn = document.getElementById('erd-copy-script-btn');
-    elements.erdScriptToCopy = document.getElementById('erd-script-to-copy');
-    
-    elements.erdJsonInput = document.getElementById('erd-json-input');
+    elements.erdSelectionZone = document.getElementById('erd-selection-zone');
+    elements.erdGroupSearch = document.getElementById('erd-group-search');
+    elements.erdGroupList = document.getElementById('erd-group-list');
+    elements.erdRefreshGroupsBtn = document.getElementById('erd-refresh-groups-btn');
+    elements.erdHideSystem = document.getElementById('erd-hide-system');
+
     elements.erdChkHideContacts = document.getElementById('erd-chk-hide-contacts');
     elements.erdGenerateBtn = document.getElementById('erd-generate-btn');
     elements.erdResetBtn = document.getElementById('erd-reset-btn');
-    
-    elements.erdInputZone = document.getElementById('erd-input-zone');
+
     elements.erdCanvasZone = document.getElementById('erd-canvas-zone');
     elements.erdWrap = document.getElementById('erd-wrap');
     elements.erdCanvas = document.getElementById('erd-canvas');
     elements.erdSvgLines = document.getElementById('erd-svg-lines');
-    
+
     elements.erdTooltip = document.getElementById('erd-tooltip');
     elements.erdTtTtl = document.getElementById('erd-tt-ttl');
     elements.erdTtTyp = document.getElementById('erd-tt-typ');
@@ -472,8 +473,6 @@ export function init() {
 
     elements.erdDownloadCsvBtn = document.getElementById('erd-download-csv-btn');
     elements.erdDownloadImgBtn = document.getElementById('erd-download-img-btn');
-
-    elements.erdSfmcLink = document.getElementById('erd-sfmc-link'); 
 
     // --- 28. SEND MANAGEMENT ---
     elements.sendManagementSection = document.getElementById('sendManagement-section');
