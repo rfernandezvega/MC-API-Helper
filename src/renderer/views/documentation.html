@@ -4,1136 +4,513 @@
 		<button class="back-button">← Atrás</button>
 	</div>
 	<h2>Documentación y Guía de Uso</h2>
+
 	<div class="tabs-container docu-container">
-		<!-- Botones de las Pestañas -->
-		<div class="tab-buttons">
-			<button class="tab-button active" data-tab="configuracion-principal">Primeros Pasos</button>
-			<button class="tab-button" data-tab="guia-rapida">Guía de funcionalidades</button>
-			<button class="tab-button" data-tab="errores-comunes">Errores Comunes</button>
-			<button class="tab-button" data-tab="comentarios-adicionales">Comentarios</button>
-		</div>
-		<!-- Pestaña 1: Primeros Pasos -->
-		<div id="configuracion-principal" class="tab-content active">
-			<ol class="docu-accordion">
-				<!-- Paso 1 -->
-				<li class="docu-accordion-item">
-					<div class="docu-accordion-header">
-						<span>
-							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-								fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-								stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;">
-								<path
-									d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z" />
-								<path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
-							</svg>
-							<strong>Paso 1: Configurar la Aplicación en Marketing Cloud</strong>
-						</span>
-					</div>
-					<div class="docu-accordion-content">
-						<div class="docu-list">
-							<ul>
-								<li>Se deberá crear siempre la app en la <b>BU PADRE</b> y dar permisos a los usuarios. Los permisos se dan en el propio paquete que se ha creado en la pestaña ACCESS
-								</li>
-								<li>Si se quiere usar en otras BUs, se debe dar permiso a cada BU y establecer una
-									conexción por cada BU.</li>
-								<li>Ve a <b>Setup → Apps → Installed Packages</b>. </li>
-								<li>Crea un paquete de tipo <b>Web App</b> llamado <b>MC API Helper</b>. </li>
-								<li>En <b>Redirect URI</b> pon lo siguiente:
-									<code>https://127.0.0.1:8443/callback</code>. </li>
-								<li>Pon los siguientes permisos:
-									<ul class="docu-permissions">
-										<li><b>Email:</b> Read, Write</li>
-										<li><b>Automations:</b> Read, Write, Execute</li>
-										<li><b>Journeys:</b> Read, Write, Activate/Stop/Pause/Resume/Send/Schedule,
-											Delete</li>
-										<li><b>Audiences:</b> Read, Write</li>
-										<li><b>List and Subscribers:</b> Read, Write</li>
-										<li><b>Data Extensions:</b> Read, Write</li>
-										<li><b>Documents and Images:</b> Read</li>
-										<li><b>Saved Content:</b> Read</li>
-										<li><b>File Locations:</b> Read</li>
-										<li><b>Users:</b> Read</li>
-									</ul>
-								</li>
-							</ul>
-						</div>
-					</div>
-				</li>
-				<!-- Paso 2 -->
-				<li class="docu-accordion-item">
-					<div class="docu-accordion-header">
-						<span>
-							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-								fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-								stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;">
-								<path d="M14 3v4a1 1 0 0 0 1 1h4" />
-								<path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
-								<path d="M9 7h1" />
-								<path d="M9 13h6" />
-								<path d="M9 17h6" />
-							</svg>
-							<strong>Paso 2: Configurar un Cliente en esta App</strong>
-						</span>
-					</div>
-					<div class="docu-accordion-content">
-						<div class="docu-list">
-							<ul>
-								<li>Ve a <b>Configuración de APIs</b> e introduce los datos del paquete. </li>
-								<li>Pulsa <b>"Login"</b> para autenticarte vía browser. </li>
-								<li>Se levantará una ventana con el login de Marketing Cloud. Pon tus credenciales</li>
-								<li>Si da algún problema, vuelve a probarlo porque puntualmente MC puede no gestionar bien la conexión. Si sigue fallando, revisa que el usuario tiene permiso en la app del Paso 1</li>								
-							</ul>
-						</div>
-					</div>
-				</li>
-			</ol>
-		</div>
-		<!-- Pestaña 2: Guía Rápida -->
-		<div id="guia-rapida" class="tab-content">
-			<!-- Buscador Sticky -->
-			<div class="docu-search-box">
-				<div class="search-input-wrapper">
-					<span class="search-icon">🔍</span>
-					<input type="text" id="docu-search-input"
-						placeholder="Buscar funcionalidad (ej: 'clonar', 'de', 'email')...">
-				</div>
+		<div class="docu-layout">
+
+			<!-- ===================== MENÚ LATERAL DE VISTAS ===================== -->
+			<div class="tab-buttons docu-vnav">
+				<div class="docu-vnav-title">Primeros pasos</div>
+				<button class="tab-button active" data-tab="doc-primeros-pasos">Primeros pasos</button>
+				<button class="tab-button" data-tab="doc-general">Generalidades de la app</button>
+				<button class="tab-button" data-tab="doc-config">Configuración de APIs</button>
+
+				<div class="docu-vnav-title">Explorar y buscar</div>
+				<button class="tab-button" data-tab="doc-buscadores">Buscadores</button>
+				<button class="tab-button" data-tab="doc-contenidos">Contenidos</button>
+				<button class="tab-button" data-tab="doc-cloudpages">Cloud Pages</button>
+				<button class="tab-button" data-tab="doc-calendario">Calendario</button>
+
+				<div class="docu-vnav-title">Gestión</div>
+				<button class="tab-button" data-tab="doc-journeys">Journeys</button>
+				<button class="tab-button" data-tab="doc-automatismos">Automatismos</button>
+				<button class="tab-button" data-tab="doc-dataextensions">Data Extensions</button>
+				<button class="tab-button" data-tab="doc-carpetas">Crear Carpetas</button>
+				<button class="tab-button" data-tab="doc-queries">Clonar Queries</button>
+				<button class="tab-button" data-tab="doc-envios">Gestión de Envíos</button>
+				<button class="tab-button" data-tab="doc-usuarios">Usuarios</button>
+
+				<div class="docu-vnav-title">Herramientas</div>
+				<button class="tab-button" data-tab="doc-emails">Validar Emails</button>
+				<button class="tab-button" data-tab="doc-erd">Generador ERD</button>
+				<button class="tab-button" data-tab="doc-auditoria">Auditoría</button>
 			</div>
-			<div class="docu-scrollable-content">
-				<!-- GRUPO: GENERAL -->
-				<div class="docu-group" data-group-name="General">
-					<h3 class="docu-group-title">General</h3>
-					<ul class="docu-accordion">
-						<li class="docu-accordion-item"
-							data-keywords="configuracion cliente login tablas buscador">
-							<div class="docu-accordion-header">
-								<span>Buscador de texto en ventana</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>
-										La aplicación dispone de un buscador que permite buscar y navegador por los elementos encontrados en la vista que se está mostrando..
-									</p>									
-									<div class="docu-screenshot-row">
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/general/buscador/buscador.gif" alt="">
-											<span class="docu-img-caption">Panel de DEs Búsqueda de Clientes</span>
-										</div>										
-									</div>									
-								</div>
-							</div>
-						</li>
-						<li class="docu-accordion-item"
-							data-keywords="logs descarga eventos errores historial api">
-							<div class="docu-accordion-header">
-								<span>Descarga de logs</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>
-										La aplicación dispone de un panel lateral derecho donde se van registrando todas
-										las acciones y llamadas que realiza la app.
-										Pulsa en los iconos <b>&lt;</b> o <b>&gt;</b> para mostrar u ocultar el panel.
-									</p>
-									<div class="docu-screenshot-row">
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/general/logs/panelLog.gif" alt="">
-											<span class="docu-img-caption">Mostrar/Ocultar panel de log</span>
-										</div>
-									</div>
-									<p>
-										Pulsando en <b>Log de Eventos</b> se abrirá la ventana para descargar los logs
-										con la fecha. Esto es útil por si os da algún error raro, para poder revisar que
-										llamadas se han hecho
-									</p>
-									<div class="docu-screenshot-row">
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/general/logs/descargaLogs.gif" alt="">
-											<span class="docu-img-caption">Descarga de logs</span>
-										</div>
-									</div>
-								</div>
-							</div>
-						</li>
-						<li class="docu-accordion-item"
-							data-keywords="configuracion cliente login tablas">
-							<div class="docu-accordion-header">
-								<span>Configuración de APIs > DEs Búsqueda de Clientes</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>
-										Además de los pasos indicados en <b>Primeros Pasos</b>, dentro de la vista de <b>Configuración de APIs</b> está la pestaña <b>DEs Búsqueda de Clientes</b>.
-									</p>
-									<p>
-										Esta permite establecer una serie de Data Extension que permitirán tener una visión del cliente dentro de la vista <b>Funcionalidades > Buscadores > Clientes</b>
-										Es útil cuando nos piden saber qué comunicaciones ha recibido un cliente, qué estado tiene en alguna tabla, logs, etc, sin necesidad de lanzar múltiples queries.
-									</p>
-									<p>
-										Para configurarlo, es necesario indicar:
-										<ul>
-											<li>Nombre de la Data Extension donde buscar</li>
-											<li>External Key de la Data Extension donde buscar</li>
-											<li>Por qué campo se debe buscar al cliente (el que coincida con el id)</li>
-										</ul>
-									</p>
-									
-									<div class="docu-screenshot-row">
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/general/configuracionAPIs/desBusquedaClientes.png" alt="">
-											<span class="docu-img-caption">Panel de DEs Búsqueda de Clientes</span>
-										</div>
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/general/configuracionAPIs/desBusquedaClientesExportar.png" alt="">
-											<span class="docu-img-caption">Exportación de fichero con nombre del cliente</span>
-										</div>
-									</div>
-									<p>
-										Si se ha configurado esta parte antes de darle al <b>login</b>, se guardarán las tablas automáticamente.
-									</p>
-									<p>Si se añaden tablas posteriormente, es necesario darle al botón de guardar de la parte superior.</p>
-									<p>Una vez configuradas, se pueden exportar para que otra persona del equipo no tenga que configurarlas manualmente</p>
-								</div>
-							</div>
-						</li>
-					</ul>
-				</div>
-				<!-- GRUPO: DATA EXTENSIONS -->
-				<div class="docu-group" data-group-name="Data Extensions">
-					<h3 class="docu-group-title">Data Extensions</h3>
-					<ul class="docu-accordion">
-						<li class="docu-accordion-item"
-							data-keywords="creacion data extension de campos sendable enviar carpeta folder ordenar fila importar">
-							<div class="docu-accordion-header">
-								<span>Creación de Data Extensions</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>Esta vista está ligada a la de <b>Configuración de Campos</b> y permite establecer la configuración de la Data Extension que se quiere crear.</p>
-									<p>Aquí se debe establecer el Nombre, Descripción (obligatorio) y si es "Sendable". Además, se puede realizar una búsqueda de carpetas para indicar dónde se debe guardar</p>
-									<p>Se puede indicar si es una Data Extension Sendable marcando la casilla correspondiente. Para ello, es necesario haber configurado los campos en <b>Configuración de Campos</b>
-									ya que requiere seleccionar uno de ellos para establecer la relación con el suscriptor.</p>
-									<div class="docu-screenshot-row">
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/dataExtensions/creacionDE/configuracionCreacionDE.png" alt="">
-											<span class="docu-img-caption">Panel de configuración Base</span>
-										</div>
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/dataExtensions/creacionDE/busquedaCarpetas.png" alt="">
-											<span class="docu-img-caption">Selector de carpetas</span>
-										</div>
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/dataExtensions/creacionDE/configuracionSendable.png" alt="">
-											<span class="docu-img-caption">Panel de configuración Sendable</span>
-										</div>	
-									</div>
-									<p>Para configurar los campos se debe ir a la vista <b>Configuración de Campos</b>.</p>	
-									<p>En esta vista se puede:
-										<ul>
-											<li>Importar un documento con los campos, por ejemplo cuando los copiamos del modelo de datos de Salesforce. Para ello solo se debe pegar el listado de campos e indicar el tipo de separador.</li>
-											<li>Crear/Actualizar Campos, cuando se quieren añadir nuevos campos a una tabla existente o actualizar longitudes en campos</li>
-											<li>Crear campos de ejemplo, para ver cómo se crea un campo de cada tipología</li>
-											<li>Limpiar toda la tabla de campos. Esto siempre mantendrá una fila vacía</li>
-											<li>Añadir filas a la tabla</li>
-											<li>Eliminar filas. Para ello seleccionando una fila, aparecerá una x a la derecha de la fila para poder eliminarla</li>
-											<li>Ordenar filas. Seleccionando una fila y usando las flechas, se puede ordenar la tabla. Esto es interesante sobre todo cuando queremos crear una copia de 
-												una tabla existente pero con un orden correcto, por ejemplo manteniendo los identificadores al principio.
-												<b>NO es posible ordenar campos sobre una Data Extension existente</b>
-											</li>
-										</ul>
-									</p>
-									<div class="docu-screenshot-row">
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/dataExtensions/configuracionCampos/importarCampos.gif" alt="">
-											<span class="docu-img-caption">Importar campos</span>
-										</div>	
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/dataExtensions/configuracionCampos/gestionarCampos.gif" alt="">
-											<span class="docu-img-caption">Gestionar campos</span>
-										</div>	
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/dataExtensions/configuracionCampos/tipoCampo.png" alt="">
-											<span class="docu-img-caption">Selector de tipo de campo</span>
-										</div>										
-									</div>																	
-									<p>Una vez configurado, pulsando en <b>Crear Data Extension</b> se creará la Data Extension. Importante, no se limpia la configuración una vez creada 
-										por si se quieren seguir haciendo acciones sobre la misma o seguir creando Data Extensions parecidas</p>
-									<div class="docu-screenshot-row">
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/dataExtensions/creacionDE/creacionDE.png" alt="">
-											<span class="docu-img-caption">Creación Data Extension OK</span>
-										</div>										
-									</div>
-								</div>
-							</div>
-						</li>
-						<li class="docu-accordion-item"
-							data-keywords="modificar añadir campos actualizar recuperar borrar eliminar external key de">
-							<div class="docu-accordion-header">
-								<span>Recuperar y borrar campos de una Data Extension</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>Esta funcionalidad es útil para copiar una Data Extension o eliminar campos que no se pueden eliminar por pantalla </p>									
-									<p>Indica la clave externa de la tabla y pulsa <b>Recuperar Campos</b>. Los campos recuperados aparecerán en la lista y en la pestaña de <b>Configuración de Campos</b></p>
-									<p>Para borrar un campo, solo se debe seleccionar en la lista y pulsar en <b>Borrar Campo</b></p>
-									<div class="docu-screenshot-row">
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/dataExtensions/recuperacionCampos/recuperacionCampos.gif" alt="">
-											<span class="docu-img-caption">Recuperación de campos</span>
-										</div>		
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/dataExtensions/recuperacionCampos/borradoCampos.gif" alt="">
-											<span class="docu-img-caption">Borrado de campos</span>
-										</div>									
-									</div>
-								</div>
-							</div>
-						</li>
-						<li class="docu-accordion-item"
-							data-keywords="documentar data extensions csv estructura carpeta folder descargar de">
-							<div class="docu-accordion-header">
-								<span>Documentar Data Extensions</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>Esta funcionalidad permite generar un fichero CSV con la estructura completa de todas las DEs contenidas en una carpeta específica.</p>
-									<p>¿Para qué es útil? Por ejemplo cuando queremos tener identificados que campos de Salesforce estan integrados. Recuperando la carpeta de Sync DEs podemos documentarlo y luego compararlo con el modelo de datos de SF</p>
-									<p>Para documentar, selecciona la carpeta y pulsa en <b>Documentar DEs</b></p>
-									<div class="docu-screenshot-row">
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/dataExtensions/recuperacionCampos/documentarDEs.gif" alt="">
-											<span class="docu-img-caption">Documentar DEs</span>
-										</div>								
-									</div>
-								</div>
-							</div>
-						</li>
-					</ul>
-				</div>
-				<!-- GRUPO: BUSCADORES -->
-				<div class="docu-group" data-group-name="Buscadores">
-					<h3 class="docu-group-title">Buscadores</h3>
-					<ul class="docu-accordion">
-						<li class="docu-accordion-item"
-							data-keywords="buscadores buscar rutas externo key clientes scripts contenidos actividades">
-							<div class="docu-accordion-header">
-								<span>Buscador de Data Extensions</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>Este buscador permite buscar una Data Extension por su Nombre o External Key.</p>
-									<p>Devolverá todas aquellas Data Extension que contengan un nombre o external key similar.</p>
-									<div class="docu-screenshot-row">
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/buscadores/dataExtensions/buscarDE.gif" alt="">
-											<span class="docu-img-caption">Buscar Data Extension</span>
-										</div>								
-									</div>
-								</div>
-							</div>
-						</li>	
-						<li class="docu-accordion-item"
-							data-keywords="buscadores buscar rutas externo key clientes scripts contenidos actividades">
-							<div class="docu-accordion-header">
-								<span>Buscador de Origenes de datos</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>Este buscador permite buscar qué query o import inserta o actualiza datos en una Data Extension.</p>
-									<p>Devolverá todas las actividades de tipo query o import que apunten a la Data Extension. Se muestra además si se encuentra
-										en algún automatismo y en qué paso del mismo.</p>
-									<p>El check de <b>Mostrar Descripción / Query</b> permite ocultar la última columna que muestra la propia query o descripción del import.</p>
-									<div class="docu-screenshot-row">
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/buscadores/origenDatos/buscarOrigenes.gif" alt="">
-											<span class="docu-img-caption">Buscar Origen de datos</span>
-										</div>
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/buscadores/origenDatos/mostrarOcultarQueries.gif" alt="">
-											<span class="docu-img-caption">Mostrar u ocultar queries</span>
-										</div>								
-									</div>
-								</div>
-							</div>
-						</li>	
-						<li class="docu-accordion-item"
-							data-keywords="buscadores buscar cliente clientes journeys expulsar">
-							<div class="docu-accordion-header">
-								<span>Buscador de Clientes</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>El buscador de Clientes pretende tener una forma rápida de buscar la información relacionada con un cliente de forma rápida, 
-										por ejemplo, cuando se pregunta qué comunicaciones ha recibido, tracking relacionado, si está en una data extension de exclusión, etc. 
-										Esto sin necesidad de tener que ir a cada tabla o lanzar queries por separado</p>
-									<p>Además permite buscar en qué Journeys se encuentra en ese momento y permite expulsarlos de estos de forma masiva. Es decir, se puede seleccionar más de un 
-										journey del que expulsarlo a la vez.</p>
-									<p>Para usar la funcionalidad de búsqueda en tablas es necesario haber configurado las tablas donde buscar en 
-										<b>General > Configuración de APISs > DEs Búsquead de Clientes</b>. Estas se podrán seleccionar para buscar y mostrará todo los campos de la misma, 
-									filtrado por el campom de búsqueda.</p>									
-									<div class="docu-screenshot-row">
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/buscadores/clientes/buscarCliente.gif" alt="">
-											<span class="docu-img-caption">Buscar Cliente</span>
-										</div>
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/buscadores/clientes/buscarEnDEs.gif" alt="">
-											<span class="docu-img-caption">Buscar en Data Extensions</span>
-										</div>	
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/buscadores/clientes/buscarEnJourneys.gif" alt="">
-											<span class="docu-img-caption">Buscar en Journeys</span>
-										</div>		
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/buscadores/clientes/expulsarDeJourneys.gif" alt="">
-											<span class="docu-img-caption">Expulsar de Journeys</span>
-										</div>							
-									</div>
-								</div>
-							</div>
-						</li>	
-						<li class="docu-accordion-item"
-							data-keywords="buscadores buscar texto queries query">
-							<div class="docu-accordion-header">
-								<span>Buscador de Texto en Queries</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>Este buscador permite buscar cualquier cadena de texto en las queries. Si se encuentra alguna, mostrará qué query es 
-										(con el enlace a ella) y en qué automatismos y paso se encuentra</p>		
-									<p>Además, mostrará la query, pudiendo mostrar y ocultar esta columna</p>								
-									<div class="docu-screenshot-row">
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/buscadores/textoQueries/buscarQueries.gif" alt="">
-											<span class="docu-img-caption">Buscar Queries</span>
-										</div>
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/buscadores/textoQueries/mostrarOcultarQueries.gif" alt="">
-											<span class="docu-img-caption">Mostrar/Ocultar Queries</span>
-										</div>						
-									</div>
-								</div>
-							</div>
-						</li>
-						<li class="docu-accordion-item"
-							data-keywords="buscadores buscar texto script scripts">
-							<div class="docu-accordion-header">
-								<span>Buscador de Texto en Scripts</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>Este buscador permite buscar cualquier cadena de texto en los scripts. Si se encuentra alguno, mostrará qué script es 
-										(con el enlace a ella)</p>									
-									<div class="docu-screenshot-row">
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/buscadores/textoScripts/buscarScripts.gif" alt="">
-											<span class="docu-img-caption">Buscar Scripts</span>
-										</div>					
-									</div>
-								</div>
-							</div>
-						</li>
-						<li class="docu-accordion-item"
-							data-keywords="buscadores buscar contenido contenidos">
-							<div class="docu-accordion-header">
-								<span>Buscador de Contenidos</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>Este buscador permite buscar cualquier contenido de content builder en base a su nombre o id. 
-										Mostrará todos los que tengan un mobre similar, la tipología y la ruta al contenido.</p>									
-									<div class="docu-screenshot-row">
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/buscadores/contenidos/buscarContenidos.gif" alt="">
-											<span class="docu-img-caption">Buscar Contenidos</span>
-										</div>					
-									</div>
-								</div>
-							</div>
-						</li>	
-						<li class="docu-accordion-item"
-							data-keywords="buscadores buscar actividad actividades automation query queries scripts extract file transfer import">
-							<div class="docu-accordion-header">
-								<span>Buscador de Actividades</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>Este buscador permite buscar cualquier actividad de la pestaña de actividades de Automation Studio.</p>	
-									<p>Es util para saber si se está utilizando la actividad en un automatismo o en varios por si se modifica o eliminar 
-										para ver a qué puede afectar.</p>				
-									<p>Permite buscar tanto por nombre como por clave externa, pero deben ser exactos.</p>					
-									<div class="docu-screenshot-row">
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/buscadores/actividades/buscarQueries.gif" alt="">
-											<span class="docu-img-caption">Buscar Queries</span>
-										</div>	
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/buscadores/actividades/buscarScripts.gif" alt="">
-											<span class="docu-img-caption">Buscar Scripts</span>
-										</div>	
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/buscadores/actividades/buscarExtracts.gif" alt="">
-											<span class="docu-img-caption">Buscar Extracts</span>
-										</div>				
-									</div>
-								</div>
-							</div>
-						</li>						
-					</ul>
-				</div>
-				<!-- GRUPO: CALENDARIO -->
-				<div class="docu-group" data-group-name="Calendario">
-					<h3 class="docu-group-title">Calendario</h3>
-					<ul class="docu-accordion">
-						<li class="docu-accordion-item"
-							data-keywords="calendario programado">
-							<div class="docu-accordion-header">
-								<span>Calendario</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>
-										Esta vista permite visualizar en un calendario todos los automatismos programados por la siguiente fecha de ejecución.
-									</p>
-									<p>
-										Es posible mostrar tanto todos los automatismos programados como aquellos que lanzan algun journey. En cualquier caso, si algún día
-										tiene algo programado, el día estará marcado en azul. 
-									</p>	
-									<p>
-										Clicando en el día, se mostrará en el panel derecho qué automatismos son y la hora a la que están programados. 
-									</p>
-									<p>
-										Pulsando en <b>Automatizaciones del Día</b> se acceder a la vista de <b>Automatismos</b> con los automatismos filtrados. 
-									</p>
-									<p>
-										<b>¡Importante!</b> La próxima vez que se acceda, se mostrará lo que ya había guardado, por lo que es importante darle a Refrescar. 
-									</p>																	
-									<div class="docu-screenshot-row">
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/calendario/automatismosProgramados.gif" alt="">
-											<span class="docu-img-caption">Automatismos programados</span>
-										</div>	
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/calendario/automatismosLanzanJourneys.gif" alt="">
-											<span class="docu-img-caption">Automatismos que lanzan Journeys</span>
-										</div>	
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/calendario/vistaFiltradaAutomatismos.gif" alt="">
-											<span class="docu-img-caption">Acceder a vista filtrada de automatismos</span>
-										</div>								
-									</div>									
-								</div>
-							</div>
-						</li>
-					</ul>
-				</div>
-				<!-- GRUPO: CONTENIDOS -->
-				<div class="docu-group" data-group-name="Contenidos">
-					<h3 class="docu-group-title">Contenidos</h3>
-					<ul class="docu-accordion">
-						<li class="docu-accordion-item"
-							data-keywords="buscar contenidos texto">
-							<div class="docu-accordion-header">
-								<span>Contenidos</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>
-										Esta vista permite descargar todos los contenidos de la instancia para poder hacer búsquedas sobre ellos. 
-										En este caso Marketing Cloud no pone una forma fácil de obtenerlo así que es necesario hacer algun paso 
-										en el propio navegador para obtener lo contenidos.
-									</p>
 
-									<p>
-										Para importarlos, pulsa en el botón <b>Importar</b> que mostrará una ventana con las instrucciones a seguir. 
-										<b>¡Importante!</b> Si al acceder al enlace que se indica en las instrucciones ves un <b>UNAUTHORIZED</b>, 
-										abre <b>Content Builder</b> y vuelve a intentarlo.
-									</p>
+			<!-- ===================== PANELES ===================== -->
+			<div class="docu-panels">
 
-									<p>
-										Una vez pegado el código, pulsa <b>Enter</b> y espera a que se termine de ejecutar. Cuando termine, copia lo 
-										que ha generado y pégalo donde indica la app. Puede que le cuesta copiarse porque el texto es enorme. De la 
-										misma forma, al pegarlo en la app tardará asi qué <b>NO LE DES A PEGAR VARIAS VECES</b>.
-									</p>
+				<!-- ===== PRIMEROS PASOS ===== -->
+				<div id="doc-primeros-pasos" class="tab-content active">
+					<div class="docu-view">
+						<h3>Primeros pasos</h3>
+						<p>Para usar la app necesitas: (1) crear un paquete API en Marketing Cloud, (2) configurar ese paquete como cliente dentro de la app y (3) iniciar sesión. Una vez con sesión iniciada en un cliente, todas las vistas quedan disponibles.</p>
 
-									<p>
-										Una vez importados, los contenidos se guardarán asociados al cliente al que se está conectado, por lo que solo será 
-										necesario volver a importar si se quiere buscar en contenidos nuevos. El buscador filtrará los contenidos 
-										que contengan la cadena de texto. Aunque no se muestre, también busca en el cuerpo de los emails y se puede 
-										utilizar por ejemplo para saber qué mails utilizan una plantilla (buscando por el nombre de la misma).
-									</p>
-									<div class="docu-screenshot-row">
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/contenidos/recuperarContenidos.gif" alt="">
-											<span class="docu-img-caption">Recuperar contenidos</span>
-										</div>	
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/contenidos/pegarContenidos.gif" alt="">
-											<span class="docu-img-caption">Pegar contenidos</span>
-										</div>	
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/contenidos/buscarContenidos.gif" alt="">
-											<span class="docu-img-caption">Buscar contenidos</span>
-										</div>					
-									</div>	
-									<p>Finalmente, cada pestaña permite exportar los contenidos de la misma en formato excel. Se exportarán los contendiso filtrados si se ha utilizado el buscador.</p>								
-								</div>
-							</div>
-						</li>
-					</ul>
-				</div>
-				<!-- GRUPO: CREAR CARPETAS -->
-				<div class="docu-group" data-group-name="Crear Carpetas">
-					<h3 class="docu-group-title">Crear Carpetas</h3>
-					<ul class="docu-accordion">
-						<li class="docu-accordion-item"
-							data-keywords="crear carpetas carpeta">
-							<div class="docu-accordion-header">
-								<span>Crear Carpetas</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>
-										Esta vista crear una estructura de carpetas de golpe para:
-										<ul>
-											<li>Data Extensions</li>
-											<li>Queries</li>
-											<li>Journeys</li>	
-											<li>Automatismos</li>
-											<li>Contenidos</li>				
-											<li>Scripts</li>								
-										</ul>
-									</p>	
-									<p>
-										Es útil en clientes con campañas repetitivas donde la estructura de carpetas bajo la campaña se compone de varias, de cara a no tener que crear una a una
-									</p>
-									<p>
-										Se debe indicar la carpeta principal bajo la que se crearán el resto. Con el nombre se lanzará el buscador de carpetas y se deberá seleccionar cual de todas las que pueden salir se quiere utilizar.
-										Una vez hecho esto, se debe indicar el nombre de cada carpeta en líneas distintas y, si deben ser hijas separarlas con doble espacio o tabulador.
-									</p>															
-									<div class="docu-screenshot-row">
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/crearCarpetas/crearCarpetasDataExtensions.gif" alt="">
-											<span class="docu-img-caption">Crear carpetas de Data Extensions</span>
-										</div>						
-									</div>									
-								</div>
-							</div>
-						</li>
-					</ul>
-				</div>
-				<!-- GRUPO: VALIDAR EMAILS -->
-				<div class="docu-group" data-group-name="Validar Emails">
-					<h3 class="docu-group-title">Validar Emails</h3>
-					<ul class="docu-accordion">
-						<li class="docu-accordion-item"
-							data-keywords="validar emails email">
-							<div class="docu-accordion-header">
-								<span>Validar Emails</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>
-										Esta vista permite validar emails contra las opciones de validación que utiliza Marketing Cloud:
-										<ul>
-											<li>SyntaxValidator</li>
-											<li>MXValidator</li>
-											<li>ListDetectiveValidator</li>											
-										</ul>
-									</p>																
-									<div class="docu-screenshot-row">
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/validadorEmail/valido.gif" alt="">
-											<span class="docu-img-caption">Válido</span>
-										</div>
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/validadorEmail/SyntaxValidator.gif" alt="">
-											<span class="docu-img-caption">SyntaxValidator</span>
-										</div>
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/validadorEmail/MXValidator.gif" alt="">
-											<span class="docu-img-caption">MXValidator</span>
-										</div>
-										<div class="docu-screenshot-item">
-											<img src="assets/documentation/validadorEmail/ListDetectiveValidator.gif" alt="">
-											<span class="docu-img-caption">ListDetectiveValidator</span>
-										</div>										
-									</div>									
-								</div>
-							</div>
-						</li>
-					</ul>
-				</div>
-				<!--
-  ================================================================
-  BLOQUE A INSERTAR EN documentation.html
-  Ubicación: Dentro del <div id="guia-rapida" class="tab-content">,
-  justo ANTES del div "docu-no-results" (el último de la guía).
-  ================================================================
--->
+						<h4>Paso 1 · Crear el paquete API en Marketing Cloud</h4>
+						<ul>
+							<li>Crea el paquete siempre en la <b>BU PADRE</b>. Si vas a usarlo en otras BUs, da permiso a cada BU y crea una conexión por cada una.</li>
+							<li>Ve a <b>Setup → Apps → Installed Packages</b> y crea un paquete de tipo <b>Web App</b> llamado <b>MC API Helper</b>.</li>
+							<li>En <b>Redirect URI</b> pon: <code>https://127.0.0.1:8443/callback</code></li>
+							<li>Asigna estos permisos (pestaña del componente del paquete):
+								<ul class="docu-permissions">
+									<li><b>Email:</b> Read, Write</li>
+									<li><b>Automations:</b> Read, Write, Execute</li>
+									<li><b>Journeys:</b> Read, Write, Activate/Stop/Pause/Resume/Send/Schedule, Delete</li>
+									<li><b>Audiences:</b> Read, Write</li>
+									<li><b>List and Subscribers:</b> Read, Write</li>
+									<li><b>Data Extensions:</b> Read, Write</li>
+									<li><b>Documents and Images:</b> Read</li>
+									<li><b>Saved Content:</b> Read</li>
+									<li><b>File Locations:</b> Read</li>
+									<li><b>Users:</b> Read</li>
+								</ul>
+							</li>
+							<li>En la pestaña <b>ACCESS</b> del paquete, da permiso a los usuarios que vayan a usar la app.</li>
+						</ul>
 
-				<!-- GRUPO: AUTOMATISMOS -->
-				<div class="docu-group" data-group-name="Automatismos">
-					<h3 class="docu-group-title">Automatismos</h3>
-					<ul class="docu-accordion">
-						<li class="docu-accordion-item"
-							data-keywords="automatismos automatismo tabla refrescar exportar activar ejecutar parar estado notificaciones">
-							<div class="docu-accordion-header">
-								<span>Gestión de Automatismos</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>
-										Esta vista muestra todos los automatismos de la instancia en una tabla paginada con los siguientes datos:
-										<b>Nombre</b>, <b>Última Ejecución</b>, <b>Próxima Ejecución</b>, <b>Estado</b> y las <b>Notificaciones</b> configuradas para errores y ejecuciones.
-									</p>
-									<p>
-										Se puede filtrar por nombre (soporta múltiples valores separados por <code>,</code> <code>;</code> o <code>|</code>) y por estado.
-										Las columnas son ordenables haciendo clic en la cabecera.
-									</p>
-									<p>Botones disponibles:</p>
-									<ul>
-										<li><b>Refrescar</b> — Recarga los datos desde la API.</li>
-										<li><b>Analizar</b> (requiere selección de 1) — Abre la vista de análisis detallado del automatismo seleccionado.</li>
-										<li><b>Cargar Notificaciones</b> — Obtiene los emails de alerta configurados en cada automatismo y los muestra en la tabla.</li>
-										<li><b>Exportar</b> — Descarga un CSV con los datos visibles (respetando los filtros activos).</li>
-										<li><b>Activar</b> (requiere selección) — Activa automatismos que están parados o pausados.</li>
-										<li><b>Ejecutar</b> (requiere selección) — Lanza una ejecución manual inmediata.</li>
-										<li><b>Parar</b> (requiere selección) — Detiene automatismos en ejecución o programados.</li>
-										<li><b>Clonar</b> (requiere selección de 1) — Navega al clonador selectivo de ese automatismo.</li>
-									</ul>
-									<p>
-										Los botones de acción (<b>Activar</b>, <b>Ejecutar</b>, <b>Parar</b>) solo se habilitan cuando los automatismos seleccionados tienen un estado compatible con la acción.
-										Si se seleccionan varios con estados distintos, los botones quedan deshabilitados.
-									</p>
-								</div>
-							</div>
-						</li>
-						<li class="docu-accordion-item"
-							data-keywords="clonar automatismo clonador selectivo actividades queries scripts carpeta destino">
-							<div class="docu-accordion-header">
-								<span>Clonador de Automatismos</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>
-										Accesible desde la vista de Automatismos seleccionando uno y pulsando <b>Clonar</b>.
-										Permite duplicar un automatismo de forma selectiva: se elige qué actividades clonar y cuáles reutilizar.
-									</p>
-									<p>
-										Configuración disponible:
-									</p>
-									<ul>
-										<li><b>Nombre Destino</b> — Nombre del nuevo automatismo (editable).</li>
-										<li><b>Carpeta Destino</b> — Por defecto se usa la misma carpeta del original; se puede cambiar con el buscador de carpetas.</li>
-										<li>Por cada actividad del automatismo se puede indicar si clonarla o reutilizar la original, y se puede cambiar el nombre y la Data Extension de destino.</li>
-										<li>Se puede establecer una <b>carpeta de DEs por defecto</b> para que todas las DEs clonadas se guarden ahí sin tener que configurarlas una a una.</li>
-									</ul>
-									<p>
-										El proceso crea primero las DEs de destino (si es necesario), luego las actividades y finalmente el automatismo completo con todos sus pasos.
-									</p>
-								</div>
-							</div>
-						</li>
-					</ul>
+						<h4>Paso 2 · Configurar el cliente en la app</h4>
+						<ul>
+							<li>Ve a <b>Configuración de APIs</b> e introduce los datos del paquete (Client Id, Client Secret, Auth URI, etc.).</li>
+							<li>Opcional: configura las <b>DEs de Búsqueda de Clientes</b> antes del login para que se guarden automáticamente (ver la vista <i>Configuración de APIs</i>).</li>
+						</ul>
+
+						<h4>Paso 3 · Iniciar sesión</h4>
+						<ul>
+							<li>Pulsa <b>Login</b>: se abrirá una ventana con el login de Marketing Cloud; introduce tus credenciales.</li>
+							<li>Si falla puntualmente, reinténtalo (a veces MC no gestiona bien la primera conexión). Si persiste, revisa que tu usuario tiene permiso en el paquete del Paso 1.</li>
+							<li>Una vez autenticado, selecciona el cliente en el desplegable superior para trabajar con él.</li>
+						</ul>
+
+						<div class="docu-note">Cada vista tiene normalmente un botón <b>Refrescar</b> que descarga datos por API y los guarda en una caché local del cliente. Al volver a entrar verás lo cacheado; pulsa Refrescar para actualizar.</div>
+					</div>
 				</div>
 
-				<!-- GRUPO: JOURNEYS -->
-				<div class="docu-group" data-group-name="Journeys">
-					<h3 class="docu-group-title">Journeys</h3>
-					<ul class="docu-accordion">
-						<li class="docu-accordion-item"
-							data-keywords="journeys journey tabla refrescar exportar copiar acciones errores comunicaciones data extensions analizar">
-							<div class="docu-accordion-header">
-								<span>Gestión de Journeys</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>
-										Esta vista muestra todos los journeys de la instancia en una tabla paginada. Cada fila incluye: <b>Nombre</b>, <b>Tipo</b>, <b>Subtipo</b>, <b>Estado</b>, <b>Data Extension de entrada</b>, <b>versiones</b> y, si se han cargado, las comunicaciones (Emails, SMS, Push, WhatsApp) usadas en cada journey.
-									</p>
-									<p>
-										Filtros disponibles: por nombre, tipo, subtipo, estado, Data Extension de entrada y campos de entrada. El botón <b>☐ Comunicaciones</b> activa un filtro adicional para mostrar solo journeys que tienen comunicaciones cargadas.
-									</p>
-									<p>Botones disponibles:</p>
-									<ul>
-										<li><b>Refrescar</b> — Recarga los datos desde la API.</li>
-										<li><b>Exportar</b> — Descarga un CSV con los journeys visibles (respetando filtros activos).</li>
-										<li><b>Analizar</b> (requiere selección de 1) — Abre la vista de análisis detallado del journey.</li>
-										<li><b>Data Extensions</b> — Escanea las DEs de entrada de todos los journeys filtrados y las muestra agrupadas.</li>
-										<li><b>Comunicaciones</b> (requiere selección) — Carga las comunicaciones (emails, SMS, etc.) configuradas en los journeys seleccionados y las muestra como columnas adicionales.</li>
-										<li><b>Copiar</b> (requiere selección de 1) — Abre el asistente de clonación del journey.</li>
-										<li><b>Acciones</b> (requiere selección) — Permite <b>Pausar</b>, <b>Reanudar</b>, <b>Parar</b> o <b>Borrar</b> los journeys seleccionados.</li>
-										<li><b>Ver Errores</b> (requiere selección de 1) — Navega a la vista de errores de ese journey.</li>
-									</ul>
-									<p>
-										Al pulsar <b>Parar</b> se muestra un modal con dos opciones: parar solo la versión activa (<b>Current</b>) o parar <b>todas</b> las versiones.
-										Para los journeys de tipo <b>Multistep</b>, al borrarlos se para primero todas las versiones automáticamente.
-									</p>
-								</div>
-							</div>
-						</li>
-						<li class="docu-accordion-item"
-							data-keywords="clonar journey copiar EmailAudience AutomationAudience DE entrada">
-							<div class="docu-accordion-header">
-								<span>Clonador de Journeys</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>
-										Accesible desde la vista de Journeys seleccionando uno y pulsando <b>Copiar</b>.
-										El asistente guía el proceso según el tipo de entrada del journey original:
-									</p>
-									<ul>
-										<li>
-											<b>EmailAudience</b> — Pregunta si se quiere clonar la Data Extension de entrada o reutilizar una existente.
-											Si se clona, se puede indicar el nombre de la nueva DE.
-										</li>
-										<li>
-											<b>AutomationAudience</b> — Busca las DEs de destino del automatismo de origen y permite seleccionar cuál actuará como fuente de datos del nuevo journey.
-										</li>
-									</ul>
-									<p>
-										En todos los casos se puede modificar el nombre del nuevo journey antes de ejecutar la clonación.
-										El proceso crea el event definition, la DE (si aplica) y el propio journey con toda su configuración.
-									</p>
-								</div>
-							</div>
-						</li>
-						<li class="docu-accordion-item"
-							data-keywords="errores journey errors fecha filtro estado actividad tipo exportar">
-							<div class="docu-accordion-header">
-								<span>Errores de Journeys</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>
-										Vista accesible desde el botón <b>Ver Errores</b> en la tabla de Journeys (con un journey seleccionado).
-										Muestra todos los errores registrados en ese journey en un rango de fechas configurable.
-									</p>
-									<p>
-										Permite filtrar por: <b>Journey</b>, <b>Estado del error</b>, <b>Actividad</b> y <b>Tipo de error</b>.
-										Los resultados son paginados y se pueden exportar en CSV con el botón <b>Exportar</b>.
-									</p>
-								</div>
-							</div>
-						</li>
-					</ul>
+				<!-- ===== GENERALIDADES ===== -->
+				<div id="doc-general" class="tab-content">
+					<div class="docu-view">
+						<h3>Generalidades de la app</h3>
+						<p>Funciones comunes disponibles en toda la aplicación.</p>
+
+						<h4>Selector de cliente</h4>
+						<ul>
+							<li>En la cabecera superior eliges el cliente con el que trabajar. Todas las vistas usan ese cliente y su caché local.</li>
+						</ul>
+
+						<h4>Buscador de texto en la ventana</h4>
+						<ul>
+							<li>Permite buscar y navegar por el texto visible de la vista actual, como el buscador del navegador.</li>
+						</ul>
+
+						<h4>Panel de logs (lateral derecho)</h4>
+						<ul>
+							<li>Registra todas las acciones y llamadas a la API. Pulsa los iconos <b>&lt;</b> / <b>&gt;</b> para mostrar u ocultar el panel.</li>
+							<li>Tres apartados: <b>Mensajes</b> (qué se está haciendo), <b>Petición</b> (llamadas a la API) y <b>Respuesta</b> (lo que devuelve la API).</li>
+							<li>Desde <b>Log de Eventos</b> puedes descargar los logs con fecha. Útil para revisar qué llamadas se hicieron si algo da error.</li>
+						</ul>
+
+						<h4>Novedades</h4>
+						<ul>
+							<li>El menú principal incluye un panel de <b>Novedades</b> con el historial de versiones y los cambios de cada una.</li>
+						</ul>
+						<div class="docu-note">La app comprueba si hay una versión nueva al arrancar; si la hay, la descarga y avisa con la opción de instalar.</div>
+					</div>
 				</div>
 
-				<!-- GRUPO: CLONAR QUERIES -->
-				<div class="docu-group" data-group-name="Clonar Queries">
-					<h3 class="docu-group-title">Clonar Queries</h3>
-					<ul class="docu-accordion">
-						<li class="docu-accordion-item"
-							data-keywords="clonar queries masivo carpeta origen destino de data extension">
-							<div class="docu-accordion-header">
-								<span>Clonador Masivo de Queries</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>
-										Esta funcionalidad permite clonar de forma masiva todas las Query Activities de una carpeta de origen a una carpeta de destino, clonando también sus Data Extensions de destino.
-									</p>
-									<p>
-										El proceso es un asistente de <b>2 pasos</b>:
-									</p>
-									<ul>
-										<li>
-											<b>Paso 1 — Configuración de carpetas:</b> Se indican los nombres (o parte del nombre) de tres carpetas:
-											la carpeta origen de las queries, la carpeta destino para las queries clonadas y la carpeta destino para las DEs clonadas.
-											Al pulsar <b>Buscar Carpetas</b> se muestran las carpetas encontradas en tres columnas; se debe seleccionar una de cada columna y pulsar <b>Continuar</b>.
-										</li>
-										<li>
-											<b>Paso 2 — Selección de queries:</b> Se muestra la lista de todas las queries de la carpeta origen.
-											Para cada una se puede editar el nombre de la query clonada y el nombre de la DE clonada.
-											Se puede seleccionar todas con el checkbox del encabezado o marcarlas individualmente.
-											Al pulsar <b>Clonar Seleccionadas</b> se lanza el proceso.
-										</li>
-									</ul>
-									<p>
-										Si varias queries comparten la misma DE de destino, esta solo se clona una vez y se reutiliza para las demás.
-									</p>
-								</div>
-							</div>
-						</li>
-					</ul>
+				<!-- ===== CONFIGURACIÓN DE APIs ===== -->
+				<div id="doc-config" class="tab-content">
+					<div class="docu-view">
+						<h3>Configuración de APIs</h3>
+						<p>Aquí se dan de alta y gestionan los clientes (credenciales del paquete API) y se inicia sesión.</p>
+
+						<h4>Qué se puede hacer</h4>
+						<ul>
+							<li>Dar de alta un cliente con los datos del paquete (Client Id, Client Secret, Auth/REST/SOAP URI, MID/Business Unit, etc.).</li>
+							<li><b>Login</b> — Inicia el flujo de autenticación por navegador contra Marketing Cloud.</li>
+							<li><b>Logout</b> — Cierra la sesión del cliente y borra las credenciales seguras guardadas; también limpia las cachés locales de ese cliente.</li>
+						</ul>
+
+						<h4>Pestaña "DEs de Búsqueda de Clientes"</h4>
+						<ul>
+							<li>Define una serie de Data Extensions sobre las que poder consultar la ficha de un cliente desde <b>Buscadores → Clientes</b> (qué comunicaciones ha recibido, estado en tablas, exclusiones, etc.) sin lanzar queries.</li>
+							<li>Por cada tabla se indica: <b>Nombre</b> de la DE, <b>External Key</b> y el <b>campo</b> por el que buscar al cliente (el que coincide con el identificador).</li>
+							<li>Si las configuras <b>antes</b> del login se guardan automáticamente. Si las añades después, pulsa el botón de <b>guardar</b> de la parte superior.</li>
+							<li>Se pueden <b>exportar/importar</b> para que otra persona del equipo no tenga que configurarlas a mano.</li>
+						</ul>
+					</div>
 				</div>
 
-				<!-- GRUPO: CLOUD PAGES -->
-				<div class="docu-group" data-group-name="Cloud Pages">
-					<h3 class="docu-group-title">Cloud Pages</h3>
-					<ul class="docu-accordion">
-						<li class="docu-accordion-item"
-							data-keywords="cloud pages cloudpages refrescar exportar ids contenidos url tipo publicacion">
-							<div class="docu-accordion-header">
-								<span>Gestión de Cloud Pages</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>
-										Esta vista muestra todas las Cloud Pages de la instancia en una tabla paginada con: <b>Nombre</b>, <b>Tipo</b>, <b>Fecha de Modificación</b>, <b>Fecha de Publicación</b>, <b>Ubicación</b>, <b>URL</b> y <b>Page ID</b>.
-									</p>
-									<p>
-										Filtros disponibles: por nombre, por Page ID, por contenido (si se han cargado los contenidos) y por tipo.
-									</p>
-									<p>Botones disponibles:</p>
-									<ul>
-										<li><b>Refrescar</b> — Recarga la lista de Cloud Pages desde la API.</li>
-										<li><b>Exportar</b> — Descarga un CSV con las Cloud Pages visibles.</li>
-										<li>
-											<b>Recuperar IDs</b> — Abre un modal con instrucciones para obtener los Page IDs de las Cloud Pages.
-											Es necesario abrir la URL indicada en el navegador (con sesión activa de MC) y pegar el JSON resultante.
-											Esto permite que la columna <b>Page ID</b> de la tabla se rellene correctamente.
-										</li>
-										<li>
-											<b>Recuperar Contenidos</b> — Abre un modal con las instrucciones para extraer el HTML de todas las Cloud Pages.
-											Hay que abrir Content Builder en el navegador, ejecutar el script en la consola (F12), copiar el resultado y pegarlo en el modal.
-											Una vez importados, el filtro de contenido de la tabla queda activo.
-											<b>Nota:</b> Si al abrir el enlace se muestra UNAUTHORIZED, abre Content Builder y vuelve a intentarlo.
-										</li>
-									</ul>
-								</div>
-							</div>
-						</li>
-					</ul>
-				</div>				
+				<!-- ===== BUSCADORES ===== -->
+				<div id="doc-buscadores" class="tab-content">
+					<div class="docu-view">
+						<h3>Buscadores</h3>
+						<p>Conjunto de buscadores para localizar dónde se usa o qué contiene cada elemento de la instancia.</p>
 
-				<!-- GRUPO: GESTIÓN DE ENVÍOS -->
-				<div class="docu-group" data-group-name="Gestión de Envíos">
-					<h3 class="docu-group-title">Gestión de Envíos</h3>
-					<ul class="docu-accordion">
-						<li class="docu-accordion-item"
-							data-keywords="envios send classifications sender profiles delivery profiles exportar refrescar comercial transaccional">
-							<div class="docu-accordion-header">
-								<span>Gestión de Envíos</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>
-										Esta vista agrupa toda la configuración de envío de Marketing Cloud en tres pestañas:
-									</p>
-									<ul>
-										<li>
-											<b>Send Classifications</b> — Lista todas las clasificaciones de envío de la instancia.
-											Muestra el nombre, External Key, tipo (Comercial/Transaccional), el Sender Profile y Delivery Profile asociados y la fecha de modificación.
-											Permite filtrar por nombre/key, por perfil y por tipo.
-										</li>
-										<li>
-											<b>Sender Profiles</b> — Lista todos los perfiles de remitente.
-											Muestra nombre, External Key, From Name, From Email, si tiene Auto-Reply, si tiene reenvío automático (Forward To) y la fecha de modificación.
-											Permite filtrar por nombre/key, From Name y From Email.
-										</li>
-										<li>
-											<b>Delivery Profiles</b> — Lista los perfiles de entrega de la instancia.
-											Muestra nombre, External Key, descripción, modo IP, dirección IP, header y footer.
-											Dado que la API de MC no expone estos datos directamente, se obtienen ejecutando un script en la consola del navegador en la página de Delivery Profiles.
-											El modal explica los pasos y proporciona el script a copiar.
-										</li>
-									</ul>
-									<p>
-										Los botones <b>Refrescar</b> y <b>Exportar</b> son globales: refrescan o exportan la pestaña activa en ese momento.
-										La exportación genera un CSV con los datos visibles respetando los filtros activos.
-									</p>
-									<p>
-										Las columnas de todas las tablas son ordenables haciendo clic en la cabecera.
-									</p>
-								</div>
-							</div>
-						</li>
-					</ul>
+						<h4>Buscador de Data Extensions</h4>
+						<ul>
+							<li>Busca una DE por <b>Nombre</b> o <b>External Key</b>; devuelve todas las que contengan un texto similar.</li>
+						</ul>
+
+						<h4>Buscador de Orígenes de datos</h4>
+						<ul>
+							<li>Indica qué <b>query</b> o <b>import</b> inserta/actualiza datos en una DE, mostrando en qué automatismo y paso se encuentra.</li>
+							<li>El check <b>Mostrar Descripción / Query</b> oculta o muestra la columna con la query o la descripción del import.</li>
+						</ul>
+
+						<h4>Buscador de Clientes</h4>
+						<ul>
+							<li>Vista rápida de un cliente: busca su información en las DEs configuradas en <b>Configuración de APIs → DEs de Búsqueda de Clientes</b> (selecciona la tabla y muestra sus campos filtrados por el cliente).</li>
+							<li>Muestra en qué <b>Journeys</b> está el contacto en ese momento y permite <b>expulsarlo</b> de uno o varios journeys a la vez (selección múltiple).</li>
+						</ul>
+
+						<h4>Buscador de Texto en Queries</h4>
+						<ul>
+							<li>Busca una cadena de texto en todas las queries; muestra la query (con enlace) y en qué automatismos y pasos aparece. La columna con la query se puede mostrar/ocultar.</li>
+						</ul>
+
+						<h4>Buscador de Texto en Scripts</h4>
+						<ul>
+							<li>Busca una cadena de texto en los scripts; muestra el script encontrado con su enlace.</li>
+						</ul>
+
+						<h4>Buscador de Contenidos</h4>
+						<ul>
+							<li>Busca cualquier contenido de Content Builder por nombre o id; muestra la tipología y la ruta. Desde el detalle se puede ver y descargar el código.</li>
+						</ul>
+
+						<h4>Buscador de Actividades</h4>
+						<ul>
+							<li>Busca actividades de Automation Studio (queries, scripts, extracts, imports, file transfers…) por nombre o External Key (exactos). Útil para saber en qué automatismos se usa una actividad antes de modificarla o borrarla.</li>
+						</ul>
+					</div>
 				</div>
 
-				<!-- GRUPO: USUARIOS -->
-				<div class="docu-group" data-group-name="Usuarios">
-					<h3 class="docu-group-title">Usuarios</h3>
-					<ul class="docu-accordion">
-						<li class="docu-accordion-item"
-							data-keywords="usuarios permisos roles activos inactivos api user exportar comparativa detalle">
-							<div class="docu-accordion-header">
-								<span>Gestión de Usuarios y Permisos</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>
-										Esta vista tiene dos pestañas:
-									</p>
-									<ul>
-										<li>
-											<b>Lista de Usuarios</b> — Muestra todos los usuarios de la instancia con: Nombre (ID), UserName, si es API User, Último Login, Estado (activo/inactivo) y Roles asignados.
-											Permite filtrar por nombre, por estado (activos/inactivos) y por roles (selector múltiple desplegable).
-											Las columnas son ordenables. El botón <b>Descargar Usuarios</b> exporta en CSV los usuarios visibles.
-										</li>
-										<li>
-											<b>Detalle / Comparativa</b> — Permite obtener un desglose completo de permisos por usuario para comparar entre ellos.
-											Como MC no expone esta información por API, es necesario ejecutar un script en la consola del navegador (F12) desde la página de administración de usuarios.
-											El modal de <b>Preparar Captura</b> proporciona el enlace y el script a ejecutar.
-											Una vez pegado el resultado, se genera una tabla expandible con todos los permisos agrupados por categoría.
-											El botón <b>Solo Diferencias</b> oculta los permisos iguales entre usuarios para facilitar la comparativa.
-											El botón <b>Colapsar Todo / Expandir Todo</b> controla la visibilidad de los grupos de permisos.
-										</li>
-									</ul>
-								</div>
-							</div>
-						</li>
-					</ul>
+				<!-- ===== CONTENIDOS ===== -->
+				<div id="doc-contenidos" class="tab-content">
+					<div class="docu-view">
+						<h3>Contenidos</h3>
+						<p>Descarga y cachea todos los contenidos de Content Builder para poder explorarlos, buscarlos, analizar su uso y borrarlos, sin entrar a Marketing Cloud. Los datos se obtienen por API (ya no hace falta ejecutar scripts en consola).</p>
+
+						<h4>Pestañas</h4>
+						<ul>
+							<li>Emails, Plantillas, Push, SMS, Whatsapp, Plantillas WA, Bloques y Code Snippet. Cada pestaña muestra un contador de elementos.</li>
+							<li>Junto al total se muestra la <b>fecha de la caché de contenidos</b> y la <b>fecha de la caché de Journeys</b> (esta última la genera la vista de Journeys y sirve para el filtro de uso).</li>
+						</ul>
+
+						<h4>Botones de cabecera</h4>
+						<ul>
+							<li><b>Refrescar</b> — Descarga los contenidos por API (puedes elegir qué tipos) y sobrescribe la caché local del cliente.</li>
+							<li><b>Exportar</b> — Descarga un CSV de la pestaña activa (respeta los filtros).</li>
+							<li><b>Borrar</b> (rojo) — Elimina los contenidos <b>seleccionados</b>. Pide confirmación indicando cuántos se van a borrar, llama al DELETE de la API y descarga un CSV con los eliminados. <b>No permite borrar contenidos que estén en uso</b> (el botón se deshabilita si algún seleccionado está en uso).</li>
+						</ul>
+
+						<h4>Filtros</h4>
+						<ul>
+							<li><b>Buscador</b> — Filtra por nombre, id y también por el cuerpo del contenido (HTML, asunto, preheader, variables/botones de WhatsApp, contenido resuelto…). Útil, por ejemplo, para saber qué emails usan una plantilla buscando su nombre.</li>
+							<li><b>Uso</b> (Todos / En uso / Sin uso) — Clasifica: emails, push, SMS y WhatsApp según los <b>Journeys cacheados</b>; bloques, plantillas y snippets según su cadena de referencias (qué los usa). Sin caché de Journeys, los mensajes no se pueden clasificar.</li>
+							<li><b>Plantilla inexistente</b> — Muestra solo los emails cuya plantilla ya no existe en la pestaña de Plantillas.</li>
+							<li><b>Filtro de fecha</b> — Selecciona el campo (Modificado/Creado) y un rango Desde/Hasta.</li>
+						</ul>
+
+						<h4>Selección y acciones por fila</h4>
+						<ul>
+							<li>Haz clic en una fila para seleccionarla (uno o varios) de cara al borrado.</li>
+							<li>Iconos por fila: <b>ver código</b>, <b>ver código resuelto</b> (emails, ensambla bloques referenciados), <b>dónde se usa</b> (bloques/plantillas referenciados por otros contenidos), <b>Journeys donde se usa</b> (emails/push/SMS/WhatsApp: abre un panel con los Journeys que lo utilizan) y <b>analizar en Buscadores</b>.</li>
+						</ul>
+						<div class="docu-note">El emparejamiento "en uso" de emails con Journeys se hace por el id legacy del email; requiere haber refrescado contenidos y haber cacheado los Journeys.</div>
+					</div>
 				</div>
 
-				<!-- GRUPO: GENERADOR ERD -->
-				<div class="docu-group" data-group-name="Generador ERD">
-					<h3 class="docu-group-title">Generador ERD</h3>
-					<ul class="docu-accordion">
-						<li class="docu-accordion-item"
-							data-keywords="erd diagrama entidad relacion attribute groups contact builder json PK FK relaciones">
-							<div class="docu-accordion-header">
-								<span>Generador de Diagramas Entidad-Relación (ERD)</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>
-										Esta funcionalidad genera un diagrama visual de las relaciones entre Data Extensions de un <b>Attribute Group</b> de Contact Builder.
-										Es útil para entender el modelo de datos del cliente de un vistazo.
-									</p>
-									<p>
-										El proceso tiene dos pasos (pestañas):
-									</p>
-									<ul>
-										<li>
-											<b>1. Extraer JSON</b> — Hay que abrir el enlace que proporciona la app (apunta a la API interna de Attribute Groups de MC) y ejecutar el script en la consola del navegador.
-											El script muestra un popup donde seleccionar qué Attribute Group analizar y genera el JSON de las relaciones.
-										</li>
-										<li>
-											<b>2. Generar Diagrama</b> — Se pega el JSON extraído en el cuadro de texto y se pulsa <b>Generar Diagrama</b>.
-											Opcionalmente se puede marcar <b>Ocultar tabla Contacts</b> para simplificar el diagrama (la tabla Contacts se marca con 🔑 en los campos que la referencian).
-										</li>
-									</ul>
-									<p>
-										El diagrama resultante es interactivo:
-									</p>
-									<ul>
-										<li>Las tablas son arrastrables para reorganizar el layout.</li>
-										<li>Al hacer clic en un campo se resalta la relación correspondiente (líneas de FK/REF).</li>
-										<li>Los campos se colorean según su tipo: 🟠 PK, 🟢 FK, 🟣 REF.</li>
-										<li>Al pasar el ratón sobre un campo se muestra un tooltip con el tipo de dato y la relación.</li>
-										<li>Se puede descargar el diagrama como imagen (<b>Descargar Imagen</b>) o exportar las relaciones como CSV (<b>Descargar CSV</b>).</li>
-										<li>El botón <b>Nuevo Diagrama</b> limpia el lienzo para empezar con otro Attribute Group.</li>
-									</ul>
-								</div>
-							</div>
-						</li>
-					</ul>
+				<!-- ===== CLOUD PAGES ===== -->
+				<div id="doc-cloudpages" class="tab-content">
+					<div class="docu-view">
+						<h3>Cloud Pages</h3>
+						<p>Lista todas las Cloud Pages de la instancia en una tabla paginada con: Nombre, Tipo, Fecha de Modificación, Fecha de Publicación, Modificado por, Ubicación, URL y Page ID. La cabecera de la tabla queda fija al hacer scroll.</p>
+
+						<h4>Botones de cabecera</h4>
+						<ul>
+							<li><b>Refrescar</b> — Recarga la lista (y el contenido) de Cloud Pages por API.</li>
+							<li><b>Exportar</b> — Descarga un CSV con las Cloud Pages visibles (respeta filtros).</li>
+							<li><b>Recuperar IDs</b> — Abre un modal con instrucciones: hay que abrir un enlace a la API interna en el navegador (con sesión MC activa) y pegar el JSON resultante para rellenar la columna <b>Page ID</b>/URL.</li>
+						</ul>
+
+						<h4>Filtros</h4>
+						<ul>
+							<li>Por <b>nombre</b>, por <b>Page ID</b>, por <b>contenido</b>, por <b>tipo</b>, por <b>publicación</b> (publicadas / no publicadas), por <b>URL</b> (con/sin URL) y por <b>rango de fechas</b> (Fecha Modificación / Fecha Publicación + Desde/Hasta).</li>
+						</ul>
+
+						<h4>Columna de acción y detalle</h4>
+						<ul>
+							<li>Cada fila tiene un icono que abre un <b>panel lateral (drawer)</b> con las <b>dependencias</b> de la Cloud Page (DEs referenciadas, parámetros, atributos, Content Blocks, Triggered Sends, URLs de HTTP.Post y redirecciones) y el <b>código fuente</b> con resaltado.</li>
+							<li>Desde el drawer se puede <b>descargar el código</b> de la página.</li>
+						</ul>
+					</div>
 				</div>
 
-				<!-- GRUPO: AUDITORÍA -->
-				<div class="docu-group" data-group-name="Auditoría">
-					<h3 class="docu-group-title">Auditoría</h3>
-					<ul class="docu-accordion">
-						<li class="docu-accordion-item"
-							data-keywords="auditoria auditoria instancia escaneo usuarios automatismos journeys cloud pages send management data extensions kpi graficos pdf exportar">
-							<div class="docu-accordion-header">
-								<span>Auditoría de Instancia</span>
-							</div>
-							<div class="docu-accordion-content">
-								<div class="docu-list">
-									<p>
-										Esta vista realiza un análisis completo del estado de la instancia de Marketing Cloud y genera un dashboard con KPIs y gráficos para cada área.
-										Si ya existe una auditoría guardada para el cliente activo, se carga automáticamente al entrar a la vista.
-									</p>
-									<p>
-										El análisis se organiza en seis pestañas de resultados: <b>Usuarios</b>, <b>Automatismos</b>, <b>Journeys</b>, <b>Cloud Pages</b>, <b>Send Management</b> y <b>Data Extensions</b>.
-									</p>
-									<p>
-										Antes de lanzar el escaneo se pueden activar opciones de <b>análisis profundo</b>:
-									</p>
-									<ul>
-										<li>
-											<b>Automatismos — Análisis Profundo</b> (lento: 2 llamadas por automatismo + 1 por SQL/SSJS) — Detecta email de alerta por error, extrae dominios de aviso, detecta descripciones en SQL/SSJS y genera un mapa de actividades compartidas entre automatismos.
-										</li>
-										<li>
-											<b>Journeys — Análisis Profundo</b> (rápido si la API devuelve actividades en la llamada de lista) — Detecta nodos Salesforce activos, calcula el mix multicanal real (Email, SMS, Push/In-App, WhatsApp) e identifica journeys con solo lógica (sin envíos).
-										</li>
-										<li>
-											<b>Data Extensions — Análisis desde JSON</b> — Para auditar las DEs hay que ejecutar un script en la consola del navegador estando en Contact Builder. El script recorre todas las carpetas (puede tardar ~20 min para ~6.000 DEs) y genera un JSON que se pega en la vista. Las DEs de la carpeta <i>Shared</i> se excluyen automáticamente.
-											<b>Atención:</b> Cada escaneo sobreescribe la caché anterior.
-										</li>
-									</ul>
-									<p>
-										Métricas disponibles por área:
-									</p>
-									<ul>
-										<li><b>Usuarios</b>: total, activos, inactivos, API users, último login, roles más frecuentes.</li>
-										<li><b>Automatismos</b>: total, activos/programados, sin historial de ejecución, que lanzan Journeys, actividades de import/export, nombres de prueba.</li>
-										<li><b>Journeys</b>: total, publicados, por tipo/subtipo/estado, integración con Salesforce, mix de canales, con/sin Goals, con/sin criterios de salida, inactividad.</li>
-										<li><b>Cloud Pages</b>: total, por tipo, publicadas vs no publicadas.</li>
-										<li><b>Send Management</b>: Send Classifications, Sender Profiles, perfiles en uso vs huérfanos, remitentes dinámicos, AutoReply y Forward.</li>
-										<li><b>Data Extensions</b>: total, sin descripción (por propietario), sendable/testable, con retención, vacías, con nombre de prueba, carpetas con más de 15 DEs.</li>
-									</ul>
-									<p>
-										Haciendo clic en cualquier barra de los gráficos se abre un <b>modal de detalle</b> con la lista de elementos que componen esa métrica, exportable en CSV.
-									</p>
-									<p>
-										Una vez completada la auditoría están disponibles dos botones:
-									</p>
-									<ul>
-										<li><b>Descargar PDF</b> — Genera un informe PDF con todos los gráficos y KPIs.</li>
-										<li><b>Exportar Detalles</b> — Descarga un ZIP con un CSV por cada categoría auditada.</li>
-									</ul>
-									<p>
-										Los resultados se guardan automáticamente en disco para el cliente activo y se cargan la próxima vez que se acceda a la vista.
-										El botón <b>Volver a Opciones</b> permite relanzar el escaneo con diferentes opciones (sobreescribiendo la caché anterior).
-									</p>
-								</div>
-							</div>
-						</li>
-					</ul>
+				<!-- ===== CALENDARIO ===== -->
+				<div id="doc-calendario" class="tab-content">
+					<div class="docu-view">
+						<h3>Calendario</h3>
+						<p>Muestra en un calendario los automatismos programados por su próxima fecha de ejecución. Los días con algo programado se marcan en azul.</p>
+
+						<h4>Controles</h4>
+						<ul>
+							<li><b>Año</b> — Desplegable para cambiar el año mostrado.</li>
+							<li><b>Refrescar Automatismos</b> — Recarga todos los automatismos programados.</li>
+							<li><b>Refrescar Automatismos de Journeys</b> — Carga/actualiza solo los automatismos que lanzan algún Journey.</li>
+						</ul>
+
+						<h4>Uso</h4>
+						<ul>
+							<li>Al hacer clic en un día, el panel derecho muestra qué automatismos hay y a qué hora están programados.</li>
+							<li>Desde <b>Automatizaciones del Día</b> se salta a la vista de <b>Automatismos</b> ya filtrada por esos automatismos.</li>
+						</ul>
+						<div class="docu-note">Al volver a entrar se muestra lo último guardado; pulsa Refrescar para tener los datos al día.</div>
+					</div>
 				</div>
-				<!-- Mensaje de no resultados -->
-				<div id="docu-no-results" class="error-text hidden"> No se han encontrado funcionalidades que coincidan	con la búsqueda. </div>
+
+				<!-- ===== JOURNEYS ===== -->
+				<div id="doc-journeys" class="tab-content">
+					<div class="docu-view">
+						<h3>Journeys</h3>
+						<p>Tabla paginada con todos los journeys: Nombre, Versión, Fecha creación/modificación/actividad, Tipo, Subtipo, Estado, Data Extension de entrada y DEs usadas en actividades. La cabecera queda fija al hacer scroll. Junto al título se muestra la <b>fecha de la caché</b> de comunicaciones.</p>
+
+						<h4>Botones de cabecera</h4>
+						<ul>
+							<li><b>Refrescar</b> — Recarga la lista de journeys por API.</li>
+							<li><b>Exportar</b> — Descarga un CSV con los journeys visibles (respeta filtros).</li>
+							<li><b>Analizar</b> (1 seleccionado) — Abre el análisis detallado del journey.</li>
+							<li><b>Data Extensions</b> — Escanea las DEs usadas en las actividades de los journeys filtrados y las muestra en su columna.</li>
+							<li><b>Descargar detalle</b> — Descarga el journey completo (actividades + comunicaciones) y lo <b>cachea</b>. Permite elegir <b>todos</b> o solo los <b>seleccionados</b>. Esta caché alimenta el filtro de uso de la vista de Contenidos y se <b>sobrescribe</b> con la última descarga.</li>
+							<li><b>Copiar</b> (1 seleccionado) — Abre el asistente de clonación del journey.</li>
+							<li><b>Acciones</b> (selección) — Permite <b>Pausar</b>, <b>Reanudar</b>, <b>Parar</b> o <b>Borrar</b> los journeys seleccionados.</li>
+							<li><b>Ver Errores</b> (1 seleccionado) — Abre la vista de errores de ese journey.</li>
+						</ul>
+
+						<h4>Filtros</h4>
+						<ul>
+							<li>Por <b>nombre</b>, <b>tipo</b>, <b>subtipo</b>, <b>estado</b>, <b>Data Extension</b> de entrada y <b>campos en entrada</b> (uno o varios separados por <code>,</code> <code>;</code> <code>|</code>).</li>
+							<li><b>Comunicaciones</b> — Botón que filtra para mostrar solo los journeys que tienen comunicaciones reales cacheadas.</li>
+							<li><b>Filtro de fecha</b> — Campo (creación / modificación / actividad) + rango Desde/Hasta.</li>
+						</ul>
+
+						<h4>Columna de comunicaciones</h4>
+						<ul>
+							<li>Los journeys con comunicaciones muestran un icono que abre un <b>panel lateral</b> con sus emails (con datos del Triggered Send: envíos, en cola, errores…), SMS, Push y WhatsApp.</li>
+						</ul>
+
+						<h4>Acciones y clonación</h4>
+						<ul>
+							<li>Al <b>Parar</b> se elige entre parar solo la versión activa o <b>todas</b> las versiones. Para journeys <b>Multistep</b>, al borrarlos se paran antes todas las versiones automáticamente.</li>
+							<li><b>Clonador</b>: para entrada <b>EmailAudience</b> pregunta si clonar la DE de entrada o reutilizar una existente; para <b>AutomationAudience</b> permite elegir la DE de destino del automatismo origen como fuente. En ambos casos se puede cambiar el nombre del nuevo journey.</li>
+							<li><b>Errores de Journeys</b>: muestra los errores de un journey en un rango de fechas, con filtros por journey, estado, actividad y tipo, y exportación a CSV.</li>
+						</ul>
+					</div>
+				</div>
+
+				<!-- ===== AUTOMATISMOS ===== -->
+				<div id="doc-automatismos" class="tab-content">
+					<div class="docu-view">
+						<h3>Automatismos</h3>
+						<p>Tabla paginada con todos los automatismos: Nombre, Última Ejecución, Próxima Ejecución, Estado, si lanza Journey y, si se cargan, las notificaciones de error/ejecución. Las columnas son ordenables. Los automatismos de sistema (los que empiezan por el MID) se ocultan automáticamente.</p>
+
+						<h4>Botones de cabecera</h4>
+						<ul>
+							<li><b>Refrescar</b> — Recarga los datos por API.</li>
+							<li><b>Analizar</b> (1 seleccionado) — Abre el análisis detallado del automatismo.</li>
+							<li><b>Cargar Notificaciones</b> — Obtiene los emails de alerta configurados y muestra las columnas de notificación.</li>
+							<li><b>Exportar</b> — Descarga un CSV con los datos visibles (respeta filtros).</li>
+							<li><b>Acciones</b> (selección) — Modal para <b>Activar</b>, <b>Ejecutar</b> o <b>Parar</b>; cada acción solo se habilita si el estado de lo seleccionado es compatible.</li>
+							<li><b>Clonar</b> (1 seleccionado) — Abre el clonador selectivo del automatismo.</li>
+						</ul>
+
+						<h4>Filtros</h4>
+						<ul>
+							<li>Por <b>nombre</b> (uno o varios separados por <code>,</code> <code>;</code> <code>|</code>), por <b>estado</b> y por <b>lanza Journey</b>.</li>
+							<li><b>Filtro de fecha</b> — Campo (Última / Próxima Ejecución) + rango Desde/Hasta.</li>
+							<li><b>Filtro por notificación</b> — Aparece solo tras pulsar <b>Cargar Notificaciones</b>; filtra los automatismos por el texto de las columnas de notificación de error/ejecución.</li>
+						</ul>
+
+						<h4>Clonador de Automatismos</h4>
+						<ul>
+							<li>Permite duplicar un automatismo de forma <b>selectiva</b>: por cada actividad se elige si clonarla o reutilizar la original, y se puede cambiar su nombre y su DE de destino.</li>
+							<li>Se puede fijar el <b>Nombre destino</b>, la <b>Carpeta destino</b> y una <b>carpeta de DEs por defecto</b> para no configurarlas una a una. El proceso crea primero las DEs, luego las actividades y por último el automatismo.</li>
+						</ul>
+					</div>
+				</div>
+
+				<!-- ===== DATA EXTENSIONS ===== -->
+				<div id="doc-dataextensions" class="tab-content">
+					<div class="docu-view">
+						<h3>Data Extensions (Gestión unificada)</h3>
+						<p>Vista con tres pestañas para crear DEs, configurar sus campos y recuperar/documentar DEs existentes.</p>
+
+						<h4>Creación de Data Extensions</h4>
+						<ul>
+							<li>Se indica <b>Nombre</b>, <b>Descripción</b> (obligatoria) y si es <b>Sendable</b> (requiere haber configurado los campos para elegir el que relaciona con el suscriptor).</li>
+							<li>Buscador de <b>carpeta</b> de destino.</li>
+							<li><b>Crear Data Extension</b> — Crea la DE con los campos configurados. No se limpia la configuración tras crearla (para seguir creando DEs similares).</li>
+						</ul>
+
+						<h4>Configuración de Campos</h4>
+						<ul>
+							<li><b>Importar</b> un listado de campos (p. ej. copiados del modelo de datos de Salesforce) indicando el separador.</li>
+							<li>Crear/actualizar campos, crear campos de ejemplo de cada tipo, limpiar la tabla, añadir/eliminar filas y <b>ordenar</b> filas con las flechas (útil para copiar una DE manteniendo los identificadores al principio; <b>no</b> se puede reordenar sobre una DE existente).</li>
+						</ul>
+
+						<h4>Recuperar y borrar campos / Documentar</h4>
+						<ul>
+							<li><b>Recuperar Campos</b> — Indica la External Key y recupera los campos de una DE existente (para copiarla o borrar campos que no se pueden borrar por pantalla).</li>
+							<li><b>Borrar Campo</b> — Borra el campo seleccionado de la lista.</li>
+							<li><b>Documentar DEs</b> — Genera un CSV con la estructura completa de todas las DEs de una carpeta (útil, p. ej., para documentar las Synchronized DEs y compararlas con el modelo de Salesforce).</li>
+						</ul>
+					</div>
+				</div>
+
+				<!-- ===== CREAR CARPETAS ===== -->
+				<div id="doc-carpetas" class="tab-content">
+					<div class="docu-view">
+						<h3>Crear Carpetas</h3>
+						<p>Crea de golpe una estructura de carpetas para Data Extensions, Queries, Journeys, Automatismos, Contenidos o Scripts. Útil en clientes con campañas repetitivas.</p>
+
+						<h4>Cómo se usa</h4>
+						<ul>
+							<li>Indica la <b>carpeta principal</b> bajo la que se crearán las demás (con el buscador de carpetas seleccionas cuál usar).</li>
+							<li>Escribe el nombre de cada carpeta en líneas distintas; para que una sea hija de otra, sángrala con <b>doble espacio o tabulador</b>.</li>
+						</ul>
+					</div>
+				</div>
+
+				<!-- ===== CLONAR QUERIES ===== -->
+				<div id="doc-queries" class="tab-content">
+					<div class="docu-view">
+						<h3>Clonar Queries</h3>
+						<p>Clona de forma masiva todas las Query Activities de una carpeta a otra, clonando también sus Data Extensions de destino. Asistente de 2 pasos.</p>
+
+						<h4>Paso 1 · Carpetas</h4>
+						<ul>
+							<li>Indica el nombre (o parte) de tres carpetas: <b>origen</b> de las queries, <b>destino</b> de las queries clonadas y <b>destino</b> de las DEs clonadas.</li>
+							<li><b>Buscar Carpetas</b> muestra las coincidencias en tres columnas; selecciona una de cada y pulsa <b>Continuar</b>.</li>
+						</ul>
+
+						<h4>Paso 2 · Selección de queries</h4>
+						<ul>
+							<li>Lista todas las queries de la carpeta origen. Por cada una puedes editar el nombre de la query y de la DE clonadas.</li>
+							<li>Selecciona todas (checkbox de cabecera) o individualmente y pulsa <b>Clonar Seleccionadas</b>.</li>
+							<li>Si varias queries comparten la misma DE de destino, esta se clona una sola vez y se reutiliza.</li>
+						</ul>
+					</div>
+				</div>
+
+				<!-- ===== GESTIÓN DE ENVÍOS ===== -->
+				<div id="doc-envios" class="tab-content">
+					<div class="docu-view">
+						<h3>Gestión de Envíos</h3>
+						<p>Agrupa la configuración de envío en tres pestañas. Los botones <b>Refrescar</b> y <b>Exportar</b> son globales y actúan sobre la pestaña activa (la exportación respeta los filtros). Todas las columnas son ordenables.</p>
+
+						<h4>Send Classifications</h4>
+						<ul>
+							<li>Clasificaciones de envío: nombre, External Key, tipo (Comercial/Transaccional), Sender Profile y Delivery Profile asociados y fecha de modificación. Filtros por nombre/key, por perfil y por tipo.</li>
+						</ul>
+
+						<h4>Sender Profiles</h4>
+						<ul>
+							<li>Perfiles de remitente: nombre, External Key, From Name, From Email, Auto-Reply, Forward To y fecha de modificación. Filtros por nombre/key, From Name y From Email.</li>
+						</ul>
+
+						<h4>Delivery Profiles</h4>
+						<ul>
+							<li>Perfiles de entrega: nombre, External Key, descripción, modo IP, IP, header y footer.</li>
+							<li>Como la API de MC no expone estos datos, se obtienen ejecutando un <b>script en la consola del navegador</b> (F12) en la página de Delivery Profiles; el modal explica los pasos y proporciona el script.</li>
+						</ul>
+					</div>
+				</div>
+
+				<!-- ===== USUARIOS ===== -->
+				<div id="doc-usuarios" class="tab-content">
+					<div class="docu-view">
+						<h3>Usuarios</h3>
+						<p>Dos pestañas: la lista de usuarios y el detalle/comparativa de permisos.</p>
+
+						<h4>Lista de Usuarios</h4>
+						<ul>
+							<li>Muestra Nombre (ID), UserName, si es API User, Último Login, Estado (activo/inactivo) y Roles. Columnas ordenables.</li>
+							<li>Filtros por nombre, por estado y por roles (selector múltiple).</li>
+							<li><b>Descargar Usuarios</b> — Exporta en CSV los usuarios visibles.</li>
+						</ul>
+
+						<h4>Detalle / Comparativa</h4>
+						<ul>
+							<li>Desglose completo de permisos por usuario para comparar entre ellos. Como MC no lo expone por API, hay que ejecutar un <b>script en la consola</b> (F12) desde la administración de usuarios; el modal <b>Preparar Captura</b> da el enlace y el script.</li>
+							<li>Una vez pegado el resultado, se genera una tabla expandible con los permisos por categoría.</li>
+							<li><b>Solo Diferencias</b> — Oculta los permisos iguales entre usuarios. <b>Colapsar/Expandir Todo</b> — Controla la visibilidad de los grupos.</li>
+						</ul>
+					</div>
+				</div>
+
+				<!-- ===== VALIDAR EMAILS ===== -->
+				<div id="doc-emails" class="tab-content">
+					<div class="docu-view">
+						<h3>Validar Emails</h3>
+						<p>Valida direcciones de email contra las mismas comprobaciones que usa Marketing Cloud:</p>
+						<ul>
+							<li><b>SyntaxValidator</b> — Sintaxis de la dirección.</li>
+							<li><b>MXValidator</b> — Existencia de registros MX del dominio.</li>
+							<li><b>ListDetectiveValidator</b> — Listas de detección de MC.</li>
+						</ul>
+						<p>Introduce el email y se indica si es válido o qué validación falla.</p>
+					</div>
+				</div>
+
+				<!-- ===== GENERADOR ERD ===== -->
+				<div id="doc-erd" class="tab-content">
+					<div class="docu-view">
+						<h3>Generador ERD</h3>
+						<p>Genera un diagrama entidad-relación de las Data Extensions de un <b>Grupo de Atributos</b> de Contact Builder. Los datos se obtienen directamente por API (ya no hay que ejecutar scripts ni pegar JSON).</p>
+
+						<h4>Cómo se usa</h4>
+						<ul>
+							<li>Al entrar, la app carga los grupos de atributos por API y los lista por nombre (indicando si son de <b>Sistema</b> o de <b>Usuario</b> y cuántas entidades tienen).</li>
+							<li><b>Buscar</b> — Filtra la lista de grupos por nombre. <b>Ocultar grupos de sistema</b> — Deja solo los de usuario. <b>Refrescar</b> — Vuelve a cargar los grupos por API.</li>
+							<li><b>Ocultar tabla Contacts</b> — Si se marca, no se dibuja la tabla central Contacts (los campos que la referencian se marcan con 🔑).</li>
+							<li>Selecciona un grupo y pulsa <b>Generar ERD</b> para dibujar su diagrama con todas sus entidades y relaciones.</li>
+						</ul>
+
+						<h4>Diagrama</h4>
+						<ul>
+							<li>Las tablas son <b>arrastrables</b> para reorganizar el layout.</li>
+							<li>Clic en un campo: resalta su relación (líneas FK/REF). Colores: 🟠 PK, 🟢 FK, 🟣 REF. Al pasar el ratón se muestra un tooltip con el tipo de dato y la relación.</li>
+							<li><b>Descargar Imagen</b> — Exporta el diagrama como PNG. <b>Descargar CSV</b> — Exporta las relaciones. <b>Nuevo Diagrama</b> — Vuelve a la selección de grupo.</li>
+						</ul>
+					</div>
+				</div>
+
+				<!-- ===== AUDITORÍA ===== -->
+				<div id="doc-auditoria" class="tab-content">
+					<div class="docu-view">
+						<h3>Auditoría de Instancia</h3>
+						<p>Analiza el estado de la instancia y genera un dashboard con KPIs y gráficos por área. Si ya hay una auditoría guardada del cliente, se carga al entrar.</p>
+
+						<h4>Áreas analizadas</h4>
+						<ul>
+							<li>Seis pestañas de resultados: <b>Usuarios</b>, <b>Automatismos</b>, <b>Journeys</b>, <b>Cloud Pages</b>, <b>Send Management</b> y <b>Data Extensions</b>.</li>
+						</ul>
+
+						<h4>Opciones de análisis profundo (antes de escanear)</h4>
+						<ul>
+							<li><b>Automatismos — Análisis Profundo</b> (lento) — Email de alerta por error, dominios de aviso, descripciones en SQL/SSJS y mapa de actividades compartidas.</li>
+							<li><b>Journeys — Análisis Profundo</b> — Nodos Salesforce, mix multicanal real (Email/SMS/Push/WhatsApp) y journeys solo de lógica.</li>
+							<li><b>Data Extensions — Análisis desde JSON</b> — Requiere ejecutar un <b>script en la consola</b> (F12) en Contact Builder; recorre todas las carpetas (puede tardar ~20 min en miles de DEs) y se pega el JSON. Las DEs de la carpeta <i>Shared</i> se excluyen. Cada escaneo sobrescribe la caché anterior.</li>
+						</ul>
+
+						<h4>Resultados y exportación</h4>
+						<ul>
+							<li>Cada barra de los gráficos abre un <b>modal de detalle</b> con la lista de elementos, exportable en CSV.</li>
+							<li><b>Descargar PDF</b> — Informe con gráficos y KPIs. <b>Exportar Detalles</b> — ZIP con un CSV por categoría. <b>Volver a Opciones</b> — Relanza el escaneo con otras opciones.</li>
+						</ul>
+						<div class="docu-note">Los resultados se guardan en disco para el cliente activo y se cargan la próxima vez.</div>
+					</div>
+				</div>
+
 			</div>
-		</div>
-		<!-- Pestaña 3: Errores Comunes -->
-		<div id="errores-comunes" class="tab-content">
-			<ul class="docu-list">
-				<li>
-					<div class="docu-item-header">
-						<span class="docu-icon warning">⚠️</span>
-						<strong>Error de autenticación</strong>
-					</div>
-					<p>Si cambias permisos en MC, es necesario desloguearse y volver a loguearse en la app para	refrescar el token.</p>
-				</li>
-				<li>
-					<div class="docu-item-header">
-						<span class="docu-icon warning">⚠️</span>
-						<strong>Carpetas no encontradas</strong>
-					</div>
-					<p>Para crear o documentar DEs, usa siempre el buscador de carpetas para obtener el ID numérico	correcto.</p>
-				</li>
-			</ul>
-		</div>
-		<!-- Pestaña 4: Comentarios -->
-		<div id="comentarios-adicionales" class="tab-content">
-			<ul class="docu-list">
-				<li>
-					<div class="docu-item-header">
-						<span class="docu-icon">💡</span>
-						<strong>Upsert de campos</strong>
-					</div>
-					<p>La acción "Actualizar campos" no borra nada; solo añade lo nuevo o modifica lo existente.</p>
-				</li>
-				<li>
-					<div class="docu-item-header">
-						<span class="docu-icon">💡</span>
-						<strong>Decimales</strong>
-					</div>
-					<p>En el campo longitud para decimales usa la coma: <code>18,2</code>. </p>
-				</li>
-			</ul>
 		</div>
 	</div>
-</div>
-<!-- Modal para ampliar imágenes (Lightbox) -->
-<div id="docu-lightbox" class="docu-lightbox hidden">
-	<span class="lightbox-close">&times;</span>
-	<img class="lightbox-img" id="lightbox-img" src="" alt="">
-	<div id="lightbox-caption" class="lightbox-caption"></div>
 </div>

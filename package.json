@@ -6,6 +6,7 @@
   "scripts": {
     "start": "npm run build:html && electron .",
     "dist": "npm run build:html && electron-builder --publish always",
+    "dist:local": "npm run build:html && electron-builder --publish never",
     "build:html": "node build-html.js"
   },
   "keywords": [],
@@ -39,7 +40,7 @@
           ]
         }
       ],
-      "signAndEditExecutable": false
+      "signAndEditExecutable": true
     },
     "nsis": {
       "oneClick": false,
