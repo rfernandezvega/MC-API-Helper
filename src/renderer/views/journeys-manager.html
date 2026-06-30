@@ -7,13 +7,13 @@
             <button id="downloadJourneysCsvBtn" class="action-button">Exportar</button>
             <button id="analyzeJourneyBtn" class="action-button" disabled>Analizar</button>
             <button id="scanDeUsageBtn" class="action-button">Data Extensions</button>
-            <button id="getCommunicationsBtn" class="action-button activate-btn" disabled>Comunicaciones</button>
+            <button id="getCommunicationsBtn" class="action-button activate-btn" disabled>Cachear Journeys</button>
             <button id="copyJourneyBtn" class="action-button" disabled>Copiar</button>
             <button id="actionsJourneyBtn" class="action-button delete-btn" disabled>Acciones</button>
             <button id="getJourneyErrorsBtn" class="action-button" disabled>Ver Errores</button>
         </div>          
     </div>
-    <h2>Gestión de Journeys <span id="journeyCount" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
+    <h2>Gestión de Journeys <span id="journeyCount" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span><span id="journeys-cache-date" style="color: #bbb; font-weight: normal; font-size: 0.75em; margin-left: 10px;"></span></h2>
     <!-- Filtros para la tabla de journeys -->
     <div class="header-filters">
         <input type="text" id="journeyNameFilter" class="filter-input" placeholder="Buscar por nombre...">
@@ -39,6 +39,7 @@
         <table id="journeys-table">
         <thead>
             <tr>
+            <th style="width:42px;"></th>
             <th class="sortable-header" data-sort-by="name">Nombre Journey</th>
             <th class="sortable-header" data-sort-by="version">Versión</th>           
             <th class="sortable-header" data-sort-by="createdDate">Fecha creación</th> 
@@ -60,4 +61,19 @@
         <span id="totalPagesJourneys">/ 1</span>
         <button id="nextPageBtnJourneys" class="action-button pagination-arrow">&raquo;</button>
     </div>
+
+    <!-- ===================== DRAWER DE COMUNICACIONES DE JOURNEY ===================== -->
+    <div id="journey-comms-backdrop" class="cp-detail-backdrop"></div>
+    <aside id="journey-comms-drawer" class="cp-detail-drawer">
+        <button id="journey-comms-close-btn" class="cp-detail-close-tab">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+            <span>Cerrar</span>
+        </button>
+        <div class="cp-detail-header">
+            <h2 id="journey-comms-title">Comunicaciones</h2>
+        </div>
+        <div id="journey-comms-body" class="cp-detail-code-block"></div>
+    </aside>
 </div>

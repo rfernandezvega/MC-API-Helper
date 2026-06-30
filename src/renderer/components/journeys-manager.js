@@ -99,7 +99,7 @@ function applyFiltersAndRender() {
 
     const commsFilter = elements.journeyCommsFilter.dataset.active === 'true';
     if (commsFilter) {
-        filtered = filtered.filter(j => j.hasCommunications === true);
+        filtered = filtered.filter(journeyHasComms);
     }
 
     currentFilteredList = filtered; // Guardamos la lista filtrada
@@ -128,15 +128,16 @@ function renderTable(journeys) {
     paginatedItems.forEach(j => {
         const row = document.createElement('tr');
         row.dataset.journeyId = j.id;
-        
-        // Chevron CSS con clase
-        const chevron = j.hasCommunications 
-            ? `<span class="comm-chevron" data-journey-id="${j.id}"></span>` 
+
+        // Botón para abrir el drawer de comunicaciones (solo si el journey tiene comunicaciones reales)
+        const commsBtn = journeyHasComms(j)
+            ? `<span class="journey-comms-btn" data-journey-id="${j.id}" title="Ver comunicaciones" style="cursor:pointer;"><svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:#558ac7;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>`
             : '';
-        
+
         row.innerHTML = `
-            <td>${chevron}  ${j.name || '---'}</td> 
-            <td>${j.version || '---'}</td> 
+            <td style="text-align:center;">${commsBtn}</td>
+            <td>${j.name || '---'}</td>
+            <td>${j.version || '---'}</td>
             <td>${formatDate(j.createdDate)}</td>
             <td>${formatDate(j.modifiedDate)}</td>
             <td>${formatDate(j.activity?.lastContactProcessed) || '---'}</td>
@@ -158,114 +159,80 @@ function renderTable(journeys) {
 }
 
 /**
- * Toggle de fila desplegable con comunicaciones.
+ * Indica si un journey tiene al menos una comunicación real (email/sms/push/whatsapp).
+ * `hasCommunications` solo indica que se descargó; un journey descargado puede no tener ninguna.
  */
-function toggleCommunicationsRow(journeyId, forceOpen = null) {
-    const existingRow = document.querySelector(`tr[data-comms-for="${journeyId}"]`);
-    const mainRow = document.querySelector(`tr[data-journey-id="${journeyId}"]`);
-    const chevron = mainRow?.querySelector('.comm-chevron');
-    
-    // Si forceOpen es null, hacer toggle; si es true/false, forzar ese estado
-    const shouldOpen = forceOpen !== null ? forceOpen : !existingRow;
-    
-    if (!shouldOpen && existingRow) {
-        // Cerrar
-        existingRow.remove();
-        if (chevron) chevron.classList.remove('open');
-        return;
-    }
-    
-    if (shouldOpen && existingRow) {
-        // Ya está abierta, no hacer nada
-        return;
-    }
+function journeyHasComms(j) {
+    return (j.emails && j.emails.length > 0)
+        || (j.sms && j.sms.length > 0)
+        || (j.pushes && j.pushes.length > 0)
+        || (j.whatsapps && j.whatsapps.length > 0);
+}
 
-    // Abrir
+/**
+ * Escapa caracteres HTML para insertar texto de forma segura.
+ */
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+/**
+ * Abre el drawer lateral mostrando las comunicaciones (emails/sms/push/whatsapp) de un journey.
+ */
+function openCommsDrawer(journeyId) {
     const journey = currentFilteredList.find(j => j.id === journeyId);
     if (!journey || !journey.hasCommunications) return;
 
-    const commsRow = document.createElement('tr');
-    commsRow.dataset.commsFor = journeyId;
-    commsRow.style.backgroundColor = '#f9f9f9';
+    elements.journeyCommsTitle.textContent = journey.name || 'Comunicaciones';
 
-    const commsCell = document.createElement('td');
-    commsCell.colSpan = 10;
-    commsCell.style.padding = '15px';
+    let html = '';
 
-    // Emails con tabla completa si hay datos SOAP
+    // Emails — tabla completa si hay datos SOAP, si no lista simple
     if (journey.emails && journey.emails.length > 0) {
-        const emailSection = document.createElement('div');
-        emailSection.innerHTML = '<h4 style="margin: 0 0 10px 0;">Emails</h4>';
-        
+        html += '<h4 style="margin:0 0 10px 0;">Emails</h4>';
         const hasDetailedData = journey.emails.some(e => typeof e === 'object' && e.customerKey);
-        
         if (hasDetailedData) {
-            const emailTable = document.createElement('table');
-            emailTable.className = 'data-table';
-            emailTable.style.width = '100%';
-            emailTable.style.marginBottom = '20px';
-            
-            emailTable.innerHTML = `
-                <thead>
+            html += `<table class="data-table" style="width:100%; margin-bottom:20px;">
+                <thead><tr>
+                    <th>Nombre</th><th>Customer Key</th><th>Estado</th><th>Descripción</th>
+                    <th>Creado</th><th>Modificado</th><th>Completados</th><th>En cola</th><th>Errores</th>
+                </tr></thead><tbody>
+                ${journey.emails.map(email => `
                     <tr>
-                        <th>Nombre</th>
-                        <th>Customer Key</th>
-                        <th>Estado</th>
-                        <th>Descripción</th>
-                        <th>Creado</th>
-                        <th>Modificado</th>
-                        <th>Completados</th>
-                        <th>En cola</th>
-                        <th>Errores</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${journey.emails.map(email => `
-                        <tr>
-                            <td>${email.name || 'N/A'}</td>
-                            <td>${email.customerKey || 'N/A'}</td>
-                            <td style="font-weight: bold; color: ${email.status === 'Active' ? '#2e7d32' : '#666'};">${email.status || 'N/A'}</td>
-                            <td>${email.description || '-'}</td>
-                            <td>${email.created ? new Date(email.created).toLocaleDateString('es-ES') : 'N/A'}</td>
-                            <td>${email.modified ? new Date(email.modified).toLocaleDateString('es-ES') : 'N/A'}</td>
-                            <td>${email.completed || '0'}</td>
-                            <td>${email.queued || '0'}</td>
-                            <td style="font-weight: bold; color: ${parseInt(email.errored || '0') > 0 ? '#d32f2f' : '#666'};">${email.errored || '0'}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            `;
-            emailSection.appendChild(emailTable);
+                        <td>${escapeHtml(email.name) || 'N/A'}</td>
+                        <td>${escapeHtml(email.customerKey) || 'N/A'}</td>
+                        <td style="font-weight:bold; color:${email.status === 'Active' ? '#2e7d32' : '#666'};">${escapeHtml(email.status) || 'N/A'}</td>
+                        <td>${escapeHtml(email.description) || '-'}</td>
+                        <td>${email.created ? new Date(email.created).toLocaleDateString('es-ES') : 'N/A'}</td>
+                        <td>${email.modified ? new Date(email.modified).toLocaleDateString('es-ES') : 'N/A'}</td>
+                        <td>${email.completed || '0'}</td>
+                        <td>${email.queued || '0'}</td>
+                        <td style="font-weight:bold; color:${parseInt(email.errored || '0') > 0 ? '#d32f2f' : '#666'};">${email.errored || '0'}</td>
+                    </tr>`).join('')}
+                </tbody></table>`;
         } else {
-            const text = document.createElement('div');
-            text.style.marginLeft = '10px';
-            text.textContent = journey.emails.map(e => typeof e === 'string' ? e : e.name).join(', ');
-            emailSection.appendChild(text);
+            html += `<div style="margin:0 0 20px 10px;">${journey.emails.map(e => escapeHtml(typeof e === 'string' ? e : e.name)).join(', ')}</div>`;
         }
-        
-        commsCell.appendChild(emailSection);
     }
 
-    // SMS, Push, WhatsApp sin bullets
-    ['sms', 'pushes', 'whatsapps'].forEach(type => {
-        if (journey[type] && journey[type].length > 0) {
-            const section = document.createElement('div');
-            section.style.marginBottom = '15px';
-            section.innerHTML = `<h4 style="margin: 0 0 5px 0;">${type.toUpperCase()}</h4>`;
-            
-            const text = document.createElement('div');
-            text.style.marginLeft = '10px';
-            text.textContent = journey[type].join(', ');
-            section.appendChild(text);
-            
-            commsCell.appendChild(section);
+    // SMS, Push, WhatsApp
+    [['sms', 'SMS'], ['pushes', 'PUSH'], ['whatsapps', 'WHATSAPP']].forEach(([key, label]) => {
+        if (journey[key] && journey[key].length > 0) {
+            html += `<h4 style="margin:0 0 5px 0;">${label}</h4><div style="margin:0 0 15px 10px;">${journey[key].map(escapeHtml).join(', ')}</div>`;
         }
     });
 
-    commsRow.appendChild(commsCell);
-    mainRow.parentNode.insertBefore(commsRow, mainRow.nextSibling);
-    
-    if (chevron) chevron.classList.add('open');
+    if (!html) html = '<div style="padding:20px; color:#999;">Este journey no tiene comunicaciones registradas.</div>';
+
+    elements.journeyCommsBody.innerHTML = html;
+    elements.journeyCommsDrawer.classList.add('open');
+    elements.journeyCommsBackdrop.classList.add('active');
+}
+
+function closeCommsDrawer() {
+    elements.journeyCommsDrawer.classList.remove('open');
+    elements.journeyCommsBackdrop.classList.remove('active');
 }
 
 // --- 3. FUNCIONES PÚBLICAS (API del Módulo) ---
@@ -311,6 +278,15 @@ export function init(dependencies) {
     document.querySelector('#journeys-table thead').addEventListener('click', handleSort);
     elements.journeysTbody.addEventListener('click', handleRowSelection);
 
+    // Drawer de comunicaciones
+    if (elements.journeyCommsCloseBtn) elements.journeyCommsCloseBtn.addEventListener('click', closeCommsDrawer);
+    if (elements.journeyCommsBackdrop) elements.journeyCommsBackdrop.addEventListener('click', closeCommsDrawer);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && elements.journeyCommsDrawer && elements.journeyCommsDrawer.classList.contains('open')) {
+            closeCommsDrawer();
+        }
+    });
+
 
     // Listeners de paginación
     elements.prevPageBtnJourneys.addEventListener('click', () => {
@@ -354,6 +330,7 @@ export function init(dependencies) {
 export async function view() {
     if (fullJourneyList.length === 0) {
         await fetchData();
+        await loadJourneysCache();
     }
     applyFiltersAndRender();
 }
@@ -375,6 +352,7 @@ export function clearCache() {
 
     isDeColumnVisible = false;
     document.querySelectorAll('.col-comm, .col-des').forEach(el => el.style.display = 'none');
+    updateJourneysCacheDate(null);
 }
 
 // --- 4. LÓGICA DE DATOS Y API ---
@@ -486,6 +464,87 @@ function enrichJourneys(journeys, allEventDefs = []) {
     });
 }
 
+// --- Caché de Journeys (carpeta ClientJourneys) ---
+
+function updateJourneysCacheDate(dateString) {
+    if (!elements.journeysCacheDate) return;
+    if (!dateString) { elements.journeysCacheDate.textContent = ''; return; }
+    const date = new Date(dateString);
+    elements.journeysCacheDate.textContent = `Caché: ${date.toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })}`;
+}
+
+/**
+ * Carga el caché de journeys del cliente y fusiona las comunicaciones/actividades
+ * en la lista en memoria (por id). Muestra la fecha de caché.
+ */
+async function loadJourneysCache() {
+    const clientName = elements.clientNameInput.value.trim();
+    if (!clientName) return;
+    try {
+        const result = await window.electronAPI.loadClientJourneys(clientName);
+        if (result.success && result.journeys && result.journeys.length > 0) {
+            const cacheById = new Map(result.journeys.map(j => [j.id, j]));
+            for (const j of fullJourneyList) {
+                const cached = cacheById.get(j.id);
+                if (cached && cached.hasCommunications) {
+                    j.emails = cached.emails || [];
+                    j.sms = cached.sms || [];
+                    j.pushes = cached.pushes || [];
+                    j.whatsapps = cached.whatsapps || [];
+                    j.activities = cached.activities || null;
+                    j.hasCommunications = true;
+                    // Provienen del disco: se muestran, pero se re-descargan si se vuelven a cachear
+                    j._commsStale = true;
+                }
+            }
+            updateJourneysCacheDate(result.lastRefresh);
+            logger.logMessage(`Caché de journeys cargada (${result.journeys.length}) para "${clientName}".`);
+        } else {
+            updateJourneysCacheDate(null);
+        }
+    } catch (error) {
+        updateJourneysCacheDate(null);
+        logger.logMessage(`Error al cargar caché de journeys: ${error.message}`);
+    }
+}
+
+/**
+ * Sobrescribe el caché con EXACTAMENTE los journeys procesados en la última acción
+ * (selección o todos). Semántica de snapshot, igual que el caché de Contenidos:
+ * el fichero refleja solo lo último que el usuario pidió cachear, con una única
+ * fecha y sin arrastrar versiones antiguas de descargas previas.
+ * @param {Array} journeys - Los journeys descargados en esta acción.
+ */
+async function saveJourneysCache(journeys) {
+    const clientName = elements.clientNameInput.value.trim();
+    if (!clientName) return;
+    try {
+        const lastRefresh = new Date().toISOString();
+        await window.electronAPI.saveClientJourneys({ clientName, journeys, lastRefresh });
+
+        // Sincronizar la memoria con el snapshot: los journeys que NO entran en esta
+        // acción pierden sus comunicaciones en memoria (la tabla pinta desde memoria,
+        // no desde el fichero), para que coincida con lo que se acaba de guardar.
+        const keptIds = new Set(journeys.map(j => j.id));
+        for (const j of fullJourneyList) {
+            if (!keptIds.has(j.id)) {
+                j.emails = [];
+                j.sms = [];
+                j.pushes = [];
+                j.whatsapps = [];
+                j.activities = null;
+                j.hasCommunications = false;
+                j._commsStale = false;
+            }
+        }
+
+        updateJourneysCacheDate(lastRefresh);
+        logger.logMessage(`Caché de journeys sobrescrita: ${journeys.length} journeys.`);
+    } catch (error) {
+        logger.logMessage(`Error al guardar caché de journeys: ${error.message}`);
+    }
+}
+
 /**
  * Fuerza una recarga completa de los datos de journeys desde la API.
  */
@@ -511,14 +570,14 @@ async function getCommunications() {
         mcApiService.setLogger(logger);
 
         for (const journey of journeysToProcess) {
-            if (journey.hasCommunications){
+            if (journey.hasCommunications && !journey._commsStale){
                 logger.logMessage(`Saltando "${journey.name}", los datos ya estaban cargados.`);
                 continue;
             }
             logger.logMessage(`Obteniendo actividades para: "${journey.name}"`);
             const details = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
             const comms = parseJourneyActivities(details.activities);
-            Object.assign(journey, { ...comms, activities: details.activities || [], hasCommunications: true });
+            Object.assign(journey, { ...comms, activities: details.activities || [], hasCommunications: true, _commsStale: false });
         }
         
         // Enriquecer emails con SOAP
@@ -527,7 +586,8 @@ async function getCommunications() {
         } catch (soapError) {
             logger.logMessage(`Error enriqueciendo con SOAP: ${soapError.message}`);
         }
-        
+
+        await saveJourneysCache(journeysToProcess);
         ui.showCustomAlert("Comunicaciones actualizadas.");
     } catch (error) {
         logger.logMessage(` -> ERROR al obtener detalles para "${error.message}"`);
@@ -552,7 +612,7 @@ async function getAllCommunications() {
         return;
     }
 
-    const msg = `Vas a obtener las comunicaciones de los ${totalCount} journeys filtrados. 
+    const msg = `Vas a obtener el detalle de los ${totalCount} journeys filtrados. 
                  Este proceso puede tardar un poco. ¿Deseas continuar?`;
     
     if (!await ui.showCustomConfirm(msg)) return;
@@ -572,14 +632,15 @@ async function getAllCommunications() {
                 ui.blockUI(`Procesando ${processed} de ${totalCount}...`);
             }
 
-            if (!journey.hasCommunications) {
+            if (!journey.hasCommunications || journey._commsStale) {
                 try {
                     const details = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
                     const comms = parseJourneyActivities(details.activities);
-                    Object.assign(journey, { 
-                        ...comms, 
-                        activities: details.activities || [], 
-                        hasCommunications: true 
+                    Object.assign(journey, {
+                        ...comms,
+                        activities: details.activities || [],
+                        hasCommunications: true,
+                        _commsStale: false
                     });
                 } catch (err) {
                     logger.logMessage(`Error en "${journey.name}": ${err.message}`);
@@ -594,7 +655,8 @@ async function getAllCommunications() {
         } catch (soapError) {
             logger.logMessage(`Error enriqueciendo con SOAP: ${soapError.message}`);
         }
-        
+
+        await saveJourneysCache(journeysToProcess);
         ui.showCustomAlert(`Proceso completado: ${totalCount} journeys analizados.`);
 
     } catch (error) {
@@ -892,6 +954,13 @@ function sortData(data) {
  * @param {Event} e - El evento de clic.
  */
 function handleRowSelection(e) {
+    // Click en el botón de comunicaciones → abrir drawer (no afecta a la selección)
+    const commsBtn = e.target.closest('.journey-comms-btn');
+    if (commsBtn) {
+        openCommsDrawer(commsBtn.dataset.journeyId);
+        return;
+    }
+
     const row = e.target.closest('tr');
     if (!row || !row.dataset.journeyId) return;
 
@@ -901,35 +970,17 @@ function handleRowSelection(e) {
 
     const rows = Array.from(elements.journeysTbody.querySelectorAll('tr'));
     const currentIndex = rows.indexOf(row);
-    const chevron = row.querySelector('.comm-chevron');
 
     if (e.shiftKey && lastSelectedIndex !== -1) {
-        // Shift: seleccionar rango (sin expandir)
+        // Shift: seleccionar rango
         const start = Math.min(lastSelectedIndex, currentIndex);
         const end = Math.max(lastSelectedIndex, currentIndex);
         for (let i = start; i <= end; i++) {
             rows[i].classList.add('selected');
         }
     } else {
-        // Click simple: TOGGLE selección + expandir si tiene comms
-        const wasSelected = row.classList.contains('selected');
-        
-        if (wasSelected) {
-            // Deseleccionar y colapsar
-            row.classList.remove('selected');
-            const detailsRow = document.querySelector(`tr[data-comms-for="${journeyId}"]`);
-            if (detailsRow) {
-                detailsRow.remove();
-            }
-            if (chevron) chevron.classList.remove('open');
-        } else {
-            // Seleccionar y expandir si hay comunicaciones
-            row.classList.add('selected');
-            if (journey.hasCommunications) {
-                toggleCommunicationsRow(journeyId, true); // true = abrir
-                if (chevron) chevron.classList.add('open');
-            }
-        }
+        // Click simple: TOGGLE selección
+        row.classList.toggle('selected');
     }
 
     lastSelectedIndex = currentIndex;
@@ -956,7 +1007,8 @@ function updateButtonsState() {
         );
     }
     
-    elements.getCommunicationsBtn.disabled = !hasSelection;
+    // Cachear Journeys: disponible si hay journeys cargados (el modal permite elegir todos o seleccionados)
+    elements.getCommunicationsBtn.disabled = fullJourneyList.length === 0;
     elements.copyJourneyBtn.disabled = !isSingleSelection;
     elements.actionsJourneyBtn.disabled = !hasSelection || !areCompatible;
     elements.getJourneyErrorsBtn.disabled = !hasSelection;
@@ -1190,7 +1242,7 @@ async function handleCommunicationsAction() {
     const selectedCount = getSelectedJourneys().length;
     const totalCount = fullJourneyList.length;
 
-    const choice = await ui.showJourneyCommModal(`¿De qué journeys quieres obtener el detalle de comunicaciones?`);
+    const choice = await ui.showJourneyCommModal(`¿De qué journeys quieres obtener el detalle?`);
     if (!choice) return;
 
     if (choice === 'selected') {

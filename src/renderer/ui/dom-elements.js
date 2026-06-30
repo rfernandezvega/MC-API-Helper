@@ -251,6 +251,13 @@ export function init() {
     elements.actionsJourneyBtn = document.getElementById('actionsJourneyBtn');
     elements.getJourneyErrorsBtn = document.getElementById('getJourneyErrorsBtn');
     elements.journeyCommsFilter = document.getElementById('journeyCommsFilter');
+    elements.journeysCacheDate = document.getElementById('journeys-cache-date');
+    // Drawer de comunicaciones de journey
+    elements.journeyCommsDrawer = document.getElementById('journey-comms-drawer');
+    elements.journeyCommsBackdrop = document.getElementById('journey-comms-backdrop');
+    elements.journeyCommsCloseBtn = document.getElementById('journey-comms-close-btn');
+    elements.journeyCommsTitle = document.getElementById('journey-comms-title');
+    elements.journeyCommsBody = document.getElementById('journey-comms-body');
 
     // --- 13. Sección: Clonador de Queries ---
     elements.queriesClonerStep1 = document.getElementById('queries-cloner-step1');
@@ -384,9 +391,11 @@ export function init() {
 
     // --- 22. GESTOR DE CONTENIDOS ---
     elements.refreshContentBtn = document.getElementById('refreshContentBtn');
-    elements.unusedContentBtn = document.getElementById('unusedContentBtn');
     elements.exportContentCsvBtn = document.getElementById('exportContentCsvBtn');
+    elements.deleteContentBtn = document.getElementById('deleteContentBtn');
     elements.contentManagerFilter = document.getElementById('contentManagerFilter');
+    elements.contentUsageFilter = document.getElementById('contentUsageFilter');
+    elements.contentMissingTemplateFilter = document.getElementById('contentMissingTemplateFilter');
     elements.contentManagerTabButtons = document.getElementById('content-manager-tab-buttons');
     elements.contentManagerTabContent = document.getElementById('content-manager-tab-content');
     elements.contentTotalCount = document.getElementById('content-total-count');

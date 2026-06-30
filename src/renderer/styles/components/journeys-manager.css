@@ -12,6 +12,16 @@
     vertical-align: middle;
 }
 
+/* Cabecera fija al hacer scroll para TODAS las columnas.
+   `.sortable-header` define `position: relative`, que anula el `position: sticky`
+   global de `th`; este selector (id + thead + th) tiene más especificidad y lo
+   restaura para todas las cabeceras, no solo la columna de acciones. */
+#journeys-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
 /* 2. Regla específica para las columnas de comunicaciones (Emails, SMSs, Pushes, Whatsapps).
       Estas son las columnas 10, 11, 12 y 13 de la tabla. */
 #journeys-table th:nth-child(n+10),

@@ -153,6 +153,22 @@ export async function fetchAssetById(assetId, apiConfig) {
     return await executeRestRequest(url, options);
 }
 
+/**
+ * Borra (DELETE) un asset de Content Builder por su ID.
+ * @param {string|number} assetId - ID del asset a eliminar.
+ * @param {object} apiConfig - Configuración autenticada de la API.
+ * @returns {Promise<object>} { success: true } si se eliminó correctamente.
+ */
+export async function deleteContentAsset(assetId, apiConfig) {
+    const url = `${apiConfig.restUri}asset/v1/content/assets/${assetId}`;
+    const options = {
+        method: 'DELETE',
+        headers: { "Authorization": `Bearer ${apiConfig.accessToken}` }
+    };
+    await executeRestRequest(url, options);
+    return { success: true };
+}
+
  
 /**
  * Recupera todos los contenidos de Content Builder dividiendo las peticiones por tipo de asset.
@@ -213,7 +229,7 @@ export async function fetchAllContentAssets(contentTypesConfig, getAuthenticated
             "sort": [{ "property": "id", "direction": "ASC" }],
             "fields": [
                 "id", "name", "assetType", "createdDate", "modifiedDate",
-                "content", "views", "category", "customerKey"
+                "content", "views", "category", "customerKey", "legacyData"
             ]
         };
 
@@ -282,6 +298,8 @@ function transformAsset(a, emailTypeIds, jsonMessageTypeIds) {
             .map(attr => `${attr.order}: ${attr.value}`)
             .join('\n') || null;
 
+        // ID legacy del email clásico → permite emparejar con triggeredSend.emailId de los Journeys
+        item.legacyId = a?.legacyData?.legacyId ?? null;
         item.templateId = a?.views?.html?.template?.id ?? null;
         item.templateName = a?.views?.html?.template?.name ?? null;
         item.attributes = attrs;

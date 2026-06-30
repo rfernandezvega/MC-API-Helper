@@ -319,6 +319,7 @@ ipcMain.handle('delete-client-cache', (event, clientName) => {
         const userDataPath = app.getPath('userData');
         const files = [
             path.join(userDataPath, 'ClientContents', `${clientName}.json`),
+            path.join(userDataPath, 'ClientJourneys', `${clientName}.json`),
             path.join(userDataPath, 'CalendarCache', `${clientName}.json`),
             path.join(userDataPath, 'ClientCache', `audit_${clientName}.json`),
             path.join(userDataPath, 'ClientCache', `cloudpages_${clientName}.json`)
@@ -470,6 +471,76 @@ ipcMain.handle('load-client-contents-from-file', async (event, clientName) => {
 
     } catch (error) {
         console.error('Error al cargar contenidos desde fichero:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('save-client-journeys-to-file', async (event, { clientName, journeys, lastRefresh }) => {
+    try {
+        const userDataPath = app.getPath('userData');
+        const journeysDirPath = path.join(userDataPath, 'ClientJourneys');
+        if (!fs.existsSync(journeysDirPath)) {
+            fs.mkdirSync(journeysDirPath);
+        }
+        const filePath = path.join(journeysDirPath, `${clientName}.json`);
+
+        const writeStream = fs.createWriteStream(filePath, { encoding: 'utf-8' });
+        // Primera línea: metadatos
+        writeStream.write(JSON.stringify({ lastRefresh: lastRefresh || new Date().toISOString() }) + '\n');
+        // Una línea por journey
+        for (const item of journeys) {
+            writeStream.write(JSON.stringify(item) + '\n');
+        }
+        writeStream.end();
+
+        return new Promise((resolve) => {
+            writeStream.on('finish', () => resolve({ success: true }));
+            writeStream.on('error', (err) => resolve({ success: false, error: err.message }));
+        });
+    } catch (error) {
+        console.error('Error al guardar journeys en fichero:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('load-client-journeys-from-file', async (event, clientName) => {
+    try {
+        const userDataPath = app.getPath('userData');
+        const filePath = path.join(userDataPath, 'ClientJourneys', `${clientName}.json`);
+        if (!fs.existsSync(filePath)) {
+            return { success: true, journeys: null, lastRefresh: null };
+        }
+
+        const readline = require('readline');
+        const journeys = [];
+        let lastRefresh = null;
+        let isFirstLine = true;
+
+        const rl = readline.createInterface({
+            input: fs.createReadStream(filePath, { encoding: 'utf-8' }),
+            crlfDelay: Infinity
+        });
+
+        for await (const line of rl) {
+            if (!line.trim()) continue;
+            try {
+                const parsed = JSON.parse(line);
+                if (isFirstLine) {
+                    if (parsed.lastRefresh && !parsed.id) {
+                        lastRefresh = parsed.lastRefresh;
+                    } else {
+                        journeys.push(parsed);
+                    }
+                    isFirstLine = false;
+                } else {
+                    journeys.push(parsed);
+                }
+            } catch {}
+        }
+
+        return { success: true, journeys, lastRefresh };
+    } catch (error) {
+        console.error('Error al cargar journeys desde fichero:', error);
         return { success: false, error: error.message };
     }
 });
