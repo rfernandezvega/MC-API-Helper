@@ -405,6 +405,7 @@ export function init() {
     elements.deleteContentBtn = document.getElementById('deleteContentBtn');
     elements.contentManagerFilter = document.getElementById('contentManagerFilter');
     elements.contentUsageFilter = document.getElementById('contentUsageFilter');
+    elements.contentJourneyFilter = document.getElementById('contentJourneyFilter');
     elements.contentMissingTemplateFilter = document.getElementById('contentMissingTemplateFilter');
     elements.contentDateField = document.getElementById('contentDateField');
     elements.contentDateFrom = document.getElementById('contentDateFrom');

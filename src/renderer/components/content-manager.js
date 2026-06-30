@@ -150,6 +150,8 @@ let getAuthenticatedConfig;
 let tabsState = {};
 // Filtro de uso: 'all' | 'used' | 'unused'
 let usageFilter = 'all';
+// Filtro por uso en Journeys: 'all' | 'in' | 'out' (solo emails/push/sms/wa)
+let journeyUsageFilter = 'all';
 // Journeys cacheados (los descarga la vista de Journeys) y referencias de contenido extraídas
 let journeysList = [];
 let journeyEmailLegacyIds = new Set(); // triggeredSend.emailId (ID legacy) usado por los journeys
@@ -256,6 +258,8 @@ export async function view() {
         // Resetear filtros y selección al entrar en la vista
         usageFilter = 'all';
         if (elements.contentUsageFilter) elements.contentUsageFilter.value = 'all';
+        journeyUsageFilter = 'all';
+        if (elements.contentJourneyFilter) elements.contentJourneyFilter.value = 'all';
         resetTemplateFilter();
         resetDateFilter();
         selectedContentIds.clear();
@@ -301,6 +305,8 @@ export function clearCache() {
     selectedContentIds.clear();
     contentLastRefresh = null;
     usageFilter = 'all';
+    journeyUsageFilter = 'all';
+    if (elements.contentJourneyFilter) elements.contentJourneyFilter.value = 'all';
     resetTemplateFilter();
     resetDateFilter();
     createDynamicTabs();
@@ -470,6 +476,17 @@ function setupEventListeners() {
         });
     }
 
+    if (elements.contentJourneyFilter) {
+        elements.contentJourneyFilter.addEventListener('change', (e) => {
+            journeyUsageFilter = e.target.value || 'all';
+            if (journeyUsageFilter !== 'all' && journeysList.length === 0) {
+                logger.logMessage('Aviso: no hay caché de Journeys. Cachéalos desde la vista de Journeys ("Descargar detalle") para filtrar por uso en Journeys.');
+            }
+            for (const tabId in tabsState) { tabsState[tabId].currentPage = 1; }
+            renderAllTabs();
+        });
+    }
+
     const onDateFilterChange = () => {
         for (const tabId in tabsState) { tabsState[tabId].currentPage = 1; }
         renderAllTabs();
@@ -628,6 +645,16 @@ function renderAllTabs() {
             const status = getUsageStatus(item, blockUnusedIds);
             if (status === 'unknown') return false; // no clasificable (sin caché de journeys)
             return status === usageFilter;
+        });
+    }
+
+    // Filtro por uso en Journeys (solo aplica a emails/push/sms/wa)
+    if (journeyUsageFilter !== 'all') {
+        filteredList = filteredList.filter(item => {
+            const canBeInJourney = EMAIL_ASSET_TYPE_IDS.includes(item.assetTypeId) || MESSAGE_ASSET_TYPE_IDS.includes(item.assetTypeId);
+            if (!canBeInJourney) return false;
+            const inJourney = getJourneysForContent(item).length > 0;
+            return journeyUsageFilter === 'in' ? inJourney : !inJourney;
         });
     }
 
@@ -905,15 +932,178 @@ function openContentDetail(contentId) {
         metaHtml += `</div>`;
     }
 
+    // Para emails: tabla de componentes (solo template-based) + Data Extensions referenciadas
+    // (desde caché, sin rutas). El código de abajo ocupa el resto del espacio disponible.
+    if (EMAIL_ASSET_TYPE_IDS.includes(item.assetTypeId)) {
+        const isTemplateBased = item.templateId != null || item.templateName || (item.slotBlockIds && item.slotBlockIds.length > 0);
+        if (isTemplateBased) {
+            const comps = getEmailComponents(item);
+            if (comps.length) metaHtml += buildComponentsTableHtml(comps);
+        }
+        const des = getEmailReferencedDEs(item);
+        if (des.length) metaHtml += buildDEsTableHtml(des);
+    }
+
     const formatted = formatCodeWithIndentation(code);
     const highlighted = highlightCloudPageCode(formatted);
+    const contentHeaderStyle = metaHtml ? ' style="margin-top:12px;"' : '';
 
     elements.contentDetailCode.innerHTML = metaHtml + `
-        <div class="code-header">Contenido</div>
+        <div class="code-header"${contentHeaderStyle}>Contenido</div>
         <pre><code>${highlighted}</code></pre>`;
 
     elements.contentDetailDrawer.classList.add('open');
     elements.contentDetailBackdrop.classList.add('active');
+}
+
+// Cabecera de celda sticky reutilizable para las tablas del drawer.
+const DRAWER_TH = 'position:sticky; top:0; z-index:2; background:#5a6d7e; color:#fff; padding:6px 8px; text-align:left;';
+
+/**
+ * Construye la tabla de componentes (ID, Nombre, Tipo) con altura acotada.
+ */
+function buildComponentsTableHtml(comps) {
+    const inlineTag = '<span style="font-size:0.72em; color:#fff; background:#9b59b6; border-radius:3px; padding:0 5px; margin-left:6px;">inline</span>';
+    const rows = comps.map(c => `<tr style="border-bottom:1px solid #eee;">
+            <td style="padding:5px 8px; color:#888;">${c.id || '---'}</td>
+            <td style="padding:5px 8px;">${escapeHtml(c.name)}${c.inline ? inlineTag : ''}</td>
+            <td style="padding:5px 8px; color:#666;">${escapeHtml(c.type) || '---'}</td>
+            <td style="padding:5px 8px; color:#888; font-size:0.95em;">${escapeHtml(c.ref) || '---'}</td>
+        </tr>`).join('');
+    return `<div style="margin-top:12px; flex-shrink:0;">
+        <div class="code-header">Componentes (${comps.length})</div>
+        <div style="overflow:auto; max-height:240px; border:1px solid #e1e4e8; border-top:none; border-radius:0 0 4px 4px;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.85em;">
+                <thead><tr><th style="${DRAWER_TH}">ID</th><th style="${DRAWER_TH}">Nombre</th><th style="${DRAWER_TH}">Tipo</th><th style="${DRAWER_TH}">Referenciado por</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    </div>`;
+}
+
+/**
+ * Construye la tabla de Data Extensions referenciadas (Data Extension, Funciones) con altura acotada.
+ */
+function buildDEsTableHtml(des) {
+    const rows = des.map(d => `<tr style="border-bottom:1px solid #eee;">
+            <td style="padding:5px 8px;">${escapeHtml(d.de)}</td>
+            <td style="padding:5px 8px; color:#666;">${escapeHtml(d.functions)}</td>
+        </tr>`).join('');
+    return `<div style="margin-top:12px; flex-shrink:0;">
+        <div class="code-header">Data Extensions (${des.length})</div>
+        <div style="overflow:auto; max-height:180px; border:1px solid #e1e4e8; border-top:none; border-radius:0 0 4px 4px;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.85em;">
+                <thead><tr><th style="${DRAWER_TH}">Data Extension</th><th style="${DRAWER_TH}">Funciones</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    </div>`;
+}
+
+/**
+ * Devuelve los componentes de un email para la tabla del drawer (igual que el detalle del
+ * Buscador, incluyendo bloques inline). Usa la estructura capturada al descargar (item.components)
+ * resolviendo nombres/tipos de assets contra la caché, sin llamadas. Si la caché es antigua y no
+ * tiene esa estructura, cae a un cálculo aproximado (plantilla + ContentBlockBy* + arrastrados).
+ */
+function getEmailComponents(item) {
+    if (Array.isArray(item.components) && item.components.length > 0) {
+        return item.components.map(resolveComponent).filter(Boolean);
+    }
+
+    // Fallback para caché antigua (sin estructura de componentes; no incluye inline)
+    const comps = [];
+    const seen = new Set();
+    const add = (c, fallbackName, fallbackType) => {
+        const key = c ? 'id:' + c.id : 'n:' + fallbackName;
+        if (seen.has(key)) return;
+        seen.add(key);
+        comps.push({ id: c ? c.id : '', name: c ? c.name : fallbackName, type: c ? (c.assetTypeName || fallbackType) : fallbackType, ref: '', inline: false });
+    };
+    if (item.templateId != null || item.templateName) {
+        const tpl = fullContentList.find(c => c.assetTypeId === 4 && (String(c.id) === String(item.templateId) || c.name === item.templateName));
+        add(tpl, item.templateName || `Plantilla ${item.templateId}`, 'Template');
+    }
+    const text = item.content || '';
+    for (const m of text.matchAll(/ContentBlockby[Ii][Dd]\s*\(\s*["']?(\d+)["']?\s*\)/gi)) {
+        add(fullContentList.find(x => String(x.id) === m[1]), `ID ${m[1]}`, 'Bloque');
+    }
+    for (const m of text.matchAll(/ContentBlockby[Kk]ey\s*\(\s*["']([^"']+)["']\s*\)/gi)) {
+        add(fullContentList.find(x => x.customerKey === m[1]), m[1], 'Bloque');
+    }
+    for (const m of text.matchAll(/ContentBlockby[Nn]ame\s*\(\s*["']([^"']+)["']\s*\)/gi)) {
+        add(fullContentList.find(x => x.name === m[1]), m[1], 'Bloque');
+    }
+    if (item.slotBlockIds) {
+        for (const id of item.slotBlockIds) {
+            const c = fullContentList.find(x => String(x.id) === String(id));
+            if (c) add(c, `ID ${id}`, 'Bloque');
+        }
+    }
+    return comps;
+}
+
+/**
+ * Resuelve un componente capturado (item.components) a {id, name, type, ref, inline} para la tabla.
+ */
+function resolveComponent(c) {
+    if (!c) return null;
+    if (c.kind === 'template') {
+        const tpl = c.id
+            ? fullContentList.find(x => String(x.id) === c.id)
+            : (c.name ? fullContentList.find(x => x.assetTypeId === 4 && x.name === c.name) : null);
+        return { id: c.id || (tpl ? tpl.id : ''), name: (tpl ? tpl.name : '') || c.name || 'Plantilla', type: 'Template', ref: c.ref || '', inline: false };
+    }
+    if (c.kind === 'inline') {
+        return { id: c.id || '', name: c.name, type: c.type || 'Bloque', ref: c.ref || '', inline: true };
+    }
+    if (c.kind === 'ref') {
+        const a = c.id ? fullContentList.find(x => String(x.id) === c.id) : null;
+        return { id: c.id || '', name: a ? a.name : `ID ${c.id}`, type: (a ? a.assetTypeName : null) || c.type || 'Bloque', ref: c.ref || '', inline: false };
+    }
+    if (c.kind === 'macro') {
+        let a = null;
+        if (c.macroType === 'Id') a = fullContentList.find(x => String(x.id) === c.macroValue);
+        else if (c.macroType === 'Key') a = fullContentList.find(x => x.customerKey === c.macroValue);
+        else if (c.macroType === 'Name') a = fullContentList.find(x => x.name === c.macroValue);
+        return { id: a ? a.id : (c.id || ''), name: a ? a.name : `${c.macroValue} (no encontrado)`, type: (a ? a.assetTypeName : null) || c.type, ref: c.ref || '', inline: false };
+    }
+    return null;
+}
+
+/**
+ * Extrae las Data Extensions referenciadas en el código del email (AMPscript/SSJS) por regex,
+ * sin resolver rutas ni hacer llamadas.
+ */
+function getEmailReferencedDEs(item) {
+    const text = [item.content, item.resolvedContent].filter(Boolean).join('\n');
+    if (!text) return [];
+
+    const ampFns = ['Lookup', 'LookupRows', 'LookupOrderedRows', 'LookupRowsCS', 'LookupOrderedRowsCS',
+        'ClaimRow', 'InsertDE', 'InsertData', 'UpdateDE', 'UpdateData', 'DeleteDE', 'DeleteData',
+        'UpsertDE', 'UpsertData', 'DataExtensionRowCount'];
+    const ssjsFns = ['Platform\\.Function\\.Lookup', 'Platform\\.Function\\.LookupRows',
+        'Platform\\.Function\\.LookupOrderedRows', 'Platform\\.Function\\.InsertData',
+        'Platform\\.Function\\.UpdateData', 'Platform\\.Function\\.DeleteData',
+        'Platform\\.Function\\.UpsertData', 'DataExtension\\.Init'];
+
+    const deMap = {};
+    const scan = (fns, label) => {
+        for (const fn of fns) {
+            const re = new RegExp(fn + '\\s*\\(\\s*["\']([^"\']+)["\']', 'gi');
+            let m;
+            while ((m = re.exec(text)) !== null) {
+                const de = m[1].trim();
+                (deMap[de] = deMap[de] || new Set()).add(label ? label(fn) : fn);
+            }
+        }
+    };
+    scan(ampFns, null);
+    scan(ssjsFns, p => p.replace(/\\\./g, '.'));
+
+    return Object.entries(deMap)
+        .map(([de, fns]) => ({ de, functions: [...fns].join(', ') }))
+        .sort((a, b) => a.de.localeCompare(b.de));
 }
 
 // --- HELPERS ---

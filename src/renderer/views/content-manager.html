@@ -9,12 +9,17 @@
         </div>
     </div>
     
-    <div class="header-filters" style="justify-content: center; gap: 8px;">
-        <input type="text" id="contentManagerFilter" class="filter-input" placeholder="Buscar en todos los contenidos..." style="width: 45%;">
+    <div class="header-filters" style="gap: 8px;">
+        <input type="text" id="contentManagerFilter" class="filter-input" placeholder="Buscar en todos los contenidos..." style="width: 280px;">
         <select id="contentUsageFilter" class="filter-input" style="width: auto;" title="Filtrar por uso">
             <option value="all">Todos</option>
             <option value="used">En uso</option>
             <option value="unused">Sin uso</option>
+        </select>
+        <select id="contentJourneyFilter" class="filter-input" style="width: auto;" title="Filtrar por uso en Journeys (emails, push, SMS y WhatsApp)">
+            <option value="all">Journeys (todos)</option>
+            <option value="in">En Journeys</option>
+            <option value="out">Fuera de Journeys</option>
         </select>
         <button type="button" id="contentMissingTemplateFilter" class="filter-input" style="cursor: pointer; text-align: center; min-width: 160px; transition: all 0.2s; background-color: #f9f9f9;" title="Mostrar solo emails cuya plantilla ya no existe">
             Plantilla inexistente

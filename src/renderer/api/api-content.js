@@ -306,26 +306,85 @@ function transformAsset(a, emailTypeIds, jsonMessageTypeIds) {
         item.subject = a?.views?.subjectline?.content ?? null;
         item.preheader = a?.views?.preheader?.content ?? null;
 
-        // Contenido principal + bloques de slots
+        // Contenido ensamblado + estructura de componentes (igual que la vista de detalle del
+        // Buscador, incluyendo bloques inline). No resuelve ContentBlockBy* ni rutas para no
+        // ralentizar la descarga masiva; los nombres de assets se resuelven luego contra la caché.
+        const components = [];
+        if (item.templateId != null || item.templateName) {
+            components.push({ kind: 'template', id: item.templateId != null ? String(item.templateId) : '', name: item.templateName || '', type: 'Template', ref: '' });
+        }
+
         let fullContent = a?.views?.html?.content || '';
         const slotBlockIds = [];
         const slots = a?.views?.html?.slots;
         if (slots) {
             for (const slotKey in slots) {
-                const blocks = slots[slotKey]?.blocks;
+                const slot = slots[slotKey];
+                let slotHtml = slot?.content || '';
+                // Etiqueta del slot (para "Referenciado por")
+                let slotLabel = '';
+                if (slot?.design) {
+                    const lm = slot.design.match(/<p[^>]*>(.*?)<\/p>/i);
+                    if (lm && lm[1]) slotLabel = lm[1].trim();
+                }
+                const slotRef = slotLabel ? `Slot: ${slotLabel}` : '';
+                const blocks = slot?.blocks;
                 if (blocks) {
                     for (const blockKey in blocks) {
                         const block = blocks[blockKey];
-                        if (block.content) fullContent += '\n' + block.content;
-                        // Recoger IDs de bloques arrastrados
-                        const refId = block.meta?.options?.id || block.id;
-                        if (refId) slotBlockIds.push(String(refId));
+                        const blockContent = block?.content || '';
+                        const blockRegex = new RegExp(
+                            `<div[^>]*data-type=["']block["'][^>]*data-key=["']${blockKey}["'][^>]*>\\s*</div>`,
+                            'gi'
+                        );
+                        slotHtml = slotHtml.replace(blockRegex, blockContent);
+
+                        const refId = block?.meta?.options?.id;
+                        const blockType = block?.assetType?.displayName || block?.assetType?.name || '---';
+                        if (refId) {
+                            // Bloque arrastrado: referencia a un asset guardado
+                            slotBlockIds.push(String(refId));
+                            components.push({ kind: 'ref', id: String(refId), name: '', type: blockType, ref: slotRef });
+                        } else if (blockContent) {
+                            // Bloque inline: creado dentro del email, no es un asset aparte
+                            components.push({
+                                kind: 'inline',
+                                id: block?.id != null ? String(block.id) : '',
+                                name: block?.name || block?.fileProperties?.fileName || `Bloque inline (${blockKey})`,
+                                type: blockType,
+                                ref: slotRef
+                            });
+                        }
                     }
                 }
+                const slotRegex = new RegExp(
+                    `<div[^>]*data-type=["']slot["'][^>]*data-key=["']${slotKey}["'][^>]*>[\\s\\S]*?</div>`,
+                    'gi'
+                );
+                fullContent = fullContent.replace(slotRegex, slotHtml);
             }
         }
         item.content = fullContent || a.content || null;
         item.slotBlockIds = slotBlockIds.length > 0 ? slotBlockIds : null;
+
+        // ContentBlockBy* en el código ensamblado
+        const codeForRefs = item.content || '';
+        const macroPatterns = [
+            { re: /ContentBlockBy[Ii][Dd]\s*\(\s*["']?(\d+)["']?\s*\)/gi, t: 'Id' },
+            { re: /ContentBlockBy[Kk]ey\s*\(\s*["']([^"']+)["']\s*\)/gi, t: 'Key' },
+            { re: /ContentBlockBy[Nn]ame\s*\(\s*["']([^"']+)["']\s*\)/gi, t: 'Name' }
+        ];
+        const seenMacro = new Set();
+        for (const p of macroPatterns) {
+            let mm;
+            while ((mm = p.re.exec(codeForRefs)) !== null) {
+                const k = `${p.t}:${mm[1]}`;
+                if (seenMacro.has(k)) continue;
+                seenMacro.add(k);
+                components.push({ kind: 'macro', macroType: p.t, macroValue: mm[1], id: p.t === 'Id' ? mm[1] : '', name: '', type: `ContentBlockBy${p.t}`, ref: `ContentBlockBy${p.t}` });
+            }
+        }
+        item.components = components.length > 0 ? components : null;
     } else if (jsonMessageTypeIds.includes(item.assetTypeId)) {
         const viewKeys = Object.keys(a?.views || {});
         const findView = (name) => viewKeys.find(k => k.toLowerCase() === name.toLowerCase());
