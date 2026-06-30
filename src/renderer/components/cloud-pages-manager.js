@@ -366,7 +366,7 @@ function renderTable(pages) {
 
     elements.cloudPagesTbody.innerHTML = '';
     if (paginatedItems.length === 0) {
-        elements.cloudPagesTbody.innerHTML = '<tr><td colspan="8">No se encontraron Cloud Pages con los filtros aplicados.</td></tr>';
+        elements.cloudPagesTbody.innerHTML = '<tr><td colspan="9">No se encontraron Cloud Pages con los filtros aplicados.</td></tr>';
     } else {
         paginatedItems.forEach(page => {
             const row = document.createElement('tr');
@@ -376,12 +376,13 @@ function renderTable(pages) {
                 ? `<td><a href="${page.url}" class="external-link" title="Abrir URL en el navegador">${page.url}</a></td>` 
                 : `<td>${page.url}</td>`;
             
-            const inspectBtn = page.hasDetailedContent 
-            ? `<span class="cp-inspect-btn" data-cloudpage-id="${page.id}" title="Ver dependencias y código"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>` 
+            const inspectBtn = page.hasDetailedContent
+            ? `<span class="cp-inspect-btn" data-cloudpage-id="${page.id}" title="Ver dependencias y código"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>`
             : '';
-            
+
             row.innerHTML = `
-                <td>${inspectBtn} ${page.name || '---'}</td>
+                <td style="text-align:center;">${inspectBtn}</td>
+                <td>${page.name || '---'}</td>
                 <td>${page.assetType.displayName || '---'}</td>
                 <td>${formatDate(page.modifiedDate)}</td>
                 <td>${page.modifiedByName || '---'}</td>
