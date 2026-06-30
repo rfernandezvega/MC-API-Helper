@@ -19,6 +19,13 @@
         <button type="button" id="contentMissingTemplateFilter" class="filter-input" style="cursor: pointer; text-align: center; min-width: 160px; transition: all 0.2s; background-color: #f9f9f9;" title="Mostrar solo emails cuya plantilla ya no existe">
             Plantilla inexistente
         </button>
+        <select id="contentDateField" class="filter-input" style="width: auto;" title="Filtrar por fecha">
+            <option value="">Fecha (todos)</option>
+            <option value="modifiedDate">Modificado</option>
+            <option value="createdDate">Creado</option>
+        </select>
+        <input type="date" id="contentDateFrom" class="filter-input" style="width: auto;" title="Desde">
+        <input type="date" id="contentDateTo" class="filter-input" style="width: auto;" title="Hasta">
     </div>
 
     <!-- Contenedor de Pestañas que se llenará dinámicamente -->

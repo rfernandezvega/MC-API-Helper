@@ -202,6 +202,10 @@ export function init() {
     elements.refreshAutomationsTableBtn = document.getElementById('refreshAutomationsTableBtn');
     elements.actionsAutomationBtn = document.getElementById('actionsAutomationBtn');
     elements.automationJourneyFilter = document.getElementById('automationJourneyFilter');
+    elements.automationNotifFilter = document.getElementById('automationNotifFilter');
+    elements.automationDateField = document.getElementById('automationDateField');
+    elements.automationDateFrom = document.getElementById('automationDateFrom');
+    elements.automationDateTo = document.getElementById('automationDateTo');
     elements.cloneAutomationBtn = document.getElementById('cloneAutomationBtn');
     elements.automationCountSpan = document.getElementById('automationCount');
     elements.downloadAutomationsCsvBtn = document.getElementById('downloadAutomationsCsvBtn');
@@ -251,6 +255,9 @@ export function init() {
     elements.actionsJourneyBtn = document.getElementById('actionsJourneyBtn');
     elements.getJourneyErrorsBtn = document.getElementById('getJourneyErrorsBtn');
     elements.journeyCommsFilter = document.getElementById('journeyCommsFilter');
+    elements.journeyDateField = document.getElementById('journeyDateField');
+    elements.journeyDateFrom = document.getElementById('journeyDateFrom');
+    elements.journeyDateTo = document.getElementById('journeyDateTo');
     elements.journeysCacheDate = document.getElementById('journeys-cache-date');
     // Drawer de comunicaciones de journey
     elements.journeyCommsDrawer = document.getElementById('journey-comms-drawer');
@@ -292,6 +299,9 @@ export function init() {
     elements.cloudPageCountSpan = document.getElementById('cloudpage-count');
     elements.cloudPagePublishedFilter = document.getElementById('cloudPagePublishedFilter');
     elements.cloudPageUrlFilter = document.getElementById('cloudPageUrlFilter');
+    elements.cloudPageDateField = document.getElementById('cloudPageDateField');
+    elements.cloudPageDateFrom = document.getElementById('cloudPageDateFrom');
+    elements.cloudPageDateTo = document.getElementById('cloudPageDateTo');
 
     // --- 15. Sección: Clonador de Automatismos ---
     elements.automationClonerSection = document.getElementById('automation-cloner-section');
@@ -396,6 +406,9 @@ export function init() {
     elements.contentManagerFilter = document.getElementById('contentManagerFilter');
     elements.contentUsageFilter = document.getElementById('contentUsageFilter');
     elements.contentMissingTemplateFilter = document.getElementById('contentMissingTemplateFilter');
+    elements.contentDateField = document.getElementById('contentDateField');
+    elements.contentDateFrom = document.getElementById('contentDateFrom');
+    elements.contentDateTo = document.getElementById('contentDateTo');
     elements.contentManagerTabButtons = document.getElementById('content-manager-tab-buttons');
     elements.contentManagerTabContent = document.getElementById('content-manager-tab-content');
     elements.contentTotalCount = document.getElementById('content-total-count');

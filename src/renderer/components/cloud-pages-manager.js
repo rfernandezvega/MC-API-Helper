@@ -56,6 +56,9 @@ export function init(dependencies) {
     elements.cloudPageTypeFilter.addEventListener('change', applyFiltersAndRender);
     elements.cloudPagePublishedFilter.addEventListener('change', applyFiltersAndRender);
     elements.cloudPageUrlFilter.addEventListener('change', applyFiltersAndRender);
+    elements.cloudPageDateField.addEventListener('change', applyFiltersAndRender);
+    elements.cloudPageDateFrom.addEventListener('change', applyFiltersAndRender);
+    elements.cloudPageDateTo.addEventListener('change', applyFiltersAndRender);
     
     // El ordenamiento también resetea la paginación.
     document.querySelector('#cloudpages-table thead').addEventListener('click', handleSort);
@@ -150,6 +153,9 @@ export function clearCache() {
     elements.cloudPagesTbody.innerHTML = '';
     elements.cloudPagePublishedFilter.value = '';
     elements.cloudPageUrlFilter.value = '';
+    elements.cloudPageDateField.value = '';
+    elements.cloudPageDateFrom.value = '';
+    elements.cloudPageDateTo.value = '';
 
     if (elements.cloudPageCountSpan) {
         elements.cloudPageCountSpan.textContent = '';
@@ -349,7 +355,15 @@ function renderFilteredTable() {
     } else if (urlFilter === 'no') {
         filtered = filtered.filter(p => !p.url || !p.url.startsWith('http'));
     }
-    
+
+    // Filtro por rango de fechas
+    const dateField = elements.cloudPageDateField.value;
+    const dateFrom = elements.cloudPageDateFrom.value;
+    const dateTo = elements.cloudPageDateTo.value;
+    if (dateField && (dateFrom || dateTo)) {
+        filtered = filtered.filter(p => ui.isDateInRange(p[dateField], dateFrom, dateTo));
+    }
+
     currentFilteredList = filtered;
     updateCloudPageCount(); 
 

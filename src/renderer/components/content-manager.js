@@ -257,6 +257,7 @@ export async function view() {
         usageFilter = 'all';
         if (elements.contentUsageFilter) elements.contentUsageFilter.value = 'all';
         resetTemplateFilter();
+        resetDateFilter();
         selectedContentIds.clear();
 
         // Cargar caché de journeys (si existe) para poder filtrar por uso
@@ -301,6 +302,7 @@ export function clearCache() {
     contentLastRefresh = null;
     usageFilter = 'all';
     resetTemplateFilter();
+    resetDateFilter();
     createDynamicTabs();
     CONTENT_TYPES_CONFIG.forEach(tab => {
         const tbody = document.getElementById(`tbody-${tab.id}`);
@@ -321,6 +323,15 @@ function resetTemplateFilter() {
         elements.contentMissingTemplateFilter.style.backgroundColor = '#f9f9f9';
         elements.contentMissingTemplateFilter.style.color = '';
     }
+}
+
+/**
+ * Resetea el filtro de rango de fechas.
+ */
+function resetDateFilter() {
+    if (elements.contentDateField) elements.contentDateField.value = '';
+    if (elements.contentDateFrom) elements.contentDateFrom.value = '';
+    if (elements.contentDateTo) elements.contentDateTo.value = '';
 }
 
 // --- OBTENCIÓN DE DATOS POR API ---
@@ -458,6 +469,14 @@ function setupEventListeners() {
             renderAllTabs();
         });
     }
+
+    const onDateFilterChange = () => {
+        for (const tabId in tabsState) { tabsState[tabId].currentPage = 1; }
+        renderAllTabs();
+    };
+    if (elements.contentDateField) elements.contentDateField.addEventListener('change', onDateFilterChange);
+    if (elements.contentDateFrom) elements.contentDateFrom.addEventListener('change', onDateFilterChange);
+    if (elements.contentDateTo) elements.contentDateTo.addEventListener('change', onDateFilterChange);
 
     elements.contentManagerTabButtons.addEventListener('click', (e) => {
         const tabBtn = e.target.closest('.tab-button');
@@ -616,6 +635,14 @@ function renderAllTabs() {
     if (templateFilterActive) {
         const { idSet, nameSet } = getTemplateSets();
         filteredList = filteredList.filter(item => isEmailWithMissingTemplate(item, idSet, nameSet));
+    }
+
+    // Filtro por rango de fechas
+    const dateField = elements.contentDateField ? elements.contentDateField.value : '';
+    const dateFrom = elements.contentDateFrom ? elements.contentDateFrom.value : '';
+    const dateTo = elements.contentDateTo ? elements.contentDateTo.value : '';
+    if (dateField && (dateFrom || dateTo)) {
+        filteredList = filteredList.filter(item => ui.isDateInRange(item[dateField], dateFrom, dateTo));
     }
 
     CONTENT_TYPES_CONFIG.forEach(tab => renderTableForTab(tab.id, filteredList));

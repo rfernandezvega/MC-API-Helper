@@ -102,6 +102,17 @@ function applyFiltersAndRender() {
         filtered = filtered.filter(journeyHasComms);
     }
 
+    // Filtro por rango de fechas
+    const dateField = elements.journeyDateField.value;
+    const dateFrom = elements.journeyDateFrom.value;
+    const dateTo = elements.journeyDateTo.value;
+    if (dateField && (dateFrom || dateTo)) {
+        filtered = filtered.filter(j => {
+            const val = dateField === 'activityDate' ? j.activity?.lastContactProcessed : j[dateField];
+            return ui.isDateInRange(val, dateFrom, dateTo);
+        });
+    }
+
     currentFilteredList = filtered; // Guardamos la lista filtrada
     updateJourneyCount(); // Actualizamos el contador
 
@@ -252,6 +263,9 @@ export function init(dependencies) {
     elements.journeyStatusFilter.addEventListener('change', applyFiltersAndRender);
     elements.journeyDEFilter.addEventListener('input', applyFiltersAndRender);
     elements.journeyFieldsFilter.addEventListener('input', applyFiltersAndRender);
+    elements.journeyDateField.addEventListener('change', applyFiltersAndRender);
+    elements.journeyDateFrom.addEventListener('change', applyFiltersAndRender);
+    elements.journeyDateTo.addEventListener('change', applyFiltersAndRender);
     elements.journeyCommsFilter.addEventListener('click', () => {
         const btn = elements.journeyCommsFilter;
         const isActive = btn.dataset.active === 'true';
@@ -348,6 +362,9 @@ export function clearCache() {
     elements.journeySubtypeFilter.innerHTML = '<option value="">Todos los subtipos</option>';
     elements.journeyStatusFilter.innerHTML = '<option value="">Todos los estados</option>';
     elements.journeyDEFilter.value = '';
+    elements.journeyDateField.value = '';
+    elements.journeyDateFrom.value = '';
+    elements.journeyDateTo.value = '';
     elements.journeysTbody.innerHTML = '';
 
     isDeColumnVisible = false;

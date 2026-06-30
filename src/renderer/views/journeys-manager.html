@@ -34,6 +34,14 @@
         <button type="button" id="journeyCommsFilter" class="filter-input" style="cursor: pointer; text-align: center; min-width: 140px; transition: all 0.2s; padding: 8px 12px; background-color: #f9f9f9;">
             Comunicaciones
         </button>
+        <select id="journeyDateField" class="filter-input">
+            <option value="">Fecha (todos)</option>
+            <option value="createdDate">Fecha creación</option>
+            <option value="modifiedDate">Fecha modificación</option>
+            <option value="activityDate">Fecha actividad</option>
+        </select>
+        <input type="date" id="journeyDateFrom" class="filter-input" title="Desde">
+        <input type="date" id="journeyDateTo" class="filter-input" title="Hasta">
     </div>
     <div class="table-container">
         <table id="journeys-table">

@@ -489,6 +489,14 @@
             <option value="yes">Lanza Journey</option>
             <option value="no">No lanza Journey</option>
         </select>
+        <select id="automationDateField" class="filter-input">
+            <option value="">Fecha (todos)</option>
+            <option value="lastRunTime">Última Ejecución</option>
+            <option value="scheduledTime">Próxima Ejecución</option>
+        </select>
+        <input type="date" id="automationDateFrom" class="filter-input" title="Desde">
+        <input type="date" id="automationDateTo" class="filter-input" title="Hasta">
+        <input type="text" id="automationNotifFilter" class="filter-input" placeholder="Filtrar por notificación..." style="display:none;">
     </div>
     <div class="table-container">
         <table id="automations-table">
@@ -571,6 +579,13 @@
             <option value="yes">Con URL</option>
             <option value="no">Sin URL</option>
         </select>
+        <select id="cloudPageDateField" class="filter-input">
+            <option value="">Fecha (todos)</option>
+            <option value="modifiedDate">Fecha Modificación</option>
+            <option value="publishDate">Fecha Publicación</option>
+        </select>
+        <input type="date" id="cloudPageDateFrom" class="filter-input" title="Desde">
+        <input type="date" id="cloudPageDateTo" class="filter-input" title="Hasta">
     </div>
     <div class="table-container">
       <table id="cloudpages-table">
@@ -664,6 +679,13 @@
         <button type="button" id="contentMissingTemplateFilter" class="filter-input" style="cursor: pointer; text-align: center; min-width: 160px; transition: all 0.2s; background-color: #f9f9f9;" title="Mostrar solo emails cuya plantilla ya no existe">
             Plantilla inexistente
         </button>
+        <select id="contentDateField" class="filter-input" style="width: auto;" title="Filtrar por fecha">
+            <option value="">Fecha (todos)</option>
+            <option value="modifiedDate">Modificado</option>
+            <option value="createdDate">Creado</option>
+        </select>
+        <input type="date" id="contentDateFrom" class="filter-input" style="width: auto;" title="Desde">
+        <input type="date" id="contentDateTo" class="filter-input" style="width: auto;" title="Hasta">
     </div>
 
     <!-- Contenedor de Pestañas que se llenará dinámicamente -->
@@ -2561,7 +2583,7 @@
             <button id="downloadJourneysCsvBtn" class="action-button">Exportar</button>
             <button id="analyzeJourneyBtn" class="action-button" disabled>Analizar</button>
             <button id="scanDeUsageBtn" class="action-button">Data Extensions</button>
-            <button id="getCommunicationsBtn" class="action-button activate-btn" disabled>Cachear Journeys</button>
+            <button id="getCommunicationsBtn" class="action-button activate-btn" disabled>Descargar detalle</button>
             <button id="copyJourneyBtn" class="action-button" disabled>Copiar</button>
             <button id="actionsJourneyBtn" class="action-button delete-btn" disabled>Acciones</button>
             <button id="getJourneyErrorsBtn" class="action-button" disabled>Ver Errores</button>
@@ -2588,6 +2610,14 @@
         <button type="button" id="journeyCommsFilter" class="filter-input" style="cursor: pointer; text-align: center; min-width: 140px; transition: all 0.2s; padding: 8px 12px; background-color: #f9f9f9;">
             Comunicaciones
         </button>
+        <select id="journeyDateField" class="filter-input">
+            <option value="">Fecha (todos)</option>
+            <option value="createdDate">Fecha creación</option>
+            <option value="modifiedDate">Fecha modificación</option>
+            <option value="activityDate">Fecha actividad</option>
+        </select>
+        <input type="date" id="journeyDateFrom" class="filter-input" title="Desde">
+        <input type="date" id="journeyDateTo" class="filter-input" title="Hasta">
     </div>
     <div class="table-container">
         <table id="journeys-table">
@@ -2659,12 +2689,13 @@
                     <li><span class="changelog-tag fix">Fix</span> Corregido un bug por el cual no se borraban las cachés de cliente al hacer logout.</li>
                     <li><span class="changelog-tag improved">Mejora</span> Se ha cambiado la forma de guardar y cargar la cache de Contenidos para clientes con volumetría alta. Requiere refrescar.</li>
                     <li><span class="changelog-tag improved">Mejora</span> En la vista de Contenidos los whatsapps se muestran con previsualización.</li>
-                    <li><span class="changelog-tag improved">Mejora</span> En Journeys, el botón de Comunicaciones ahora es de caché de todo el Journey. Lo cual sirve para la vista de Contenidos. Se muestra la fecha de la caché y esta se sobrescribe con la última descarga.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> En Journeys, el botón de Comunicaciones ahora es de descarga de todo el Journey. Lo cual sirve para la vista de Contenidos. Se muestra la fecha de la caché y esta se sobrescribe con la última descarga.</li>
                     <li><span class="changelog-tag new">Nuevo</span> En Journeys, nueva columna con icono y panel para ver las comunicaciones de cada Journey. El icono solo aparece para los Journeys que realmente tienen comunicaciones.</li>
                     <li><span class="changelog-tag new">Nuevo</span> En Contenidos, nuevo filtro por uso (Todos / En uso / Sin uso): emails, push, SMS y WhatsApp se clasifican según los Journeys cacheados, y bloques, plantillas y snippets según sus referencias.</li>
                     <li><span class="changelog-tag new">Nuevo</span> En Contenidos, nuevo icono "Journeys donde se usa" en emails, push, SMS y WhatsApp que abre un panel con la lista de Journeys que los utilizan.</li>
                     <li><span class="changelog-tag new">Nuevo</span> En Contenidos, nuevo filtro "Plantilla inexistente" que muestra los emails cuya plantilla ya no existe.</li>
                     <li><span class="changelog-tag new">Nuevo</span> En Contenidos, nuevo botón Borrar para eliminar uno o varios contenidos seleccionados, con confirmación previa y descarga de un CSV con los eliminados. No permite borrar contenidos que estén en uso.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> En Automatismos, cuando se cargan las notificaciones aparece un filtro para poder buscar qué automatismos tienen X buzón.</li>
                     <li><span class="changelog-tag improved">Mejora</span> El Generador ERD obtiene los grupos de atributos directamente por API (ya no hay que pegar JSON): seleccionas un grupo y se dibuja su diagrama, con filtro de grupos de sistema y descarga de CSV/imagen.</li>
                 </ul>
             </details>

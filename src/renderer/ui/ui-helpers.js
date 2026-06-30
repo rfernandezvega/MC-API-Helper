@@ -9,6 +9,32 @@ import * as logger from '../ui/logger.js';
 
 let zIndexCounter = 10000; // Un valor inicial alto
 
+/**
+ * Comprueba si una fecha (string ISO) está dentro del rango [fromStr, toStr].
+ * Los valores vacíos, '---' o '0001-01-01...' se consideran fuera de rango.
+ * Si un extremo del rango no se indica, ese límite no se aplica.
+ * @param {string} rawValue - Fecha del registro (ISO) o nula.
+ * @param {string} fromStr - Fecha "desde" en formato YYYY-MM-DD (o vacío).
+ * @param {string} toStr - Fecha "hasta" en formato YYYY-MM-DD (o vacío).
+ * @returns {boolean}
+ */
+export function isDateInRange(rawValue, fromStr, toStr) {
+    if (!rawValue) return false;
+    const s = String(rawValue).trim();
+    if (s === '' || s === '---' || s.startsWith('0001-01-01')) return false;
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return false;
+    if (fromStr) {
+        const from = new Date(fromStr + 'T00:00:00');
+        if (!isNaN(from.getTime()) && d < from) return false;
+    }
+    if (toStr) {
+        const to = new Date(toStr + 'T23:59:59.999');
+        if (!isNaN(to.getTime()) && d > to) return false;
+    }
+    return true;
+}
+
 
 /**
  * Muestra un modal de alerta no bloqueante.

@@ -58,6 +58,24 @@ function renderFilteredTable() {
         filtered = filtered.filter(auto => !auto.launchesJourney);
     }
 
+    // Filtro por rango de fechas
+    const dateField = elements.automationDateField.value;
+    const dateFrom = elements.automationDateFrom.value;
+    const dateTo = elements.automationDateTo.value;
+    if (dateField && (dateFrom || dateTo)) {
+        filtered = filtered.filter(auto => ui.isDateInRange(auto[dateField], dateFrom, dateTo));
+    }
+
+    // Filtro por notificaciones (solo aplica cuando se han cargado)
+    const notifFilter = isNotifColumnsVisible ? elements.automationNotifFilter.value.toLowerCase().trim() : '';
+    if (notifFilter) {
+        filtered = filtered.filter(auto => {
+            const err = (auto.notifications?.Error || '').toLowerCase();
+            const comp = (auto.notifications?.Complete || '').toLowerCase();
+            return err.includes(notifFilter) || comp.includes(notifFilter);
+        });
+    }
+
     currentFilteredList = filtered; // Guardamos la lista filtrada
     updateAutomationCount(); // Actualizamos el contador
     
@@ -126,6 +144,10 @@ export function init(dependencies) {
 
     elements.automationNameFilter.addEventListener('input', applyFiltersAndRender);
     elements.automationStatusFilter.addEventListener('change', applyFiltersAndRender);
+    elements.automationNotifFilter.addEventListener('input', applyFiltersAndRender);
+    elements.automationDateField.addEventListener('change', applyFiltersAndRender);
+    elements.automationDateFrom.addEventListener('change', applyFiltersAndRender);
+    elements.automationDateTo.addEventListener('change', applyFiltersAndRender);
     
     document.querySelector('#automations-table thead').addEventListener('click', handleSort);
     
@@ -209,6 +231,11 @@ export function clearCache() {
     elements.automationStatusFilter.innerHTML = '<option value="">Todos los estados</option>';
     elements.automationsTbody.innerHTML = '';
     elements.automationJourneyFilter.value = '';
+    elements.automationNotifFilter.value = '';
+    elements.automationNotifFilter.style.display = 'none';
+    elements.automationDateField.value = '';
+    elements.automationDateFrom.value = '';
+    elements.automationDateTo.value = '';
     isNotifColumnsVisible = false;
 }
 
@@ -564,6 +591,10 @@ function updateNotifColumnsVisibility() {
     document.querySelectorAll('#automations-table .col-notif').forEach(el => {
         el.style.display = display;
     });
+    // El filtro por notificaciones aparece junto con las columnas
+    if (elements.automationNotifFilter) {
+        elements.automationNotifFilter.style.display = isNotifColumnsVisible ? '' : 'none';
+    }
 }
 
 /**
