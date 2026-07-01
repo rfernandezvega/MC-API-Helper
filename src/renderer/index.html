@@ -216,6 +216,7 @@
     <div class="section-header">
         <button class="back-button">← Atrás</button>
         <div class="header-actions" style="display:flex; gap:10px; align-items:center;">
+            <button id="backToAuditBtn"          class="action-button activate-btn" style="display:none; background-color:#8e44ad;">Volver a la Auditoría</button>
             <button id="downloadAuditPdfBtn"     class="action-button activate-btn" style="display:none; background-color:#2980b9;">Descargar Informe</button>
             <button id="downloadAuditDetailsBtn" class="action-button activate-btn" style="display:none; background-color:#27ae60;">Descargar Detalles</button>
             <button id="runAuditBtn" class="action-button activate-btn">Iniciar Escaneo de Instancia</button>
@@ -232,7 +233,6 @@
 
         <h3 style="margin-top:0; color:#2c3e50;">Cómo lanzar la auditoría</h3>
         <ol style="color:#444; font-size:0.88em; line-height:1.8; margin:0 0 6px 0; padding-left:22px;">
-            <li>Comprueba que estás conectado al <b>cliente / BU</b> correcto (arriba a la derecha).</li>
             <li>Para que la pestaña <b>Contenidos</b> tenga datos, entra antes a la vista de <b>Contenidos</b> y pulsa <b>Refrescar</b> (la auditoría reutiliza esa caché, no descarga contenidos).</li>
             <li>Para auditar <b>Data Extensions</b> (opcional), copia el script de abajo, ejecútalo en la consola de <b>Contact Builder</b> y pega el JSON resultante en el cuadro.</li>
             <li>Pulsa <b>«Iniciar Escaneo de Instancia»</b> (arriba a la derecha) y confirma. <b>No cierres la aplicación</b> mientras dura el proceso.</li>

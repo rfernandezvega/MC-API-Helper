@@ -255,6 +255,9 @@ export async function auditContent(ctx) {
     const kpis = [
         { value: contents.length, label: 'Total contenidos', color: '#69a3db', drillKey: 'ct_overview' },
         { value: emails.length, label: 'Emails', color: '#2980b9', drillKey: 'ct_cat_Emails' },
+        { value: sms.length, label: 'SMS', color: '#16a085', drillKey: 'ct_cat_SMS' },
+        { value: push.length, label: 'Push', color: '#e67e22', drillKey: 'ct_cat_Push' },
+        { value: whatsapps.length, label: 'WhatsApp', color: '#25a35a', drillKey: 'ct_cat_WhatsApp' },
         { value: tplMissing, label: 'Plantilla inexistente', color: tplMissing > 0 ? '#e74c3c' : '#bdc3c7', drillKey: 'ct_tpl_missing' },
         { value: unusedBlocksTotal, label: 'Bloques sin uso', color: unusedBlocksTotal > 0 ? '#f39c12' : '#bdc3c7', drillKey: null },
         { value: waTplUnused, label: 'Plantillas WA sin uso', color: waTplUnused > 0 ? '#9b59b6' : '#bdc3c7', drillKey: 'ct_wa_tpl_unused' },
@@ -264,10 +267,6 @@ export async function auditContent(ctx) {
     const cards = [
         { title: 'Contenidos por tipo', help: 'Volumetría de la caché de Contenidos por categoría.', wide: true, bars: overviewBars },
         { title: 'Emails por tipo', help: 'Template-Based, HTML y Text-only.', bars: emailTypeBars },
-        { title: 'Emails · plantilla', help: 'De los emails que usan plantilla, cuántas siguen existiendo.', bars: [
-            { label: 'Plantilla existente', value: tplOk, total: tplOk + tplMissing, color: '#27ae60', drillKey: 'ct_tpl_ok' },
-            { label: 'Plantilla inexistente', value: tplMissing, total: tplOk + tplMissing, color: '#e74c3c', drillKey: 'ct_tpl_missing' },
-        ]},
         { title: 'Bloques sin uso por tipo', help: 'Bloques y snippets no referenciados por ningún contenido.', bars: unusedBlockBars },
         { title: 'Comunicaciones en Journeys', help: 'Emails/Push/SMS/WhatsApp referenciados en journeys cacheados.', bars: journeyBars },
         { title: 'WhatsApp · componentes', help: 'Tipos de componentes usados en mensajes y plantillas de WhatsApp.', bars: waComponentBars },

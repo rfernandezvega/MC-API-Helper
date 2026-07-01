@@ -17,6 +17,7 @@ let currentAuditApiCalls = 0;
 let currentStats        = null;
 let globalPdfData       = {};
 let usersById           = {}; // id/userName -> user — rellenado en auditUsers, usado en auditAutomations
+let hasAuditResult      = false; // hay un panel de auditoría (recién ejecutado o de caché) al que volver
 
 const ACTIVITY_TYPE_MAP = {
     42:   'Email',                   43:   'Importación (Import)',
@@ -51,6 +52,9 @@ export function init(dependencies) {
 
     document.getElementById('downloadAuditDetailsBtn')
         ?.addEventListener('click', downloadAllDetailsCsv);
+
+    document.getElementById('backToAuditBtn')
+        ?.addEventListener('click', showAuditDashboard);
 
     document.getElementById('auditoria-section')
         ?.addEventListener('click', e => {
@@ -220,20 +224,36 @@ export function init(dependencies) {
 
 async function handleRunAuditClick() {
     const optionsPanel = document.getElementById('audit-options');
-    const dashboard    = document.getElementById('audit-dashboard');
     if (optionsPanel.style.display === 'none') {
+        // Estamos en el panel de resultados → volver a las opciones (sin perder el panel).
         document.getElementById('audit-stats-container').innerHTML = '';
         document.getElementById('downloadAuditPdfBtn').style.display  = 'none';
         document.getElementById('downloadAuditDetailsBtn').style.display = 'none';
-        dashboard.style.display    = 'none';
+        document.getElementById('audit-dashboard').style.display    = 'none';
         optionsPanel.style.display = '';
         const btn = document.getElementById('runAuditBtn');
         if (btn) btn.innerHTML = 'Iniciar Escaneo de Instancia';
+        // Si hay una auditoría ya calculada, ofrecer volver a ella sin re-escanear.
+        document.getElementById('backToAuditBtn').style.display = hasAuditResult ? 'block' : 'none';
     } else {
         // El usuario pulsa "Iniciar Escaneo" explícitamente → siempre lanza un nuevo escaneo,
         // aunque haya caché. La caché solo se carga automáticamente al entrar en la vista.
         await runAudit();
     }
+}
+
+// Vuelve a mostrar el panel de resultados ya calculado (sin re-escanear).
+function showAuditDashboard() {
+    if (!hasAuditResult) return;
+    const dashboard = document.getElementById('audit-dashboard');
+    document.getElementById('audit-options').style.display = 'none';
+    dashboard.style.display       = 'flex';
+    dashboard.style.flexDirection = 'column';
+    document.getElementById('downloadAuditPdfBtn').style.display     = 'block';
+    document.getElementById('downloadAuditDetailsBtn').style.display = 'block';
+    document.getElementById('backToAuditBtn').style.display = 'none';
+    const topBtn = document.getElementById('runAuditBtn');
+    if (topBtn) topBtn.innerHTML = 'Volver a Opciones';
 }
 
 export async function view() {
@@ -244,7 +264,9 @@ export async function view() {
     document.getElementById('audit-dashboard').style.display        = 'none';
     document.getElementById('downloadAuditPdfBtn').style.display    = 'none';
     document.getElementById('downloadAuditDetailsBtn').style.display = 'none';
+    document.getElementById('backToAuditBtn').style.display          = 'none';
     document.getElementById('audit-stats-container').innerHTML      = '';
+    hasAuditResult = false; // aún no hay panel del cliente actual al que volver
     initDrillData(); // limpiar datos del cliente anterior
     const topBtn = document.getElementById('runAuditBtn');
     if (topBtn) topBtn.innerHTML = 'Iniciar Escaneo de Instancia';
@@ -282,6 +304,8 @@ function renderCachedAudit(cached) {
     document.getElementById('downloadAuditDetailsBtn').style.display = 'block';
     const topBtn = document.getElementById('runAuditBtn');
     if (topBtn) topBtn.textContent = 'Volver a Opciones';
+    document.getElementById('backToAuditBtn').style.display = 'none';
+    hasAuditResult = true; // panel disponible para volver desde las opciones
 
     TAB_IDS.forEach(id => {
         const el = document.getElementById(`audit-tab-${id}`);
@@ -435,6 +459,7 @@ async function runAudit() {
     document.getElementById('audit-stats-container').innerHTML      = '';
     document.getElementById('downloadAuditPdfBtn').style.display    = 'none';
     document.getElementById('downloadAuditDetailsBtn').style.display = 'none';
+    document.getElementById('backToAuditBtn').style.display          = 'none';
     document.getElementById('audit-options').style.display          = 'none';
     const topBtn = document.getElementById('runAuditBtn');
     if (topBtn) topBtn.innerHTML = 'Volver a Opciones';
@@ -497,6 +522,7 @@ async function runAudit() {
             </div>`;
         document.getElementById('downloadAuditPdfBtn').style.display    = 'block';
         document.getElementById('downloadAuditDetailsBtn').style.display = 'block';
+        hasAuditResult = true; // panel disponible para volver desde las opciones
 
         const clientName = elements.clientNameInput?.value?.trim();
         if (clientName) {
