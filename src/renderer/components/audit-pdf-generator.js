@@ -50,7 +50,8 @@ export async function generateAuditPDF(pdfData, stats, clientName) {
             { key: 'journeys', title: '3. JOURNEYS' },
             { key: 'cp', title: '4. CLOUD PAGES' },
             { key: 'sm', title: '5. SEND MANAGEMENT' },
-            { key: 'de', title: '6. DATA EXTENSIONS' }
+            { key: 'de', title: '6. DATA EXTENSIONS' },
+            { key: 'content', title: '7. CONTENIDOS' }
         ];
 
         for (let i = 0; i < sections.length; i++) {

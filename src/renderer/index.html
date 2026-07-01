@@ -224,73 +224,83 @@
 
     <h2 style="color:#69a3db; text-align:center; margin-bottom:6px;">Auditoría de Instancia</h2>
     <p style="text-align:center; color:#888; font-size:0.88em; margin-bottom:24px;">
-        Auditoría: usuarios, automatismos, journeys, cloud pages y configuración de envío.
+        Auditoría: usuarios, automatismos, journeys, cloud pages, configuración de envío, data extensions y contenidos.
     </p>
 
     <!-- PANEL DE CONFIGURACIÓN — ocupa todo el ancho disponible -->
     <div id="audit-options" class="config-block" style="width:100%; margin:0 0 30px 0; border-top:4px solid #69a3db;">
 
-        <h3 style="margin-top:0; color:#2c3e50;">Configuración del Análisis</h3>
-        <p style="color:#666; font-size:0.88em; line-height:1.6; margin-bottom:6px;">
-            El escaneo básico usa únicamente llamadas masivas y es rápido.
-            Las opciones de análisis profundo inspeccionan cada elemento individualmente y pueden tardar varios minutos y hacer una gran cantidad de llamadas API.
-            Esto último hay que tenerlo en cuenta ya que hay un límite anual.
-            Como ejemplo, para un cliente con 700 Journeys y 200 automatismos puede tardar 10 minutos y hacer 1700 llamadas.
+        <h3 style="margin-top:0; color:#2c3e50;">Cómo lanzar la auditoría</h3>
+        <ol style="color:#444; font-size:0.88em; line-height:1.8; margin:0 0 6px 0; padding-left:22px;">
+            <li>Comprueba que estás conectado al <b>cliente / BU</b> correcto (arriba a la derecha).</li>
+            <li>Para que la pestaña <b>Contenidos</b> tenga datos, entra antes a la vista de <b>Contenidos</b> y pulsa <b>Refrescar</b> (la auditoría reutiliza esa caché, no descarga contenidos).</li>
+            <li>Para auditar <b>Data Extensions</b> (opcional), copia el script de abajo, ejecútalo en la consola de <b>Contact Builder</b> y pega el JSON resultante en el cuadro.</li>
+            <li>Pulsa <b>«Iniciar Escaneo de Instancia»</b> (arriba a la derecha) y confirma. <b>No cierres la aplicación</b> mientras dura el proceso.</li>
+            <li>Al terminar, revisa las pestañas del panel y descarga el <b>Informe (PDF)</b> o los <b>Detalles</b>.</li>
+        </ol>
+        <p style="color:#666; font-size:0.84em; line-height:1.6; margin:0 0 6px 0;">
+            Los <b>Journeys</b> se descargan durante el escaneo y quedan en una caché compartida con las vistas de Journeys y Contenidos:
+            si ya están descargados (misma versión), se reutilizan y solo se bajan los nuevos o modificados. En cualquier caso, siempre se
+            muestran el <b>total de llamadas API</b> y el <b>tiempo</b> del escaneo. Hay un <b>límite anual de llamadas API</b>: como referencia,
+            un cliente con 700 Journeys y 200 automatismos puede tardar unos 10 minutos.
         </p>
-        <p style="color:#888; font-size:0.82em; margin-bottom:20px; font-style:italic;">
+        <p style="color:#888; font-size:0.82em; margin-bottom:18px; font-style:italic;">
             Si ya existe una auditoría guardada para este cliente, se cargará automáticamente al entrar a esta vista.
         </p>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-
-            <div style="background:#f0f7ff; padding:16px; border-radius:10px; border:1px solid #d1e3f5;">
-                <label style="display:flex; align-items:flex-start; gap:12px; cursor:pointer;">
-                    <input type="checkbox" id="audit-opt-autos" style="width:18px; height:18px; margin-top:3px; flex-shrink:0;">
-                    <div>
-                        <div style="font-weight:700; font-size:1em; color:#2c3e50; margin-bottom:6px;">Automatismos — Análisis Profundo</div>
-                        <ul style="font-size:0.83em; color:#555; margin:0; padding-left:16px; line-height:1.7;">
-                            <li>Verificación de <b>email de alerta por error</b> y extracción de <b>dominios</b> de aviso.</li>
-                            <li>Detección de <b>descripciones</b> en SQL Queries y Scripts SSJS.</li>
-                            <li>Mapa de <b>actividades compartidas</b> entre múltiples automatismos.</li>
-                        </ul>
-                        <div style="margin-top:6px; font-size:0.8em; color:#555; font-style:italic;">
-                            Tipos de actividad, imports, exports y launchers de Journeys se calculan <b>sin llamadas extra</b>.
-                        </div>
-                        <div style="margin-top:8px; font-size:0.8em; color:#c0392b; font-weight:600;">
-                            Atención: Lento — 2 llamadas por automatismo + 1 por SQL/SSJS.
-                        </div>
-                    </div>
-                </label>
-            </div>
-
-            <div style="background:#fdf5e6; padding:16px; border-radius:10px; border:1px solid #f9e1b5;">
-                <label style="display:flex; align-items:flex-start; gap:12px; cursor:pointer;">
-                    <input type="checkbox" id="audit-opt-journeys" style="width:18px; height:18px; margin-top:3px; flex-shrink:0;">
-                    <div>
-                        <div style="font-weight:700; font-size:1em; color:#2c3e50; margin-bottom:6px;">Journeys — Análisis Profundo</div>
-                        <ul style="font-size:0.83em; color:#555; margin:0; padding-left:16px; line-height:1.7;">
-                            <li>Detección de <b>nodos Salesforce</b> activos en el canvas.</li>
-                            <li>Mix multicanal real: <b>Email, SMS, Push/In-App, WhatsApp</b>.</li>
-                            <li>Journeys con <b>solo lógica</b> (sin actividades de envío).</li>
-                        </ul>
-                        <div style="margin-top:6px; font-size:0.8em; color:#555; font-style:italic;">
-                            Subtipo, Goals, criterios de salida y tipología de entrada se calculan <b>sin llamadas extra</b>.
-                        </div>
-                        <div style="margin-top:8px; font-size:0.8em; color:#27ae60; font-weight:600;">
-                            Rápido si la API devuelve actividades en la llamada de lista. Si no, 1 llamada extra por journey.
-                        </div>
-                    </div>
-                </label>
-            </div>
-
-
-        </div><!-- /grid 2 columnas -->
+        <h3 style="color:#2c3e50; margin-bottom:10px;">Qué se analiza en cada pestaña</h3>
+        <table style="width:100%; border-collapse:collapse; font-size:0.84em; margin-bottom:4px;">
+            <thead>
+                <tr style="text-align:left;">
+                    <th style="padding:9px 12px; background:#69a3db; color:#fff; border-bottom:2px solid #e2e8f0; width:15%;">Pestaña</th>
+                    <th style="padding:9px 12px; background:#69a3db; color:#fff; border-bottom:2px solid #e2e8f0; width:52%;">Descripción</th>
+                    <th style="padding:9px 12px; background:#69a3db; color:#fff; border-bottom:2px solid #e2e8f0; width:33%;">Origen del dato</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; font-weight:600; color:#2c3e50;">Usuarios</td>
+                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Roles, estados (activo/bloqueado), tipo de usuario y último acceso.</td>
+                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Se descarga durante el escaneo (no depende de otra vista).</td>
+                </tr>
+                <tr style="background:#fbfcfe;">
+                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; font-weight:600; color:#2c3e50;">Automatismos</td>
+                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Tipos de actividad, estados, programación, email de alerta por error, descripciones en SQL/SSJS y actividades compartidas.</td>
+                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Se descarga durante el escaneo (no depende de otra vista).</td>
+                </tr>
+                <tr>
+                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; font-weight:600; color:#2c3e50;">Journeys</td>
+                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Estado, subtipo, Goals/salidas, actividad reciente, mix multicanal (Email/SMS/Push/WhatsApp) y nodos Salesforce.</td>
+                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Caché compartida con la vista de <b>Journeys</b> (y de Contenidos). Se descarga aquí si falta.</td>
+                </tr>
+                <tr style="background:#fbfcfe;">
+                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; font-weight:600; color:#2c3e50;">Cloud Pages</td>
+                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Cantidad, tipo y estado de publicación de las páginas.</td>
+                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Se descarga durante el escaneo (no depende de otra vista).</td>
+                </tr>
+                <tr>
+                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; font-weight:600; color:#2c3e50;">Send Management</td>
+                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Send Classifications, Sender/Delivery Profiles y configuración de envío.</td>
+                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Se descarga durante el escaneo (no depende de otra vista).</td>
+                </tr>
+                <tr style="background:#fbfcfe;">
+                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; font-weight:600; color:#2c3e50;">Data Extensions</td>
+                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Volumetría, campos, retención y uso de las DEs.</td>
+                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">JSON pegado del script de abajo (Contact Builder). No consume llamadas de la app.</td>
+                </tr>
+                <tr>
+                    <td style="padding:9px 12px; font-weight:600; color:#2c3e50;">Contenidos</td>
+                    <td style="padding:9px 12px; color:#555;">Contenidos por tipo, plantillas inexistentes, bloques/plantillas sin uso y comunicaciones dentro/fuera de journeys.</td>
+                    <td style="padding:9px 12px; color:#555;">Caché de la vista de <b>Contenidos</b> (refréscala antes) + caché de <b>Journeys</b>. No consume llamadas aquí.</td>
+                </tr>
+            </tbody>
+        </table>
 
         <!-- OPCIÓN: Data Extensions (JSON) — fuera del grid, ocupa todo el ancho -->
         <div style="margin-top:24px; border-top:1px solid #e2e8f0; padding-top:20px;">
             <div style="font-weight:700; font-size:1em; color:#2c3e50; margin-bottom:6px;">Data Extensions — Análisis desde JSON</div>
             <p style="font-size:0.83em; color:#555; margin:0 0 12px 0; line-height:1.6;">
-                Cada escaneo <b>sobreescribe la caché anterior</b> — si relanzas sin las opciones de análisis profundo marcadas, perderás esos datos.<br>Para auditar las DEs de la instancia, accede <a id="audit-de-cb-link" href="#" class="external-link" style="color: #0070d2; text-decoration: underline; font-weight: bold;">aquí</a>  y ejecuta el script de abajo en la consola del navegador
+                Cada escaneo <b>sobreescribe la caché anterior</b> — si relanzas el escaneo sin volver a pegar el JSON, se perderán estos datos.<br>Para auditar las DEs de la instancia, accede <a id="audit-de-cb-link" href="#" class="external-link" style="color: #0070d2; text-decoration: underline; font-weight: bold;">aquí</a>  y ejecuta el script de abajo en la consola del navegador
                 estando logado en <b>Contact Builder</b>. El script recorre todas las carpetas (para ~6.000 DEs tarda aproximadamente 20 minutos) y te mostrará
                 un popup para copiar el JSON resultante. Las DEs compartidas (carpeta <i>Shared</i>) se excluyen automáticamente del análisis.
             </p>
@@ -322,6 +332,7 @@
             <button class="tab-button"        data-tab="audit-tab-cp"       style="padding:10px 18px; font-size:0.88em;">Cloud Pages</button>
             <button class="tab-button"        data-tab="audit-tab-sm"       style="padding:10px 18px; font-size:0.88em;">Send Management</button>
             <button class="tab-button" data-tab="audit-tab-de" style="padding:10px 18px; font-size:0.88em;">Data Extensions</button>
+            <button class="tab-button" data-tab="audit-tab-content" style="padding:10px 18px; font-size:0.88em;">Contenidos</button>
             <div id="audit-stats-container" style="margin-left:auto; padding-right:8px;"></div>
         </div>
 
@@ -332,6 +343,7 @@
             <div id="audit-tab-cp"       class="tab-content"></div>
             <div id="audit-tab-sm"       class="tab-content"></div>
             <div id="audit-tab-de"       class="tab-content"></div>
+            <div id="audit-tab-content"  class="tab-content"></div>
         </div>
 
     </div>
@@ -2062,18 +2074,20 @@
     <div class="menu-group changelog-group">
         <h3>Novedades</h3>
         <div class="changelog-list">
-            <!-- ======================== v2.5.4 ======================== -->
+            <!-- ======================== v2.5.5 ======================== -->
             <details class="changelog-entry" open>
                 <summary class="changelog-version">
-                    <span class="changelog-badge">v2.5.4</span>
-                    <span class="changelog-date">X Julio 2026</span>
+                    <span class="changelog-badge">v2.5.5</span>
+                    <span class="changelog-date">1 Julio 2026</span>
                 </summary>
                 <ul class="changelog-items">
+                    <li><span class="changelog-tag fix">Fix</span> Parece que por fin se muestra el icono de la app en la barra de tareas.</li>
                     <li><span class="changelog-tag fix">Fix</span> Corregido un bug por el cual no se borraban las cachés de cliente al hacer logout.</li>
                     <li><span class="changelog-tag improved">Mejora</span> Se ha cambiado la forma de guardar y cargar la cache de Contenidos para clientes con volumetría alta. Requiere refrescar.</li>
                     <li><span class="changelog-tag improved">Mejora</span> En la vista de Contenidos los whatsapps se muestran con previsualización.</li>
                     <li><span class="changelog-tag improved">Mejora</span> En Journeys, el botón de Comunicaciones ahora es de descarga de todo el Journey. Lo cual sirve para la vista de Contenidos. Se muestra la fecha de la caché y esta se sobrescribe con la última descarga.</li>
-                    <li><span class="changelog-tag improved">Nuevo</span> En Journeys (botón de Descarga) y Contenidos ahora se indica el tiempo aproximado de descarga por elemento.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> En Journeys (botón de Descarga) y Contenidos ahora se indica el tiempo aproximado de descarga por elemento.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Varios ajustes en tablas para mantener cabeceras fijas, que los anchos no vayan cambiando por página, etc.</li>
                     <li><span class="changelog-tag improved">Mejora</span> El Generador ERD obtiene los grupos de atributos directamente por API (ya no hay que pegar JSON): seleccionas un grupo y se dibuja su diagrama, con filtro de grupos de sistema y descarga de CSV/imagen.</li>
                     <li><span class="changelog-tag new">Nuevo</span> En Automatismos, Journeys, Cloud Pages y Contenidos ahora se puede filtrar por cualquier campo de fecha.</li>
                     <li><span class="changelog-tag new">Nuevo</span> En Journeys, nueva columna con icono y panel para ver las comunicaciones de cada Journey. El icono solo aparece para los Journeys que realmente tienen comunicaciones.</li>

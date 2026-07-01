@@ -1546,10 +1546,12 @@ function updateCacheDate(dateString) {
 function updateJourneyCacheDate(dateString) {
     if (!elements.contentJourneyCacheDate) return;
     if (!dateString) {
-        elements.contentJourneyCacheDate.textContent = '';
+        elements.contentJourneyCacheDate.textContent = 'Sin caché de Journeys';
+        elements.contentJourneyCacheDate.style.color = '#dc3545';
         return;
     }
     const date = new Date(dateString);
+    elements.contentJourneyCacheDate.style.color = '#bbb';
     elements.contentJourneyCacheDate.textContent = `Journeys: ${date.toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })}`;
 }
 

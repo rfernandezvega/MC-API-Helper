@@ -144,8 +144,10 @@ export function blockUI(message = 'Cargando...', subMessage = '') {
     if (elements.loaderText) {
         if (subMessage) {
             const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            elements.loaderText.innerHTML = `${esc(message)}<div style="margin-top:8px;"><span style="display:inline-block; font-size:0.8em; font-weight:600; color:#fff; background:#558ac7; padding:3px 10px; border-radius:12px;">${esc(subMessage)}</span></div>`;
+            elements.loaderText.style.textAlign = 'center';
+            elements.loaderText.innerHTML = `${esc(message)}<div style="margin-top:8px; text-align:center;"><span style="display:inline-block; font-size:0.8em; font-weight:600; color:#fff; background:#558ac7; padding:3px 10px; border-radius:12px;">${esc(subMessage)}</span></div>`;
         } else {
+            elements.loaderText.style.textAlign = '';
             elements.loaderText.textContent = message;
         }
     }

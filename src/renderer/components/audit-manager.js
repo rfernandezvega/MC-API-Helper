@@ -6,6 +6,8 @@ import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import { generateAuditPDF } from './audit-pdf-generator.js';
+import { auditContent } from './audit-content.js';
+import { ensureJourneysDetailCache } from './journeys-cache.js';
 
 let getAuthenticatedConfig;
 
@@ -32,7 +34,7 @@ const ACTIVITY_TYPE_MAP = {
     1101: 'IS Decision',             1701: 'Einstein Rec',
 };
 
-const TAB_IDS = ['users', 'autos', 'journeys', 'cp', 'sm', 'de'];
+const TAB_IDS = ['users', 'autos', 'journeys', 'cp', 'sm', 'de', 'content'];
 
 // ==========================================
 // INIT + VIEW
@@ -428,9 +430,6 @@ function getUserLabel(owner) {
 // ==========================================
 
 async function runAudit() {
-    const isDetailedAutos    = document.getElementById('audit-opt-autos').checked;
-    const isDetailedJourneys = document.getElementById('audit-opt-journeys').checked;
-
     if (!await ui.showCustomConfirm('El escaneo va a comenzar. No cierres la aplicación durante el proceso.')) return;
 
     document.getElementById('audit-stats-container').innerHTML      = '';
@@ -457,30 +456,34 @@ async function runAudit() {
     try {
         const apiConfig = await getAuthenticatedConfig();
 
-        ui.blockUI('1/6: Escaneando Usuarios…');
+        ui.blockUI('1/7: Escaneando Usuarios…');
         await auditUsers(apiConfig);
         renderedTabs.users = document.getElementById('audit-tab-users').innerHTML;
 
-        ui.blockUI('2/6: Escaneando Automatismos…');
-        await auditAutomations(apiConfig, isDetailedAutos);
+        ui.blockUI('2/7: Escaneando Automatismos…');
+        await auditAutomations(apiConfig, true);
         renderedTabs.autos = document.getElementById('audit-tab-autos').innerHTML;
 
-        ui.blockUI('3/6: Escaneando Journeys…');
-        await auditJourneys(apiConfig, isDetailedJourneys);
+        ui.blockUI('3/7: Escaneando Journeys…');
+        await auditJourneys(apiConfig);
         renderedTabs.journeys = document.getElementById('audit-tab-journeys').innerHTML;
 
-        ui.blockUI('4/6: Escaneando Cloud Pages…');
+        ui.blockUI('4/7: Escaneando Cloud Pages…');
         await auditCloudPages(apiConfig);
         renderedTabs.cp = document.getElementById('audit-tab-cp').innerHTML;
 
-        ui.blockUI('5/6: Escaneando Send Management…');
+        ui.blockUI('5/7: Escaneando Send Management…');
         await auditSendManagement(apiConfig);
         renderedTabs.sm = document.getElementById('audit-tab-sm').innerHTML;
 
         const deJson = document.getElementById('audit-de-json')?.value?.trim();
-        ui.blockUI('6/6: Analizando Data Extensions…');
+        ui.blockUI('6/7: Analizando Data Extensions…');
         await auditDataExtensions(deJson);
         renderedTabs.de = document.getElementById('audit-tab-de').innerHTML;
+
+        ui.blockUI('7/7: Analizando Contenidos (caché)…');
+        await auditContent({ clientName: elements.clientNameInput?.value?.trim(), helpers: contentAuditHelpers() });
+        renderedTabs.content = document.getElementById('audit-tab-content').innerHTML;
 
         const durationMs = Date.now() - startTime;
         const min = Math.floor(durationMs / 60000);
@@ -501,7 +504,7 @@ async function runAudit() {
                 clientName,
                 auditData: {
                     savedAt:   new Date().toISOString(),
-                    options:   { autos: isDetailedAutos, journeys: isDetailedJourneys },
+                    options:   { autos: true, journeys: true },
                     deJson:    document.getElementById('audit-de-json')?.value?.trim() || '',
                     tabs:      renderedTabs,
                     drillData: auditDrillData,
@@ -1061,12 +1064,20 @@ async function auditAutomations(apiConfig, isDetailed) {
 // ==========================================
 // 3. JOURNEYS
 // ==========================================
-async function auditJourneys(apiConfig, isDetailed) {
-    currentAuditApiCalls += 2;
-    const [eventDefs, journeys] = await Promise.all([
-        mcApiService.fetchAllEventDefinitions(apiConfig),
-        mcApiService.fetchAllJourneys(apiConfig),
-    ]);
+async function auditJourneys(apiConfig) {
+    currentAuditApiCalls += 1;
+    const eventDefs = await mcApiService.fetchAllEventDefinitions(apiConfig);
+
+    // Descarga/caché de journeys COMPARTIDA con la vista de Journeys y Contenidos:
+    // reutiliza el detalle ya cacheado (por modifiedDate) y solo baja los nuevos/modificados.
+    const clientName = elements.clientNameInput?.value?.trim();
+    const jResult = await ensureJourneysDetailCache({
+        apiConfig, clientName,
+        onProgress: (m, s) => ui.blockUI(m, s),
+        formatEta: ui.formatEta
+    });
+    const journeys = jResult.journeys;
+    currentAuditApiCalls += jResult.apiCalls;
 
     const total    = journeys.length;
     const status   = {}, entries  = {}, subtypes = {};
@@ -1160,36 +1171,29 @@ async function auditJourneys(apiConfig, isDetailed) {
             addDrillRow('journey_test_name', [j.name, j.version, j.status, sub]);
         }
 
-        if (isDetailed) {
-            ui.blockUI(`3/5: Analizando ${j.name} (${i + 1}/${journeys.length})…`);
-            let acts = Array.isArray(j.activities) && j.activities.length > 0 ? j.activities : null;
-            if (!acts) {
-                try { currentAuditApiCalls++; const detail = await mcApiService.fetchJourneyDetailsById(j.id, apiConfig); acts = detail.activities || []; }
-                catch (e) { acts = []; }
-            }
+        // Análisis profundo (siempre): las actividades ya vienen del helper de caché de journeys.
+        const acts = Array.isArray(j.activities) ? j.activities : [];
+        const activeChannels = new Set();
+        let hasSF = false;
+        acts.forEach(a => {
+            const t = (a.type || '').toUpperCase();
+            if (t === 'EMAILV2') activeChannels.add('Email');
+            if (['SMS','SMSSYNC'].includes(t)) activeChannels.add('SMS');
+            if (t === 'WHATSAPPACTIVITY') activeChannels.add('WhatsApp');
+            if (['INAPP','INBOX','MOBILEPUSH','PUSHINBOXACTIVITY','PUSHNOTIFICATIONACTIVITY'].includes(t)) activeChannels.add('Push / In-App');
+            if (['SALESFORCESALESCLOUDACTIVITY','SALESCLOUDACTIVITY','OBJECTACTIVITY','CAMPAIGNMEMBER','LEAD'].includes(t)) hasSF = true;
+        });
 
-            const activeChannels = new Set();
-            let hasSF = false;
-            acts.forEach(a => {
-                const t = (a.type || '').toUpperCase();
-                if (t === 'EMAILV2') activeChannels.add('Email');
-                if (['SMS','SMSSYNC'].includes(t)) activeChannels.add('SMS');
-                if (t === 'WHATSAPPACTIVITY') activeChannels.add('WhatsApp');
-                if (['INAPP','INBOX','MOBILEPUSH','PUSHINBOXACTIVITY','PUSHNOTIFICATIONACTIVITY'].includes(t)) activeChannels.add('Push / In-App');
-                if (['SALESFORCESALESCLOUDACTIVITY','SALESCLOUDACTIVITY','OBJECTACTIVITY','CAMPAIGNMEMBER','LEAD'].includes(t)) hasSF = true;
-            });
+        const combo = Array.from(activeChannels).sort().join(' + ') || 'Solo Lógica (Sin Envío)';
+        channels[combo] = (channels[combo] || 0) + 1;
+        if (!mixJourneys[combo]) mixJourneys[combo] = [];
+        mixJourneys[combo].push([j.name, j.status, type, hasGoal?'Sí':'No', hasExit?'Sí':'No']);
+        if (combo === 'Solo Lógica (Sin Envío)') logicOnlyCount++;
 
-            const combo = Array.from(activeChannels).sort().join(' + ') || 'Solo Lógica (Sin Envío)';
-            channels[combo] = (channels[combo] || 0) + 1;
-            if (!mixJourneys[combo]) mixJourneys[combo] = [];
-            mixJourneys[combo].push([j.name, j.status, type, hasGoal?'Sí':'No', hasExit?'Sí':'No']);
-            if (combo === 'Solo Lógica (Sin Envío)') logicOnlyCount++;
-
-            registerDrill('journey_sf_yes', 'Con Nodos Salesforce', ['Nombre', 'Estado', 'Tipo Entrada']);
-            registerDrill('journey_sf_no',  'Sin Nodos Salesforce', ['Nombre', 'Estado', 'Tipo Entrada']);
-            if (hasSF) { sfIntegration['Con nodos Salesforce']++; addDrillRow('journey_sf_yes', [j.name, j.status, type]); }
-            else       { sfIntegration['Sin nodos Salesforce']++; addDrillRow('journey_sf_no',  [j.name, j.status, type]); }
-        }
+        registerDrill('journey_sf_yes', 'Con Nodos Salesforce', ['Nombre', 'Estado', 'Tipo Entrada']);
+        registerDrill('journey_sf_no',  'Sin Nodos Salesforce', ['Nombre', 'Estado', 'Tipo Entrada']);
+        if (hasSF) { sfIntegration['Con nodos Salesforce']++; addDrillRow('journey_sf_yes', [j.name, j.status, type]); }
+        else       { sfIntegration['Sin nodos Salesforce']++; addDrillRow('journey_sf_no',  [j.name, j.status, type]); }
     }
 
     const channelBars = Object.entries(channels).sort((a, b) => b[1] - a[1]).map(([label, value]) => {
@@ -1206,7 +1210,7 @@ async function auditJourneys(apiConfig, isDetailed) {
     const noActPct = publishedCount > 0 ? Math.round((activeNoActivity1m / publishedCount) * 100) : 0;
     if (noActPct > 30) callouts.push(buildCallout('warning', 'Journeys activos sin uso',
         `El ${noActPct}% de los Journeys publicados no han procesado contactos en el último mes.`));
-    if (isDetailed && logicOnlyCount > 0 && Math.round((logicOnlyCount / total) * 100) > 10)
+    if (logicOnlyCount > 0 && Math.round((logicOnlyCount / total) * 100) > 10)
         callouts.push(buildCallout('info', 'Journeys sin actividades de envío',
             `${logicOnlyCount} journeys solo contienen nodos de lógica, sin ningún canal de envío.`));
 
@@ -1249,24 +1253,20 @@ async function auditJourneys(apiConfig, isDetailed) {
         ]},
     ];
 
-    const deepCards = isDetailed ? [
+    const deepCards = [
         { title: 'Integración con CRM (Salesforce)', help: 'Presencia de actividades de Salesforce.', bars: [
             { label: 'Con nodos Salesforce', value: sfIntegration['Con nodos Salesforce'], total, color: '#9b59b6', drillKey: 'journey_sf_yes' },
             { label: 'Sin nodos Salesforce', value: sfIntegration['Sin nodos Salesforce'], total, color: '#bdc3c7', drillKey: 'journey_sf_no' },
         ]},
         { title: 'Multicanalidad', help: 'Combinación de canales (Email, SMS, Push/In-App, WhatsApp).', bars: channelBars },
-    ] : [];
+    ];
 
     registerPdfData('journeys', kpis, [...baseCards, ...deepCards], callouts.map(c => parsePdfCallout(c)));
-
-    const deepSection = isDetailed
-        ? buildGrid(deepCards.map(c => buildMetricCard(c.title, c.help, c.bars, { wide: c.wide })))
-        : buildCallout('info', 'Análisis profundo no ejecutado', 'Activa la opción para ver el mix multicanal real y los nodos de Salesforce en el canvas.');
 
     document.getElementById('audit-tab-journeys').innerHTML = buildTabWrapper(
         buildKpiRow(kpis) + callouts.join('') +
         buildGrid(baseCards.map(c => buildMetricCard(c.title, c.help, c.bars, { wide: c.wide }))) +
-        deepSection
+        buildGrid(deepCards.map(c => buildMetricCard(c.title, c.help, c.bars, { wide: c.wide })))
     );
 }
 
@@ -1665,6 +1665,14 @@ function buildStatsBanner(timeStr, calls) {
 
 function buildTabWrapper(content) {
     return `<div style="padding:20px 24px;">${content}</div>`;
+}
+
+// Helpers de render/drill que se pasan a los módulos de pestaña externos (p.ej. audit-content.js)
+function contentAuditHelpers() {
+    return {
+        registerDrill, addDrillRow, registerPdfData,
+        buildTabWrapper, buildKpiRow, buildGrid, buildMetricCard, buildCallout, parsePdfCallout
+    };
 }
 
 function buildKpiRow(items) {
