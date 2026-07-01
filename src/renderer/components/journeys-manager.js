@@ -181,6 +181,16 @@ function journeyHasComms(j) {
 }
 
 /**
+ * Devuelve el submensaje de "tiempo estimado restante" para el loader.
+ */
+function etaSub(startTime, done, total) {
+    const elapsed = (Date.now() - startTime) / 1000;
+    if (done <= 0 || total <= done || elapsed <= 0) return '';
+    const eta = ui.formatEta((total - done) / (done / elapsed));
+    return eta ? `Tiempo estimado restante: ${eta}` : '';
+}
+
+/**
  * Escapa caracteres HTML para insertar texto de forma segura.
  */
 function escapeHtml(str) {
@@ -586,7 +596,12 @@ async function getCommunications() {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
 
+        const startTime = Date.now();
+        const total = journeysToProcess.length;
+        let processed = 0;
         for (const journey of journeysToProcess) {
+            processed++;
+            ui.blockUI(`Recuperando comunicaciones ${processed}/${total}...`, etaSub(startTime, processed, total));
             if (journey.hasCommunications && !journey._commsStale){
                 logger.logMessage(`Saltando "${journey.name}", los datos ya estaban cargados.`);
                 continue;
@@ -641,12 +656,13 @@ async function getAllCommunications() {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
 
+        const startTime = Date.now();
         let processed = 0;
         // 2. Procesamos uno a uno para evitar colapsar la API/App
         for (const journey of journeysToProcess) {
             processed++;
-            if (processed % 5 === 0) { // Actualizamos el mensaje del loader cada 5
-                ui.blockUI(`Procesando ${processed} de ${totalCount}...`);
+            if (processed % 5 === 0 || processed === totalCount) { // Actualizamos el mensaje del loader
+                ui.blockUI(`Procesando ${processed} de ${totalCount}...`, etaSub(startTime, processed, totalCount));
             }
 
             if (!journey.hasCommunications || journey._commsStale) {

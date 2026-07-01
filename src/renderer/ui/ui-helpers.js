@@ -139,12 +139,34 @@ export function showCustomConfirmComplex(message, okText, cancelText) {
  * Muestra un overlay de carga para prevenir interacciones.
  * @param {string} [message='Cargando...'] - El mensaje a mostrar.
  */
-export function blockUI(message = 'Cargando...') {
+export function blockUI(message = 'Cargando...', subMessage = '') {
     if (document.activeElement) document.activeElement.blur();
     if (elements.loaderText) {
-        elements.loaderText.textContent = message;
+        if (subMessage) {
+            const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            elements.loaderText.innerHTML = `${esc(message)}<div style="margin-top:8px;"><span style="display:inline-block; font-size:0.8em; font-weight:600; color:#fff; background:#558ac7; padding:3px 10px; border-radius:12px;">${esc(subMessage)}</span></div>`;
+        } else {
+            elements.loaderText.textContent = message;
+        }
     }
     elements.loaderOverlay.style.display = 'flex';
+}
+
+/**
+ * Formatea una duración en segundos a un texto de estimación legible (~X s / ~X min / ~X h).
+ * @param {number} seconds
+ * @returns {string}
+ */
+export function formatEta(seconds) {
+    if (!isFinite(seconds) || seconds < 0) return '';
+    const s = Math.round(seconds);
+    if (s < 60) return `~${s} s`;
+    const m = Math.floor(s / 60);
+    const remS = s % 60;
+    if (m < 60) return remS ? `~${m} min ${remS} s` : `~${m} min`;
+    const h = Math.floor(m / 60);
+    const remM = m % 60;
+    return remM ? `~${h} h ${remM} min` : `~${h} h`;
 }
 
 /** Oculta el overlay de carga. */

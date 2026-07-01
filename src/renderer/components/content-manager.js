@@ -168,6 +168,8 @@ let templateSetsCache = null;
 let selectedContentIds = new Set();
 // Fecha de la caché de contenidos cargada (para re-guardar tras un borrado sin cambiarla)
 let contentLastRefresh = null;
+// Cliente cuyos contenidos ya están cargados en memoria (evita releer el fichero en cada acceso)
+let contentLoadedClient = null;
 
 // Tipos cuyo uso se determina por los Journeys
 const EMAIL_ASSET_TYPE_IDS = [207, 208, 209];
@@ -253,17 +255,25 @@ export async function view() {
         return;
     }
 
+    // Resetear filtros y selección al entrar en la vista
+    usageFilter = 'all';
+    if (elements.contentUsageFilter) elements.contentUsageFilter.value = 'all';
+    journeyUsageFilter = 'all';
+    if (elements.contentJourneyFilter) elements.contentJourneyFilter.value = 'all';
+    resetTemplateFilter();
+    resetDateFilter();
+    selectedContentIds.clear();
+
+    // Ya cargado en memoria para este cliente → no releer el fichero de contenidos (537 MB).
+    // Pero sí recargamos la caché de journeys (mucho más ligera) para reflejar cambios recientes.
+    if (contentLoadedClient === clientName) {
+        await loadCachedJourneys(clientName);
+        renderAllTabs();
+        return;
+    }
+
     ui.blockUI("Cargando contenidos...");
     try {
-        // Resetear filtros y selección al entrar en la vista
-        usageFilter = 'all';
-        if (elements.contentUsageFilter) elements.contentUsageFilter.value = 'all';
-        journeyUsageFilter = 'all';
-        if (elements.contentJourneyFilter) elements.contentJourneyFilter.value = 'all';
-        resetTemplateFilter();
-        resetDateFilter();
-        selectedContentIds.clear();
-
         // Cargar caché de journeys (si existe) para poder filtrar por uso
         await loadCachedJourneys(clientName);
 
@@ -273,6 +283,7 @@ export async function view() {
             blockUnusedIdsCache = null;
             templateSetsCache = null;
             contentLastRefresh = result.lastRefresh || null;
+            contentLoadedClient = clientName;
             enrichEmailsWithResolvedContent(fullContentList);
             logger.logMessage(`Cargados ${fullContentList.length} contenidos desde caché para "${clientName}".`);
             renderAllTabs();
@@ -283,6 +294,7 @@ export async function view() {
             blockUnusedIdsCache = null;
             templateSetsCache = null;
             contentLastRefresh = null;
+            contentLoadedClient = clientName;
             renderAllTabs();
             updateCacheDate(null);
         }
@@ -304,6 +316,7 @@ export function clearCache() {
     templateSetsCache = null;
     selectedContentIds.clear();
     contentLastRefresh = null;
+    contentLoadedClient = null;
     usageFilter = 'all';
     journeyUsageFilter = 'all';
     if (elements.contentJourneyFilter) elements.contentJourneyFilter.value = 'all';
@@ -358,7 +371,7 @@ async function fetchContentData(typesToFetch) {
         const contents = await mcApiService.fetchAllContentAssets(
             typesToFetch,
             getAuthenticatedConfig,
-            (msg) => ui.blockUI(msg),
+            (msg, sub) => ui.blockUI(msg, sub),
             async (partialResults) => {
                 await window.electronAPI.saveClientContents({ 
                     clientName, 
@@ -376,6 +389,7 @@ async function fetchContentData(typesToFetch) {
         templateSetsCache = null;
         selectedContentIds.clear();
         contentLastRefresh = new Date().toISOString();
+        contentLoadedClient = clientName;
         renderAllTabs();
         updateCacheDate(contentLastRefresh);
         ui.showCustomAlert(`Se han obtenido ${fullContentList.length} contenidos para "${clientName}".`);
@@ -439,24 +453,29 @@ function createDynamicTabs() {
         contentContainer.appendChild(contentDiv);
     });
 
-    // Re-añadir el contador total y fecha
+    // Contador total y fechas: columna alineada a la derecha, cada dato en su línea
+    const infoBox = document.createElement('div');
+    infoBox.style.cssText = 'margin-left:auto; display:flex; flex-direction:column; align-items:flex-end; gap:2px; padding-bottom:6px; text-align:right; white-space:nowrap;';
+
     const totalSpan = document.createElement('span');
     totalSpan.id = 'content-total-count';
-    totalSpan.style.cssText = 'font-size:0.85em; color:#999; margin-left:auto; align-self:flex-end; padding-bottom:6px; white-space:nowrap;';
-    buttonsContainer.appendChild(totalSpan);
+    totalSpan.style.cssText = 'font-size:0.85em; color:#999;';
+    infoBox.appendChild(totalSpan);
     elements.contentTotalCount = totalSpan;
 
     const cacheDate = document.createElement('span');
     cacheDate.id = 'content-cache-date';
-    cacheDate.style.cssText = 'font-size:0.75em; color:#bbb; margin-left:8px; align-self:flex-end; padding-bottom:6px; white-space:nowrap;';
-    buttonsContainer.appendChild(cacheDate);
+    cacheDate.style.cssText = 'font-size:0.75em; color:#bbb;';
+    infoBox.appendChild(cacheDate);
     elements.contentCacheDate = cacheDate;
 
     const journeyDate = document.createElement('span');
     journeyDate.id = 'content-journey-cache-date';
-    journeyDate.style.cssText = 'font-size:0.75em; color:#bbb; margin-left:8px; align-self:flex-end; padding-bottom:6px; white-space:nowrap;';
-    buttonsContainer.appendChild(journeyDate);
+    journeyDate.style.cssText = 'font-size:0.75em; color:#bbb;';
+    infoBox.appendChild(journeyDate);
     elements.contentJourneyCacheDate = journeyDate;
+
+    buttonsContainer.appendChild(infoBox);
 }
 
 function setupEventListeners() {
@@ -1054,7 +1073,17 @@ function resolveComponent(c) {
             : (c.name ? fullContentList.find(x => x.assetTypeId === 4 && x.name === c.name) : null);
         return { id: c.id || (tpl ? tpl.id : ''), name: (tpl ? tpl.name : '') || c.name || 'Plantilla', type: 'Template', ref: c.ref || '', inline: false };
     }
+    if (c.kind === 'block') {
+        const a = c.id ? fullContentList.find(x => String(x.id) === c.id) : null;
+        return { id: c.id || '', name: (a ? a.name : '') || c.name || `ID ${c.id}`, type: (a ? a.assetTypeName : null) || c.type || 'Bloque', ref: c.ref || '', inline: false };
+    }
     if (c.kind === 'inline') {
+        // Compatibilidad con caché antigua: si trae un id real, es un bloque, no inline
+        const hasRealId = c.id && /^\d+$/.test(String(c.id));
+        if (hasRealId) {
+            const a = fullContentList.find(x => String(x.id) === String(c.id));
+            return { id: c.id, name: (a ? a.name : '') || c.name || `ID ${c.id}`, type: (a ? a.assetTypeName : null) || c.type || 'Bloque', ref: c.ref || '', inline: false };
+        }
         return { id: c.id || '', name: c.name, type: c.type || 'Bloque', ref: c.ref || '', inline: true };
     }
     if (c.kind === 'ref') {
@@ -1062,6 +1091,9 @@ function resolveComponent(c) {
         return { id: c.id || '', name: a ? a.name : `ID ${c.id}`, type: (a ? a.assetTypeName : null) || c.type || 'Bloque', ref: c.ref || '', inline: false };
     }
     if (c.kind === 'macro') {
+        // Solo mostramos los ContentBlockBy* del contenido base (como el Buscador). Los de caché
+        // antigua (extraídos del contenido ensamblado, incluidos los de bloques embebidos) se omiten.
+        if (!c.fromBase) return null;
         let a = null;
         if (c.macroType === 'Id') a = fullContentList.find(x => String(x.id) === c.macroValue);
         else if (c.macroType === 'Key') a = fullContentList.find(x => x.customerKey === c.macroValue);
