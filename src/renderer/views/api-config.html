@@ -11,11 +11,15 @@
     <h2>Configuración de APIs</h2>
     <!-- Gestión de Clientes (Crear, Seleccionar) - Se mantiene fuera de las pestañas -->
     <div class="client-management">
-        <input type="text" id="clientName" placeholder="Nombre del Cliente">
+        <input type="text" id="configClientName" placeholder="Nombre del Cliente">
         <select id="savedConfigs">
             <option value="">Seleccionar configuración...</option>
         </select>
     </div>
+    <!-- Contexto activo (cliente + BU). Lo leen las vistas como clave de caché; no editable por el usuario. -->
+    <input type="hidden" id="clientName">
+    <!-- MID de la BU activa (account_id). Lo leen las vistas que necesitan el MID en uso. -->
+    <input type="hidden" id="activeMid">
 
     <!-- ========================================================== -->
     <!-- ESTRUCTURA DE PESTAÑAS  -->
@@ -23,6 +27,7 @@
     <div class="tabs-container">
         <div class="tab-buttons">
             <button class="tab-button active" data-tab="api-settings-tab">Configuración de API</button>
+            <button class="tab-button" data-tab="business-units-tab">Business Units</button>
             <button class="tab-button" data-tab="de-search-tab">DEs Búsqueda de Clientes</button>
         </div>
 
@@ -31,7 +36,7 @@
             <!-- Datos de la Aplicación API (Bloque movido aquí) -->
             <div class="config-block">
                 <h3>Datos Aplicación</h3>
-                <div class="form-group"><label for="businessUnit">Business Unit (MID)</label><input type="text" id="businessUnit"></div>
+                <div class="form-group"><label for="businessUnit">Business Unit principal (MID)</label><input type="text" id="businessUnit" placeholder="MID de la BU principal (Enterprise)"></div>
                 <div class="form-group"><label for="authUri">Auth URI</label><input type="text" id="authUri" placeholder="Ej: https://...mc.auth.marketingcloudapis.com/v2/token"></div>
                 <div class="form-group"><label for="clientId">Client ID</label><input type="text" id="clientId"></div>
                 <div class="form-group"><label for="clientSecret">Client Secret</label><input type="password" id="clientSecret" placeholder="Necesario para el primer login"></div>
@@ -42,7 +47,41 @@
             </div>
         </div>
 
-        <!-- PESTAÑA 2: DEs Búsqueda de Clientes -->
+        <!-- PESTAÑA 2: Business Units del cliente -->
+        <div id="business-units-tab" class="tab-content">
+            <!-- Business Units del cliente: se reutilizan las MISMAS credenciales para todas.
+                 Se pueden añadir a mano o autodescubrir con "Sincronizar BUs" (requiere sesión activa). -->
+            <div class="config-block flex-layout-block">
+                <div class="config-block-header">
+                    <h3>Business Units del cliente</h3>
+                    <div class="header-actions">
+                        <button id="addBuRowBtn" class="action-button">Añadir BU</button>
+                        <button id="syncBuBtn" class="action-button activate-btn">Sincronizar BUs</button>
+                    </div>
+                </div>
+                <p class="info-text" style="text-align:left; margin:0 0 15px;">
+                    Todas las BUs comparten las credenciales de la pestaña "Configuración de API". La BU principal se añade automáticamente con el MID indicado.
+                    "Sincronizar BUs" descubre las BUs del tenant (necesita haber hecho login primero). Estas BUs son las que aparecen
+                    en el desplegable de cliente de la barra lateral.
+                </p>
+                <div class="table-container">
+                    <div class="table-scroll-wrapper">
+                        <table id="bu-list-table" class="editable-row-table">
+                            <thead>
+                                <tr>
+                                    <th>Nombre BU</th>
+                                    <th>MID</th>
+                                    <th>Visible</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bu-list-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 3: DEs Búsqueda de Clientes -->
         <div id="de-search-tab" class="tab-content">
             <!-- Configuración de Data Views para el buscador de envíos (Bloque movido aquí) -->
             <div class="config-block flex-layout-block">

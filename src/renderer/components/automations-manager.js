@@ -262,15 +262,8 @@ async function fetchData() {
         
         fullAutomationList = await mcApiService.fetchAllAutomations(apiConfig);
 
-        // Filtrar automatismos de sistema (empiezan por el MID)
-        let mid = elements.businessUnitInput?.value?.trim();
-        if (!mid) {
-            try {
-                const clientName = elements.clientNameInput?.value?.trim();
-                const configs = await window.electronAPI.loadGlobalConfigs();
-                if (clientName && configs?.[clientName]) mid = configs[clientName].businessUnit;
-            } catch (e) {}
-        }
+        // Filtrar automatismos de sistema (empiezan por el MID de la BU activa)
+        let mid = elements.activeMidInput?.value?.trim();
         if (mid) {
             fullAutomationList = fullAutomationList.filter(a => !a.name.startsWith(mid));
         }

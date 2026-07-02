@@ -53,10 +53,13 @@
 			<!-- Selector de Cliente y Estado de Sesión -->
 			<div class="sidebar-client-selector">
 				<h2>Cliente</h2>
-				<select id="sidebarClientSelect">
-					<option value="">Ninguno seleccionado</option>
-				</select>
-				<p id="login-status" class="login-status inactive">🔴 Sesión no iniciada</p>
+				<div id="clientSelector" class="client-selector">
+						<button type="button" id="clientSelectorBtn" class="client-selector-btn">
+							<span id="clientSelectorLabel">Ninguno seleccionado</span>
+							<span class="client-selector-caret">▾</span>
+						</button>
+					</div>
+				<p id="login-status" class="login-status inactive">Sesión no iniciada</p>
 			</div>
 
 			<h2 id="sidebar-views-title">Vistas</h2>
@@ -133,12 +136,8 @@
       <pre><code id="log-messages">Esperando acciones...</code></pre>
     </div>
     <div id="log-request-block" class="log-block">
-      <h4>Llamadas API</h4>
-      <pre><code id="log-request"></code></pre>
-    </div>
-    <div id="log-response-block" class="log-block">
-      <h4>Respuestas API</h4>
-      <pre><code id="log-response"></code></pre>
+      <h4>Llamadas API (petición ▸ respuesta)</h4>
+      <div id="log-transcript" class="log-transcript"></div>
     </div>
   </div>
 </aside>

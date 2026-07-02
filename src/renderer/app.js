@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	function updateLoginStatus(isLoggedIn, clientName = '', userInfo = null) {
 		if (isLoggedIn) {
-			let statusHTML = `🟢 `;
+			let statusHTML = ``;
 			if (userInfo && userInfo.email) {
 				statusHTML += `<small style="font-weight: normal;">${userInfo.preferred_username}</small>`;
 			}else{
@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			}
 			elements.loginStatusEl.innerHTML = statusHTML;
 		} else {
-			elements.loginStatusEl.innerHTML = '🔴 Sesión no iniciada';
+			elements.loginStatusEl.innerHTML = 'Sesión no iniciada';
 		}
         elements.loginStatusEl.className = `login-status ${isLoggedIn ? 'active' : 'inactive'}`;
 	}
@@ -176,11 +176,15 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * @throws {Error} Si no hay cliente seleccionado o si la sesión no es válida.
 	 */
 	async function getAuthenticatedConfig() {
-		const clientName = elements.clientNameInput.value.trim();
+		// El contexto activo (cliente + BU) lo gestiona org-manager. El nombre del cliente
+		// identifica las credenciales; el MID indica la Business Unit (account_id) del token.
+		const ctx = orgManager.getActiveContext();
+		const clientName = ctx.clientName;
+		const mid = ctx.mid;
 		if (!clientName) throw new Error("No hay ningún cliente seleccionado.");
 
-		// Llama al proceso principal para obtener el token de forma segura.
-		const apiConfig = await window.electronAPI.getApiConfig(clientName);
+		// Llama al proceso principal para obtener el token de forma segura (token por BU).
+		const apiConfig = await window.electronAPI.getApiConfig(clientName, mid);
 
 		// Si no hay token, la sesión no es válida.
 		if (!apiConfig || !apiConfig.accessToken) {
@@ -200,8 +204,8 @@ document.addEventListener('DOMContentLoaded', function () {
 		queryTextFinder.updateOrgInfo(apiConfig.orgInfo);
 		updateLoginStatus(true, clientName, currentUserInfo);
 
-		// Añade el MID (Business Unit) al objeto de configuración antes de devolverlo.
-		apiConfig.businessUnit = elements.businessUnitInput.value.trim();
+		// Añade el MID (Business Unit activa) al objeto de configuración antes de devolverlo.
+		apiConfig.businessUnit = elements.activeMidInput.value.trim();
 		return apiConfig;
 	}
 	
@@ -210,9 +214,8 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * único string y lo descarga como un fichero .txt.
 	 */
 	function generateAndDownloadLog() {
-		const messagesContent = elements.logMessagesEl.textContent;
-		const requestContent = elements.logRequestEl.textContent;
-		const responseContent = elements.logResponseEl.textContent;
+		const messagesContent = logger.getMessagesText ? logger.getMessagesText() : elements.logMessagesEl.textContent;
+		const transcriptContent = logger.getTranscriptText ? logger.getTranscriptText() : (elements.logTranscriptEl?.textContent || '');
 
 		const separator = "\n\n========================================\n\n";
 
@@ -220,11 +223,8 @@ document.addEventListener('DOMContentLoaded', function () {
 			"--- MENSAJES ---",
 			messagesContent,
 			separator,
-			"--- LLAMADAS API ---",
-			requestContent,
-			separator,
-			"--- RESPUESTAS API ---",
-			responseContent
+			"--- LLAMADAS API (petición ▸ respuesta) ---",
+			transcriptContent
 		].join('\n\n');
 
 		// Crear un nombre de fichero con la fecha y hora actual
@@ -350,8 +350,8 @@ document.addEventListener('DOMContentLoaded', function () {
 			ui.unblockUI();
 			if (result.success) {
 				ui.showCustomAlert("Login completado con éxito.");
-				// Carga la configuración del cliente recién logueado.
-				orgManager.loadAndSyncClientConfig(elements.clientNameInput.value);
+				// Carga la configuración del cliente recién logueado (activa su BU principal).
+				orgManager.loadAndSyncClientConfig(elements.configClientNameInput.value);
 			} else {
 				ui.showCustomAlert(`Error en el login: ${result.error}`);
 				updateLoginStatus(false);

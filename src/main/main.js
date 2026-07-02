@@ -27,15 +27,11 @@ app.disableHardwareAcceleration();
 
 // --- Variables de estado ---
 let mainWindow;
-let activeSession = { 
-    clientName: null,
-    accessToken: null,
-    soapUri: null,
-    restUri: null,
-    expiryTimestamp: 0,
-    userInfo: null,
-    orgInfo: null 
-};
+// Sesiones cacheadas por combinación cliente+BU. Clave: `${clientName}::${mid}`.
+// Un mismo cliente (tenant) puede tener varias BUs activas; cada una tiene su propio
+// access token (acuñado desde el refresh token compartido usando account_id=mid).
+let sessions = {};
+function sessionKey(clientName, mid) { return `${clientName}::${mid || ''}`; }
 let sheetsClientPromise = null;
 
 // --- Constantes ---
@@ -317,16 +313,27 @@ ipcMain.on('open-external-link', (event, url) => {
 ipcMain.handle('delete-client-cache', (event, clientName) => {
     try {
         const userDataPath = app.getPath('userData');
-        const files = [
-            path.join(userDataPath, 'ClientContents', `${clientName}.json`),
-            path.join(userDataPath, 'ClientJourneys', `${clientName}.json`),
-            path.join(userDataPath, 'CalendarCache', `${clientName}.json`),
-            path.join(userDataPath, 'ClientCache', `audit_${clientName}.json`),
-            path.join(userDataPath, 'ClientCache', `cloudpages_${clientName}.json`)
+        // Saneado idéntico al del renderer (org-manager) para que los prefijos casen con los nombres de fichero.
+        const sanitize = (s) => String(s || '').replace(/[\\\/:*?"<>|]/g, '_').replace(/\s+/g, ' ').trim();
+        const safeClient = sanitize(clientName);
+        // Un cliente puede tener varias BUs cuyas cachés se nombran "Cliente - NombreBU".
+        // Se borran tanto la caché exacta ("Cliente", cachés antiguas) como las de todas sus BUs ("Cliente - *").
+        const matchesClient = (base, prefix) => base === prefix || base.startsWith(`${prefix} - `);
+        const dirs = [
+            { dir: 'ClientContents', prefix: safeClient },
+            { dir: 'ClientJourneys', prefix: safeClient },
+            { dir: 'CalendarCache',  prefix: safeClient },
+            { dir: 'ClientCache',    prefix: `audit_${safeClient}` },
+            { dir: 'ClientCache',    prefix: `cloudpages_${safeClient}` }
         ];
-        for (const filePath of files) {
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
+        for (const { dir, prefix } of dirs) {
+            const dirPath = path.join(userDataPath, dir);
+            if (!fs.existsSync(dirPath)) continue;
+            for (const file of fs.readdirSync(dirPath)) {
+                if (!file.endsWith('.json')) continue;
+                if (matchesClient(file.slice(0, -5), prefix)) {
+                    try { fs.unlinkSync(path.join(dirPath, file)); } catch (e) {}
+                }
             }
         }
         return { success: true };
@@ -635,7 +642,9 @@ ipcMain.handle('save-multiple-csvs', async (event, { folderPath, files }) => {
 
 
 // --- 5. GESTIÓN DE CREDENCIALES Y TOKENS ---
-async function refreshAccessToken(clientName) {
+// Acuña un access token para un cliente+BU concreto usando el refresh token compartido del
+// cliente y account_id=mid (así una sola credencial/refresh sirve para todas las BUs del tenant).
+async function refreshAccessToken(clientName, mid) {
     const refreshToken = await keytar.getPassword(KEYTAR_SERVICE_NAME, `${clientName}-refreshToken`);
     const clientSecret = await keytar.getPassword(KEYTAR_SERVICE_NAME, `${clientName}-clientSecret`);
     const clientId = await keytar.getPassword(KEYTAR_SERVICE_NAME, `${clientName}-clientId`);
@@ -647,10 +656,14 @@ async function refreshAccessToken(clientName) {
 
     try {
         const payload = { grant_type: 'refresh_token', client_id: clientId, client_secret: clientSecret, refresh_token: refreshToken };
+        if (mid) payload.account_id = mid; // cambia el contexto a la BU solicitada
         const response = await axios.post(authUri, payload, { headers: { 'Content-Type': 'application/json' } });
         const tokenData = response.data;
 
-        await keytar.setPassword(KEYTAR_SERVICE_NAME, `${clientName}-refreshToken`, tokenData.refresh_token);
+        // SFMC rota el refresh token en cada refresco; se guarda compartido por cliente.
+        if (tokenData.refresh_token) {
+            await keytar.setPassword(KEYTAR_SERVICE_NAME, `${clientName}-refreshToken`, tokenData.refresh_token);
+        }
 
         let userInfo = null, orgInfo = null;
         try {
@@ -664,51 +677,52 @@ async function refreshAccessToken(clientName) {
             console.error("No se pudo obtener la información del usuario/organización.", e.message);
         }
 
-        activeSession = {
-            clientName: clientName,
+        sessions[sessionKey(clientName, mid)] = {
+            clientName, mid,
             accessToken: tokenData.access_token,
             soapUri: tokenData.soap_instance_url,
             restUri: tokenData.rest_instance_url,
             expiryTimestamp: Date.now() + (tokenData.expires_in - TOKEN_EXPIRY_BUFFER) * 1000,
-            userInfo: userInfo,
-            orgInfo: orgInfo,
+            userInfo, orgInfo,
             scope: tokenData.scope
         };
-        console.log(activeSession);
     } catch (error) {
         console.error("Error crítico al refrescar el token.", error.response ? error.response.data : error.message);
+        // El refresh token compartido pudo quedar invalidado → forzar nuevo login del cliente.
         await keytar.deletePassword(KEYTAR_SERVICE_NAME, `${clientName}-refreshToken`);
-        activeSession = {};
+        delete sessions[sessionKey(clientName, mid)];
         throw new Error("Fallo al refrescar el token. Por favor, haz login de nuevo.");
     }
 }
 
-ipcMain.handle('get-api-config', async (event, clientName) => {
+ipcMain.handle('get-api-config', async (event, arg) => {
+    // Acepta el formato nuevo {clientName, mid} y el antiguo (string) por compatibilidad.
+    const clientName = (typeof arg === 'string') ? arg : arg?.clientName;
+    const mid        = (typeof arg === 'string') ? null : (arg?.mid || null);
     if (!clientName) return null;
 
-    let needsRefresh = false;
+    const key = sessionKey(clientName, mid);
+    const cached = sessions[key];
 
-    // Una sesión es válida si tiene un token y no ha expirado.
-    if (activeSession.clientName !== clientName || !activeSession.accessToken || Date.now() >= activeSession.expiryTimestamp) {
-        needsRefresh = true;
-    } 
-
-    if (needsRefresh) {
+    // Una sesión es válida si tiene token y no ha expirado.
+    if (!cached || !cached.accessToken || Date.now() >= cached.expiryTimestamp) {
         try {
-            await refreshAccessToken(clientName);
+            await refreshAccessToken(clientName, mid);
         } catch (e) {
             mainWindow.webContents.send('require-login', { message: e.message });
             return null;
         }
     }
 
+    const s = sessions[key];
+    if (!s) return null;
     return {
-        accessToken: activeSession.accessToken,
-        soapUri: activeSession.soapUri ? activeSession.soapUri + 'Service.asmx' : null,
-        restUri: activeSession.restUri,
-        userInfo: activeSession.userInfo,
-        orgInfo: activeSession.orgInfo,
-        scope:  activeSession.scope
+        accessToken: s.accessToken,
+        soapUri: s.soapUri ? s.soapUri + 'Service.asmx' : null,
+        restUri: s.restUri,
+        userInfo: s.userInfo,
+        orgInfo: s.orgInfo,
+        scope:  s.scope
     };
 });
 
@@ -779,14 +793,16 @@ ipcMain.on('start-login', async (event, config) => {
                         console.error("No se pudo obtener la info de usuario/organización.", e.message);
                     }
 
-                    activeSession = {
+                    sessions[sessionKey(config.clientName, config.businessUnit)] = {
                         clientName: config.clientName,
+                        mid: config.businessUnit,
                         accessToken: tokenData.access_token,
                         soapUri: tokenData.soap_instance_url,
                         restUri: tokenData.rest_instance_url,
                         expiryTimestamp: Date.now() + (tokenData.expires_in - TOKEN_EXPIRY_BUFFER) * 1000,
                         userInfo: userInfo,
-                        orgInfo: orgInfo
+                        orgInfo: orgInfo,
+                        scope: tokenData.scope
                     };
                     
                     mainWindow.webContents.send('token-received', { success: true, data: { ...tokenData, userInfo, orgInfo } });
@@ -818,9 +834,10 @@ ipcMain.on('logout', async (event, clientName) => {
     await keytar.deletePassword(KEYTAR_SERVICE_NAME, `${clientName}-clientSecret`);
     await keytar.deletePassword(KEYTAR_SERVICE_NAME, `${clientName}-clientId`);
     await keytar.deletePassword(KEYTAR_SERVICE_NAME, `${clientName}-authUri`);
-    
-    if (activeSession.clientName === clientName) {
-        activeSession = {};
+
+    // Eliminar todas las sesiones (todas las BUs) de este cliente.
+    for (const k of Object.keys(sessions)) {
+        if (sessions[k]?.clientName === clientName) delete sessions[k];
     }
 
     mainWindow.webContents.send('logout-success');

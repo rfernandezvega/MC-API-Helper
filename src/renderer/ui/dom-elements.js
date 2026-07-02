@@ -37,7 +37,8 @@ export function init() {
     // --- 2. Navegación y Barras Laterales ---
     elements.mainMenu = document.getElementById('main-menu');
     elements.allSections = document.querySelectorAll('#main-content > .section');
-    elements.sidebarClientSelect = document.getElementById('sidebarClientSelect');
+    elements.clientSelectorBtn = document.getElementById('clientSelectorBtn');
+    elements.clientSelectorLabel = document.getElementById('clientSelectorLabel');
     elements.loginStatusEl = document.getElementById('login-status');
     elements.tabButtons = document.querySelectorAll('.tab-button');
     elements.tabContents = document.querySelectorAll('.tab-content');
@@ -50,16 +51,20 @@ export function init() {
     elements.logDrawerBackdrop = document.getElementById('log-drawer-backdrop');
     elements.logHeaderTitle = document.getElementById('log-header-title');
     elements.logMessagesEl = document.getElementById('log-messages');
-    elements.logRequestEl = document.getElementById('log-request');
-    elements.logResponseEl = document.getElementById('log-response');
+    elements.logTranscriptEl = document.getElementById('log-transcript');
 
     // --- 4. Sección: Configuración de APIs ---
-    elements.clientNameInput = document.getElementById('clientName');
+    elements.clientNameInput = document.getElementById('clientName');            // clave de caché del contexto activo (cliente+BU), oculto
+    elements.configClientNameInput = document.getElementById('configClientName'); // nombre del cliente en el formulario (crear/editar)
     elements.savedConfigsSelect = document.getElementById('savedConfigs');
+    elements.buListTbody = document.getElementById('bu-list-tbody');
+    elements.addBuRowBtn = document.getElementById('addBuRowBtn');
+    elements.syncBuBtn = document.getElementById('syncBuBtn');
     elements.authUriInput = document.getElementById('authUri');
     elements.clientIdInput = document.getElementById('clientId');
     elements.clientSecretInput = document.getElementById('clientSecret');
-    elements.businessUnitInput = document.getElementById('businessUnit');
+    elements.businessUnitInput = document.getElementById('businessUnit');  // MID principal (formulario/guardado)
+    elements.activeMidInput = document.getElementById('activeMid');         // MID de la BU activa (account_id)
     elements.tokenField = document.getElementById('token');
     elements.soapUriInput = document.getElementById('soapUri');
     elements.restUriInput = document.getElementById('restUri');

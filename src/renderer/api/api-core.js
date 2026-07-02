@@ -4,6 +4,7 @@
 // ===================================================================
 
 let silenceResponses = false;
+let apiCallSeq = 0; // correlaciona cada llamada con su respuesta en el log
 
 export let logger = {
     logApiCall: () => {}, 
@@ -32,7 +33,8 @@ export function setSilentResponses(silent) {
  * @throws {Error} Si la respuesta de la API no indica un estado de éxito.
  */
 export async function executeSoapRequest(soapUri, soapPayload) {
-    logger.logApiCall({ endpoint: soapUri, payload: soapPayload });
+    const callId = ++apiCallSeq;
+    logger.logApiCall({ endpoint: soapUri, method: 'POST', payload: soapPayload, _id: callId });
 
     const response = await fetch(soapUri, {
         method: 'POST',
@@ -41,11 +43,21 @@ export async function executeSoapRequest(soapUri, soapPayload) {
     });
     const responseText = await response.text();
 
-    logger.logApiResponse({ status: response.status, body: responseText });
+    logger.logApiResponse({ endpoint: soapUri, status: response.status, body: responseText, _id: callId });
 
     if (!responseText.includes('<OverallStatus>OK</OverallStatus>') && !responseText.includes('<OverallStatus>MoreDataAvailable</OverallStatus>')) {
-        const errorMatch = responseText.match(/<StatusMessage>(.*?)<\/StatusMessage>/);
-        throw new Error(errorMatch ? errorMatch[1] : 'Error desconocido en la respuesta SOAP.');
+        // Intentar extraer el mensaje de error: StatusMessage (Retrieve) o faultstring (SOAP Fault).
+        const statusMatch = responseText.match(/<StatusMessage>([\s\S]*?)<\/StatusMessage>/);
+        const faultMatch = responseText.match(/<faultstring[^>]*>([\s\S]*?)<\/faultstring>/i);
+        let message = statusMatch?.[1] || faultMatch?.[1];
+        if (!message) {
+            // Sin mensaje reconocible: incluir un fragmento de la respuesta (o el estado HTTP) para diagnosticar.
+            const snippet = (responseText || '').trim().slice(0, 300);
+            message = snippet
+                ? `Respuesta SOAP inesperada (HTTP ${response.status}): ${snippet}`
+                : `Respuesta SOAP vacía (HTTP ${response.status}).`;
+        }
+        throw new Error(message);
     }
     return responseText;
 }
@@ -58,12 +70,13 @@ export async function executeSoapRequest(soapUri, soapPayload) {
  * @throws {Error} Si el código HTTP no es 2xx o la API devuelve un error.
  */
 export async function executeRestRequest(url, options = {}) {
-    logger.logApiCall({ endpoint: url, options });
+    const callId = ++apiCallSeq;
+    logger.logApiCall({ endpoint: url, options, _id: callId });
     const response = await fetch(url, options);
     const responseText = await response.text();
-    
+
     if (!silenceResponses) {
-        logger.logApiResponse({ status: response.status, body: responseText });
+        logger.logApiResponse({ endpoint: url, status: response.status, body: responseText, _id: callId });
     }
 
     if (!response.ok) {

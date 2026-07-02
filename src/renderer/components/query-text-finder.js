@@ -99,7 +99,7 @@ function renderTable(queries) {
         const row = document.createElement('tr');
         
         // Link dinámico
-        const mid = elements.businessUnitInput.value;
+        const mid = elements.activeMidInput.value;
         const stack = elements.stackKeyInput.value.toLowerCase().replace('s', '').replace('tack', '');
         const objId = query.objectID || query.ObjectID || '';
         const queryLink = `https://mc.s${stack}.exacttarget.com/cloud/#app/Automation%20Studio/AutomationStudioFuel3/%23ActivityDetails/300/${objId}`;

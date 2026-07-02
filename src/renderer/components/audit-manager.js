@@ -709,14 +709,7 @@ async function auditAutomations(apiConfig, isDetailed) {
     let autos = await mcApiService.fetchAllAutomations(apiConfig);
     const rawTotalAutos = autos.length;
 
-    let mid = elements.businessUnitInput?.value?.trim();
-    if (!mid) {
-        try {
-            const clientName = elements.clientNameInput?.value?.trim();
-            const configs = await window.electronAPI.loadGlobalConfigs();
-            if (clientName && configs?.[clientName]) mid = configs[clientName].businessUnit;
-        } catch (e) {}
-    }
+    let mid = elements.activeMidInput?.value?.trim();
     if (mid) autos = autos.filter(a => !a.name.startsWith(mid));
 
     const ignoredSystemAutos = rawTotalAutos - autos.length;

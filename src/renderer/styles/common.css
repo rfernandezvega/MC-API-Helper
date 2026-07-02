@@ -110,13 +110,60 @@ body {
   border-bottom: 2px solid #f0f6fc; 
 }
 
-#sidebarClientSelect {
+/* --- Selector de cliente de dos niveles (Cliente → BU) --- */
+.client-selector { position: relative; margin-top: 5px; }
+.client-selector-btn {
   width: 100%;
-  padding: 8px;
+  padding: 8px 10px;
   border: 1px solid #ccc;
-  border-radius: 4px;
-  margin-top: 5px;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9em;
+  color: #2c3e50;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
+.client-selector-btn:hover { border-color: #69a3db; }
+.client-selector-btn.open { border-color: #69a3db; box-shadow: 0 0 0 2px rgba(105,163,219,0.2); }
+.client-selector-btn > span:first-child {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; flex: 1;
+}
+.client-selector-caret { color: #69a3db; font-size: 0.85em; flex-shrink: 0; }
+
+/* Menús flotantes (se insertan en <body> con position:fixed para no recortarse). */
+.client-selector-menu, .client-selector-submenu {
+  position: fixed;
+  background: #fff;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.14);
+  padding: 4px;
+  z-index: 4000;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.client-selector-submenu { min-width: 170px; }
+.cs-client, .cs-bu {
+  padding: 8px 10px;
+  border-radius: 5px;
+  font-size: 0.88em;
+  color: #2c3e50;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cs-client {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; cursor: default;
+}
+.cs-client:hover { background: #f0f6fc; }
+.cs-client.active > .cs-client-name { font-weight: 700; color: #1c5fa8; }
+.cs-client .cs-arrow { color: #9aa7b4; font-size: 0.8em; }
+.cs-bu:hover { background: #e8f1fb; color: #1c5fa8; }
+.cs-bu.active { font-weight: 700; color: #1c5fa8; background: #eaf3fc; }
+.cs-empty { padding: 8px 10px; color: #94a3b8; font-size: 0.85em; white-space: nowrap; }
 .login-status {
     font-size: 0.85em; font-weight: bold; text-align: center; margin: 10px 0 0 0;
     padding: 5px; border-radius: 4px; line-height: 1.4;
@@ -286,7 +333,6 @@ body {
   margin-top: 12px;
 }
 
-/* Cada bloque ocupa 1/3 del ancho */
 .log-drawer .log-block {
   flex: 1 1 0;
   display: flex;
@@ -294,6 +340,10 @@ body {
   min-width: 0;
   min-height: 0;
 }
+
+/* El panel de llamadas ocupa ~65% del ancho; Mensajes el resto. */
+.log-drawer #log-message-block { flex: 35 1 0; }
+.log-drawer #log-request-block { flex: 65 1 0; }
 
 .log-drawer .log-block h4 {
   margin: 0 0 8px 0;
@@ -314,6 +364,56 @@ body {
   font-size: 0.8em;
   min-height: 0;
   border: 1px solid #e9ecef;
+}
+
+/* --- Transcript colapsable de llamadas (petición ▸ respuesta) --- */
+.log-transcript {
+  flex-grow: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 4px;
+  background-color: #f4f6f8;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  font-size: 0.8em;
+}
+.log-entry {
+  background: #fff;
+  border: 1px solid #e3e8ee;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+.log-entry.error { border-color: #f0b4bb; }
+.log-entry > summary {
+  cursor: pointer;
+  padding: 7px 10px;
+  font-family: monospace;
+  color: #2c3e50;
+  list-style: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+  border-radius: 6px;
+}
+.log-entry > summary::-webkit-details-marker { display: none; }
+.log-entry > summary::before { content: '▸ '; color: #69a3db; font-weight: bold; }
+.log-entry[open] > summary::before { content: '▾ '; }
+.log-entry[open] > summary { border-bottom: 1px solid #e3e8ee; border-radius: 6px 6px 0 0; }
+.log-entry.error > summary { color: #b5303c; }
+.log-entry-body { padding: 8px 10px; }
+.log-entry-body .log-label { font-weight: bold; font-size: 0.92em; color: #558ac7; margin: 6px 0 2px; }
+/* Especificidad (0,0,2,1) para ganar a ".log-drawer .log-block pre". */
+.log-transcript .log-entry-body pre {
+  flex-grow: 0;
+  margin: 0 0 6px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  background: #f8fafc;
+  border: 1px solid #eef0f2;
+  border-radius: 4px;
+  padding: 6px;
+  font-size: 1em;
 }
 
 

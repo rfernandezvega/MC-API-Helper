@@ -29,9 +29,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * El proceso principal gestiona de forma segura la validez y el refresco del token.
    * Es una llamada asíncrona (invoke) que devuelve una promesa.
    * @param {string} clientName - El nombre del cliente para el cual se solicita la configuración.
+   * @param {string} [mid] - MID de la Business Unit para la que se quiere el token (account_id).
    * @returns {Promise<object|null>} Una promesa que resuelve con el objeto de configuración o null si falla.
    */
-  getApiConfig: (clientName) => ipcRenderer.invoke('get-api-config', clientName),
+  getApiConfig: (clientName, mid) => ipcRenderer.invoke('get-api-config', { clientName, mid }),
 
   /**
    * Cierra la sesión del cliente especificado.
