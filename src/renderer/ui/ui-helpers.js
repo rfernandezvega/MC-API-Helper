@@ -9,6 +9,32 @@ import * as logger from '../ui/logger.js';
 
 let zIndexCounter = 10000; // Un valor inicial alto
 
+/**
+ * Comprueba si una fecha (string ISO) está dentro del rango [fromStr, toStr].
+ * Los valores vacíos, '---' o '0001-01-01...' se consideran fuera de rango.
+ * Si un extremo del rango no se indica, ese límite no se aplica.
+ * @param {string} rawValue - Fecha del registro (ISO) o nula.
+ * @param {string} fromStr - Fecha "desde" en formato YYYY-MM-DD (o vacío).
+ * @param {string} toStr - Fecha "hasta" en formato YYYY-MM-DD (o vacío).
+ * @returns {boolean}
+ */
+export function isDateInRange(rawValue, fromStr, toStr) {
+    if (!rawValue) return false;
+    const s = String(rawValue).trim();
+    if (s === '' || s === '---' || s.startsWith('0001-01-01')) return false;
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return false;
+    if (fromStr) {
+        const from = new Date(fromStr + 'T00:00:00');
+        if (!isNaN(from.getTime()) && d < from) return false;
+    }
+    if (toStr) {
+        const to = new Date(toStr + 'T23:59:59.999');
+        if (!isNaN(to.getTime()) && d > to) return false;
+    }
+    return true;
+}
+
 
 /**
  * Muestra un modal de alerta no bloqueante.
@@ -113,12 +139,36 @@ export function showCustomConfirmComplex(message, okText, cancelText) {
  * Muestra un overlay de carga para prevenir interacciones.
  * @param {string} [message='Cargando...'] - El mensaje a mostrar.
  */
-export function blockUI(message = 'Cargando...') {
+export function blockUI(message = 'Cargando...', subMessage = '') {
     if (document.activeElement) document.activeElement.blur();
     if (elements.loaderText) {
-        elements.loaderText.textContent = message;
+        if (subMessage) {
+            const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            elements.loaderText.style.textAlign = 'center';
+            elements.loaderText.innerHTML = `${esc(message)}<div style="margin-top:8px; text-align:center;"><span style="display:inline-block; font-size:0.8em; font-weight:600; color:#fff; background:#558ac7; padding:3px 10px; border-radius:12px;">${esc(subMessage)}</span></div>`;
+        } else {
+            elements.loaderText.style.textAlign = '';
+            elements.loaderText.textContent = message;
+        }
     }
     elements.loaderOverlay.style.display = 'flex';
+}
+
+/**
+ * Formatea una duración en segundos a un texto de estimación legible (~X s / ~X min / ~X h).
+ * @param {number} seconds
+ * @returns {string}
+ */
+export function formatEta(seconds) {
+    if (!isFinite(seconds) || seconds < 0) return '';
+    const s = Math.round(seconds);
+    if (s < 60) return `~${s} s`;
+    const m = Math.floor(s / 60);
+    const remS = s % 60;
+    if (m < 60) return remS ? `~${m} min ${remS} s` : `~${m} min`;
+    const h = Math.floor(m / 60);
+    const remM = m % 60;
+    return remM ? `~${h} h ${remM} min` : `~${h} h`;
 }
 
 /** Oculta el overlay de carga. */

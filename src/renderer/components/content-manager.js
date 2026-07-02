@@ -148,8 +148,32 @@ const ITEMS_PER_PAGE = 15;
 let fullContentList = [];
 let getAuthenticatedConfig;
 let tabsState = {};
-let unusedFilter = false;
-let unusedIds = new Set();
+// Filtro de uso: 'all' | 'used' | 'unused'
+let usageFilter = 'all';
+// Filtro por uso en Journeys: 'all' | 'in' | 'out' (solo emails/push/sms/wa)
+let journeyUsageFilter = 'all';
+// Journeys cacheados (los descarga la vista de Journeys) y referencias de contenido extraídas
+let journeysList = [];
+let journeyEmailLegacyIds = new Set(); // triggeredSend.emailId (ID legacy) usado por los journeys
+let journeyAssetIds = new Set();       // assetId (sms/push/wa) = id del asset 230
+// Mapas: clave de referencia → lista de journeys {id, name, status, version} que la usan
+let journeyRefsByEmailLegacyId = new Map();
+let journeyRefsByAssetId = new Map();
+// Caché de IDs de bloques/plantillas/snippets sin uso (se recalcula al cambiar los contenidos)
+let blockUnusedIdsCache = null;
+// Filtro: mostrar solo emails cuya plantilla ya no existe
+let templateFilterActive = false;
+let templateSetsCache = null;
+// Selección de filas (ids como string) para borrado
+let selectedContentIds = new Set();
+// Fecha de la caché de contenidos cargada (para re-guardar tras un borrado sin cambiarla)
+let contentLastRefresh = null;
+// Cliente cuyos contenidos ya están cargados en memoria (evita releer el fichero en cada acceso)
+let contentLoadedClient = null;
+
+// Tipos cuyo uso se determina por los Journeys
+const EMAIL_ASSET_TYPE_IDS = [207, 208, 209];
+const MESSAGE_ASSET_TYPE_IDS = [230];
 
 // --- FUNCIONES PÚBLICAS ---
 
@@ -208,20 +232,18 @@ export function init(dependencies) {
         URL.revokeObjectURL(a.href);
     });
 
-    elements.unusedContentBtn.addEventListener('click', () => {
-        unusedFilter = !unusedFilter;
-        elements.unusedContentBtn.style.backgroundColor = unusedFilter ? '#28a745' : '';
-        elements.unusedContentBtn.textContent = unusedFilter ? 'Mostrar Todos' : 'Sin Uso';
-
-        if (unusedFilter) {
-            unusedIds = findUnusedContentIds();
-            logger.logMessage(`Contenidos sin uso detectados: ${unusedIds.size}`);
-        } else {
-            unusedIds.clear();
-        }
-
+    // Filtro "Plantilla inexistente" → solo emails con plantilla huérfana
+    elements.contentMissingTemplateFilter.addEventListener('click', () => {
+        templateFilterActive = !templateFilterActive;
+        const btn = elements.contentMissingTemplateFilter;
+        btn.style.backgroundColor = templateFilterActive ? '#558ac7' : '#f9f9f9';
+        btn.style.color = templateFilterActive ? '#fff' : '';
+        for (const tabId in tabsState) { tabsState[tabId].currentPage = 1; }
         renderAllTabs();
     });
+
+    // Botón Borrar → elimina los contenidos seleccionados
+    elements.deleteContentBtn.addEventListener('click', deleteSelectedContents);
 }
 
 export async function view() {
@@ -233,11 +255,35 @@ export async function view() {
         return;
     }
 
+    // Resetear filtros y selección al entrar en la vista
+    usageFilter = 'all';
+    if (elements.contentUsageFilter) elements.contentUsageFilter.value = 'all';
+    journeyUsageFilter = 'all';
+    if (elements.contentJourneyFilter) elements.contentJourneyFilter.value = 'all';
+    resetTemplateFilter();
+    resetDateFilter();
+    selectedContentIds.clear();
+
+    // Ya cargado en memoria para este cliente → no releer el fichero de contenidos (537 MB).
+    // Pero sí recargamos la caché de journeys (mucho más ligera) para reflejar cambios recientes.
+    if (contentLoadedClient === clientName) {
+        await loadCachedJourneys(clientName);
+        renderAllTabs();
+        return;
+    }
+
     ui.blockUI("Cargando contenidos...");
     try {
+        // Cargar caché de journeys (si existe) para poder filtrar por uso
+        await loadCachedJourneys(clientName);
+
         const result = await window.electronAPI.loadClientContents(clientName);
         if (result.success && result.contents) {
             fullContentList = result.contents;
+            blockUnusedIdsCache = null;
+            templateSetsCache = null;
+            contentLastRefresh = result.lastRefresh || null;
+            contentLoadedClient = clientName;
             enrichEmailsWithResolvedContent(fullContentList);
             logger.logMessage(`Cargados ${fullContentList.length} contenidos desde caché para "${clientName}".`);
             renderAllTabs();
@@ -245,6 +291,10 @@ export async function view() {
         } else {
             logger.logMessage(`No hay contenidos en caché para "${clientName}". Pulsa Refrescar para obtenerlos.`);
             fullContentList = [];
+            blockUnusedIdsCache = null;
+            templateSetsCache = null;
+            contentLastRefresh = null;
+            contentLoadedClient = clientName;
             renderAllTabs();
             updateCacheDate(null);
         }
@@ -257,13 +307,50 @@ export async function view() {
 
 export function clearCache() {
     fullContentList = [];
+    journeysList = [];
+    journeyEmailLegacyIds.clear();
+    journeyAssetIds.clear();
+    journeyRefsByEmailLegacyId.clear();
+    journeyRefsByAssetId.clear();
+    blockUnusedIdsCache = null;
+    templateSetsCache = null;
+    selectedContentIds.clear();
+    contentLastRefresh = null;
+    contentLoadedClient = null;
+    usageFilter = 'all';
+    journeyUsageFilter = 'all';
+    if (elements.contentJourneyFilter) elements.contentJourneyFilter.value = 'all';
+    resetTemplateFilter();
+    resetDateFilter();
     createDynamicTabs();
     CONTENT_TYPES_CONFIG.forEach(tab => {
         const tbody = document.getElementById(`tbody-${tab.id}`);
         if (tbody) tbody.innerHTML = '';
     });
     elements.contentManagerFilter.value = '';
+    if (elements.contentUsageFilter) elements.contentUsageFilter.value = 'all';
+    updateDeleteButtonState();
     logger.logMessage("Caché y tablas del Gestor de Contenidos limpiadas.");
+}
+
+/**
+ * Resetea el filtro "Plantilla inexistente" y su botón.
+ */
+function resetTemplateFilter() {
+    templateFilterActive = false;
+    if (elements.contentMissingTemplateFilter) {
+        elements.contentMissingTemplateFilter.style.backgroundColor = '#f9f9f9';
+        elements.contentMissingTemplateFilter.style.color = '';
+    }
+}
+
+/**
+ * Resetea el filtro de rango de fechas.
+ */
+function resetDateFilter() {
+    if (elements.contentDateField) elements.contentDateField.value = '';
+    if (elements.contentDateFrom) elements.contentDateFrom.value = '';
+    if (elements.contentDateTo) elements.contentDateTo.value = '';
 }
 
 // --- OBTENCIÓN DE DATOS POR API ---
@@ -284,7 +371,7 @@ async function fetchContentData(typesToFetch) {
         const contents = await mcApiService.fetchAllContentAssets(
             typesToFetch,
             getAuthenticatedConfig,
-            (msg) => ui.blockUI(msg),
+            (msg, sub) => ui.blockUI(msg, sub),
             async (partialResults) => {
                 await window.electronAPI.saveClientContents({ 
                     clientName, 
@@ -298,8 +385,13 @@ async function fetchContentData(typesToFetch) {
         enrichEmailsWithResolvedContent(contents);
 
         fullContentList = contents;
+        blockUnusedIdsCache = null;
+        templateSetsCache = null;
+        selectedContentIds.clear();
+        contentLastRefresh = new Date().toISOString();
+        contentLoadedClient = clientName;
         renderAllTabs();
-        updateCacheDate(new Date().toISOString());
+        updateCacheDate(contentLastRefresh);
         ui.showCustomAlert(`Se han obtenido ${fullContentList.length} contenidos para "${clientName}".`);
 
     } catch (error) {
@@ -361,18 +453,29 @@ function createDynamicTabs() {
         contentContainer.appendChild(contentDiv);
     });
 
-    // Re-añadir el contador total y fecha
+    // Contador total y fechas: columna alineada a la derecha, cada dato en su línea
+    const infoBox = document.createElement('div');
+    infoBox.style.cssText = 'margin-left:auto; display:flex; flex-direction:column; align-items:flex-end; gap:2px; padding-bottom:6px; text-align:right; white-space:nowrap;';
+
     const totalSpan = document.createElement('span');
     totalSpan.id = 'content-total-count';
-    totalSpan.style.cssText = 'font-size:0.85em; color:#999; margin-left:auto; align-self:flex-end; padding-bottom:6px; white-space:nowrap;';
-    buttonsContainer.appendChild(totalSpan);
+    totalSpan.style.cssText = 'font-size:0.85em; color:#999;';
+    infoBox.appendChild(totalSpan);
     elements.contentTotalCount = totalSpan;
 
     const cacheDate = document.createElement('span');
     cacheDate.id = 'content-cache-date';
-    cacheDate.style.cssText = 'font-size:0.75em; color:#bbb; margin-left:8px; align-self:flex-end; padding-bottom:6px; white-space:nowrap;';
-    buttonsContainer.appendChild(cacheDate);
+    cacheDate.style.cssText = 'font-size:0.75em; color:#bbb;';
+    infoBox.appendChild(cacheDate);
     elements.contentCacheDate = cacheDate;
+
+    const journeyDate = document.createElement('span');
+    journeyDate.id = 'content-journey-cache-date';
+    journeyDate.style.cssText = 'font-size:0.75em; color:#bbb;';
+    infoBox.appendChild(journeyDate);
+    elements.contentJourneyCacheDate = journeyDate;
+
+    buttonsContainer.appendChild(infoBox);
 }
 
 function setupEventListeners() {
@@ -380,6 +483,36 @@ function setupEventListeners() {
         for (const tabId in tabsState) { tabsState[tabId].currentPage = 1; }
         renderAllTabs();
     });
+
+    if (elements.contentUsageFilter) {
+        elements.contentUsageFilter.addEventListener('change', (e) => {
+            usageFilter = e.target.value || 'all';
+            if (usageFilter !== 'all' && journeysList.length === 0) {
+                logger.logMessage('Aviso: no hay caché de Journeys. Emails, Push, SMS y WhatsApp no se pueden clasificar por uso (pulsa "Consultar Journeys").');
+            }
+            for (const tabId in tabsState) { tabsState[tabId].currentPage = 1; }
+            renderAllTabs();
+        });
+    }
+
+    if (elements.contentJourneyFilter) {
+        elements.contentJourneyFilter.addEventListener('change', (e) => {
+            journeyUsageFilter = e.target.value || 'all';
+            if (journeyUsageFilter !== 'all' && journeysList.length === 0) {
+                logger.logMessage('Aviso: no hay caché de Journeys. Cachéalos desde la vista de Journeys ("Descargar detalle") para filtrar por uso en Journeys.');
+            }
+            for (const tabId in tabsState) { tabsState[tabId].currentPage = 1; }
+            renderAllTabs();
+        });
+    }
+
+    const onDateFilterChange = () => {
+        for (const tabId in tabsState) { tabsState[tabId].currentPage = 1; }
+        renderAllTabs();
+    };
+    if (elements.contentDateField) elements.contentDateField.addEventListener('change', onDateFilterChange);
+    if (elements.contentDateFrom) elements.contentDateFrom.addEventListener('change', onDateFilterChange);
+    if (elements.contentDateTo) elements.contentDateTo.addEventListener('change', onDateFilterChange);
 
     elements.contentManagerTabButtons.addEventListener('click', (e) => {
         const tabBtn = e.target.closest('.tab-button');
@@ -413,6 +546,14 @@ function setupEventListeners() {
         if (refsBtn) {
             const contentId = refsBtn.dataset.contentId;
             if (contentId) openReferencesDetail(contentId);
+            return;
+        }
+
+        // Botón de journeys donde se usa
+        const journeysBtn = e.target.closest('.cp-journeys-btn');
+        if (journeysBtn) {
+            const contentId = journeysBtn.dataset.contentId;
+            if (contentId) openJourneysDetail(contentId);
             return;
         }
 
@@ -457,6 +598,21 @@ function setupEventListeners() {
             if (pageButton.id.startsWith('prev-') && tabState.currentPage > 1) tabState.currentPage--;
             else if (pageButton.id.startsWith('next-') && tabState.currentPage < totalPages) tabState.currentPage++;
             renderAllTabs();
+            return;
+        }
+
+        // Selección de fila para borrado (clic en cualquier parte de la fila que no sea un botón)
+        const row = e.target.closest('tr[data-content-id]');
+        if (row) {
+            const id = row.dataset.contentId;
+            if (selectedContentIds.has(id)) {
+                selectedContentIds.delete(id);
+                row.classList.remove('selected');
+            } else {
+                selectedContentIds.add(id);
+                row.classList.add('selected');
+            }
+            updateDeleteButtonState();
         }
     });
 
@@ -500,14 +656,39 @@ function renderAllTabs() {
         });
     }
 
-    // Filtro de contenidos sin uso
-    if (unusedFilter && unusedIds.size > 0) {
+    // Filtro por uso (En uso / Sin uso)
+    if (usageFilter !== 'all') {
+        if (!blockUnusedIdsCache) blockUnusedIdsCache = findUnusedContentIds();
+        const blockUnusedIds = blockUnusedIdsCache;
         filteredList = filteredList.filter(item => {
-            // Emails, push, sms, wa: siempre mostrar (no aplica)
-            if ([207, 208, 209, 230].includes(item.assetTypeId)) return false;
-            // Bloques, snippets, plantillas: solo los no referenciados
-            return unusedIds.has(item.id);
+            const status = getUsageStatus(item, blockUnusedIds);
+            if (status === 'unknown') return false; // no clasificable (sin caché de journeys)
+            return status === usageFilter;
         });
+    }
+
+    // Filtro por uso en Journeys (solo aplica a emails/push/sms/wa)
+    if (journeyUsageFilter !== 'all') {
+        filteredList = filteredList.filter(item => {
+            const canBeInJourney = EMAIL_ASSET_TYPE_IDS.includes(item.assetTypeId) || MESSAGE_ASSET_TYPE_IDS.includes(item.assetTypeId);
+            if (!canBeInJourney) return false;
+            const inJourney = getJourneysForContent(item).length > 0;
+            return journeyUsageFilter === 'in' ? inJourney : !inJourney;
+        });
+    }
+
+    // Filtro "Plantilla inexistente": solo emails cuya plantilla ya no existe
+    if (templateFilterActive) {
+        const { idSet, nameSet } = getTemplateSets();
+        filteredList = filteredList.filter(item => isEmailWithMissingTemplate(item, idSet, nameSet));
+    }
+
+    // Filtro por rango de fechas
+    const dateField = elements.contentDateField ? elements.contentDateField.value : '';
+    const dateFrom = elements.contentDateFrom ? elements.contentDateFrom.value : '';
+    const dateTo = elements.contentDateTo ? elements.contentDateTo.value : '';
+    if (dateField && (dateFrom || dateTo)) {
+        filteredList = filteredList.filter(item => ui.isDateInRange(item[dateField], dateFrom, dateTo));
     }
 
     CONTENT_TYPES_CONFIG.forEach(tab => renderTableForTab(tab.id, filteredList));
@@ -526,6 +707,9 @@ function renderAllTabs() {
 
     // Precalcular qué contenidos tienen referencias
     updateReferencedFlags();
+
+    // Estado del botón Borrar según selección
+    updateDeleteButtonState();
 }
 
 /**
@@ -541,9 +725,13 @@ function actionBtnsHtml(item) {
     if (hasCode && [207, 208, 209].includes(item.assetTypeId)) {
         html += `<span class="cp-resolve-btn" data-content-id="${item.id}" title="Ver código resuelto"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#2e7d32;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg></span>`;
     }
-    // Dónde se usa — solo si tiene referencias
+    // Dónde se usa (contenidos) — solo si tiene referencias
     if (![207, 208, 209, 230].includes(item.assetTypeId) && item._isReferenced) {
         html += `<span class="cp-refs-btn" data-content-id="${item.id}" title="Dónde se usa"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#e65100;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></span>`;
+    }
+    // Journeys donde se usa — emails/push/sms/wa referenciados en algún journey cacheado
+    if ([207, 208, 209, 230].includes(item.assetTypeId) && getJourneysForContent(item).length > 0) {
+        html += `<span class="cp-journeys-btn" data-content-id="${item.id}" title="Journeys donde se usa"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#8e44ad;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></span>`;
     }
     html += `<span class="cp-analyze-btn" data-content-id="${item.id}" title="Analizar en Buscadores"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#558ac7;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>`;
     return html;
@@ -579,7 +767,7 @@ function renderTableForTab(tabId, sourceData) {
 
             if (tabId === 'emails') {
                 const attributesHtml = item.attributes ? item.attributes.replace(/\n/g, '<br>') : '---';
-                return `<tr>
+                return `<tr data-content-id="${item.id}"${selectedContentIds.has(String(item.id)) ? ' class="selected"' : ''}>
                     ${actions}
                     <td>${item.id || '---'}</td>
                     <td>${item.name || '---'}</td>
@@ -589,7 +777,7 @@ function renderTableForTab(tabId, sourceData) {
                     <td title="${escapeHtml(item.attributes) || ''}">${attributesHtml}</td>
                 </tr>`;
             } else if (tabId === 'plantillas') {
-                return `<tr>
+                return `<tr data-content-id="${item.id}"${selectedContentIds.has(String(item.id)) ? ' class="selected"' : ''}>
                     ${actions}
                     <td>${item.id || '---'}</td>
                     <td>${item.name || '---'}</td>
@@ -598,7 +786,7 @@ function renderTableForTab(tabId, sourceData) {
                 </tr>`;
             } else if (tabId === 'push') {
                 const actionHtml = item.actionType ? `${item.actionType}: ${item.actionUrl || ''}` : '---';
-                return `<tr>
+                return `<tr data-content-id="${item.id}"${selectedContentIds.has(String(item.id)) ? ' class="selected"' : ''}>
                     ${actions}
                     <td>${item.id || '---'}</td>
                     <td>${item.name || '---'}</td>
@@ -608,7 +796,7 @@ function renderTableForTab(tabId, sourceData) {
                     <td title="${escapeHtml(actionHtml)}">${actionHtml}</td>
                 </tr>`;
             } else if (tabId === 'sms') {
-                return `<tr>
+                return `<tr data-content-id="${item.id}"${selectedContentIds.has(String(item.id)) ? ' class="selected"' : ''}>
                     ${actions}
                     <td>${item.id || '---'}</td>
                     <td>${item.name || '---'}</td>
@@ -616,7 +804,7 @@ function renderTableForTab(tabId, sourceData) {
                 </tr>`;
             } else if (tabId === 'whatsapp') {
                 const hasButtons = item.waButtons ? 'Sí' : 'No';
-                return `<tr>
+                return `<tr data-content-id="${item.id}"${selectedContentIds.has(String(item.id)) ? ' class="selected"' : ''}>
                     ${actions}
                     <td>${item.id || '---'}</td>
                     <td>${item.name || '---'}</td>
@@ -625,7 +813,7 @@ function renderTableForTab(tabId, sourceData) {
                     <td>${formatDate(item.modifiedDate)}</td>
                 </tr>`;
             } else if (tabId === 'bloques') {
-                return `<tr>
+                return `<tr data-content-id="${item.id}"${selectedContentIds.has(String(item.id)) ? ' class="selected"' : ''}>
                     ${actions}
                     <td>${item.id || '---'}</td>
                     <td>${item.name || '---'}</td>
@@ -633,7 +821,7 @@ function renderTableForTab(tabId, sourceData) {
                     <td>${formatDate(item.modifiedDate)}</td>
                 </tr>`;
             } else if (tabId === 'codesnippet') {
-                return `<tr>
+                return `<tr data-content-id="${item.id}"${selectedContentIds.has(String(item.id)) ? ' class="selected"' : ''}>
                     ${actions}
                     <td>${item.id || '---'}</td>
                     <td>${item.name || '---'}</td>
@@ -641,7 +829,7 @@ function renderTableForTab(tabId, sourceData) {
                 </tr>`;
             } else if (tabId === 'plantillas_wa') {
                 const buttonsHtml = item.waButtons ? `<span title="${escapeHtml(item.waButtons)}">Sí</span>` : 'No';
-                return `<tr>
+                return `<tr data-content-id="${item.id}"${selectedContentIds.has(String(item.id)) ? ' class="selected"' : ''}>
                     ${actions}
                     <td>${item.id || '---'}</td>
                     <td>${item.name || '---'}</td>
@@ -763,15 +951,191 @@ function openContentDetail(contentId) {
         metaHtml += `</div>`;
     }
 
+    // Para emails: tabla de componentes (solo template-based) + Data Extensions referenciadas
+    // (desde caché, sin rutas). El código de abajo ocupa el resto del espacio disponible.
+    if (EMAIL_ASSET_TYPE_IDS.includes(item.assetTypeId)) {
+        const isTemplateBased = item.templateId != null || item.templateName || (item.slotBlockIds && item.slotBlockIds.length > 0);
+        if (isTemplateBased) {
+            const comps = getEmailComponents(item);
+            if (comps.length) metaHtml += buildComponentsTableHtml(comps);
+        }
+        const des = getEmailReferencedDEs(item);
+        if (des.length) metaHtml += buildDEsTableHtml(des);
+    }
+
     const formatted = formatCodeWithIndentation(code);
     const highlighted = highlightCloudPageCode(formatted);
+    const contentHeaderStyle = metaHtml ? ' style="margin-top:12px;"' : '';
 
     elements.contentDetailCode.innerHTML = metaHtml + `
-        <div class="code-header">Contenido</div>
+        <div class="code-header"${contentHeaderStyle}>Contenido</div>
         <pre><code>${highlighted}</code></pre>`;
 
     elements.contentDetailDrawer.classList.add('open');
     elements.contentDetailBackdrop.classList.add('active');
+}
+
+// Cabecera de celda sticky reutilizable para las tablas del drawer.
+const DRAWER_TH = 'position:sticky; top:0; z-index:2; background:#5a6d7e; color:#fff; padding:6px 8px; text-align:left;';
+
+/**
+ * Construye la tabla de componentes (ID, Nombre, Tipo) con altura acotada.
+ */
+function buildComponentsTableHtml(comps) {
+    const inlineTag = '<span style="font-size:0.72em; color:#fff; background:#9b59b6; border-radius:3px; padding:0 5px; margin-left:6px;">inline</span>';
+    const rows = comps.map(c => `<tr style="border-bottom:1px solid #eee;">
+            <td style="padding:5px 8px; color:#888;">${c.id || '---'}</td>
+            <td style="padding:5px 8px;">${escapeHtml(c.name)}${c.inline ? inlineTag : ''}</td>
+            <td style="padding:5px 8px; color:#666;">${escapeHtml(c.type) || '---'}</td>
+            <td style="padding:5px 8px; color:#888; font-size:0.95em;">${escapeHtml(c.ref) || '---'}</td>
+        </tr>`).join('');
+    return `<div style="margin-top:12px; flex-shrink:0;">
+        <div class="code-header">Componentes (${comps.length})</div>
+        <div style="overflow:auto; max-height:240px; border:1px solid #e1e4e8; border-top:none; border-radius:0 0 4px 4px;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.85em;">
+                <thead><tr><th style="${DRAWER_TH}">ID</th><th style="${DRAWER_TH}">Nombre</th><th style="${DRAWER_TH}">Tipo</th><th style="${DRAWER_TH}">Referenciado por</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    </div>`;
+}
+
+/**
+ * Construye la tabla de Data Extensions referenciadas (Data Extension, Funciones) con altura acotada.
+ */
+function buildDEsTableHtml(des) {
+    const rows = des.map(d => `<tr style="border-bottom:1px solid #eee;">
+            <td style="padding:5px 8px;">${escapeHtml(d.de)}</td>
+            <td style="padding:5px 8px; color:#666;">${escapeHtml(d.functions)}</td>
+        </tr>`).join('');
+    return `<div style="margin-top:12px; flex-shrink:0;">
+        <div class="code-header">Data Extensions (${des.length})</div>
+        <div style="overflow:auto; max-height:180px; border:1px solid #e1e4e8; border-top:none; border-radius:0 0 4px 4px;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.85em;">
+                <thead><tr><th style="${DRAWER_TH}">Data Extension</th><th style="${DRAWER_TH}">Funciones</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    </div>`;
+}
+
+/**
+ * Devuelve los componentes de un email para la tabla del drawer (igual que el detalle del
+ * Buscador, incluyendo bloques inline). Usa la estructura capturada al descargar (item.components)
+ * resolviendo nombres/tipos de assets contra la caché, sin llamadas. Si la caché es antigua y no
+ * tiene esa estructura, cae a un cálculo aproximado (plantilla + ContentBlockBy* + arrastrados).
+ */
+function getEmailComponents(item) {
+    if (Array.isArray(item.components) && item.components.length > 0) {
+        return item.components.map(resolveComponent).filter(Boolean);
+    }
+
+    // Fallback para caché antigua (sin estructura de componentes; no incluye inline)
+    const comps = [];
+    const seen = new Set();
+    const add = (c, fallbackName, fallbackType) => {
+        const key = c ? 'id:' + c.id : 'n:' + fallbackName;
+        if (seen.has(key)) return;
+        seen.add(key);
+        comps.push({ id: c ? c.id : '', name: c ? c.name : fallbackName, type: c ? (c.assetTypeName || fallbackType) : fallbackType, ref: '', inline: false });
+    };
+    if (item.templateId != null || item.templateName) {
+        const tpl = fullContentList.find(c => c.assetTypeId === 4 && (String(c.id) === String(item.templateId) || c.name === item.templateName));
+        add(tpl, item.templateName || `Plantilla ${item.templateId}`, 'Template');
+    }
+    const text = item.content || '';
+    for (const m of text.matchAll(/ContentBlockby[Ii][Dd]\s*\(\s*["']?(\d+)["']?\s*\)/gi)) {
+        add(fullContentList.find(x => String(x.id) === m[1]), `ID ${m[1]}`, 'Bloque');
+    }
+    for (const m of text.matchAll(/ContentBlockby[Kk]ey\s*\(\s*["']([^"']+)["']\s*\)/gi)) {
+        add(fullContentList.find(x => x.customerKey === m[1]), m[1], 'Bloque');
+    }
+    for (const m of text.matchAll(/ContentBlockby[Nn]ame\s*\(\s*["']([^"']+)["']\s*\)/gi)) {
+        add(fullContentList.find(x => x.name === m[1]), m[1], 'Bloque');
+    }
+    if (item.slotBlockIds) {
+        for (const id of item.slotBlockIds) {
+            const c = fullContentList.find(x => String(x.id) === String(id));
+            if (c) add(c, `ID ${id}`, 'Bloque');
+        }
+    }
+    return comps;
+}
+
+/**
+ * Resuelve un componente capturado (item.components) a {id, name, type, ref, inline} para la tabla.
+ */
+function resolveComponent(c) {
+    if (!c) return null;
+    if (c.kind === 'template') {
+        const tpl = c.id
+            ? fullContentList.find(x => String(x.id) === c.id)
+            : (c.name ? fullContentList.find(x => x.assetTypeId === 4 && x.name === c.name) : null);
+        return { id: c.id || (tpl ? tpl.id : ''), name: (tpl ? tpl.name : '') || c.name || 'Plantilla', type: 'Template', ref: c.ref || '', inline: false };
+    }
+    if (c.kind === 'block') {
+        const a = c.id ? fullContentList.find(x => String(x.id) === c.id) : null;
+        return { id: c.id || '', name: (a ? a.name : '') || c.name || `ID ${c.id}`, type: (a ? a.assetTypeName : null) || c.type || 'Bloque', ref: c.ref || '', inline: false };
+    }
+    if (c.kind === 'inline') {
+        // Compatibilidad con caché antigua: si trae un id real, es un bloque, no inline
+        const hasRealId = c.id && /^\d+$/.test(String(c.id));
+        if (hasRealId) {
+            const a = fullContentList.find(x => String(x.id) === String(c.id));
+            return { id: c.id, name: (a ? a.name : '') || c.name || `ID ${c.id}`, type: (a ? a.assetTypeName : null) || c.type || 'Bloque', ref: c.ref || '', inline: false };
+        }
+        return { id: c.id || '', name: c.name, type: c.type || 'Bloque', ref: c.ref || '', inline: true };
+    }
+    if (c.kind === 'ref') {
+        const a = c.id ? fullContentList.find(x => String(x.id) === c.id) : null;
+        return { id: c.id || '', name: a ? a.name : `ID ${c.id}`, type: (a ? a.assetTypeName : null) || c.type || 'Bloque', ref: c.ref || '', inline: false };
+    }
+    if (c.kind === 'macro') {
+        // Solo mostramos los ContentBlockBy* del contenido base (como el Buscador). Los de caché
+        // antigua (extraídos del contenido ensamblado, incluidos los de bloques embebidos) se omiten.
+        if (!c.fromBase) return null;
+        let a = null;
+        if (c.macroType === 'Id') a = fullContentList.find(x => String(x.id) === c.macroValue);
+        else if (c.macroType === 'Key') a = fullContentList.find(x => x.customerKey === c.macroValue);
+        else if (c.macroType === 'Name') a = fullContentList.find(x => x.name === c.macroValue);
+        return { id: a ? a.id : (c.id || ''), name: a ? a.name : `${c.macroValue} (no encontrado)`, type: (a ? a.assetTypeName : null) || c.type, ref: c.ref || '', inline: false };
+    }
+    return null;
+}
+
+/**
+ * Extrae las Data Extensions referenciadas en el código del email (AMPscript/SSJS) por regex,
+ * sin resolver rutas ni hacer llamadas.
+ */
+function getEmailReferencedDEs(item) {
+    const text = [item.content, item.resolvedContent].filter(Boolean).join('\n');
+    if (!text) return [];
+
+    const ampFns = ['Lookup', 'LookupRows', 'LookupOrderedRows', 'LookupRowsCS', 'LookupOrderedRowsCS',
+        'ClaimRow', 'InsertDE', 'InsertData', 'UpdateDE', 'UpdateData', 'DeleteDE', 'DeleteData',
+        'UpsertDE', 'UpsertData', 'DataExtensionRowCount'];
+    const ssjsFns = ['Platform\\.Function\\.Lookup', 'Platform\\.Function\\.LookupRows',
+        'Platform\\.Function\\.LookupOrderedRows', 'Platform\\.Function\\.InsertData',
+        'Platform\\.Function\\.UpdateData', 'Platform\\.Function\\.DeleteData',
+        'Platform\\.Function\\.UpsertData', 'DataExtension\\.Init'];
+
+    const deMap = {};
+    const scan = (fns, label) => {
+        for (const fn of fns) {
+            const re = new RegExp(fn + '\\s*\\(\\s*["\']([^"\']+)["\']', 'gi');
+            let m;
+            while ((m = re.exec(text)) !== null) {
+                const de = m[1].trim();
+                (deMap[de] = deMap[de] || new Set()).add(label ? label(fn) : fn);
+            }
+        }
+    };
+    scan(ampFns, null);
+    scan(ssjsFns, p => p.replace(/\\\./g, '.'));
+
+    return Object.entries(deMap)
+        .map(([de, fns]) => ({ de, functions: [...fns].join(', ') }))
+        .sort((a, b) => a.de.localeCompare(b.de));
 }
 
 // --- HELPERS ---
@@ -1133,6 +1497,42 @@ function openReferencesDetail(contentId) {
     elements.contentDetailBackdrop.classList.add('active');
 }
 
+/**
+ * Muestra en el drawer la lista de journeys donde se usa un email/mensaje.
+ */
+function openJourneysDetail(contentId) {
+    const item = fullContentList.find(c => String(c.id) === String(contentId));
+    if (!item) return;
+
+    const journeys = getJourneysForContent(item);
+    elements.contentDetailTitle.textContent = `Journeys donde se usa: ${item.name}`;
+
+    let html = '';
+    if (journeys.length === 0) {
+        html = '<div style="padding:20px; color:#999; text-align:center;">No se ha encontrado este contenido en ningún journey cacheado.</div>';
+    } else {
+        html = `<div style="padding:8px 12px; font-size:0.85em; color:#666; border-bottom:1px solid #e2e8f0;">${journeys.length} journey${journeys.length !== 1 ? 's' : ''} encontrado${journeys.length !== 1 ? 's' : ''}</div>`;
+        html += `<div style="overflow:auto; flex-grow:1;"><table style="width:100%; border-collapse:collapse;">
+            <thead><tr>
+                <th style="position:sticky; top:0; z-index:2; background:#5a6d7e; color:#fff; padding:8px; text-align:left;">Journey</th>
+                <th style="position:sticky; top:0; z-index:2; background:#5a6d7e; color:#fff; padding:8px; text-align:left;">Versión</th>
+                <th style="position:sticky; top:0; z-index:2; background:#5a6d7e; color:#fff; padding:8px; text-align:left;">Estado</th>
+            </tr></thead><tbody>`;
+        for (const j of journeys) {
+            html += `<tr style="border-bottom:1px solid #eee;">
+                <td style="padding:6px 8px;">${escapeHtml(j.name)}</td>
+                <td style="padding:6px 8px;">${j.version != null ? j.version : '---'}</td>
+                <td style="padding:6px 8px;">${escapeHtml(j.status) || '---'}</td>
+            </tr>`;
+        }
+        html += '</tbody></table></div>';
+    }
+
+    elements.contentDetailCode.innerHTML = html;
+    elements.contentDetailDrawer.classList.add('open');
+    elements.contentDetailBackdrop.classList.add('active');
+}
+
 function updateCacheDate(dateString) {
     if (!elements.contentCacheDate) return;
     if (!dateString) {
@@ -1141,6 +1541,143 @@ function updateCacheDate(dateString) {
     }
     const date = new Date(dateString);
     elements.contentCacheDate.textContent = `Última descarga: ${date.toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })}`;
+}
+
+function updateJourneyCacheDate(dateString) {
+    if (!elements.contentJourneyCacheDate) return;
+    if (!dateString) {
+        elements.contentJourneyCacheDate.textContent = 'Sin caché de Journeys';
+        elements.contentJourneyCacheDate.style.color = '#dc3545';
+        return;
+    }
+    const date = new Date(dateString);
+    elements.contentJourneyCacheDate.style.color = '#bbb';
+    elements.contentJourneyCacheDate.textContent = `Journeys: ${date.toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })}`;
+}
+
+// ===================================================================
+// ===== JOURNEYS: lectura de caché y cálculo de uso =================
+// La descarga/caché de journeys la realiza la vista de Journeys.
+// Aquí solo se consume el caché para clasificar Emails/Push/SMS/WhatsApp.
+// ===================================================================
+
+/**
+ * Determina el estado de uso de un contenido.
+ * - Emails (207/208/209): "en uso" si su legacyId aparece como triggeredSend.emailId
+ *   en algún journey (o, en su defecto, si su asset id se referencia directamente).
+ *   Si no hay caché de journeys, o el email no tiene legacyId (caché antigua) → 'unknown'.
+ * - Mensajes Push/SMS/WhatsApp (230): "en uso" si su asset id aparece como assetId en algún journey.
+ * - Bloques / Plantillas / Snippets / Plantillas WA: según la cadena de
+ *   referencias entre contenidos (findUnusedContentIds).
+ * @returns {'used'|'unused'|'unknown'}
+ */
+function getUsageStatus(item, blockUnusedIds) {
+    if (EMAIL_ASSET_TYPE_IDS.includes(item.assetTypeId)) {
+        if (!journeysList || journeysList.length === 0) return 'unknown';
+        const legacy = item.legacyId != null ? String(item.legacyId) : null;
+        if (legacy && journeyEmailLegacyIds.has(legacy)) return 'used';
+        if (journeyAssetIds.has(String(item.id))) return 'used';        // email referenciado como asset
+        if (journeyEmailLegacyIds.has(String(item.id))) return 'used';  // por si el id coincidiera
+        if (!legacy) return 'unknown'; // caché de contenidos antigua sin legacyId → no clasificable
+        return 'unused';
+    }
+    if (MESSAGE_ASSET_TYPE_IDS.includes(item.assetTypeId)) {
+        if (!journeysList || journeysList.length === 0) return 'unknown';
+        return journeyAssetIds.has(String(item.id)) ? 'used' : 'unused';
+    }
+    return blockUnusedIds.has(item.id) ? 'unused' : 'used';
+}
+
+/**
+ * Recorre las actividades de los journeys cacheados y separa las referencias:
+ *  - journeyEmailLegacyIds: triggeredSend.emailId (ID legacy del email clásico).
+ *  - journeyAssetIds: assetId de actividades SMS/Push/WhatsApp (= id del asset 230).
+ */
+function recomputeJourneyReferences() {
+    journeyEmailLegacyIds = new Set();
+    journeyAssetIds = new Set();
+    journeyRefsByEmailLegacyId = new Map();
+    journeyRefsByAssetId = new Map();
+
+    const addRef = (map, key, journey) => {
+        const k = String(key);
+        if (!map.has(k)) map.set(k, []);
+        const arr = map.get(k);
+        if (!arr.some(x => x.id === journey.id)) {
+            arr.push({ id: journey.id, name: journey.name, status: journey.status, version: journey.version });
+        }
+    };
+
+    for (const j of (journeysList || [])) {
+        const acts = j.activities || [];
+        for (const a of acts) {
+            const cfg = a.configurationArguments || {};
+            if (a.type === 'EMAILV2') {
+                const emailId = cfg.triggeredSend?.emailId;
+                if (emailId != null) {
+                    journeyEmailLegacyIds.add(String(emailId));
+                    addRef(journeyRefsByEmailLegacyId, emailId, j);
+                }
+            }
+            if (cfg.assetId != null) {
+                journeyAssetIds.add(String(cfg.assetId));
+                addRef(journeyRefsByAssetId, cfg.assetId, j);
+            }
+        }
+    }
+    logger.logMessage(`Referencias en Journeys → emails(legacy): ${journeyEmailLegacyIds.size}, assets(sms/push/wa): ${journeyAssetIds.size}`);
+}
+
+/**
+ * Devuelve la lista de journeys {id, name, status, version} donde se usa un contenido.
+ */
+function getJourneysForContent(item) {
+    const result = [];
+    const seen = new Set();
+    const collect = (arr) => {
+        for (const j of (arr || [])) {
+            if (!seen.has(j.id)) { seen.add(j.id); result.push(j); }
+        }
+    };
+    if (EMAIL_ASSET_TYPE_IDS.includes(item.assetTypeId)) {
+        if (item.legacyId != null) collect(journeyRefsByEmailLegacyId.get(String(item.legacyId)));
+        collect(journeyRefsByAssetId.get(String(item.id)));
+        collect(journeyRefsByEmailLegacyId.get(String(item.id)));
+    } else if (MESSAGE_ASSET_TYPE_IDS.includes(item.assetTypeId)) {
+        collect(journeyRefsByAssetId.get(String(item.id)));
+    }
+    return result;
+}
+
+/**
+ * Carga los journeys cacheados de un cliente (los descarga la vista de Journeys)
+ * y recalcula las referencias de contenido usadas.
+ */
+async function loadCachedJourneys(clientName) {
+    try {
+        const result = await window.electronAPI.loadClientJourneys(clientName);
+        if (result.success && result.journeys && result.journeys.length > 0) {
+            journeysList = result.journeys;
+            recomputeJourneyReferences();
+            updateJourneyCacheDate(result.lastRefresh);
+            logger.logMessage(`Cargados ${journeysList.length} journeys desde caché para "${clientName}".`);
+        } else {
+            journeysList = [];
+            journeyEmailLegacyIds.clear();
+            journeyAssetIds.clear();
+            journeyRefsByEmailLegacyId.clear();
+            journeyRefsByAssetId.clear();
+            updateJourneyCacheDate(null);
+        }
+    } catch (error) {
+        journeysList = [];
+        journeyEmailLegacyIds.clear();
+        journeyAssetIds.clear();
+        journeyRefsByEmailLegacyId.clear();
+        journeyRefsByAssetId.clear();
+        updateJourneyCacheDate(null);
+        logger.logMessage(`Error al cargar journeys: ${error.message}`);
+    }
 }
 
 function updateReferencedFlags() {
@@ -1158,6 +1695,197 @@ function updateReferencedFlags() {
 
     for (const item of fullContentList) {
         item._isReferenced = referencedIds.has(String(item.id));
+    }
+}
+
+// ===================================================================
+// ===== PLANTILLAS INEXISTENTES =====================================
+// ===================================================================
+
+/**
+ * Construye (y memoiza) los conjuntos de ids y nombres de las plantillas existentes
+ * (assetTypeId 4) presentes en la caché de contenidos.
+ */
+function getTemplateSets() {
+    if (templateSetsCache) return templateSetsCache;
+    const idSet = new Set();
+    const nameSet = new Set();
+    for (const item of fullContentList) {
+        if (item.assetTypeId === 4) {
+            if (item.id != null) idSet.add(String(item.id));
+            if (item.name) nameSet.add(item.name);
+        }
+    }
+    templateSetsCache = { idSet, nameSet };
+    return templateSetsCache;
+}
+
+/**
+ * Indica si un item es un email que referencia una plantilla que ya no existe
+ * (no aparece en la pestaña de Plantillas).
+ */
+function isEmailWithMissingTemplate(item, idSet, nameSet) {
+    if (!EMAIL_ASSET_TYPE_IDS.includes(item.assetTypeId)) return false;
+    const hasTemplateRef = item.templateId != null || !!item.templateName;
+    if (!hasTemplateRef) return false;
+    if (item.templateId != null && idSet.has(String(item.templateId))) return false; // existe por id
+    if (item.templateName && nameSet.has(item.templateName)) return false;            // existe por nombre
+    return true;
+}
+
+// ===================================================================
+// ===== BORRADO DE CONTENIDOS =======================================
+// ===================================================================
+
+function updateDeleteButtonState() {
+    if (!elements.deleteContentBtn) return;
+    const n = selectedContentIds.size;
+
+    // Si alguno de los seleccionados está "en uso", el botón se deshabilita.
+    let hasInUse = false;
+    if (n > 0) {
+        if (!blockUnusedIdsCache) blockUnusedIdsCache = findUnusedContentIds();
+        for (const id of selectedContentIds) {
+            const item = fullContentList.find(c => String(c.id) === String(id));
+            if (item && getUsageStatus(item, blockUnusedIdsCache) === 'used') {
+                hasInUse = true;
+                break;
+            }
+        }
+    }
+
+    elements.deleteContentBtn.disabled = n === 0 || hasInUse;
+    elements.deleteContentBtn.textContent = n > 0 ? `Borrar (${n})` : 'Borrar';
+    elements.deleteContentBtn.title = hasInUse
+        ? 'Hay elementos en uso seleccionados; deselecciónalos para poder borrar'
+        : '';
+}
+
+/**
+ * Borra los contenidos seleccionados vía API (previa confirmación), actualiza la caché
+ * y descarga un CSV con los elementos eliminados.
+ */
+async function deleteSelectedContents() {
+    const ids = [...selectedContentIds];
+    if (ids.length === 0) return;
+
+    // Clasificar los seleccionados: los que están "en uso" no se pueden borrar.
+    if (!blockUnusedIdsCache) blockUnusedIdsCache = findUnusedContentIds();
+    const blockUnusedIds = blockUnusedIdsCache;
+
+    const deletable = [];
+    const inUse = [];
+    let unknownCount = 0; // uso no verificable (p.ej. emails/mensajes sin caché de journeys)
+    for (const id of ids) {
+        const item = fullContentList.find(c => String(c.id) === String(id));
+        if (!item) continue;
+        const status = getUsageStatus(item, blockUnusedIds);
+        if (status === 'used') inUse.push(item);
+        else {
+            if (status === 'unknown') unknownCount++;
+            deletable.push(item);
+        }
+    }
+
+    if (deletable.length === 0) {
+        ui.showCustomAlert(`No se puede borrar: ${inUse.length} elemento(s) seleccionado(s) están en uso.`);
+        return;
+    }
+
+    let confirmMsg = '';
+    if (inUse.length > 0) {
+        confirmMsg += `${inUse.length} elemento(s) están en uso y NO se borrarán.\n`;
+    }
+    if (unknownCount > 0) {
+        confirmMsg += `${unknownCount} elemento(s) cuyo uso en journeys no se ha podido verificar (cachea los journeys para mayor seguridad).\n`;
+    }
+    confirmMsg += `\n¿Seguro que quieres borrar ${deletable.length} elemento(s)? Esta acción no se puede deshacer.`;
+
+    const confirmed = await ui.showCustomConfirm(confirmMsg);
+    if (!confirmed) return;
+
+    const clientName = elements.clientNameInput.value.trim();
+    ui.blockUI(`Borrando 0/${deletable.length}...`);
+    logger.startLogBuffering();
+
+    const deleted = [];
+    const failed = [];
+
+    try {
+        const apiConfig = await getAuthenticatedConfig();
+        mcApiService.setLogger(logger);
+
+        let i = 0;
+        for (const item of deletable) {
+            i++;
+            ui.blockUI(`Borrando ${i}/${deletable.length}...`);
+            try {
+                await mcApiService.deleteContentAsset(item.id, apiConfig);
+                deleted.push(item);
+                logger.logMessage(`Eliminado: ${item.name} (${item.id})`);
+            } catch (e) {
+                failed.push({ id: item.id, name: item.name, error: e.message });
+                logger.logMessage(`Error al eliminar ${item.id}: ${e.message}`);
+            }
+        }
+
+        // Quitar los eliminados de la lista y reescribir la caché
+        if (deleted.length > 0) {
+            const deletedIds = new Set(deleted.map(d => String(d.id)));
+            fullContentList = fullContentList.filter(c => !deletedIds.has(String(c.id)));
+            blockUnusedIdsCache = null;
+            templateSetsCache = null;
+            try {
+                await window.electronAPI.saveClientContents({
+                    clientName,
+                    contents: fullContentList,
+                    lastRefresh: contentLastRefresh || new Date().toISOString()
+                });
+            } catch (e) {
+                logger.logMessage(`Error al guardar la caché tras el borrado: ${e.message}`);
+            }
+            await downloadDeletedCsv(deleted);
+        }
+
+        selectedContentIds.clear();
+        renderAllTabs();
+
+        let msg = `${deleted.length} elemento(s) eliminado(s).`;
+        if (inUse.length > 0) msg += ` ${inUse.length} omitido(s) por estar en uso.`;
+        if (failed.length > 0) msg += ` ${failed.length} con error (revisa el log).`;
+        ui.showCustomAlert(msg);
+    } catch (error) {
+        logger.logMessage(`Error en el borrado: ${error.message}`);
+        ui.showCustomAlert(`Error: ${error.message}`);
+    } finally {
+        ui.unblockUI();
+        logger.endLogBuffering();
+    }
+}
+
+/**
+ * Descarga un CSV con los contenidos eliminados.
+ */
+async function downloadDeletedCsv(items) {
+    const headers = ['ID', 'Nombre', 'Tipo', 'CustomerKey', 'Plantilla', 'Modificado'];
+    const rows = items.map(it => [
+        formatCsvCell(it.id),
+        formatCsvCell(it.name),
+        formatCsvCell(it.assetTypeName),
+        formatCsvCell(it.customerKey),
+        formatCsvCell(it.templateName),
+        formatCsvCell(it.modifiedDate ? formatDate(it.modifiedDate) : '')
+    ].join(','));
+
+    const csv = [headers.join(','), ...rows].join('\n');
+    const BOM_CHAR = String.fromCharCode(0xFEFF);
+    const clientName = elements.clientNameInput.value.trim() || 'cliente';
+    const fileName = `eliminados_${clientName}_${new Date().toISOString().slice(0, 10)}.csv`;
+    try {
+        await window.electronAPI.saveCsvFile({ content: BOM_CHAR + csv, defaultName: fileName });
+        logger.logMessage(`CSV de eliminados generado (${items.length}).`);
+    } catch (e) {
+        logger.logMessage(`Error al guardar el CSV de eliminados: ${e.message}`);
     }
 }
 

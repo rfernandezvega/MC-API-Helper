@@ -241,6 +241,17 @@
 
 
 /* ====================================================================
+   CABECERA FIJA de la tabla de Cloud Pages.
+   `.sortable-header` define position:relative y anula el sticky global de th;
+   este selector (id + thead + th) tiene más especificidad y lo restaura.
+   ==================================================================== */
+#cloudpages-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+/* ====================================================================
    BOTÓN DE INSPECCIÓN (reemplaza al comm-chevron en Cloud Pages)
    ==================================================================== */
 .cp-inspect-btn {

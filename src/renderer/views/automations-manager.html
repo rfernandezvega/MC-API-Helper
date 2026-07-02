@@ -39,6 +39,14 @@
             <option value="yes">Lanza Journey</option>
             <option value="no">No lanza Journey</option>
         </select>
+        <select id="automationDateField" class="filter-input">
+            <option value="">Fecha (todos)</option>
+            <option value="lastRunTime">Última Ejecución</option>
+            <option value="scheduledTime">Próxima Ejecución</option>
+        </select>
+        <input type="date" id="automationDateFrom" class="filter-input" title="Desde">
+        <input type="date" id="automationDateTo" class="filter-input" title="Hasta">
+        <input type="text" id="automationNotifFilter" class="filter-input" placeholder="Filtrar por notificación..." style="display:none;">
     </div>
     <div class="table-container">
         <table id="automations-table">

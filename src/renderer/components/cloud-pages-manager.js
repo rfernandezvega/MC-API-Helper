@@ -56,6 +56,9 @@ export function init(dependencies) {
     elements.cloudPageTypeFilter.addEventListener('change', applyFiltersAndRender);
     elements.cloudPagePublishedFilter.addEventListener('change', applyFiltersAndRender);
     elements.cloudPageUrlFilter.addEventListener('change', applyFiltersAndRender);
+    elements.cloudPageDateField.addEventListener('change', applyFiltersAndRender);
+    elements.cloudPageDateFrom.addEventListener('change', applyFiltersAndRender);
+    elements.cloudPageDateTo.addEventListener('change', applyFiltersAndRender);
     
     // El ordenamiento también resetea la paginación.
     document.querySelector('#cloudpages-table thead').addEventListener('click', handleSort);
@@ -150,6 +153,9 @@ export function clearCache() {
     elements.cloudPagesTbody.innerHTML = '';
     elements.cloudPagePublishedFilter.value = '';
     elements.cloudPageUrlFilter.value = '';
+    elements.cloudPageDateField.value = '';
+    elements.cloudPageDateFrom.value = '';
+    elements.cloudPageDateTo.value = '';
 
     if (elements.cloudPageCountSpan) {
         elements.cloudPageCountSpan.textContent = '';
@@ -349,7 +355,15 @@ function renderFilteredTable() {
     } else if (urlFilter === 'no') {
         filtered = filtered.filter(p => !p.url || !p.url.startsWith('http'));
     }
-    
+
+    // Filtro por rango de fechas
+    const dateField = elements.cloudPageDateField.value;
+    const dateFrom = elements.cloudPageDateFrom.value;
+    const dateTo = elements.cloudPageDateTo.value;
+    if (dateField && (dateFrom || dateTo)) {
+        filtered = filtered.filter(p => ui.isDateInRange(p[dateField], dateFrom, dateTo));
+    }
+
     currentFilteredList = filtered;
     updateCloudPageCount(); 
 
@@ -366,7 +380,7 @@ function renderTable(pages) {
 
     elements.cloudPagesTbody.innerHTML = '';
     if (paginatedItems.length === 0) {
-        elements.cloudPagesTbody.innerHTML = '<tr><td colspan="8">No se encontraron Cloud Pages con los filtros aplicados.</td></tr>';
+        elements.cloudPagesTbody.innerHTML = '<tr><td colspan="9">No se encontraron Cloud Pages con los filtros aplicados.</td></tr>';
     } else {
         paginatedItems.forEach(page => {
             const row = document.createElement('tr');
@@ -376,12 +390,13 @@ function renderTable(pages) {
                 ? `<td><a href="${page.url}" class="external-link" title="Abrir URL en el navegador">${page.url}</a></td>` 
                 : `<td>${page.url}</td>`;
             
-            const inspectBtn = page.hasDetailedContent 
-            ? `<span class="cp-inspect-btn" data-cloudpage-id="${page.id}" title="Ver dependencias y código"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>` 
+            const inspectBtn = page.hasDetailedContent
+            ? `<span class="cp-inspect-btn" data-cloudpage-id="${page.id}" title="Ver dependencias y código"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>`
             : '';
-            
+
             row.innerHTML = `
-                <td>${inspectBtn} ${page.name || '---'}</td>
+                <td style="text-align:center;">${inspectBtn}</td>
+                <td>${page.name || '---'}</td>
                 <td>${page.assetType.displayName || '---'}</td>
                 <td>${formatDate(page.modifiedDate)}</td>
                 <td>${page.modifiedByName || '---'}</td>

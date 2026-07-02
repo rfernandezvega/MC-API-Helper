@@ -4,6 +4,19 @@
 import { executeRestRequest, logger, setSilentResponses } from './api-core.js';
 import { getFolderPath } from './api-helpers.js';
 
+/** Formatea una duración en segundos a un texto de estimación (~X s / ~X min / ~X h). */
+function etaFromSeconds(seconds) {
+    if (!isFinite(seconds) || seconds < 0) return '';
+    const s = Math.round(seconds);
+    if (s < 60) return `~${s} s`;
+    const m = Math.floor(s / 60);
+    const remS = s % 60;
+    if (m < 60) return remS ? `~${m} min ${remS} s` : `~${m} min`;
+    const h = Math.floor(m / 60);
+    const remM = m % 60;
+    return remM ? `~${h} h ${remM} min` : `~${h} h`;
+}
+
 /**
  * Recupera la lista completa de todos los assets que son de tipo "Cloud Page" en la instancia.
  * @param {object} apiConfig - Configuración autenticada de la API.
@@ -153,6 +166,22 @@ export async function fetchAssetById(assetId, apiConfig) {
     return await executeRestRequest(url, options);
 }
 
+/**
+ * Borra (DELETE) un asset de Content Builder por su ID.
+ * @param {string|number} assetId - ID del asset a eliminar.
+ * @param {object} apiConfig - Configuración autenticada de la API.
+ * @returns {Promise<object>} { success: true } si se eliminó correctamente.
+ */
+export async function deleteContentAsset(assetId, apiConfig) {
+    const url = `${apiConfig.restUri}asset/v1/content/assets/${assetId}`;
+    const options = {
+        method: 'DELETE',
+        headers: { "Authorization": `Bearer ${apiConfig.accessToken}` }
+    };
+    await executeRestRequest(url, options);
+    return { success: true };
+}
+
  
 /**
  * Recupera todos los contenidos de Content Builder dividiendo las peticiones por tipo de asset.
@@ -200,6 +229,7 @@ export async function fetchAllContentAssets(contentTypesConfig, getAuthenticated
         let page = 1;
         let totalCount = 0;
         let groupCount = 0;
+        const groupStart = Date.now();
 
         if (onProgress) onProgress(`Descargando ${group.name}...`);
         logger.logMessage(`Consultando tipo "${group.name}" (IDs: ${group.ids.join(', ')})...`);
@@ -213,7 +243,7 @@ export async function fetchAllContentAssets(contentTypesConfig, getAuthenticated
             "sort": [{ "property": "id", "direction": "ASC" }],
             "fields": [
                 "id", "name", "assetType", "createdDate", "modifiedDate",
-                "content", "views", "category", "customerKey"
+                "content", "views", "category", "customerKey", "legacyData"
             ]
         };
 
@@ -238,7 +268,16 @@ export async function fetchAllContentAssets(contentTypesConfig, getAuthenticated
             groupCount += pageItems.length;
             totalCount = data.count;
 
-            if (onProgress) onProgress(`Descargando ${group.name}... ${groupCount}/${totalCount}`);
+            if (onProgress) {
+                let sub = '';
+                const elapsed = (Date.now() - groupStart) / 1000;
+                if (groupCount > 0 && totalCount > groupCount && elapsed > 0) {
+                    const rate = groupCount / elapsed; // items/seg
+                    const eta = etaFromSeconds((totalCount - groupCount) / rate);
+                    if (eta) sub = `Tiempo estimado restante: ${eta}`;
+                }
+                onProgress(`Descargando ${group.name}... ${groupCount}/${totalCount}`, sub);
+            }
             logger.logMessage(`  ${group.name} — Pág ${page}: ${pageItems.length} items (${groupCount}/${totalCount})`);
             page++;
 
@@ -282,32 +321,94 @@ function transformAsset(a, emailTypeIds, jsonMessageTypeIds) {
             .map(attr => `${attr.order}: ${attr.value}`)
             .join('\n') || null;
 
+        // ID legacy del email clásico → permite emparejar con triggeredSend.emailId de los Journeys
+        item.legacyId = a?.legacyData?.legacyId ?? null;
         item.templateId = a?.views?.html?.template?.id ?? null;
         item.templateName = a?.views?.html?.template?.name ?? null;
         item.attributes = attrs;
         item.subject = a?.views?.subjectline?.content ?? null;
         item.preheader = a?.views?.preheader?.content ?? null;
 
-        // Contenido principal + bloques de slots
+        // Contenido ensamblado + estructura de componentes (igual que la vista de detalle del
+        // Buscador, incluyendo bloques inline). No resuelve ContentBlockBy* ni rutas para no
+        // ralentizar la descarga masiva; los nombres de assets se resuelven luego contra la caché.
+        const components = [];
+        if (item.templateId != null || item.templateName) {
+            components.push({ kind: 'template', id: item.templateId != null ? String(item.templateId) : '', name: item.templateName || '', type: 'Template', ref: '' });
+        }
+
         let fullContent = a?.views?.html?.content || '';
         const slotBlockIds = [];
         const slots = a?.views?.html?.slots;
         if (slots) {
             for (const slotKey in slots) {
-                const blocks = slots[slotKey]?.blocks;
+                const slot = slots[slotKey];
+                let slotHtml = slot?.content || '';
+                // Etiqueta del slot (para "Referenciado por")
+                let slotLabel = '';
+                if (slot?.design) {
+                    const lm = slot.design.match(/<p[^>]*>(.*?)<\/p>/i);
+                    if (lm && lm[1]) slotLabel = lm[1].trim();
+                }
+                const slotRef = slotLabel ? `Slot: ${slotLabel}` : '';
+                const blocks = slot?.blocks;
                 if (blocks) {
                     for (const blockKey in blocks) {
                         const block = blocks[blockKey];
-                        if (block.content) fullContent += '\n' + block.content;
-                        // Recoger IDs de bloques arrastrados
-                        const refId = block.meta?.options?.id || block.id;
-                        if (refId) slotBlockIds.push(String(refId));
+                        const blockContent = block?.content || '';
+                        const blockRegex = new RegExp(
+                            `<div[^>]*data-type=["']block["'][^>]*data-key=["']${blockKey}["'][^>]*>\\s*</div>`,
+                            'gi'
+                        );
+                        slotHtml = slotHtml.replace(blockRegex, blockContent);
+
+                        const refId = block?.meta?.options?.id;
+                        const ownId = (block?.id != null && /^\d+$/.test(String(block.id))) ? String(block.id) : '';
+                        const blockType = block?.assetType?.displayName || block?.assetType?.name || '---';
+                        const blockName = block?.name || block?.fileProperties?.fileName || '';
+                        if (refId) {
+                            // Bloque arrastrado: referencia a un asset guardado por meta.options.id
+                            slotBlockIds.push(String(refId));
+                            components.push({ kind: 'ref', id: String(refId), name: '', type: blockType, ref: slotRef });
+                        } else if (ownId) {
+                            // Bloque real embebido: tiene id de asset propio (no es inline)
+                            slotBlockIds.push(ownId);
+                            components.push({ kind: 'block', id: ownId, name: blockName, type: blockType, ref: slotRef });
+                        } else if (blockContent) {
+                            // Bloque inline de verdad: creado dentro del email, sin id de asset
+                            components.push({ kind: 'inline', id: '', name: blockName || `Bloque inline (${blockKey})`, type: blockType, ref: slotRef });
+                        }
                     }
                 }
+                const slotRegex = new RegExp(
+                    `<div[^>]*data-type=["']slot["'][^>]*data-key=["']${slotKey}["'][^>]*>[\\s\\S]*?</div>`,
+                    'gi'
+                );
+                fullContent = fullContent.replace(slotRegex, slotHtml);
             }
         }
         item.content = fullContent || a.content || null;
         item.slotBlockIds = slotBlockIds.length > 0 ? slotBlockIds : null;
+
+        // ContentBlockBy* en el contenido base del email (mismo criterio que la tabla de
+        // componentes del Buscador: no se rastrean los macros embebidos dentro de bloques inline)
+        const codeForRefs = a.content || a?.views?.html?.content || '';
+        const macroPatterns = [
+            { re: /ContentBlockBy[Ii][Dd]\s*\(\s*["']?(\d+)["']?\s*\)/gi, t: 'Id' },
+            { re: /ContentBlockBy[Kk]ey\s*\(\s*["']([^"']+)["']\s*\)/gi, t: 'Key' },
+            { re: /ContentBlockBy[Nn]ame\s*\(\s*["']([^"']+)["']\s*\)/gi, t: 'Name' }
+        ];
+        const seenMacro = new Set();
+        for (const p of macroPatterns) {
+            let mm;
+            while ((mm = p.re.exec(codeForRefs)) !== null) {
+                const k = `${p.t}:${mm[1]}`;
+                if (seenMacro.has(k)) continue;
+                seenMacro.add(k);
+                components.push({ kind: 'macro', fromBase: true, macroType: p.t, macroValue: mm[1], id: p.t === 'Id' ? mm[1] : '', name: '', type: `ContentBlockBy${p.t}`, ref: `ContentBlockBy${p.t}` });
+            }
+        }
+        item.components = components.length > 0 ? components : null;
     } else if (jsonMessageTypeIds.includes(item.assetTypeId)) {
         const viewKeys = Object.keys(a?.views || {});
         const findView = (name) => viewKeys.find(k => k.toLowerCase() === name.toLowerCase());

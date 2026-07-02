@@ -83,6 +83,25 @@
     border-color: #ffa726;
 }
 
+.cp-journeys-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    background-color: #f3e8fb;
+    border: 1px solid #d2b4e8;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+.cp-journeys-btn:hover {
+    background-color: #e7d3f5;
+    border-color: #9b59b6;
+}
+
 /* WhatsApp Preview */
 .wa-preview {
     background-color: #e5ddd5;

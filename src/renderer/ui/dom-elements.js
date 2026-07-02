@@ -202,6 +202,10 @@ export function init() {
     elements.refreshAutomationsTableBtn = document.getElementById('refreshAutomationsTableBtn');
     elements.actionsAutomationBtn = document.getElementById('actionsAutomationBtn');
     elements.automationJourneyFilter = document.getElementById('automationJourneyFilter');
+    elements.automationNotifFilter = document.getElementById('automationNotifFilter');
+    elements.automationDateField = document.getElementById('automationDateField');
+    elements.automationDateFrom = document.getElementById('automationDateFrom');
+    elements.automationDateTo = document.getElementById('automationDateTo');
     elements.cloneAutomationBtn = document.getElementById('cloneAutomationBtn');
     elements.automationCountSpan = document.getElementById('automationCount');
     elements.downloadAutomationsCsvBtn = document.getElementById('downloadAutomationsCsvBtn');
@@ -251,6 +255,16 @@ export function init() {
     elements.actionsJourneyBtn = document.getElementById('actionsJourneyBtn');
     elements.getJourneyErrorsBtn = document.getElementById('getJourneyErrorsBtn');
     elements.journeyCommsFilter = document.getElementById('journeyCommsFilter');
+    elements.journeyDateField = document.getElementById('journeyDateField');
+    elements.journeyDateFrom = document.getElementById('journeyDateFrom');
+    elements.journeyDateTo = document.getElementById('journeyDateTo');
+    elements.journeysCacheDate = document.getElementById('journeys-cache-date');
+    // Drawer de comunicaciones de journey
+    elements.journeyCommsDrawer = document.getElementById('journey-comms-drawer');
+    elements.journeyCommsBackdrop = document.getElementById('journey-comms-backdrop');
+    elements.journeyCommsCloseBtn = document.getElementById('journey-comms-close-btn');
+    elements.journeyCommsTitle = document.getElementById('journey-comms-title');
+    elements.journeyCommsBody = document.getElementById('journey-comms-body');
 
     // --- 13. Sección: Clonador de Queries ---
     elements.queriesClonerStep1 = document.getElementById('queries-cloner-step1');
@@ -285,6 +299,9 @@ export function init() {
     elements.cloudPageCountSpan = document.getElementById('cloudpage-count');
     elements.cloudPagePublishedFilter = document.getElementById('cloudPagePublishedFilter');
     elements.cloudPageUrlFilter = document.getElementById('cloudPageUrlFilter');
+    elements.cloudPageDateField = document.getElementById('cloudPageDateField');
+    elements.cloudPageDateFrom = document.getElementById('cloudPageDateFrom');
+    elements.cloudPageDateTo = document.getElementById('cloudPageDateTo');
 
     // --- 15. Sección: Clonador de Automatismos ---
     elements.automationClonerSection = document.getElementById('automation-cloner-section');
@@ -384,9 +401,15 @@ export function init() {
 
     // --- 22. GESTOR DE CONTENIDOS ---
     elements.refreshContentBtn = document.getElementById('refreshContentBtn');
-    elements.unusedContentBtn = document.getElementById('unusedContentBtn');
     elements.exportContentCsvBtn = document.getElementById('exportContentCsvBtn');
+    elements.deleteContentBtn = document.getElementById('deleteContentBtn');
     elements.contentManagerFilter = document.getElementById('contentManagerFilter');
+    elements.contentUsageFilter = document.getElementById('contentUsageFilter');
+    elements.contentJourneyFilter = document.getElementById('contentJourneyFilter');
+    elements.contentMissingTemplateFilter = document.getElementById('contentMissingTemplateFilter');
+    elements.contentDateField = document.getElementById('contentDateField');
+    elements.contentDateFrom = document.getElementById('contentDateFrom');
+    elements.contentDateTo = document.getElementById('contentDateTo');
     elements.contentManagerTabButtons = document.getElementById('content-manager-tab-buttons');
     elements.contentManagerTabContent = document.getElementById('content-manager-tab-content');
     elements.contentTotalCount = document.getElementById('content-total-count');
@@ -442,20 +465,21 @@ export function init() {
 
     // --- 27. GENERADOR ERD ---
     elements.erdSection = document.getElementById('erd-generator-section');
-    elements.erdCopyScriptBtn = document.getElementById('erd-copy-script-btn');
-    elements.erdScriptToCopy = document.getElementById('erd-script-to-copy');
-    
-    elements.erdJsonInput = document.getElementById('erd-json-input');
+    elements.erdSelectionZone = document.getElementById('erd-selection-zone');
+    elements.erdGroupSearch = document.getElementById('erd-group-search');
+    elements.erdGroupList = document.getElementById('erd-group-list');
+    elements.erdRefreshGroupsBtn = document.getElementById('erd-refresh-groups-btn');
+    elements.erdHideSystem = document.getElementById('erd-hide-system');
+
     elements.erdChkHideContacts = document.getElementById('erd-chk-hide-contacts');
     elements.erdGenerateBtn = document.getElementById('erd-generate-btn');
     elements.erdResetBtn = document.getElementById('erd-reset-btn');
-    
-    elements.erdInputZone = document.getElementById('erd-input-zone');
+
     elements.erdCanvasZone = document.getElementById('erd-canvas-zone');
     elements.erdWrap = document.getElementById('erd-wrap');
     elements.erdCanvas = document.getElementById('erd-canvas');
     elements.erdSvgLines = document.getElementById('erd-svg-lines');
-    
+
     elements.erdTooltip = document.getElementById('erd-tooltip');
     elements.erdTtTtl = document.getElementById('erd-tt-ttl');
     elements.erdTtTyp = document.getElementById('erd-tt-typ');
@@ -463,8 +487,6 @@ export function init() {
 
     elements.erdDownloadCsvBtn = document.getElementById('erd-download-csv-btn');
     elements.erdDownloadImgBtn = document.getElementById('erd-download-img-btn');
-
-    elements.erdSfmcLink = document.getElementById('erd-sfmc-link'); 
 
     // --- 28. SEND MANAGEMENT ---
     elements.sendManagementSection = document.getElementById('sendManagement-section');

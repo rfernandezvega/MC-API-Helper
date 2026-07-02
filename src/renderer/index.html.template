@@ -385,7 +385,7 @@
 <!-- MODAL ESPECÍFICA PARA COMUNICACIONES -->
 <div id="journey-comm-modal" class="modal-overlay">
     <div class="modal-content" style="min-width: 450px;">
-        <h3>Recuperar Comunicaciones</h3>
+        <h3>Recuperar Journeys Completos</h3>
         <p id="journey-comm-message" style="margin-bottom: 25px; color: #666;"></p>
 
         <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 40px;">

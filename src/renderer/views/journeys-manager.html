@@ -7,13 +7,13 @@
             <button id="downloadJourneysCsvBtn" class="action-button">Exportar</button>
             <button id="analyzeJourneyBtn" class="action-button" disabled>Analizar</button>
             <button id="scanDeUsageBtn" class="action-button">Data Extensions</button>
-            <button id="getCommunicationsBtn" class="action-button activate-btn" disabled>Comunicaciones</button>
+            <button id="getCommunicationsBtn" class="action-button activate-btn" disabled>Descargar detalle</button>
             <button id="copyJourneyBtn" class="action-button" disabled>Copiar</button>
             <button id="actionsJourneyBtn" class="action-button delete-btn" disabled>Acciones</button>
             <button id="getJourneyErrorsBtn" class="action-button" disabled>Ver Errores</button>
         </div>          
     </div>
-    <h2>Gestión de Journeys <span id="journeyCount" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
+    <h2>Gestión de Journeys <span id="journeyCount" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span><span id="journeys-cache-date" style="color: #bbb; font-weight: normal; font-size: 0.75em; margin-left: 10px;"></span></h2>
     <!-- Filtros para la tabla de journeys -->
     <div class="header-filters">
         <input type="text" id="journeyNameFilter" class="filter-input" placeholder="Buscar por nombre...">
@@ -34,21 +34,30 @@
         <button type="button" id="journeyCommsFilter" class="filter-input" style="cursor: pointer; text-align: center; min-width: 140px; transition: all 0.2s; padding: 8px 12px; background-color: #f9f9f9;">
             Comunicaciones
         </button>
+        <select id="journeyDateField" class="filter-input">
+            <option value="">Fecha (todos)</option>
+            <option value="createdDate">Fecha creación</option>
+            <option value="modifiedDate">Fecha modificación</option>
+            <option value="activityDate">Fecha actividad</option>
+        </select>
+        <input type="date" id="journeyDateFrom" class="filter-input" title="Desde">
+        <input type="date" id="journeyDateTo" class="filter-input" title="Hasta">
     </div>
     <div class="table-container">
         <table id="journeys-table">
         <thead>
             <tr>
-            <th class="sortable-header" data-sort-by="name">Nombre Journey</th>
-            <th class="sortable-header" data-sort-by="version">Versión</th>           
-            <th class="sortable-header" data-sort-by="createdDate">Fecha creación</th> 
-            <th class="sortable-header" data-sort-by="modifiedDate">Fecha modificación</th>
-            <th class="sortable-header" data-sort-by="activityDate">Fecha actividad</th>
-            <th class="sortable-header" data-sort-by="eventType">Tipo</th>
-            <th class="sortable-header" data-sort-by="definitionType">Subtipo</th>
-            <th class="sortable-header" data-sort-by="status">Estado</th>
-            <th class="sortable-header" data-sort-by="dataExtensionName">Data Extension</th>
-            <th class="sortable-header col-des" data-sort-by="usedDEs">DEs en Actividades</th>
+            <th style="width:40px;"></th>
+            <th class="sortable-header" data-sort-by="name" style="width:19%;">Nombre Journey</th>
+            <th class="sortable-header" data-sort-by="version" style="width:6%;">Versión</th>
+            <th class="sortable-header" data-sort-by="createdDate" style="width:11%;">Fecha creación</th>
+            <th class="sortable-header" data-sort-by="modifiedDate" style="width:11%;">Fecha modificación</th>
+            <th class="sortable-header" data-sort-by="activityDate" style="width:11%;">Fecha actividad</th>
+            <th class="sortable-header" data-sort-by="eventType" style="width:11%;">Tipo</th>
+            <th class="sortable-header" data-sort-by="definitionType" style="width:8%;">Subtipo</th>
+            <th class="sortable-header" data-sort-by="status" style="width:7%;">Estado</th>
+            <th class="sortable-header" data-sort-by="dataExtensionName" style="width:16%;">Data Extension</th>
+            <th class="sortable-header col-des" data-sort-by="usedDEs" style="width:16%;">DEs en Actividades</th>
             </tr>
         </thead>
         <tbody id="journeys-tbody"></tbody>
@@ -60,4 +69,19 @@
         <span id="totalPagesJourneys">/ 1</span>
         <button id="nextPageBtnJourneys" class="action-button pagination-arrow">&raquo;</button>
     </div>
+
+    <!-- ===================== DRAWER DE COMUNICACIONES DE JOURNEY ===================== -->
+    <div id="journey-comms-backdrop" class="cp-detail-backdrop"></div>
+    <aside id="journey-comms-drawer" class="cp-detail-drawer">
+        <button id="journey-comms-close-btn" class="cp-detail-close-tab">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+            <span>Cerrar</span>
+        </button>
+        <div class="cp-detail-header">
+            <h2 id="journey-comms-title">Comunicaciones</h2>
+        </div>
+        <div id="journey-comms-body" class="cp-detail-code-block"></div>
+    </aside>
 </div>

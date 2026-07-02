@@ -8,23 +8,30 @@
 /* 1. Aplicamos alineación vertical a todas las celdas.
       Esto asegura que si una fila se hace alta, el contenido de las celdas cortas
       se mantenga centrado verticalmente, lo que se ve mucho mejor. */
+/* Anchos de columna fijos (no dependen del contenido) */
+#journeys-table {
+    table-layout: fixed;
+    width: 100%;
+}
 #journeys-table td {
     vertical-align: middle;
 }
-
-/* 2. Regla específica para las columnas de comunicaciones (Emails, SMSs, Pushes, Whatsapps).
-      Estas son las columnas 10, 11, 12 y 13 de la tabla. */
-#journeys-table th:nth-child(n+10),
-#journeys-table td:nth-child(n+10) {
-    /* Establecemos un ancho mínimo y máximo para estas columnas. */
-    min-width: 250px;
-    max-width: 300px;
-
-    /* Permite que el texto salte a la siguiente línea de forma natural. */
+/* Que los textos largos (nombres, Data Extensions) se ajusten al ancho fijo */
+#journeys-table th,
+#journeys-table td {
     white-space: normal;
-    
-    /* Fuerza el salto de línea para palabras muy largas sin espacios. */
     word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+/* Cabecera fija al hacer scroll para TODAS las columnas.
+   `.sortable-header` define `position: relative`, que anula el `position: sticky`
+   global de `th`; este selector (id + thead + th) tiene más especificidad y lo
+   restaura para todas las cabeceras, no solo la columna de acciones. */
+#journeys-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
 }
 
 

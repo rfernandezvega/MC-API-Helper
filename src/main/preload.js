@@ -74,6 +74,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * @returns {Promise<object>} Una promesa que resuelve con los contenidos cargados o null.
    */
   loadClientContents: (clientName) => ipcRenderer.invoke('load-client-contents-from-file', clientName),
+
+  /**
+   * Guarda los journeys completos de un cliente en un fichero de caché local (carpeta ClientJourneys).
+   * @param {object} data - Un objeto con { clientName: string, journeys: Array<object>, lastRefresh: string }.
+   * @returns {Promise<object>} Una promesa que resuelve con el resultado de la operación.
+   */
+  saveClientJourneys: (data) => ipcRenderer.invoke('save-client-journeys-to-file', data),
+
+  /**
+   * Carga los journeys cacheados de un cliente desde la carpeta ClientJourneys.
+   * @param {string} clientName - El nombre del cliente.
+   * @returns {Promise<object>} Una promesa que resuelve con { journeys, lastRefresh } o nulos.
+   */
+  loadClientJourneys: (clientName) => ipcRenderer.invoke('load-client-journeys-from-file', clientName),
+
   /**
    * Guarda la lista enriquecida de Cloud Pages en un fichero de caché local.
    * @param {object} data - Un objeto con { clientName: string, cloudPagesData: Array<object> }.

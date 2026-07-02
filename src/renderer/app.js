@@ -18,7 +18,6 @@ import * as logger from './ui/logger.js';                           // Gestor de
 // Cada módulo encapsula la lógica de una sección específica de la aplicación.
 import * as fieldsTable from './components/fields-table.js';         // Lógica de la tabla de campos de Data Extension.
 import * as orgManager from './components/org-manager.js';             // Lógica para gestionar las configuraciones de clientes (login, guardado, etc.).
-import * as documentationManager from './components/documentation-manager.js'; // Lógica para la sección de documentación.
 import * as deCreator from './components/de-creator.js';             // Lógica para el formulario de creación de Data Extensions.
 import * as fieldManager from './components/field-manager.js';           // Lógica para la gestión de campos (recuperar, borrar, documentar).
 import * as automationsManager from './components/automations-manager.js'; // Lógica de la vista "Gestión de Automatismos".
@@ -587,8 +586,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // --- INICIALIZACIÓN DE MÓDULOS ---
 		fieldsTable.init();
-        documentationManager.init();
-		
+
 		// ESPERAMOS A QUE EL ORG MANAGER INICIALICE Y MIGRE DATOS
 		await orgManager.init({
 			getAuthenticatedConfig,
