@@ -100,14 +100,13 @@ function entryMethod(e) {
     return e.request?.method || e.request?.options?.method || (e.request ? 'POST' : '');
 }
 
-/** Texto formateado de la PETICIÓN de una entrada. */
+/** Texto formateado de la PETICIÓN de una entrada. Se muestra el CUERPO (lo relevante);
+ *  las cabeceras se omiten (solo llevan el token de auth). El endpoint ya va en la cabecera. */
 function formatRequest(e) {
     if (!e.request) return '(sin petición)';
-    const lines = [];
-    if (e.request.options?.headers) lines.push(`Headers:\n${prettyJson(e.request.options.headers)}`);
     const body = (e.request.payload !== undefined) ? e.request.payload : e.request.options?.body;
-    if (body !== undefined && body !== null && body !== '') lines.push(formatBody(body));
-    return lines.join('\n') || '(sin cuerpo)';
+    if (body !== undefined && body !== null && body !== '') return formatBody(body);
+    return '(sin cuerpo — p. ej. GET)';
 }
 
 /** Texto formateado de la RESPUESTA de una entrada. */
