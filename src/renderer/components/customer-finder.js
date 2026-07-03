@@ -5,6 +5,7 @@ import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
+import * as whatsappFinder from './whatsapp-finder.js';
 
 // --- 1. ESTADO DEL MÓDULO ---
 
@@ -93,6 +94,7 @@ async function searchCustomer() {
     elements.getCustomerJourneysBtn.disabled = true;
     elements.customerJourneysResultsBlock.classList.add('hidden');
     elements.customerDesResultsBlock.classList.add('hidden');
+    whatsappFinder.resetWhatsapp();
     elements.customerSearchTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
 
     try {
@@ -122,6 +124,12 @@ async function searchCustomer() {
         renderCustomerSearchResults();
 
         logger.logMessage(`Búsqueda completada. Se encontraron ${finalResults.length} resultado(s).`);
+
+        // Búsqueda adicional en la Audiencia WhatsApp si el toggle está activo.
+        if (whatsappFinder.isEnabled()) {
+            logger.logMessage('Incluyendo búsqueda en la Audiencia WhatsApp...');
+            await whatsappFinder.searchWhatsapp(value, apiConfig);
+        }
 
     } catch (error) {
         logger.logMessage(`Error al buscar clientes: ${error.message}`);

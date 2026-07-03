@@ -73,10 +73,11 @@
         <div class="config-block">
             <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
                 <div class="form-group" style="margin:0; flex:1; min-width:200px;">
-                    <label for="customerSearchValue">Subscriber Key o Email:</label>
+                    <label for="customerSearchValue">Subscriber Key, Email o Teléfono:</label>
                     <input type="text" id="customerSearchValue" placeholder="Ingresa el valor a buscar">
                 </div>
                 <button id="searchCustomerBtn" class="action-button" style="height:36px;">Buscar Cliente</button>
+                <button id="waToggleBtn" class="action-button" type="button" style="height:36px;" title="Incluir búsqueda en la audiencia de WhatsApp">Incluir WhatsApp</button>
             </div>
         </div>
         <div class="config-block" style="flex-grow:1;">
@@ -124,6 +125,36 @@
         <div id="customer-des-results-block" class="config-block hidden">
             <h3>Resultados de Búsqueda en Data Extensions</h3>
             <div id="des-results-container"></div>
+        </div>
+
+        <!-- Resultados de Audiencia WhatsApp (cuando se incluye WhatsApp en la búsqueda) -->
+        <div id="wa-results-block" class="config-block hidden">
+            <h3 style="margin:0 0 10px;">Audiencia WhatsApp</h3>
+            <div class="table-container">
+                <table id="wa-results-table">
+                    <thead><tr><th>Contact Key</th><th>Teléfono</th><th>Locale</th><th>Canales</th></tr></thead>
+                    <tbody id="wa-results-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Alta WhatsApp (si no se encuentra en la audiencia) -->
+        <div id="wa-register-block" class="config-block hidden">
+            <h3 style="margin:0 0 10px;">No encontrado en WhatsApp — Alta de contacto</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div class="form-group" style="margin:0;"><label for="waNewSubKey">Contact Key</label><input type="text" id="waNewSubKey"></div>
+                <div class="form-group" style="margin:0;"><label for="waNewMobile">Teléfono</label><input type="text" id="waNewMobile"></div>
+                <div class="form-group" style="margin:0;"><label for="waNewLocale">Locale (país)</label>
+                    <input type="text" id="waNewLocale" list="wa-locale-list" placeholder="Escribe país o código (p. ej. ES)" autocomplete="off">
+                    <datalist id="wa-locale-list"></datalist>
+                </div>
+                <div class="form-group" style="margin:0;"><label for="waNewChannel">Channel ID</label>
+                    <select id="waNewChannel"></select>
+                </div>
+            </div>
+            <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+                <button id="waRegisterBtn" class="action-button activate-btn" type="button">Dar de alta</button>
+            </div>
         </div>
     </div>
 

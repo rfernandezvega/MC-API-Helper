@@ -164,6 +164,10 @@ body {
 .cs-bu:hover { background: #e8f1fb; color: #1c5fa8; }
 .cs-bu.active { font-weight: 700; color: #1c5fa8; background: #eaf3fc; }
 .cs-empty { padding: 8px 10px; color: #94a3b8; font-size: 0.85em; white-space: nowrap; }
+.chan-tag {
+    display: inline-block; background: #e1f5fe; color: #0277bd; padding: 3px 10px;
+    border-radius: 4px; font-size: 0.85em; margin: 2px; border: 1px solid #b3e5fc; font-weight: bold;
+}
 .login-status {
     font-size: 0.85em; font-weight: bold; text-align: center; margin: 10px 0 0 0;
     padding: 5px; border-radius: 4px; line-height: 1.4;

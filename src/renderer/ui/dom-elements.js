@@ -76,6 +76,10 @@ export function init() {
     elements.addSendConfigRowBtn = document.getElementById('addSendConfigRowBtn');
     elements.importDvConfigBtn = document.getElementById('importDvConfigBtn');
     elements.exportDvConfigBtn = document.getElementById('exportDvConfigBtn');
+    // Canales WhatsApp (por BU) en la vista de configuración de clientes
+    elements.addWaChannelBtn = document.getElementById('addWaChannelBtn');
+    elements.waChannelsTbody = document.getElementById('wa-channels-tbody');
+    elements.waConsoleLink = document.getElementById('wa-console-link');
 
     // --- 5.0 Sección: Data Extensions ---
     elements.gestionDeUnificadaSection = document.getElementById('gestion-de-unificada-section');
@@ -143,6 +147,18 @@ export function init() {
     elements.customerJourneysTbody = document.getElementById('customer-journeys-tbody');
     elements.customerDesResultsBlock = document.getElementById('customer-des-results-block');
     elements.desResultsContainer = document.getElementById('des-results-container');
+
+    // --- 8c-bis. Audiencia WhatsApp (dentro de la pestaña Clientes) ---
+    elements.waToggleBtn = document.getElementById('waToggleBtn');
+    elements.waResultsBlock = document.getElementById('wa-results-block');
+    elements.waResultsTbody = document.getElementById('wa-results-tbody');
+    elements.waRegisterBlock = document.getElementById('wa-register-block');
+    elements.waNewSubKey = document.getElementById('waNewSubKey');
+    elements.waNewMobile = document.getElementById('waNewMobile');
+    elements.waNewLocale = document.getElementById('waNewLocale');
+    elements.waNewLocaleList = document.getElementById('wa-locale-list');
+    elements.waNewChannel = document.getElementById('waNewChannel');
+    elements.waRegisterBtn = document.getElementById('waRegisterBtn');
 
     // --- 8d. Pestaña: Texto en Queries ---
     elements.querySearchText = document.getElementById('querySearchText');

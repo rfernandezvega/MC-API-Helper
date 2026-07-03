@@ -106,7 +106,7 @@ function formatRequest(e) {
     if (!e.request) return '(sin petición)';
     const body = (e.request.payload !== undefined) ? e.request.payload : e.request.options?.body;
     if (body !== undefined && body !== null && body !== '') return formatBody(body);
-    return '(sin cuerpo — p. ej. GET)';
+    return '(sin body)';
 }
 
 /** Texto formateado de la RESPUESTA de una entrada. */

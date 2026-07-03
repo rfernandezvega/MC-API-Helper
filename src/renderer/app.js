@@ -29,6 +29,7 @@ import * as dataSourceFinder from './components/data-source-finder.js';  // Lóg
 import * as queryTextFinder from './components/query-text-finder.js';      // Lógica del buscador de texto en queries.
 import * as contentFinder from './components/content-finder.js';  			// Lógica del buscador de contenidos
 import * as customerFinder from './components/customer-finder.js';         // Lógica del buscador de clientes/suscriptores.
+import * as whatsappFinder from './components/whatsapp-finder.js';         // Audiencia WhatsApp (búsqueda + alta) dentro de Clientes.
 import * as emailValidator from './components/email-validator.js';       // Lógica del validador de emails.
 import * as calendar from './components/calendar.js';                  // Lógica del calendario de automatismos.
 import * as automationCloner from './components/automation-cloner.js'; // Lógica del clonador de automatismos.
@@ -621,6 +622,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		queryTextFinder.init({ getAuthenticatedConfig });
 		scriptTextFinder.init({ getAuthenticatedConfig });
 		customerFinder.init({ getAuthenticatedConfig });
+		whatsappFinder.init({ getAuthenticatedConfig });
 		contentFinder.init({ getAuthenticatedConfig });
 		emailValidator.init({ getAuthenticatedConfig });
 		actividadesFinder.init({ getAuthenticatedConfig });

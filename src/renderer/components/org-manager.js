@@ -25,6 +25,9 @@ function escapeHtml(s) {
         .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// Consola de la app de WhatsApp (para que el usuario consulte los channelId de cada canal).
+const WA_CONSOLE_URL = 'https://mc.exacttarget.com/cloud/#app/WhatsApp/';
+
 // --- DEPENDENCIAS INYECTADAS ---
 let getAuthenticatedConfig;
 let updateLoginStatus;
@@ -78,7 +81,8 @@ function getConfigToSave() {
         businessUnits,
         clientId: elements.clientIdInput.value,
         stackKey: elements.stackKeyInput.value,
-        dvConfigs: getDvConfigsFromTable()
+        dvConfigs: getDvConfigsFromTable(),
+        waChannels: getWaChannelsFromTable()
     };
 }
 
@@ -90,12 +94,13 @@ async function saveClientConfig() {
         if (!clientName) { ui.showCustomAlert('Introduzca un nombre de cliente.'); return; }
 
         let configs = await window.electronAPI.loadGlobalConfigs();
-        configs[clientName] = getConfigToSave();
+        // Merge: se conservan campos que gestionan otras vistas (p. ej. waChannels de WhatsApp por BU).
+        configs[clientName] = { ...(configs[clientName] || {}), ...getConfigToSave() };
         await window.electronAPI.saveGlobalConfigs(configs);
 
         await loadConfigsIntoSelect();
         customerFinder.updateClientConfig(configs[clientName]);
-        ui.showCustomAlert(`Configuración para "${clientName}" guardada en disco.`);
+        ui.showCustomAlert(`Configuración para "${clientName}" guardada.`);
     } finally { logger.endLogBuffering(); }
 }
 
@@ -160,6 +165,7 @@ function setClientConfigForm(config) {
     elements.stackKeyInput.value = config.stackKey || '';
     populateDvConfigsTable(config.dvConfigs);
     populateBuTable(getBusFor(config));
+    populateWaChannelsTable(config.waChannels, getBusFor(config));
     elements.tokenField.value = '';
     elements.soapUriInput.value = '';
     elements.restUriInput.value = '';
@@ -515,6 +521,53 @@ function getBuTableRows() {
 }
 
 
+// --- HELPERS: CANALES WHATSAPP (por BU) ---
+
+/** Construye el <select> de BU para una fila de canal, con la BU indicada preseleccionada. */
+function buSelectHtml(bus, selectedMid) {
+    const opts = (bus || []).map(b =>
+        `<option value="${escapeHtml(b.mid)}"${String(b.mid) === String(selectedMid) ? ' selected' : ''}>${escapeHtml(b.name || b.mid)}</option>`
+    ).join('');
+    return `<select class="wa-bu-select">${opts}</select>`;
+}
+
+function addWaChannelRow(mid = '', channelId = '', name = '', bus = null) {
+    const buList = bus || getBuTableRows();
+    const row = elements.waChannelsTbody.insertRow();
+    row.innerHTML = `<td>${buSelectHtml(buList, mid)}</td>` +
+        `<td contenteditable="true">${escapeHtml(channelId)}</td>` +
+        `<td contenteditable="true">${escapeHtml(name)}</td>` +
+        `<td style="text-align:center;"><button type="button" class="wa-del-btn" title="Eliminar canal" ` +
+        `style="background:#fce8e6; border:1px solid #f6ccc7; color:#c5221f; border-radius:4px; padding:4px 12px; cursor:pointer; font-weight:bold;">Eliminar</button></td>`;
+}
+
+/** Pinta la tabla de canales a partir de waChannels ({mid: [{id, name}]}). */
+function populateWaChannelsTable(waChannels = {}, bus = null) {
+    elements.waChannelsTbody.innerHTML = '';
+    const buList = bus || getBuTableRows();
+    const entries = [];
+    for (const mid of Object.keys(waChannels || {})) {
+        for (const c of (waChannels[mid] || [])) entries.push({ mid, id: c.id, name: c.name });
+    }
+    if (!entries.length) { addWaChannelRow('', '', '', buList); return; }
+    entries.forEach(e => addWaChannelRow(e.mid, e.id, e.name, buList));
+}
+
+/** Lee la tabla de canales y devuelve el objeto agrupado {mid: [{id, name}]}. */
+function getWaChannelsFromTable() {
+    const result = {};
+    for (const row of elements.waChannelsTbody.querySelectorAll('tr')) {
+        const mid = row.cells[0]?.querySelector('select')?.value?.trim();
+        const id = row.cells[1]?.textContent.trim();
+        const name = row.cells[2]?.textContent.trim();
+        if (!mid || !id) continue;
+        if (!result[mid]) result[mid] = [];
+        if (!result[mid].some(c => c.id === id)) result[mid].push({ id, name: name || id });
+    }
+    return result;
+}
+
+
 // --- HELPERS: TABLA DE CONFIGURACIÓN DE BÚSQUEDA (DVs) ---
 
 function getDvConfigsFromTable() {
@@ -586,6 +639,16 @@ export async function init(dependencies) {
         if (e.target.matches('.delete-row-btn')) {
             e.target.closest('tr')?.remove();
         }
+    });
+
+    // Canales WhatsApp (por BU).
+    elements.addWaChannelBtn?.addEventListener('click', () => addWaChannelRow('', '', ''));
+    elements.waChannelsTbody?.addEventListener('click', (e) => {
+        if (e.target.matches('.wa-del-btn')) e.target.closest('tr')?.remove();
+    });
+    elements.waConsoleLink?.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.electronAPI.openExternalLink(WA_CONSOLE_URL);
     });
 
     // Desplegable plano (editar/activar por BU principal).

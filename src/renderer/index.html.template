@@ -70,7 +70,7 @@
 				<h3 class="collapsible-header">General</h3>
 				<ul class="collapsible-content">
 					<li><a class="macro-item" data-macro="docu">Documentación</a></li>
-					<li><a class="macro-item" data-macro="configuracionAPIs">Configuración de APIs</a></li>
+					<li><a class="macro-item" data-macro="configuracionAPIs">Configuración de Clientes</a></li>
 				</ul>
 			</div>
 			<div class="collapsible-group">
