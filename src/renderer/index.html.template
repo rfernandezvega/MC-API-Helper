@@ -50,9 +50,9 @@
 <aside id="macros-sidebar">
 	<div class="sidebar-content-wrapper">
 		<div class="sidebar-header">
-			<!-- Selector de Cliente y Estado de Sesión -->
+			<!-- Selector de Cuentas y Estado de Sesión -->
 			<div class="sidebar-client-selector">
-				<h2>Cliente</h2>
+				<h2>Cuenta</h2>
 				<div id="clientSelector" class="client-selector">
 						<button type="button" id="clientSelectorBtn" class="client-selector-btn">
 							<span id="clientSelectorLabel">Ninguno seleccionado</span>
@@ -70,7 +70,7 @@
 				<h3 class="collapsible-header">General</h3>
 				<ul class="collapsible-content">
 					<li><a class="macro-item" data-macro="docu">Documentación</a></li>
-					<li><a class="macro-item" data-macro="configuracionAPIs">Configuración de Clientes</a></li>
+					<li><a class="macro-item" data-macro="configuracionAPIs">Configuración de Cuentas</a></li>
 				</ul>
 			</div>
 			<div class="collapsible-group">

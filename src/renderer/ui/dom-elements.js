@@ -76,7 +76,7 @@ export function init() {
     elements.addSendConfigRowBtn = document.getElementById('addSendConfigRowBtn');
     elements.importDvConfigBtn = document.getElementById('importDvConfigBtn');
     elements.exportDvConfigBtn = document.getElementById('exportDvConfigBtn');
-    // Canales WhatsApp (por BU) en la vista de configuración de clientes
+    // Canales WhatsApp (por BU) en la vista de Configuración de Cuentas
     elements.addWaChannelBtn = document.getElementById('addWaChannelBtn');
     elements.waChannelsTbody = document.getElementById('wa-channels-tbody');
     elements.waConsoleLink = document.getElementById('wa-console-link');

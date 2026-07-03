@@ -50,9 +50,9 @@
 <aside id="macros-sidebar">
 	<div class="sidebar-content-wrapper">
 		<div class="sidebar-header">
-			<!-- Selector de Cliente y Estado de Sesión -->
+			<!-- Selector de Cuentas y Estado de Sesión -->
 			<div class="sidebar-client-selector">
-				<h2>Cliente</h2>
+				<h2>Cuenta</h2>
 				<div id="clientSelector" class="client-selector">
 						<button type="button" id="clientSelectorBtn" class="client-selector-btn">
 							<span id="clientSelectorLabel">Ninguno seleccionado</span>
@@ -70,7 +70,7 @@
 				<h3 class="collapsible-header">General</h3>
 				<ul class="collapsible-content">
 					<li><a class="macro-item" data-macro="docu">Documentación</a></li>
-					<li><a class="macro-item" data-macro="configuracionAPIs">Configuración de Clientes</a></li>
+					<li><a class="macro-item" data-macro="configuracionAPIs">Configuración de Cuentas</a></li>
 				</ul>
 			</div>
 			<div class="collapsible-group">
@@ -115,15 +115,15 @@
             <button id="logoutBtn" class="action-button delete-btn">Logout / Borrar</button>
         </div>            
     </div>
-    <h2>Configuración de clientes</h2>
-    <!-- Gestión de Clientes (Crear, Seleccionar) - Se mantiene fuera de las pestañas -->
+    <h2>Configuración de Cuentas</h2>
+    <!-- Gestión de Cuentas (Crear, Seleccionar) - Se mantiene fuera de las pestañas -->
     <div class="client-management">
-        <input type="text" id="configClientName" placeholder="Nombre del Cliente">
+        <input type="text" id="configClientName" placeholder="Nombre de la Cuenta">
         <select id="savedConfigs">
             <option value="">Seleccionar configuración...</option>
         </select>
     </div>
-    <!-- Contexto activo (cliente + BU). Lo leen las vistas como clave de caché; no editable por el usuario. -->
+    <!-- Contexto activo (Cuenta + BU). Lo leen las vistas como clave de caché; no editable por el usuario. -->
     <input type="hidden" id="clientName">
     <!-- MID de la BU activa (account_id). Lo leen las vistas que necesitan el MID en uso. -->
     <input type="hidden" id="activeMid">
@@ -155,9 +155,9 @@
             </div>
         </div>
 
-        <!-- PESTAÑA 2: Business Units del cliente -->
+        <!-- PESTAÑA 2: Business Units de la Cuenta -->
         <div id="business-units-tab" class="tab-content">
-            <!-- Business Units del cliente: se reutilizan las MISMAS credenciales para todas.
+            <!-- Business Units de la Cuenta: se reutilizan las MISMAS credenciales para todas.
                  Se pueden añadir a mano o autodescubrir con "Sincronizar BUs" (requiere sesión activa). -->
             <div class="config-block flex-layout-block">
                 <div class="config-block-header">
@@ -170,7 +170,7 @@
                 <p class="info-text" style="text-align:left; margin:0 0 15px;">
                     Todas las BUs comparten las credenciales de la pestaña "Configuración de API". La BU principal se añade automáticamente con el MID indicado.
                     "Sincronizar BUs" descubre las BUs del tenant (necesita haber hecho login primero). Estas BUs son las que aparecen
-                    en el desplegable de cliente de la barra lateral.
+                    en el desplegable de Cuentas de la barra lateral.
                 </p>
                 <div class="table-container">
                     <div class="table-scroll-wrapper">

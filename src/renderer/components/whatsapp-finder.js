@@ -2,7 +2,7 @@
 // Descripción: Audiencia WhatsApp integrada en la pestaña Clientes. La búsqueda se dispara desde el
 // mismo buscador de clientes cuando el toggle "Incluir WhatsApp" está activo. Permite ver los canales
 // del contacto y, si no existe, darlo de alta eligiendo un canal de los configurados para la BU activa
-// (en "Configuración de clientes"). El channelId no está hardcodeado.
+// (en "Configuración de Cuentas"). El channelId no está hardcodeado.
 
 import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
@@ -34,7 +34,7 @@ const COUNTRIES = [
 function activeClientName() { return elements.configClientNameInput?.value?.trim() || ''; }
 function activeMid() { return elements.activeMidInput?.value?.trim() || ''; }
 
-/** Canales configurados para el cliente+BU activos (se gestionan en "Configuración de clientes"). */
+/** Canales configurados para el cliente+BU activos (se gestionan en "Configuración de Cuentas"). */
 async function loadActiveChannels() {
     const client = activeClientName();
     const mid = activeMid();
@@ -138,7 +138,7 @@ async function showRegister(term) {
 
     elements.waRegisterBlock.classList.remove('hidden');
     if (!channels.length) {
-        ui.showCustomAlert('No hay canales de WhatsApp configurados para esta BU. Añádelos en "Configuración de clientes" antes de dar de alta.');
+        ui.showCustomAlert('No hay canales de WhatsApp configurados para esta BU. Añádelos en "Configuración de Cuentas" antes de dar de alta.');
     }
 }
 
@@ -149,7 +149,7 @@ async function register() {
     const channelId = elements.waNewChannel.value;
 
     if (!contactKey || !mobile) { ui.showCustomAlert('Contact Key y Teléfono son obligatorios.'); return; }
-    if (!channelId) { ui.showCustomAlert('No hay canal seleccionado. Configura los canales de WhatsApp de esta BU en "Configuración de clientes".'); return; }
+    if (!channelId) { ui.showCustomAlert('No hay canal seleccionado. Configura los canales de WhatsApp de esta BU en "Configuración de Cuentas".'); return; }
 
     if (!await ui.showCustomConfirm(`¿Dar de alta el contacto "${contactKey}" en el canal ${channelId}?`)) return;
 
