@@ -19,7 +19,6 @@
 				<button class="tab-button" data-tab="doc-buscadores">Buscadores</button>
 				<button class="tab-button" data-tab="doc-contenidos">Contenidos</button>
 				<button class="tab-button" data-tab="doc-cloudpages">Cloud Pages</button>
-				<button class="tab-button" data-tab="doc-calendario">Calendario</button>
 
 				<div class="docu-vnav-title">Gestión</div>
 				<button class="tab-button" data-tab="doc-journeys">Journeys</button>
@@ -247,27 +246,6 @@
 				</div>
 
 				<!-- ===== CALENDARIO ===== -->
-				<div id="doc-calendario" class="tab-content">
-					<div class="docu-view">
-						<h3>Calendario</h3>
-						<p>Muestra en un calendario los automatismos programados por su próxima fecha de ejecución. Los días con algo programado se marcan en azul.</p>
-
-						<h4>Controles</h4>
-						<ul>
-							<li><b>Año</b> — Desplegable para cambiar el año mostrado.</li>
-							<li><b>Refrescar Automatismos</b> — Recarga todos los automatismos programados.</li>
-							<li><b>Refrescar Automatismos de Journeys</b> — Carga/actualiza solo los automatismos que lanzan algún Journey.</li>
-						</ul>
-
-						<h4>Uso</h4>
-						<ul>
-							<li>Al hacer clic en un día, el panel derecho muestra qué automatismos hay y a qué hora están programados.</li>
-							<li>Desde <b>Automatizaciones del Día</b> se salta a la vista de <b>Automatismos</b> ya filtrada por esos automatismos.</li>
-						</ul>
-						<div class="docu-note">Al volver a entrar se muestra lo último guardado; pulsa Refrescar para tener los datos al día.</div>
-					</div>
-				</div>
-
 				<!-- ===== JOURNEYS ===== -->
 				<div id="doc-journeys" class="tab-content">
 					<div class="docu-view">
@@ -316,6 +294,7 @@
 						<h4>Botones de cabecera</h4>
 						<ul>
 							<li><b>Refrescar</b> — Recarga los datos por API.</li>
+							<li><b>Calendario</b> — Abre un panel lateral con un calendario que sitúa los automatismos <b>actualmente filtrados</b> en la vista por su próxima fecha de ejecución. Los días con algo programado se marcan en azul; al pulsar un día, el panel derecho muestra qué automatismos hay y a qué hora. Se puede cambiar el <b>Año</b>.</li>
 							<li><b>Analizar</b> (1 seleccionado) — Abre el análisis detallado del automatismo.</li>
 							<li><b>Cargar Notificaciones</b> — Obtiene los emails de alerta configurados y muestra las columnas de notificación.</li>
 							<li><b>Exportar</b> — Descarga un CSV con los datos visibles (respeta filtros).</li>

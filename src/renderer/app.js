@@ -85,7 +85,6 @@ document.addEventListener('DOMContentLoaded', function () {
 			'configuracion-apis-section': 'configuracionAPIs',			
 			'buscadores-section': 'buscadores',
 			'clonador-queries-section': 'clonadorQueries',
-			'calendario-section': 'calendario',
 			'gestion-automatismos-section': 'gestionAutomatismos',
 			'gestion-journeys-section': 'gestionJourneys',
 			'gestion-cloudpages-section': 'gestionCloudPages',
@@ -395,10 +394,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     showSection('campos-section');
                     fieldsTable.prepareView();
                 }
-				else if (macro === 'calendario'){
-                    showSection('calendario-section');
-                    await calendar.view();
-                }  
 				else if (macro === 'gestionAutomatismos') {
 					showSection('gestion-automatismos-section');
 					await automationsManager.view(); 
@@ -500,16 +495,6 @@ document.addEventListener('DOMContentLoaded', function () {
 			settings.collapsibleStates[header.textContent.trim()] = isExpanded;
 			await window.electronAPI.saveSettings(settings);
 		}));
-	}
-
-	/**
-	 * Función "puente" que permite a otros módulos (como el calendario)
-	 * navegar a la vista de automatismos y pasarle una lista de nombres para filtrar.
-	 * @param {Array<string>} automationNames - Nombres de los automatismos a mostrar.
-	 */
-	async function showFilteredAutomations(automationNames) {
-		showSection('gestion-automatismos-section');
-		await automationsManager.view(automationNames);
 	}
 
 	/**
@@ -626,7 +611,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		contentFinder.init({ getAuthenticatedConfig });
 		emailValidator.init({ getAuthenticatedConfig });
 		actividadesFinder.init({ getAuthenticatedConfig });
-		calendar.init({ getAuthenticatedConfig, showAutomationsView: showFilteredAutomations });
+		calendar.init();
 		automationCloner.init({ getAuthenticatedConfig, goBack });
 		automationAnalyzer.init({ getAuthenticatedConfig, goBack });
 		journeyAnalyzer.init({

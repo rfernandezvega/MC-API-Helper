@@ -208,13 +208,16 @@ export function init() {
     elements.validateEmailBtn = document.getElementById('validateEmailBtn');
     elements.emailValidationResults = document.getElementById('email-validation-results');
 
-    // --- 10. Sección: Calendario ---
+    // --- 10. Calendario (drawer dentro de Automatismos) ---
+    elements.calendarBtn = document.getElementById('calendarBtn');
+    elements.calendarDrawer = document.getElementById('calendar-drawer');
+    elements.calendarBackdrop = document.getElementById('calendar-backdrop');
+    elements.calendarCloseBtn = document.getElementById('calendar-close-btn');
+    elements.calendarDrawerCount = document.getElementById('calendarDrawerCount');
     elements.calendarGrid = document.getElementById('calendar-grid');
     elements.calendarYearSelect = document.getElementById('calendarYearSelect');
     elements.automationList = document.getElementById('automation-list');
     elements.automationListHeader = document.getElementById('automation-list-header');
-    elements.refreshAutomationsBtn = document.getElementById('refreshAutomationsBtn');
-    elements.refreshJourneyAutomationsBtn = document.getElementById('refreshJourneyAutomationsBtn');
 
     // --- 11. Sección: Gestión de Automatismos ---
     elements.automationsTbody = document.getElementById('automations-tbody');

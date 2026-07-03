@@ -78,7 +78,6 @@
 				<ul class="collapsible-content">
 					<li><a class="macro-item" data-macro="buscadores">Buscadores</a></li>
                     <li><a class="macro-item" data-macro="gestionDEs">Data Extensions</a></li>
-					<li><a class="macro-item" data-macro="calendario">Calendario</a></li>         
 					<li><a class="macro-item" data-macro="gestionAutomatismos">Automatismos</a></li> 
 					<li><a class="macro-item" data-macro="clonadorQueries">Clonar Queries</a></li>
 					<li><a class="macro-item" data-macro="gestionJourneys">Journeys</a></li>   

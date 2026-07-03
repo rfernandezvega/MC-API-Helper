@@ -78,7 +78,6 @@
 				<ul class="collapsible-content">
 					<li><a class="macro-item" data-macro="buscadores">Buscadores</a></li>
                     <li><a class="macro-item" data-macro="gestionDEs">Data Extensions</a></li>
-					<li><a class="macro-item" data-macro="calendario">Calendario</a></li>         
 					<li><a class="macro-item" data-macro="gestionAutomatismos">Automatismos</a></li> 
 					<li><a class="macro-item" data-macro="clonadorQueries">Clonar Queries</a></li>
 					<li><a class="macro-item" data-macro="gestionJourneys">Journeys</a></li>   
@@ -559,6 +558,7 @@
         <button class="back-button">← Atrás</button>            
         <div class="header-actions">
             <button id="refreshAutomationsTableBtn" class="action-button">Refrescar</button>
+            <button id="calendarBtn" class="action-button">Calendario</button>
             <button id="analyzeAutomationBtn" class="action-button" disabled>Analizar</button>
             <button id="getNotificationsBtn" class="action-button">Cargar Notificaciones</button>
             <button id="downloadAutomationsCsvBtn" class="action-button">Exportar</button>
@@ -609,33 +609,33 @@
         <span id="totalPagesAutomations">/ 1</span>
         <button id="nextPageBtnAutomations" class="action-button pagination-arrow">&raquo;</button>
         </div>
-</div>
 
-<!-- 7. SECCIÓN: CALENDARIO DE AUTOMATIZACIONES -->
-<div id="calendario-section" class="section">
-    <div class="section-header">
-        <button class="back-button">← Atrás</button>
+    <!-- ===================== DRAWER: CALENDARIO DE AUTOMATISMOS ===================== -->
+    <div id="calendar-backdrop" class="cp-detail-backdrop"></div>
+    <aside id="calendar-drawer" class="cp-detail-drawer">
+        <button id="calendar-close-btn" class="cp-detail-close-tab">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+            <span>Cerrar</span>
+        </button>
+        <div class="cp-detail-header">
+            <h2>Calendario de Automatismos <span id="calendarDrawerCount" style="color:#558ac7; font-weight:normal; font-size:0.75em;"></span></h2>
             <div class="calendar-controls">
-            <label for="calendarYearSelect">Año:</label>
-            <select id="calendarYearSelect" class="filter-input"></select>
-            <button id="refreshAutomationsBtn" class="action-button">Refrescar Automatismos</button>
-            <button id="refreshJourneyAutomationsBtn" class="action-button activate-btn">Refrescar Automatismos de Journeys</button>
-        </div>
-    </div>
-    <div class="calendar-container">
-        <!-- Rejilla de meses del calendario -->
-        <div id="calendar-main" class="calendar-main-view">
-            <h2>Calendario de Automatizaciones</h2>
-            <div id="calendar-grid" class="calendar-grid"></div>
-        </div>
-        <!-- Barra lateral para mostrar detalles del día seleccionado -->
-        <aside id="calendar-sidebar" class="calendar-sidebar">
-            <h3 id="automation-list-header">Automatizaciones del Día</h3>
-            <div id="automation-list">
-                <p>Selecciona un día para ver los detalles.</p>
+                <label for="calendarYearSelect">Año:</label>
+                <select id="calendarYearSelect" class="filter-input"></select>
             </div>
-        </aside>
-    </div>
+        </div>
+        <div class="calendar-container" style="margin-top:12px;">
+            <div id="calendar-main" class="calendar-main-view">
+                <div id="calendar-grid" class="calendar-grid"></div>
+            </div>
+            <aside id="calendar-sidebar" class="calendar-sidebar">
+                <h3 id="automation-list-header">Automatismos del Día</h3>
+                <div id="automation-list"><p>Selecciona un día para ver los detalles.</p></div>
+            </aside>
+        </div>
+    </aside>
 </div>
 
  <!-- 13. SECCIÓN: GESTIÓN DE CLOUD PAGES -->
@@ -829,7 +829,6 @@
 				<button class="tab-button" data-tab="doc-buscadores">Buscadores</button>
 				<button class="tab-button" data-tab="doc-contenidos">Contenidos</button>
 				<button class="tab-button" data-tab="doc-cloudpages">Cloud Pages</button>
-				<button class="tab-button" data-tab="doc-calendario">Calendario</button>
 
 				<div class="docu-vnav-title">Gestión</div>
 				<button class="tab-button" data-tab="doc-journeys">Journeys</button>
@@ -1057,27 +1056,6 @@
 				</div>
 
 				<!-- ===== CALENDARIO ===== -->
-				<div id="doc-calendario" class="tab-content">
-					<div class="docu-view">
-						<h3>Calendario</h3>
-						<p>Muestra en un calendario los automatismos programados por su próxima fecha de ejecución. Los días con algo programado se marcan en azul.</p>
-
-						<h4>Controles</h4>
-						<ul>
-							<li><b>Año</b> — Desplegable para cambiar el año mostrado.</li>
-							<li><b>Refrescar Automatismos</b> — Recarga todos los automatismos programados.</li>
-							<li><b>Refrescar Automatismos de Journeys</b> — Carga/actualiza solo los automatismos que lanzan algún Journey.</li>
-						</ul>
-
-						<h4>Uso</h4>
-						<ul>
-							<li>Al hacer clic en un día, el panel derecho muestra qué automatismos hay y a qué hora están programados.</li>
-							<li>Desde <b>Automatizaciones del Día</b> se salta a la vista de <b>Automatismos</b> ya filtrada por esos automatismos.</li>
-						</ul>
-						<div class="docu-note">Al volver a entrar se muestra lo último guardado; pulsa Refrescar para tener los datos al día.</div>
-					</div>
-				</div>
-
 				<!-- ===== JOURNEYS ===== -->
 				<div id="doc-journeys" class="tab-content">
 					<div class="docu-view">
@@ -1126,6 +1104,7 @@
 						<h4>Botones de cabecera</h4>
 						<ul>
 							<li><b>Refrescar</b> — Recarga los datos por API.</li>
+							<li><b>Calendario</b> — Abre un panel lateral con un calendario que sitúa los automatismos <b>actualmente filtrados</b> en la vista por su próxima fecha de ejecución. Los días con algo programado se marcan en azul; al pulsar un día, el panel derecho muestra qué automatismos hay y a qué hora. Se puede cambiar el <b>Año</b>.</li>
 							<li><b>Analizar</b> (1 seleccionado) — Abre el análisis detallado del automatismo.</li>
 							<li><b>Cargar Notificaciones</b> — Obtiene los emails de alerta configurados y muestra las columnas de notificación.</li>
 							<li><b>Exportar</b> — Descarga un CSV con los datos visibles (respeta filtros).</li>
@@ -2193,8 +2172,9 @@
                     <li><span class="changelog-tag improved">Mejora</span> Ya no es necesario dar de alta cada BU de cada cliente. Solo hace falta logearse en la BU principal y en Confogiración de APIs > Business Units darle a Sincronizar.</li>
                     <li><span class="changelog-tag improved">Mejora</span> La selección de clientes ahora solo muestra 1 cliente y desde este se puede seleccionar la Business Unit. Es necesario dar el permiso Accounts: Read y volver a logearse.</li>
                     <li><span class="changelog-tag improved">Mejora</span> El panel de logs y el fichero descargado ahora muestra las llamadas y respuestas agrupadas y colapsadas.</li>
-                    <li><span class="changelog-tag new">Nuevo</span> El Buscador de Clientes ahora permite buscar en los canales de Whatsapp y dar de alta un registro directamente.</li>   
-                    <li><span class="changelog-tag new">Nuevo</span> La Auditoría ahora tiene en cuenta la cache de contenidos para sacar métricas.</li>               
+                    <li><span class="changelog-tag new">Nuevo</span> El Buscador de Clientes ahora permite buscar en los canales de Whatsapp y dar de alta un registro directamente en un canal, por ejemplo para pruebas.</li>   
+                    <li><span class="changelog-tag new">Nuevo</span> La Auditoría ahora tiene en cuenta la cache de contenidos para sacar métricas.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> El Calendario ya no es una vista aparte: ahora es un botón dentro de Automatismos que abre un panel con el calendario de los automatismos que tengas filtrados en la vista.</li>
                 </ul>
             </details>
 

@@ -5,6 +5,7 @@ import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
+import * as calendar from './calendar.js';
 
 // --- 1. ESTADO DEL MÓDULO ---
 let fullAutomationList = [];
@@ -139,6 +140,8 @@ export function init(dependencies) {
     elements.automationJourneyFilter.addEventListener('change', applyFiltersAndRender);
     elements.cloneAutomationBtn.addEventListener('click', () => inspectAndShowCloner());
     elements.refreshAutomationsTableBtn.addEventListener('click', refreshData);
+    // Abre el calendario (drawer) con los automatismos actualmente filtrados en la vista.
+    elements.calendarBtn?.addEventListener('click', () => calendar.open(currentFilteredList));
     elements.getNotificationsBtn.addEventListener('click', loadNotificationsForVisibleRows);
     elements.analyzeAutomationBtn.addEventListener('click', () => analyzeSelectedAutomation());
 
