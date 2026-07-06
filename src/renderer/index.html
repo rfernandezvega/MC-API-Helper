@@ -110,7 +110,7 @@
         <button class="back-button">← Atrás</button>
         <div class="header-actions">
             <button id="saveConfigBtn" class="action-button">Guardar</button>
-            <button id="loginBtn" class="action-button">Login</button>
+            <button id="loginBtn" class="action-button activate-btn">Login</button>
             <button id="logoutBtn" class="action-button delete-btn">Logout / Borrar</button>
         </div>            
     </div>
@@ -231,8 +231,8 @@
                     <h3>Búsqueda Dinámica en Data Extensions</h3>
                     <div class="header-actions">
                         <button id="addSendConfigRowBtn" class="action-button">Añadir Fila</button>
-                        <button id="importDvConfigBtn" class="action-button">Importar</button>
-                        <button id="exportDvConfigBtn" class="action-button activate-btn">Exportar</button>
+                        <button id="importDvConfigBtn" class="action-button activate-btn">Importar</button>
+                        <button id="exportDvConfigBtn" class="action-button download-btn">Exportar</button>
                     </div>
                 </div>
                 <p class="info-text u-text-left u-m-0 u-mb-15">
@@ -295,9 +295,9 @@
     <div class="section-header">
         <button class="back-button">← Atrás</button>
         <div class="header-actions" style="display:flex; gap:10px; align-items:center;">
-            <button id="backToAuditBtn"          class="action-button activate-btn audit-btn-blue" style="display:none;">Volver a la Auditoría</button>
-            <button id="downloadAuditPdfBtn"     class="action-button activate-btn audit-btn-blue" style="display:none;">Descargar Informe</button>
-            <button id="downloadAuditDetailsBtn" class="action-button activate-btn audit-btn-green" style="display:none;">Descargar Detalles</button>
+            <button id="backToAuditBtn"          class="action-button" style="display:none;">Volver a la Auditoría</button>
+            <button id="downloadAuditPdfBtn"     class="action-button download-btn" style="display:none;">Descargar Informe</button>
+            <button id="downloadAuditDetailsBtn" class="action-button download-btn" style="display:none;">Descargar Detalles</button>
             <button id="runAuditBtn" class="action-button activate-btn">Iniciar Escaneo de Instancia</button>
         </div>
     </div>
@@ -451,8 +451,8 @@
     <div class="section-header">
         <button id="automationAnalyzerBackBtn" class="back-button">← Volver a la lista</button>     
         <div class="header-actions">
-        <button id="downloadAutomationPdfBtn" class="action-button activate-btn">Generar PDF</button>
-        <button id="downloadAutomationWordBtn" class="action-button ja-btn-word">Generar Word</button>
+        <button id="downloadAutomationPdfBtn" class="action-button download-btn">Generar PDF</button>
+        <button id="downloadAutomationWordBtn" class="action-button download-btn">Generar Word</button>
     </div>       
     </div>
     <h2>Análisis de Automatismo: <span id="analyzerAutomationNameTitle" class="ja-title-name"></span></h2>
@@ -544,7 +544,7 @@
         <p id="automation-actions-message" class="u-mb-25" style="font-size: 14px;"></p>
         <div class="u-flex-col u-gap-15">
             <button id="automation-actions-activate-btn" class="action-button activate-btn">Activar</button>
-            <button id="automation-actions-run-btn" class="action-button">Ejecutar</button>
+            <button id="automation-actions-run-btn" class="action-button warn-btn">Ejecutar</button>
             <button id="automation-actions-stop-btn" class="action-button delete-btn">Parar</button>
         </div>
         <div class="modal-actions u-mt-25">
@@ -562,9 +562,9 @@
             <button id="calendarBtn" class="action-button">Calendario</button>
             <button id="analyzeAutomationBtn" class="action-button" disabled>Analizar</button>
             <button id="getNotificationsBtn" class="action-button">Cargar Notificaciones</button>
-            <button id="downloadAutomationsCsvBtn" class="action-button">Exportar</button>
-            <button id="actionsAutomationBtn" class="action-button delete-btn" disabled>Acciones</button>
-            <button id="cloneAutomationBtn" class="action-button" disabled>Clonar</button>            
+            <button id="downloadAutomationsCsvBtn" class="action-button download-btn">Exportar</button>
+            <button id="actionsAutomationBtn" class="action-button warn-btn" disabled>Acciones</button>
+            <button id="cloneAutomationBtn" class="action-button activate-btn" disabled>Clonar</button>            
         </div>
     </div>
     <h2>Gestión de Automatismos <span id="automationCount" class="u-title-hint"></span></h2>
@@ -645,7 +645,7 @@
         <button class="back-button">← Atrás</button>  
         <div class="header-actions">
             <button id="refreshCloudPagesTableBtn" class="action-button">Refrescar</button>
-            <button id="downloadCloudPagesCsvBtn" class="action-button">Exportar</button>
+            <button id="downloadCloudPagesCsvBtn" class="action-button download-btn">Exportar</button>
             <button id="getCloudPageIdsBtn" class="action-button">Recuperar IDs</button>
         </div>          
     </div>
@@ -740,7 +740,7 @@
     </button>
     <div class="cp-detail-header">
         <h2 id="cp-detail-title">Detalle de Cloud Page</h2>
-        <button id="cp-detail-download-btn" class="action-button" title="Descargar código fuente">Descargar código</button>
+        <button id="cp-detail-download-btn" class="action-button download-btn" title="Descargar código fuente">Descargar código</button>
     </div>
     <!-- Dependencias en columnas -->
     <div id="cp-detail-deps" class="cp-detail-deps-row"></div>
@@ -754,7 +754,7 @@
         <button class="back-button">← Atrás</button>
         <div class="header-actions">
             <button id="refreshContentBtn" class="action-button">Refrescar</button>
-            <button id="exportContentCsvBtn" class="action-button">Exportar</button>
+            <button id="exportContentCsvBtn" class="action-button download-btn">Exportar</button>
             <button id="deleteContentBtn" class="action-button delete-btn" disabled>Borrar</button>
         </div>
     </div>
@@ -804,7 +804,7 @@
     </button>
     <div class="cp-detail-header">
         <h2 id="content-detail-title">Detalle de Contenido</h2>
-        <button id="content-detail-download-btn" class="action-button" title="Descargar contenido">Descargar</button>
+        <button id="content-detail-download-btn" class="action-button download-btn" title="Descargar contenido">Descargar</button>
     </div>
     <div id="content-detail-code" class="cp-detail-code-block"></div>
 </aside>
@@ -1334,8 +1334,8 @@
         <button class="back-button">← Atrás</button>
         <div class="header-actions">
             <button id="erd-reset-btn" class="action-button hidden">Nuevo Diagrama</button>
-            <button id="erd-download-csv-btn" class="action-button activate-btn hidden">Descargar CSV</button>
-            <button id="erd-download-img-btn" class="action-button hidden">Descargar Imagen</button>
+            <button id="erd-download-csv-btn" class="action-button download-btn hidden">Descargar CSV</button>
+            <button id="erd-download-img-btn" class="action-button download-btn hidden">Descargar Imagen</button>
             <button id="erd-refresh-groups-btn" class="action-button">Refrescar</button>
             <button id="erd-generate-btn" class="action-button activate-btn" disabled>Generar ERD</button>
         </div>
@@ -1641,7 +1641,7 @@
         </button>
         <div class="cp-detail-header">
             <h2 id="finder-code-title">Código Fuente</h2>
-            <button id="finder-code-download-btn" class="action-button" title="Descargar código fuente">Descargar</button>
+            <button id="finder-code-download-btn" class="action-button download-btn" title="Descargar código fuente">Descargar</button>
         </div>
         <div id="finder-code-content" class="cp-detail-code-block"></div>
     </aside>
@@ -1764,16 +1764,16 @@
 
         <!-- Grupo 2: Acciones de Configuración de Campos -->
         <div id="header-actions-config-campos" class="header-actions de-tab-actions hidden">
-            <button id="importFieldsBtn" class="action-button">Importar</button>                
+            <button id="importFieldsBtn" class="action-button activate-btn">Importar</button>
             <button id="createFieldsBtn" class="action-button activate-btn">Crear/Actualizar Campos</button>
-            <button id="createDummyFieldsBtn" class="action-button">Campos de Ejemplo</button>                
+            <button id="createDummyFieldsBtn" class="action-button secondary-btn">Campos de Ejemplo</button>
             <button id="clearFieldsBtn" class="action-button delete-btn">Limpiar Tabla</button>
         </div>
 
         <!-- Grupo 3: Acciones de Gestión/Borrado -->
         <div id="header-actions-gestion-campos" class="header-actions de-tab-actions hidden">
             <button id="getFields" class="action-button">Recuperar Campos</button>
-            <button id="documentDEsBtn" class="action-button" disabled>Documentar DEs</button>
+            <button id="documentDEsBtn" class="action-button download-btn" disabled>Documentar DEs</button>
             <button id="deleteField" class="action-button delete-btn">Borrar Campo</button>
         </div>
     </div>
@@ -1873,10 +1873,10 @@
     <div class="section-header">
         <button id="journeyAnalyzerBackBtn" class="back-button">← Volver a la lista</button>            
         <div class="header-actions">
-            <button id="expandAllAnalyzerBtn" class="action-button">Expandir Todo</button>
-            <button id="collapseAllAnalyzerBtn" class="action-button">Colapsar Todo</button>
-            <button id="downloadJourneyPdfBtn" class="action-button activate-btn">Generar PDF</button>
-            <button id="downloadJourneyWordBtn" class="action-button ja-btn-word">Generar Word</button>
+            <button id="expandAllAnalyzerBtn" class="action-button secondary-btn">Expandir Todo</button>
+            <button id="collapseAllAnalyzerBtn" class="action-button secondary-btn">Colapsar Todo</button>
+            <button id="downloadJourneyPdfBtn" class="action-button download-btn">Generar PDF</button>
+            <button id="downloadJourneyWordBtn" class="action-button download-btn">Generar Word</button>
         </div>
     </div>
     <h2>Análisis de Journey: <span id="analyzerJourneyNameTitle" class="ja-title-name"></span></h2>
@@ -1918,7 +1918,7 @@
         <button id="journeyErrorsBackBtn" class="back-button">← Volver</button>
         <div class="header-actions">
             <button id="refreshJourneyErrorsBtn" class="action-button">Refrescar</button>
-            <button id="downloadJourneyErrorsCsvBtn" class="action-button">Descargar CSV</button>
+            <button id="downloadJourneyErrorsCsvBtn" class="action-button download-btn">Descargar CSV</button>
         </div>
     </div>
     
@@ -1981,9 +1981,9 @@
             ¿Qué acción deseas realizar sobre los journeys seleccionados?
         </p>
         <div class="u-flex-col u-gap-15">
-            <button id="journey-actions-pause-btn" class="action-button">Pausar Journeys</button>
-            <button id="journey-actions-resume-btn" class="action-button">Reanudar Journeys</button>
-            <button id="journey-actions-stop-btn" class="action-button">Parar Journeys</button>
+            <button id="journey-actions-pause-btn" class="action-button warn-btn">Pausar Journeys</button>
+            <button id="journey-actions-resume-btn" class="action-button activate-btn">Reanudar Journeys</button>
+            <button id="journey-actions-stop-btn" class="action-button delete-btn">Parar Journeys</button>
             <button id="journey-actions-delete-btn" class="action-button delete-btn">Borrar Journeys</button>
         </div>
         <div class="modal-actions u-mt-25">
@@ -2039,7 +2039,7 @@
 
         <div class="modal-actions">
             <button id="journey-pause-cancel-btn" class="action-button cancel-btn">Cancelar</button>
-            <button id="journey-pause-confirm-btn" class="action-button activate-btn">Pausar Journeys</button>
+            <button id="journey-pause-confirm-btn" class="action-button warn-btn">Pausar Journeys</button>
         </div>
     </div>
 </div>
@@ -2051,12 +2051,12 @@
         <button class="back-button">← Atrás</button>  
         <div class="header-actions">
             <button id="refreshJourneysTableBtn" class="action-button">Refrescar</button>
-            <button id="downloadJourneysCsvBtn" class="action-button">Exportar</button>
+            <button id="downloadJourneysCsvBtn" class="action-button download-btn">Exportar</button>
             <button id="analyzeJourneyBtn" class="action-button" disabled>Analizar</button>
             <button id="scanDeUsageBtn" class="action-button">Data Extensions</button>
-            <button id="getCommunicationsBtn" class="action-button activate-btn" disabled>Descargar detalle</button>
-            <button id="copyJourneyBtn" class="action-button" disabled>Copiar</button>
-            <button id="actionsJourneyBtn" class="action-button delete-btn" disabled>Acciones</button>
+            <button id="getCommunicationsBtn" class="action-button download-btn" disabled>Descargar detalle</button>
+            <button id="copyJourneyBtn" class="action-button activate-btn" disabled>Copiar</button>
+            <button id="actionsJourneyBtn" class="action-button warn-btn" disabled>Acciones</button>
             <button id="getJourneyErrorsBtn" class="action-button" disabled>Ver Errores</button>
         </div>          
     </div>
@@ -2157,13 +2157,13 @@
                     <span class="changelog-date">X Julio 2026</span>
                 </summary>
                 <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Rediseño visual completo de la aplicación: nueva paleta de colores, botones, tablas, modales, menú lateral y badges de estado unificados en todas las vistas.</li>
                     <li><span class="changelog-tag improved">Mejora</span> Ya no es necesario dar de alta cada BU de cada cliente. Solo hace falta logearse en la BU principal y en Confogiración de APIs > Business Units darle a Sincronizar.</li>
                     <li><span class="changelog-tag improved">Mejora</span> La selección de clientes ahora solo muestra 1 cliente y desde este se puede seleccionar la Business Unit. Es necesario dar el permiso Accounts: Read y volver a logearse.</li>
                     <li><span class="changelog-tag improved">Mejora</span> El panel de logs y el fichero descargado ahora muestra las llamadas y respuestas agrupadas y colapsadas.</li>
                     <li><span class="changelog-tag new">Nuevo</span> El Buscador de Clientes ahora permite buscar en los canales de Whatsapp y dar de alta un registro directamente en un canal, por ejemplo para pruebas.</li>   
                     <li><span class="changelog-tag new">Nuevo</span> La Auditoría ahora tiene en cuenta la cache de contenidos para sacar métricas.</li>
-                    <li><span class="changelog-tag improved">Mejora</span> El Calendario ya no es una vista aparte: ahora es un botón dentro de Automatismos que abre un panel con el calendario de los automatismos que tengas filtrados en la vista.</li>
-                    <li><span class="changelog-tag improved">Mejora</span> Rediseño visual completo de la aplicación: nueva paleta de colores, botones, tablas, modales, menú lateral y badges de estado unificados en todas las vistas.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> El Calendario ya no es una vista aparte: ahora es un botón dentro de Automatismos que abre un panel con el calendario de los automatismos que tengas filtrados en la vista.</li>                    
                 </ul>
             </details>
 
@@ -2427,7 +2427,7 @@
     <!-- ========================================================== -->
     <div id="queries-cloner-step2" class="cloner-step-container" style="display: none;">
             <div class="section-header">
-            <button id="queryClonerBackBtn" class="action-button">← Atrás</button>
+            <button id="queryClonerBackBtn" class="action-button cancel-btn">← Atrás</button>
         </div>
         <h2>Clonador de Queries - Paso 2: Selección</h2>
         
@@ -2461,7 +2461,7 @@
         <button class="back-button">← Atrás</button>
         <div class="header-actions">
             <button id="refreshSendManagementBtn" class="action-button">Refrescar</button>
-            <button id="downloadSendManagementCsvBtn" class="action-button activate-btn">Exportar</button>
+            <button id="downloadSendManagementCsvBtn" class="action-button download-btn">Exportar</button>
         </div>
     </div>
 
@@ -2601,7 +2601,7 @@
     <div class="section-header">
         <button class="back-button">← Atrás</button>
         <div class="header-actions">
-            <button id="downloadUsersCsvBtn" class="action-button activate-btn">Descargar Usuarios</button>
+            <button id="downloadUsersCsvBtn" class="action-button download-btn">Descargar Usuarios</button>
             <button id="prepareCapturBtn" class="action-button" disabled>Preparar Captura</button>
         </div>
     </div>
@@ -2749,7 +2749,7 @@
         <textarea id="paste-data-area" rows="10" placeholder="Ciudad	Text	50&#10;Email	EmailAddress	254"></textarea>
         <div class="modal-actions">
             <button id="process-paste-btn" class="action-button">Añadir Campos</button>
-            <button id="cancel-paste-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="cancel-paste-btn" class="action-button cancel-btn">Cancelar</button>
         </div>
     </div>
 </div>
@@ -2779,7 +2779,7 @@
         <h3>Confirmación Requerida</h3>
         <p id="custom-confirm-message" style="line-height: 1.6;"></p>
         <div class="modal-actions">
-            <button id="custom-confirm-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="custom-confirm-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="custom-confirm-ok-btn" class="action-button activate-btn">Confirmar</button>
         </div>
     </div>
@@ -2811,7 +2811,7 @@
             </div>
         </div>
         <div class="modal-actions">
-            <button id="folder-selector-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="folder-selector-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="folder-selector-ok-btn" class="action-button activate-btn" disabled>Seleccionar</button>
         </div>
     </div>
@@ -2860,7 +2860,7 @@
         
         <!-- Botones de acción del modal -->
         <div class="modal-actions">
-            <button id="automation-de-selector-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="automation-de-selector-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="automation-de-selector-continue-btn" class="action-button" disabled>Continuar →</button>
             <button id="automation-de-selector-clone-btn" class="action-button activate-btn hidden" disabled>Clonar</button>
         </div>
@@ -2943,7 +2943,7 @@
 
         <!-- Los botones de acción van fuera del contenedor de estilos -->
         <div class="modal-actions">
-            <button id="journey-cloner-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="journey-cloner-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="journey-cloner-continue-btn" class="action-button" disabled>Continuar →</button>
             <button id="journey-cloner-clone-btn" class="action-button activate-btn hidden" disabled>Clonar</button>
         </div>
@@ -2957,13 +2957,13 @@
 
         <!-- Bloque central de acciones -->
         <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 40px;">
-            <button id="journey-stop-current-btn" class="action-button" style="background-color: #558ac7; min-width: 160px;">Solo última versión</button>
-            <button id="journey-stop-all-btn" class="action-button activate-btn" style="min-width: 160px;">Todas las versiones</button>
+            <button id="journey-stop-current-btn" class="action-button delete-btn" style="min-width: 160px;">Solo última versión</button>
+            <button id="journey-stop-all-btn" class="action-button delete-btn" style="min-width: 160px;">Todas las versiones</button>
         </div>
 
         <!-- Bloque inferior derecho para Cancelar -->
         <div style="display: flex; justify-content: flex-end;">
-            <button id="journey-stop-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="journey-stop-cancel-btn" class="action-button cancel-btn">Cancelar</button>
         </div>
     </div>
 </div>
@@ -2974,12 +2974,12 @@
         <p id="journey-comm-message" style="margin-bottom: 25px; color: #666;"></p>
 
         <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 40px;">
-            <button id="journey-comm-selected-btn" class="action-button" style="background-color: #558ac7; min-width: 160px;">Solo seleccionados</button>
-            <button id="journey-comm-all-btn" class="action-button activate-btn" style="min-width: 160px;">Todos los cargados</button>
+            <button id="journey-comm-selected-btn" class="action-button download-btn" style="min-width: 160px;">Solo seleccionados</button>
+            <button id="journey-comm-all-btn" class="action-button download-btn" style="min-width: 160px;">Todos los cargados</button>
         </div>
 
         <div style="display: flex; justify-content: flex-end;">
-            <button id="journey-comm-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="journey-comm-cancel-btn" class="action-button cancel-btn">Cancelar</button>
         </div>
     </div>
 </div>
@@ -2990,7 +2990,7 @@
         <h3 id="checkbox-select-title">Seleccionar opciones</h3>
         <div id="checkbox-select-options" style="padding: 10px 0;"></div>
         <div class="modal-actions">
-            <button id="checkbox-select-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="checkbox-select-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="checkbox-select-ok-btn" class="action-button activate-btn">Aceptar</button>
         </div>
     </div>

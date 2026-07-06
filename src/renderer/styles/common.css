@@ -30,6 +30,10 @@
     --sf-green: #4caf50;         /* éxito (antes #28a745) */
     --sf-red: #c23934;           /* peligro (antes #dc3545) */
     --sf-red-bg: #fff1f1;        /* hover de acciones peligrosas */
+    --sf-teal: #0b827c;          /* descargas y exportaciones */
+    --sf-teal-dark: #09615c;
+    --sf-orange: #dd7a01;        /* cambios de estado con impacto (pausar, ejecutar) */
+    --sf-orange-dark: #b5670a;
     --sf-radius: 4px;
     --sf-radius-lg: 8px;
     --sf-shadow-menu: 0 8px 24px rgba(0,0,0,0.15);
@@ -523,6 +527,12 @@ body {
 .action-button.secondary-btn:hover { background-color: #5a6268; }
 .action-button.activate-btn, #saveConfigBtn { background-color: var(--sf-green); }
 .action-button.activate-btn:hover, #saveConfigBtn:hover { background-color: #43a047; }
+/* Descargas y exportaciones (CSV, PDF, imagen, exportar config...) */
+.action-button.download-btn { background-color: var(--sf-teal); }
+.action-button.download-btn:hover { background-color: var(--sf-teal-dark); }
+/* Cambios de estado con impacto pero no destructivos (pausar, ejecutar, menú de acciones) */
+.action-button.warn-btn { background-color: var(--sf-orange); }
+.action-button.warn-btn:hover { background-color: var(--sf-orange-dark); }
 /* Peligro: rojo sólido con texto blanco para destacar acciones delicadas */
 .action-button.delete-btn {
   background-color: var(--sf-red);

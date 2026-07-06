@@ -177,15 +177,6 @@
     color: var(--sf-blue-dark);
 }
 
-/* --- Botón "Generar Word" (color corporativo Word) ---
-   Se conserva el azul original que no coincide con ningún token. */
-.action-button.ja-btn-word {
-    background-color: #2b5797;
-}
-.action-button.ja-btn-word:hover {
-    background-color: #244a80;
-}
-
 /* --- Cabecera de sección "Actividades del Journey" (view HTML) --- */
 .ja-section-title-row {
     margin: 40px 0 15px 0;

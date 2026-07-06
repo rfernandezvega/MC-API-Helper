@@ -130,22 +130,6 @@
     box-sizing: border-box;
 }
 
-/* --- Variantes de color de los botones de la cabecera de auditoría ---
-   El HTML original fijaba estos colores con background-color inline sobre
-   .activate-btn (verde). Se conservan tal cual como clases. */
-.action-button.activate-btn.audit-btn-blue {
-    background-color: #2980b9;
-}
-.action-button.activate-btn.audit-btn-blue:hover {
-    background-color: #2471a3;
-}
-.action-button.activate-btn.audit-btn-green {
-    background-color: #27ae60;
-}
-.action-button.activate-btn.audit-btn-green:hover {
-    background-color: #229954;
-}
-
 /* --- Botones de las pestañas del dashboard ---
    Todos repetían padding:10px 18px; font-size:0.88em. */
 .audit-dashboard-tabs .tab-button {

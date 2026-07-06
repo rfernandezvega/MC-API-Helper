@@ -162,7 +162,7 @@
         <textarea id="paste-data-area" rows="10" placeholder="Ciudad	Text	50&#10;Email	EmailAddress	254"></textarea>
         <div class="modal-actions">
             <button id="process-paste-btn" class="action-button">Añadir Campos</button>
-            <button id="cancel-paste-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="cancel-paste-btn" class="action-button cancel-btn">Cancelar</button>
         </div>
     </div>
 </div>
@@ -192,7 +192,7 @@
         <h3>Confirmación Requerida</h3>
         <p id="custom-confirm-message" style="line-height: 1.6;"></p>
         <div class="modal-actions">
-            <button id="custom-confirm-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="custom-confirm-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="custom-confirm-ok-btn" class="action-button activate-btn">Confirmar</button>
         </div>
     </div>
@@ -224,7 +224,7 @@
             </div>
         </div>
         <div class="modal-actions">
-            <button id="folder-selector-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="folder-selector-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="folder-selector-ok-btn" class="action-button activate-btn" disabled>Seleccionar</button>
         </div>
     </div>
@@ -273,7 +273,7 @@
         
         <!-- Botones de acción del modal -->
         <div class="modal-actions">
-            <button id="automation-de-selector-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="automation-de-selector-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="automation-de-selector-continue-btn" class="action-button" disabled>Continuar →</button>
             <button id="automation-de-selector-clone-btn" class="action-button activate-btn hidden" disabled>Clonar</button>
         </div>
@@ -356,7 +356,7 @@
 
         <!-- Los botones de acción van fuera del contenedor de estilos -->
         <div class="modal-actions">
-            <button id="journey-cloner-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="journey-cloner-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="journey-cloner-continue-btn" class="action-button" disabled>Continuar →</button>
             <button id="journey-cloner-clone-btn" class="action-button activate-btn hidden" disabled>Clonar</button>
         </div>
@@ -370,13 +370,13 @@
 
         <!-- Bloque central de acciones -->
         <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 40px;">
-            <button id="journey-stop-current-btn" class="action-button" style="background-color: #558ac7; min-width: 160px;">Solo última versión</button>
-            <button id="journey-stop-all-btn" class="action-button activate-btn" style="min-width: 160px;">Todas las versiones</button>
+            <button id="journey-stop-current-btn" class="action-button delete-btn" style="min-width: 160px;">Solo última versión</button>
+            <button id="journey-stop-all-btn" class="action-button delete-btn" style="min-width: 160px;">Todas las versiones</button>
         </div>
 
         <!-- Bloque inferior derecho para Cancelar -->
         <div style="display: flex; justify-content: flex-end;">
-            <button id="journey-stop-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="journey-stop-cancel-btn" class="action-button cancel-btn">Cancelar</button>
         </div>
     </div>
 </div>
@@ -387,12 +387,12 @@
         <p id="journey-comm-message" style="margin-bottom: 25px; color: #666;"></p>
 
         <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 40px;">
-            <button id="journey-comm-selected-btn" class="action-button" style="background-color: #558ac7; min-width: 160px;">Solo seleccionados</button>
-            <button id="journey-comm-all-btn" class="action-button activate-btn" style="min-width: 160px;">Todos los cargados</button>
+            <button id="journey-comm-selected-btn" class="action-button download-btn" style="min-width: 160px;">Solo seleccionados</button>
+            <button id="journey-comm-all-btn" class="action-button download-btn" style="min-width: 160px;">Todos los cargados</button>
         </div>
 
         <div style="display: flex; justify-content: flex-end;">
-            <button id="journey-comm-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="journey-comm-cancel-btn" class="action-button cancel-btn">Cancelar</button>
         </div>
     </div>
 </div>
@@ -403,7 +403,7 @@
         <h3 id="checkbox-select-title">Seleccionar opciones</h3>
         <div id="checkbox-select-options" style="padding: 10px 0;"></div>
         <div class="modal-actions">
-            <button id="checkbox-select-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="checkbox-select-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="checkbox-select-ok-btn" class="action-button activate-btn">Aceptar</button>
         </div>
     </div>
