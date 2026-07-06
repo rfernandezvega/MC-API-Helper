@@ -1,0 +1,371 @@
+/* ===================================================================
+   styles/components/journey-analyzer.css
+   Estilos específicos del Journey Analyzer y el Automation Analyzer.
+   Rellenado en WP-7a / WP-7d: extracción de estilos inline repetidos
+   de journey-analyzer.js y automation-analyzer.js (cajas de aviso,
+   tablas embebidas y paneles de detalle).
+   Los colores de acento variables por tipo de actividad se dejan inline
+   en el JS (son datos dinámicos) y solo se extrae aquí la base común.
+   =================================================================== */
+
+/* --- Caja de aviso base (radio; borde y fondo en las variantes) ---
+   La usan ambos analizadores para los bloques de configuración de
+   actividad. El padding y los márgenes son contextuales y se dejan inline;
+   los pasteles concretos van en las variantes de abajo. */
+.ja-box {
+    border-radius: var(--sf-radius);
+}
+
+/* Variante amarilla (warnings / goals / STO / A-B test). */
+.ja-box-warn {
+    background: #fffaf0;
+    border: 1px solid #f3e5ab;
+}
+
+/* Variante roja (exit criteria / errores). */
+.ja-box-error {
+    background: #fdf2f2;
+    border: 1px solid #f5c6cb;
+}
+
+/* Variante azul (información neutra / paneles Salesforce). */
+.ja-box-info {
+    background: #fdfefe;
+    border: 1px solid #d4e6f1;
+}
+
+/* Variante verde (envíos de email / éxito). */
+.ja-box-ok {
+    background: #f4f9f4;
+    border: 1px solid #c8e6c9;
+}
+
+/* Variante gris neutra (engagement / criterios de decisión). */
+.ja-box-neutral {
+    background: #f4f6f7;
+    border: 1px solid #d5dbdb;
+}
+
+/* --- Variantes por tipo de actividad (pastel + acento estático) ---
+   Cada tipo tenía su propia combinación inline; el color de acento
+   (border-left) es fijo por tipo, no depende del dato. */
+
+/* Mobile Push. */
+.ja-box-push {
+    background: #fdf4ff;
+    border: 1px solid #f5d0fe;
+    border-left: 4px solid #a21caf;
+}
+
+/* Splits Einstein (canal / frecuencia). */
+.ja-box-einstein {
+    background: #e8f4f8;
+    border: 1px solid #a9cce3;
+    border-left: 5px solid #032e61;
+}
+
+/* Ámbar (A/B test, espera de respuesta de chat). */
+.ja-box-amber {
+    background: #fffcf5;
+    border: 1px solid #f3e5ab;
+}
+
+/* Einstein STO. */
+.ja-box-sto {
+    background: #f0f4f8;
+    border: 1px solid #d6dbdf;
+    border-left: 5px solid #032e61;
+}
+
+/* WhatsApp. */
+.ja-box-whatsapp {
+    background: #f0fff4;
+    border: 1px solid #c6f6d5;
+    border-left: 5px solid #25d366;
+}
+
+/* Transferencia de sesión WhatsApp. */
+.ja-box-sky {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-left: 5px solid #0ea5e9;
+}
+
+/* Acciones Salesforce (Sales/Object Activity). */
+.ja-box-sf {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 5px solid #00a1e0;
+}
+
+/* SMS MobileConnect. */
+.ja-box-sms {
+    background: #fff5f7;
+    border: 1px solid #fed7e2;
+    border-left: 5px solid #d53f8c;
+}
+
+/* MobilePush Inbox. */
+.ja-box-inbox {
+    background: #fffcf2;
+    border: 1px solid #fef3c7;
+    border-left: 5px solid #d97706;
+}
+
+/* --- Cajas de rama en los criterios de decisión --- */
+.ja-branch-box {
+    margin-bottom: 12px;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid #d6dbdf;
+    border-left: 4px solid #5499c7;
+    border-radius: var(--sf-radius);
+    font-family: sans-serif;
+}
+
+/* Rama "Resto" (contactos que no cumplen ningún criterio). */
+.ja-branch-rest {
+    padding: 10px;
+    background: #fdfefe;
+    border: 1px solid #d6dbdf;
+    border-left: 4px solid #abb2b9;
+    border-radius: var(--sf-radius);
+}
+
+/* --- Tablas embebidas dentro de las cajas de detalle ---
+   Sustituye el repetido width:100%; border-collapse:collapse; font-size:0.85em
+   con fondo blanco. */
+.ja-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85em;
+    background: #fff;
+}
+
+/* Celdas de las tablas embebidas: padding:5px; border:1px solid #eee. */
+.ja-table th,
+.ja-table td {
+    padding: 5px;
+    border: 1px solid #eee;
+    text-align: left;
+}
+
+/* --- Contenido de cada bloque colapsable (createCollapsibleHtml) ---
+   Sustituye el inline padding:15px; background:#fff; border sin borde
+   superior. */
+.ja-collapsible-inner {
+    padding: 15px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-top: none;
+}
+
+/* --- Bloque <pre> del flujo lógico --- */
+.ja-flow-pre {
+    background: var(--sf-bg-alt);
+    padding: 15px;
+    border-radius: 5px;
+    font-size: 0.9em;
+    line-height: 1.4;
+    overflow-x: auto;
+    margin: 0;
+    border: 1px solid #eee;
+}
+
+/* --- Nombre del journey/automatismo en el <h2> de las cabeceras --- */
+.ja-title-name {
+    color: var(--sf-blue-dark);
+}
+
+/* --- Botón "Generar Word" (color corporativo Word) ---
+   Se conserva el azul original que no coincide con ningún token. */
+.action-button.ja-btn-word {
+    background-color: #2b5797;
+}
+.action-button.ja-btn-word:hover {
+    background-color: #244a80;
+}
+
+/* --- Cabecera de sección "Actividades del Journey" (view HTML) --- */
+.ja-section-title-row {
+    margin: 40px 0 15px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--sf-blue-dark);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ja-section-title-row h3 {
+    margin: 0;
+    color: var(--sf-blue-dark);
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: bold;
+}
+
+/* ===================================================================
+   Bloques del Automation Analyzer (comparte fichero y prefijo ja-)
+   =================================================================== */
+
+/* Cabecera de información general del automatismo (sin borde decorativo). */
+.ja-header-block {
+    background-color: var(--sf-bg-alt);
+    margin-bottom: 20px;
+}
+
+/* Rejilla de datos de la cabecera (estado, ejecuciones). */
+.ja-header-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+/* Descripción bajo la rejilla de cabecera. */
+.ja-header-desc {
+    margin-top: 10px;
+    word-break: break-word;
+}
+
+/* Botón colapsable en rojo para avisos de impacto compartido.
+   Los !important se conservan del inline original: deben ganar a la
+   regla base de .sql-toggle-btn. */
+.sql-toggle-btn.ja-toggle-danger {
+    background: #fff5f5 !important;
+    color: #b03a2e !important;
+    border: 1px solid #fadbd8 !important;
+    font-size: 0.85em;
+}
+
+/* Contenido colapsable claro para las listas de impacto (sobreescribe
+   el tema oscuro por defecto de .sql-content). */
+.sql-content.ja-content-light {
+    border-color: #fadbd8 !important;
+    background: #f8f9fa !important;
+}
+
+/* Caja verde "actividad exclusiva" (sin uso compartido). */
+.ja-impact-exclusive {
+    background: #f0fff4 !important;
+    color: #1e8449 !important;
+    border: 1px solid #d4efdf !important;
+    padding: 8px 12px;
+    border-radius: var(--sf-radius);
+    font-size: 0.85em;
+}
+
+/* Panel derecho de configuración detallada de cada actividad (sin borde decorativo). */
+.ja-details-panel {
+    padding: 10px;
+    background: #f0f7ff;
+    border-radius: var(--sf-radius);
+    font-size: 0.85em;
+    line-height: 1.5;
+}
+
+/* Bloque de Data Extension destino (nombre, key y ruta de carpeta). */
+.ja-de-block {
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #d1e3f5;
+}
+.ja-de-name {
+    font-weight: bold;
+    color: #2c3e50;
+    font-size: 1.1em;
+}
+.ja-de-key {
+    color: #666;
+    font-size: 0.85em;
+    margin-bottom: 4px;
+}
+.ja-de-path {
+    color: #444;
+    font-size: 0.9em;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 5px;
+}
+
+/* Celdas de la tabla actividad (izquierda) / detalle (derecha). */
+.ja-cell-activity {
+    width: 40%;
+    text-align: left;
+    vertical-align: top;
+}
+.ja-cell-details {
+    width: 60%;
+    text-align: left;
+    vertical-align: top;
+}
+
+/* Etiqueta de tipo, nombre y descripción de la celda de actividad. */
+.ja-type-label {
+    color: var(--sf-blue-dark);
+    font-weight: bold;
+    text-transform: uppercase;
+}
+.ja-act-name {
+    display: block;
+    font-size: 1.1em;
+    margin: 4px 0;
+}
+.ja-act-desc {
+    color: #666;
+    display: block;
+    margin-bottom: 10px;
+}
+
+/* Listas de impacto (automatismos que comparten la actividad o la DE).
+   Los !important se conservan del inline original: ganan al color claro
+   del tema oscuro de .sql-content. */
+.ja-impact-list {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 0.85em;
+    color: #333333 !important;
+}
+.ja-ds-list {
+    margin: 0;
+    padding: 10px;
+    list-style: none;
+    color: #333333 !important;
+}
+.ja-ds-item {
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed #ddd;
+}
+.ja-ds-name {
+    font-weight: bold;
+    color: #b03a2e;
+}
+.ja-ds-autos {
+    margin: 4px 0 0 0;
+    padding-left: 15px;
+    font-size: 0.9em;
+    color: #333333 !important;
+}
+
+/* Rejilla de detalles técnicos de una importación. */
+.ja-import-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    font-size: 0.9em;
+    border-top: 1px solid #d1d9e0;
+    margin-top: 5px;
+    padding-top: 8px;
+}
+
+/* Valores acentuados repetidos en los paneles de detalle. */
+.ja-val-green {
+    color: #27ae60;
+}
+.ja-val-action {
+    text-transform: capitalize;
+    color: #2980b9;
+    font-weight: bold;
+}

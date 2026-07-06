@@ -8,21 +8,21 @@
         </div>
     </div>
     
-    <h2>Errores de Journeys <span id="journeyErrorsCountSpan" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
-    
+    <h2>Errores de Journeys <span id="journeyErrorsCountSpan" class="je-count"></span></h2>
+
     <div class="header-filters">
-        <input type="date" id="journeyErrorsStartDate" class="filter-input" style="width: 140px;">
-        <input type="date" id="journeyErrorsEndDate" class="filter-input" style="width: 140px;">
-        <select id="journeyErrorsJourneyFilter" class="filter-input" style="min-width: 200px;">
+        <input type="date" id="journeyErrorsStartDate" class="filter-input je-filter-date">
+        <input type="date" id="journeyErrorsEndDate" class="filter-input je-filter-date">
+        <select id="journeyErrorsJourneyFilter" class="filter-input je-filter-wide">
             <option value="">Todos los journeys</option>
         </select>
-        <select id="journeyErrorsStatusFilter" class="filter-input" style="min-width: 150px;">
+        <select id="journeyErrorsStatusFilter" class="filter-input je-filter-medium">
             <option value="">Todos los estados</option>
             <option value="ERROR">Error</option>
             <option value="WARNING">Warning</option>
         </select>
-        <input type="text" id="journeyErrorsActivityFilter" class="filter-input" placeholder="Filtrar por actividad..." style="min-width: 200px;">
-        <select id="journeyErrorsTypeFilter" class="filter-input" style="min-width: 150px;">
+        <input type="text" id="journeyErrorsActivityFilter" class="filter-input je-filter-wide" placeholder="Filtrar por actividad...">
+        <select id="journeyErrorsTypeFilter" class="filter-input je-filter-medium">
             <option value="">Todos los tipos</option>
             <option value="EMAILV2">Email</option>
             <option value="SALESCLOUDACTIVITY">Salesforce</option>

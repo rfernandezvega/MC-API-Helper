@@ -60,7 +60,7 @@
                         <button id="syncBuBtn" class="action-button activate-btn">Sincronizar BUs</button>
                     </div>
                 </div>
-                <p class="info-text" style="text-align:left; margin:0 0 15px;">
+                <p class="info-text u-text-left u-m-0 u-mb-15">
                     Todas las BUs comparten las credenciales de la pestaña "Configuración de API". La BU principal se añade automáticamente con el MID indicado.
                     "Sincronizar BUs" descubre las BUs del tenant (necesita haber hecho login primero). Estas BUs son las que aparecen
                     en el desplegable de Cuentas de la barra lateral.
@@ -73,6 +73,7 @@
                                     <th>Nombre BU</th>
                                     <th>MID</th>
                                     <th>Visible</th>
+                                    <th style="width:90px;">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="bu-list-tbody"></tbody>
@@ -91,7 +92,7 @@
                         <button id="addWaChannelBtn" class="action-button" type="button">Añadir canal</button>
                     </div>
                 </div>
-                <p class="info-text" style="text-align:left; margin:0 0 14px;">
+                <p class="info-text u-text-left u-m-0 u-mb-15">
                     Cada canal se asocia a una <b>Business Unit</b> y se usa en el alta de contactos de la
                     <b>Audiencia WhatsApp</b> (Buscadores → Clientes). Para conocer los <i>channelId</i>, accede a la app de WhatsApp
                     (<a id="wa-console-link" href="#" class="external-link" style="color:#0070d2; text-decoration:underline; font-weight:bold;">abrir</a>)
@@ -128,7 +129,7 @@
                         <button id="exportDvConfigBtn" class="action-button activate-btn">Exportar</button>
                     </div>
                 </div>
-                <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+                <p class="info-text u-text-left u-m-0 u-mb-15">
                     Configura las tablas donde se buscará al cliente al pulsar el botón "DEs". Los cambios se guardan junto con el resto de la configuración.
                 </p>
                 <div class="table-container">
@@ -139,6 +140,7 @@
                                     <th>Nombre</th>
                                     <th>External Key</th>
                                     <th>Campo de Búsqueda</th>
+                                    <th style="width:90px;">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="sends-config-tbody">

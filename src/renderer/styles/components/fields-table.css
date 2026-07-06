@@ -31,25 +31,34 @@
     align-self: flex-start;
 }
 
-/* Estilo de los botones dentro del contenedor de controles */
+/* Estilo de los botones dentro del contenedor de controles
+   (secundario blanco con borde, estilo btn-secondary de referencia) */
 .control-buttons button {
     width: 100px;
-    background-color: #6c757d;
-    color: #fff;
-    border: none;
-    border-radius: 5px;
+    background-color: #fff;
+    color: var(--sf-text-soft);
+    border: 1px solid var(--sf-border);
+    border-radius: var(--sf-radius);
     padding: 8px;
+    font-weight: 600;
     cursor: pointer;
+}
+.control-buttons button:hover {
+    background-color: var(--sf-bg);
 }
 
 .control-buttons .action-button{
     width: 100px;
-    background-color: #69a3db; 
+    background-color: var(--sf-blue);
+    border: none;
     color: #fff;
 }
 .control-buttons .action-button:hover {
-     background-color: #558ac7;
+     background-color: var(--sf-blue-dark);
 }
+/* Los botones de subir/bajar fila son secundarios: grises, no azules. */
+.control-buttons .action-button.secondary-btn { background-color: #6c757d; }
+.control-buttons .action-button.secondary-btn:hover { background-color: #5a6268; }
 
 /* Estilo para el modal de importación */
 .delimiter-selector {
@@ -61,7 +70,7 @@
 .delimiter-selector select, .delimiter-selector input {
     padding: 6px;
     border-radius: 4px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--sf-border);
 }
 .delimiter-selector input { 
     width: 40px; 
@@ -72,7 +81,7 @@
   width: 100%;
   padding: 8px;
   border-radius: 4px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--sf-border);
   font-family: monospace;
   margin-bottom: 15px;
 }
@@ -111,10 +120,9 @@
     flex: 1;
 }
 
-/* Cabecera fija al hacer scroll vertical */
+/* Cabecera fija al hacer scroll vertical (el fondo azul lo aporta el th global) */
 #myTable thead th {
     position: sticky;
     top: 0;
     z-index: 2;
-    background-color: #558ac7;       /* Mantiene el color azul de la cabecera */
 }

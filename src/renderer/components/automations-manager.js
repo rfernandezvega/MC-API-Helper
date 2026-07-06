@@ -6,13 +6,17 @@ import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import * as calendar from './calendar.js';
+import { escapeHtml, formatDate } from '../ui/format-utils.js';
+import { createTableSorter, createPaginator, renderStatusBadge } from '../ui/table-utils.js';
 
 // --- 1. ESTADO DEL MÓDULO ---
 let fullAutomationList = [];
-let currentPage = 1;
-let currentSortColumn = 'lastRunTime';
-let currentSortDirection = 'desc';
 const ITEMS_PER_PAGE = 15;
+
+// Controladores reutilizables de ordenación y paginación (WP-4/WP-5), instanciados en
+// init(). La ordenación inicial se mantiene: 'lastRunTime' (fecha) descendente.
+let sorter = null;
+let paginator = null;
 
 let currentFilteredList = [];
 
@@ -29,7 +33,8 @@ let lastSelectedIndex = -1;
  * Se llama cuando se cambia un FILTRO. Resetea la paginación y renderiza.
  */
 function applyFiltersAndRender() {
-    currentPage = 1;
+    // update() vuelve a página 1 sin disparar onPageChange (el render lo hacemos aquí)
+    paginator?.update(0, 1);
     renderFilteredTable();
 }
 
@@ -88,9 +93,10 @@ function renderFilteredTable() {
  * @param {Array} automations - La lista de automatismos a mostrar.
  */
 function renderTable(automations) {
-    sortData(automations); 
+    if (sorter) sorter.sort(automations);
 
-    const paginatedItems = automations.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+    // paginate() recalcula el total de páginas y devuelve solo la página actual
+    const paginatedItems = paginator ? paginator.paginate(automations) : automations;
 
     elements.automationsTbody.innerHTML = '';
     if (paginatedItems.length === 0) {
@@ -104,22 +110,22 @@ function renderTable(automations) {
             const completeNotif = auto.notifications?.Complete ?? '---';
             const journeyIcon = auto.launchesJourney ? 'Sí' : 'No';
 
+            // Datos de la API (nombre, estado, notificaciones): se escapan antes de interpolar
             row.innerHTML = `
-                <td>${auto.name || 'Sin Nombre'}</td>
+                <td>${escapeHtml(auto.name) || 'Sin Nombre'}</td>
                 <td>${formatDate(auto.lastRunTime)}</td>
                 <td>${formatDate(auto.scheduledTime)}</td>
-                <td>${auto.status || '---'}</td>
-                <td style="text-align:center;">${journeyIcon}</td>
-                <td class="col-notif">${errorNotif}</td>
-                <td class="col-notif">${completeNotif}</td>
+                <td>${auto.status ? renderStatusBadge(auto.status) : '---'}</td>
+                <td class="ta-center">${journeyIcon}</td>
+                <td class="col-notif">${escapeHtml(errorNotif)}</td>
+                <td class="col-notif">${escapeHtml(completeNotif)}</td>
             `;
             elements.automationsTbody.appendChild(row);
         });
     }
 
     elements.paginationAutomations.style.display = 'flex';
-    updatePaginationUI(automations.length);
-    updateSortIndicators();
+    if (sorter) sorter.updateIndicators();
     updateButtonsState();
     updateNotifColumnsVisibility();
 }
@@ -152,32 +158,33 @@ export function init(dependencies) {
     elements.automationDateFrom.addEventListener('change', applyFiltersAndRender);
     elements.automationDateTo.addEventListener('change', applyFiltersAndRender);
     
-    document.querySelector('#automations-table thead').addEventListener('click', handleSort);
-    
-    elements.prevPageBtnAutomations.addEventListener('click', () => {
-        if (currentPage > 1) {
-            currentPage--;
-            renderFilteredTable();
-        }
+    // Ordenación — controlador reutilizable (las columnas *Time se ordenan como fecha).
+    // Al ordenar se resetea la paginación, igual que hacía el handleSort local.
+    sorter = createTableSorter({
+        tableSelector: '#automations-table',
+        initialColumn: 'lastRunTime',
+        initialDirection: 'desc',
+        types: { lastRunTime: 'date', scheduledTime: 'date' },
+        onSort: applyFiltersAndRender
     });
-    elements.nextPageBtnAutomations.addEventListener('click', () => {
-        const maxPage = parseInt(elements.pageInputAutomations.max, 10) || 1;
-        if (currentPage < maxPage) {
-            currentPage++;
-            renderFilteredTable();
-        }
-    });
-    elements.pageInputAutomations.addEventListener('change', () => {
-        let newPage = parseInt(elements.pageInputAutomations.value, 10) || 1;
-        const maxPage = parseInt(elements.pageInputAutomations.max, 10) || 1;
-        if (newPage < 1) newPage = 1;
-        if (newPage > maxPage) newPage = maxPage;
-        currentPage = newPage;
-        renderFilteredTable();
-    });
+    sorter.attach();
+
+    // Paginación — controlador reutilizable sobre los 4 controles estándar
+    paginator = createPaginator(
+        {
+            pageInput: elements.pageInputAutomations,
+            totalLabel: elements.totalPagesAutomations,
+            prevBtn: elements.prevPageBtnAutomations,
+            nextBtn: elements.nextPageBtnAutomations
+        },
+        { itemsPerPage: ITEMS_PER_PAGE, onPageChange: renderFilteredTable }
+    );
+
+    // Si el input de página queda vacío al perder el foco, volvemos a la página 1
     elements.pageInputAutomations.addEventListener('blur', () => {
-        if(elements.pageInputAutomations.value === '') {
-            currentPage = 1;
+        if (elements.pageInputAutomations.value === '') {
+            // update() cambia de página sin disparar onPageChange; el render es explícito
+            paginator.update(0, 1);
             renderFilteredTable();
         }
     });
@@ -229,7 +236,7 @@ export async function view(automationNamesToFilter = null) {
  */
 export function clearCache() {
     fullAutomationList = [];
-    currentPage = 1;
+    paginator?.update(0, 1);
     elements.automationNameFilter.value = '';
     elements.automationStatusFilter.innerHTML = '<option value="">Todos los estados</option>';
     elements.automationsTbody.innerHTML = '';
@@ -282,7 +289,7 @@ async function fetchData() {
     } catch (error) {
         logger.logMessage(`Error al cargar Automatismos: ${error.message}`);
         ui.showCustomAlert(`Error al cargar Automatismos: ${error.message}`);
-        elements.automationsTbody.innerHTML = `<tr><td colspan="4" style="color:red;">Error al cargar: ${error.message}</td></tr>`;
+        elements.automationsTbody.innerHTML = `<tr><td colspan="7" class="error-text">Error al cargar: ${escapeHtml(error.message)}</td></tr>`;
     } finally {
         ui.unblockUI();
         logger.endLogBuffering();
@@ -448,71 +455,7 @@ async function analyzeSelectedAutomation() {
     }
 }
 
-// --- 5. GESTIÓN DE LA TABLA ---
-/**
- * Obtiene el valor de una propiedad anidada de un objeto a partir de una ruta de texto.
- * Ejemplo: getPropertyByPath(obj, 'a.b.c') es equivalente a obj.a.b.c
- * @param {object} obj - El objeto del que se extraerá el valor.
- * @param {string} path - La ruta de la propiedad (ej: 'schedule.scheduledTime').
- * @returns {*} El valor encontrado o null si no existe.
- */
-function getPropertyByPath(obj, path) {
-    return path.split('.').reduce((o, p) => (o ? o[p] : null), obj);
-}
-/**
- * Gestiona el evento de clic en las cabeceras para cambiar el orden.
- */
-function handleSort(e) {
-    const header = e.target.closest('.sortable-header');
-    if (!header) return;
-
-    const newSortColumn = header.dataset.sortBy;
-    if (currentSortColumn === newSortColumn) {
-        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
-    } else {
-        currentSortColumn = newSortColumn;
-        currentSortDirection = 'asc';
-    }
-    applyFiltersAndRender();
-}
-
-/**
- * Ordena un array de datos basándose en la columna y dirección actuales.
- */
-function sortData(dataToSort) {
-    const direction = currentSortDirection === 'asc' ? 1 : -1;
-    
-    dataToSort.sort((a, b) => {
-        let valA = getPropertyByPath(a, currentSortColumn);
-        let valB = getPropertyByPath(b, currentSortColumn);
-
-        const aIsNull = valA == null || (typeof valA === 'string' && valA.startsWith('0001-01-01'));
-        const bIsNull = valB == null || (typeof valB === 'string' && valB.startsWith('0001-01-01'));
-
-        if (aIsNull && bIsNull) return 0; // Ambos son nulos, son iguales.
-        
-        //Los nulos SIEMPRE al final
-        if (aIsNull) return 1; 
-        if (bIsNull) return -1;
-
-        // Si llegamos aquí, ninguno es nulo y podemos comparar.
-        if (currentSortColumn.includes('Time')) {
-            const dateA = new Date(valA);
-            const dateB = new Date(valB);
-
-            // Para fechas inválidas, siempre al final
-            if (isNaN(dateA.getTime())) return 1;
-            if (isNaN(dateB.getTime())) return -1;
-
-            return (dateA - dateB) * direction;
-        }
-        
-        // Ordenación alfanumérica para el resto de columnas
-        return String(valA).localeCompare(String(valB), undefined, { sensitivity: 'base' }) * direction;
-    });
-}
-
-// --- 6. HELPERS DE UI ---
+// --- 5. HELPERS DE UI ---
 
 /**
  * Rellena el desplegable de filtro de estados.
@@ -556,30 +499,6 @@ function updateButtonsState() {
 }
 
 /**
- * Actualiza la UI de los controles de paginación.
- */
-function updatePaginationUI(totalItems) {
-    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
-    elements.totalPagesAutomations.textContent = `/ ${totalPages}`;
-    elements.pageInputAutomations.value = currentPage;
-    elements.pageInputAutomations.max = totalPages;
-    elements.prevPageBtnAutomations.disabled = currentPage === 1;
-    elements.nextPageBtnAutomations.disabled = currentPage >= totalPages;
-}
-
-/**
- * Actualiza los indicadores visuales en las cabeceras de la tabla.
- */
-function updateSortIndicators() {
-    document.querySelectorAll('#automations-table .sortable-header').forEach(header => {
-        header.classList.remove('sort-asc', 'sort-desc');
-        if (header.dataset.sortBy === currentSortColumn) {
-            header.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
-        }
-    });
-}
-
-/**
  * Muestra u oculta las columnas de notificaciones según el flag.
  */
 function updateNotifColumnsVisibility() {
@@ -590,18 +509,6 @@ function updateNotifColumnsVisibility() {
     // El filtro por notificaciones aparece junto con las columnas
     if (elements.automationNotifFilter) {
         elements.automationNotifFilter.style.display = isNotifColumnsVisible ? '' : 'none';
-    }
-}
-
-/**
- * Formatea una cadena de fecha a un formato legible local.
- */
-function formatDate(dateString) {
-    if (!dateString || dateString.startsWith('0001-01-01')) return '---';
-    try {
-        return new Date(dateString).toLocaleString('es-ES', { timeZone: 'Europe/Madrid' });
-    } catch (error) {
-        return 'Fecha inválida';
     }
 }
 
@@ -633,7 +540,7 @@ function downloadAutomationsCsv() {
     }
 
     const sortedData = [...currentFilteredList];
-    sortData(sortedData);
+    if (sorter) sorter.sort(sortedData);
     
     const rows = sortedData.map(auto => {
         let rowData = [

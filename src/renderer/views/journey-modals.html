@@ -5,65 +5,64 @@
 
 <!-- MODAL: ACCIONES SOBRE JOURNEYS -->
 <div id="journey-actions-modal" class="modal-overlay">
-    <div class="modal-content" style="width: 400px;">
+    <div class="modal-content jm-modal-sm">
         <h3>Acciones sobre Journeys</h3>
-        <p id="journey-actions-message" style="font-size: 14px; margin-bottom: 25px;">
+        <p id="journey-actions-message" class="jm-modal-text">
             ¿Qué acción deseas realizar sobre los journeys seleccionados?
         </p>
-        <div style="display: flex; flex-direction: column; gap: 15px;">
+        <div class="u-flex-col u-gap-15">
             <button id="journey-actions-pause-btn" class="action-button">Pausar Journeys</button>
             <button id="journey-actions-resume-btn" class="action-button">Reanudar Journeys</button>
             <button id="journey-actions-stop-btn" class="action-button">Parar Journeys</button>
             <button id="journey-actions-delete-btn" class="action-button delete-btn">Borrar Journeys</button>
         </div>
-        <div class="modal-actions" style="margin-top: 25px;">
+        <div class="modal-actions u-mt-25">
             <button id="journey-actions-cancel-btn" class="action-button cancel-btn">Cancelar</button>
         </div>
     </div>
 </div>
 
 <!-- MODAL: CONFIGURACIÓN DE PAUSA -->
-<!-- MODAL: CONFIGURACIÓN DE PAUSA -->
 <div id="journey-pause-modal" class="modal-overlay">
-    <div class="modal-content" style="width: 520px;">
+    <div class="modal-content jm-modal-md">
         <h3>Pausar Journeys</h3>
-        <p style="font-size: 14px; margin-bottom: 25px;">
+        <p class="jm-modal-text">
             Vas a pausar <strong id="journey-pause-count-text">0</strong> journey(s). Configura las opciones de pausa:
         </p>
-        
-        <div style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 30px;">
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <label style="min-width: 160px; font-weight: 600;" title="El número de días para pausar el journey. El valor mínimo es 1 y el máximo es 14.">
-                    ℹ️ Paused Days 
+
+        <div class="jm-modal-body">
+            <div class="jm-modal-row">
+                <label class="jm-modal-label" title="El número de días para pausar el journey. El valor mínimo es 1 y el máximo es 14.">
+                    ℹ️ Paused Days
                 </label>
-                <input type="number" id="journey-pause-days" class="filter-input" min="1" max="14" value="14" style="width: 80px;">
+                <input type="number" id="journey-pause-days" class="filter-input jm-input-xs" min="1" max="14" value="14">
             </div>
 
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <label style="min-width: 160px; font-weight: 600;" title="La acción a tomar cuando transcurran los días indicados en Paused Days.">
-                    ℹ️ Guardrail Action 
+            <div class="jm-modal-row">
+                <label class="jm-modal-label" title="La acción a tomar cuando transcurran los días indicados en Paused Days.">
+                    ℹ️ Guardrail Action
                 </label>
-                <select id="journey-pause-guardrail" class="filter-input" style="width: 200px;">
+                <select id="journey-pause-guardrail" class="filter-input jm-input-sm">
                     <option value="Resume">Resume (Reanudar)</option>
                     <option value="Stop">Stop (Parar)</option>
                     <option value="None">None (Nada)</option>
                 </select>
             </div>
 
-            <div style="border-top: 1px solid #eee; padding-top: 15px; display: flex; flex-direction: column; gap: 12px;">
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;" title="Si es 'true', la fecha de finalización de una actividad 'Wait By Duration' se extiende por los días pausados.">
-                    <span style="font-weight: 600;">ℹ️ Extend Wait End Dates</span>
-                    <input type="checkbox" id="journey-pause-extend" checked style="width: 18px; height: 18px;">
+            <div class="jm-modal-check-group">
+                <label class="jm-modal-check" title="Si es 'true', la fecha de finalización de una actividad 'Wait By Duration' se extiende por los días pausados.">
+                    <span>ℹ️ Extend Wait End Dates</span>
+                    <input type="checkbox" id="journey-pause-extend" checked>
                 </label>
 
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;" title="Especifica si se deben evaluar y procesar los eventos de las actividades 'Wait Until Event' durante la pausa.">
-                    <span style="font-weight: 600;">ℹ️ Process Wait Until Events</span>
-                    <input type="checkbox" id="journey-pause-process" checked style="width: 18px; height: 18px;">
+                <label class="jm-modal-check" title="Especifica si se deben evaluar y procesar los eventos de las actividades 'Wait Until Event' durante la pausa.">
+                    <span>ℹ️ Process Wait Until Events</span>
+                    <input type="checkbox" id="journey-pause-process" checked>
                 </label>
 
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;" title="Si es 'true', los nuevos contactos se encolan mientras dure la pausa y entran al reanudarse el journey.">
-                    <span style="font-weight: 600;">ℹ️ Retain Contact Injection</span>
-                    <input type="checkbox" id="journey-pause-retain" checked style="width: 18px; height: 18px;">                    
+                <label class="jm-modal-check" title="Si es 'true', los nuevos contactos se encolan mientras dure la pausa y entran al reanudarse el journey.">
+                    <span>ℹ️ Retain Contact Injection</span>
+                    <input type="checkbox" id="journey-pause-retain" checked>
                 </label>
             </div>
         </div>

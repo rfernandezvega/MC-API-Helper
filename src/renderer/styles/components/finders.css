@@ -1,0 +1,94 @@
+/* ===================================================================
+   styles/components/finders.css
+   Estilos específicos de los buscadores (finders).
+   Extracción 1:1 de los estilos inline repetidos en views/finders.html
+   (WP-6b). No añade lógica: solo agrupa los patrones repetidos.
+   =================================================================== */
+
+/* Fila de filtros de un buscador: alinea los campos y el botón al pie,
+   con separación entre ellos y salto de línea en pantallas estrechas.
+   Sustituye a "display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap". */
+.finder-filter-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Campo de la fila de filtros que ocupa el espacio disponible.
+   Sustituye a "margin:0; flex:1; min-width:200px". */
+.finder-field {
+    margin: 0;
+    flex: 1;
+    min-width: 200px;
+}
+
+/* Botón de acción de un buscador: fija la altura para alinearlo con los
+   inputs de la fila de filtros. Sustituye al inline "height:36px". */
+.finder-btn {
+    height: 36px;
+}
+
+/* Inputs y selects de la fila de filtros con la misma altura que los
+   botones para que queden perfectamente alineados. */
+.finder-filter-row input[type="text"],
+.finder-filter-row select {
+    height: 36px;
+    box-sizing: border-box;
+}
+
+/* Anula el margin-bottom de 15px que .config-section-container .form-group
+   añade a los campos: desalineaba los botones respecto a los inputs
+   (este fichero se importa después de common.css, por eso gana el empate). */
+.finder-filter-row .form-group {
+    margin-bottom: 0;
+}
+
+/* Tablas del detalle de contenido (Componentes / DEs referenciadas):
+   cabecera clara para no competir con las barras azules de las secciones
+   colapsables ni heredar los bordes azul oscuro del th global. */
+.finder-detail-table {
+    width: 100%;
+    /* separate + spacing 0: con collapse los bordes no acompañan al th sticky */
+    border-collapse: separate;
+    border-spacing: 0;
+}
+.finder-detail-table th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--sf-bg-alt);
+    color: var(--sf-text-soft);
+    font-weight: 600;
+    padding: 8px;
+    border-top: 1px solid var(--sf-border);
+    border-right: 1px solid var(--sf-border);
+    border-bottom: 1px solid var(--sf-border);
+}
+.finder-detail-table th:first-child { border-left: 1px solid var(--sf-border); }
+.finder-detail-table td {
+    padding: 8px;
+}
+
+/* Rejilla de dos columnas del formulario de alta de contacto WhatsApp.
+   Sustituye a "display:grid; grid-template-columns:1fr 1fr; gap:12px". */
+.wa-register-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+/* Bloque de detalle del buscador de contenidos: separador superior azul.
+   La visibilidad (display:none) sigue gestionándola el JS por style.display.
+   Sustituye a "margin-top:20px; border-top:2px solid #558ac7; padding-top:15px". */
+.finder-content-detail {
+    margin-top: 20px;
+    border-top: 2px solid var(--sf-blue-dark);
+    padding-top: 15px;
+}
+
+/* Título del bloque de detalle del buscador de contenidos.
+   Sustituye al inline "color:#558ac7". */
+.finder-content-detail-title {
+    color: var(--sf-blue-dark);
+}

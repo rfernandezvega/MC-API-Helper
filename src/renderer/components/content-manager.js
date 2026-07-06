@@ -8,6 +8,8 @@ import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import { formatCodeWithIndentation, highlightCloudPageCode, buildCodeViewer } from '../ui/code-utils.js';
 import { searchAndShowDetail } from './content-finder.js';
+import { escapeHtml, formatDate } from '../ui/format-utils.js';
+import { createTableSorter, createPaginator } from '../ui/table-utils.js';
 
 // --- CONFIGURACIÓN CENTRAL DE LA VISTA ---
 // ===================================================================
@@ -148,6 +150,9 @@ const ITEMS_PER_PAGE = 15;
 let fullContentList = [];
 let getAuthenticatedConfig;
 let tabsState = {};
+// Controladores de ordenación y paginación POR PESTAÑA (helpers de table-utils)
+let tabSorters = {};
+let tabPaginators = {};
 // Filtro de uso: 'all' | 'used' | 'unused'
 let usageFilter = 'all';
 // Filtro por uso en Journeys: 'all' | 'in' | 'out' (solo emails/push/sms/wa)
@@ -235,10 +240,9 @@ export function init(dependencies) {
     // Filtro "Plantilla inexistente" → solo emails con plantilla huérfana
     elements.contentMissingTemplateFilter.addEventListener('click', () => {
         templateFilterActive = !templateFilterActive;
-        const btn = elements.contentMissingTemplateFilter;
-        btn.style.backgroundColor = templateFilterActive ? '#558ac7' : '#f9f9f9';
-        btn.style.color = templateFilterActive ? '#fff' : '';
-        for (const tabId in tabsState) { tabsState[tabId].currentPage = 1; }
+        // El estado visual lo gestiona la clase compartida .type-card
+        elements.contentMissingTemplateFilter.classList.toggle('active', templateFilterActive);
+        resetAllPages();
         renderAllTabs();
     });
 
@@ -339,8 +343,17 @@ export function clearCache() {
 function resetTemplateFilter() {
     templateFilterActive = false;
     if (elements.contentMissingTemplateFilter) {
-        elements.contentMissingTemplateFilter.style.backgroundColor = '#f9f9f9';
-        elements.contentMissingTemplateFilter.style.color = '';
+        elements.contentMissingTemplateFilter.classList.remove('active');
+    }
+}
+
+/**
+ * Vuelve a la página 1 en todas las pestañas (se usa al cambiar cualquier filtro).
+ * update() no dispara onPageChange, por lo que no provoca renders adicionales.
+ */
+function resetAllPages() {
+    for (const tabId in tabPaginators) {
+        tabPaginators[tabId].update(tabsState[tabId].currentFilteredList.length, 1);
     }
 }
 
@@ -413,9 +426,6 @@ function createDynamicTabs() {
 
     CONTENT_TYPES_CONFIG.forEach((tab, index) => {
         tabsState[tab.id] = {
-            currentPage: 1,
-            sortColumn: 'modifiedDate',
-            sortDirection: 'desc',
             currentFilteredList: []
         };
 
@@ -423,7 +433,7 @@ function createDynamicTabs() {
         const button = document.createElement('button');
         button.className = `tab-button ${isActive ? 'active' : ''}`;
         button.dataset.tab = `tab-content-${tab.id}`;
-        button.innerHTML = `<span class="tab-count" data-tab-count="${tab.id}" style="font-size:0.75em; color:#999; font-weight:normal;">0</span><br>${tab.displayName}`;
+        button.innerHTML = `<span class="tab-count cm-tab-count" data-tab-count="${tab.id}">0</span><br>${tab.displayName}`;
         buttonsContainer.appendChild(button);
 
         const contentDiv = document.createElement('div');
@@ -451,27 +461,52 @@ function createDynamicTabs() {
             </div>
         `;
         contentContainer.appendChild(contentDiv);
+
+        // Un controlador de ordenación y otro de paginación POR PESTAÑA, cada uno
+        // con sus propios elementos y estado (los th llevan data-sort-by y data-tab-id).
+        tabSorters[tab.id] = createTableSorter({
+            tableSelector: `#table-${tab.id}`,
+            initialColumn: 'modifiedDate',
+            initialDirection: 'desc',
+            types: { modifiedDate: 'date', createdDate: 'date' },
+            // Igual que antes: al reordenar se vuelve a la página 1 de esa pestaña
+            onSort: () => {
+                tabPaginators[tab.id].update(tabsState[tab.id].currentFilteredList.length, 1);
+                renderAllTabs();
+            }
+        });
+        tabSorters[tab.id].attach();
+
+        tabPaginators[tab.id] = createPaginator(
+            {
+                pageInput: document.getElementById(`page-input-${tab.id}`),
+                totalLabel: document.getElementById(`total-pages-${tab.id}`),
+                prevBtn: document.getElementById(`prev-page-${tab.id}`),
+                nextBtn: document.getElementById(`next-page-${tab.id}`)
+            },
+            { itemsPerPage: ITEMS_PER_PAGE, onPageChange: renderAllTabs }
+        );
     });
 
     // Contador total y fechas: columna alineada a la derecha, cada dato en su línea
     const infoBox = document.createElement('div');
-    infoBox.style.cssText = 'margin-left:auto; display:flex; flex-direction:column; align-items:flex-end; gap:2px; padding-bottom:6px; text-align:right; white-space:nowrap;';
+    infoBox.className = 'cm-info-box';
 
     const totalSpan = document.createElement('span');
     totalSpan.id = 'content-total-count';
-    totalSpan.style.cssText = 'font-size:0.85em; color:#999;';
+    totalSpan.className = 'cm-info-hint';
     infoBox.appendChild(totalSpan);
     elements.contentTotalCount = totalSpan;
 
     const cacheDate = document.createElement('span');
     cacheDate.id = 'content-cache-date';
-    cacheDate.style.cssText = 'font-size:0.75em; color:#bbb;';
+    cacheDate.className = 'cm-info-date';
     infoBox.appendChild(cacheDate);
     elements.contentCacheDate = cacheDate;
 
     const journeyDate = document.createElement('span');
     journeyDate.id = 'content-journey-cache-date';
-    journeyDate.style.cssText = 'font-size:0.75em; color:#bbb;';
+    journeyDate.className = 'cm-info-date';
     infoBox.appendChild(journeyDate);
     elements.contentJourneyCacheDate = journeyDate;
 
@@ -480,7 +515,7 @@ function createDynamicTabs() {
 
 function setupEventListeners() {
     elements.contentManagerFilter.addEventListener('input', () => {
-        for (const tabId in tabsState) { tabsState[tabId].currentPage = 1; }
+        resetAllPages();
         renderAllTabs();
     });
 
@@ -490,7 +525,7 @@ function setupEventListeners() {
             if (usageFilter !== 'all' && journeysList.length === 0) {
                 logger.logMessage('Aviso: no hay caché de Journeys. Emails, Push, SMS y WhatsApp no se pueden clasificar por uso (pulsa "Consultar Journeys").');
             }
-            for (const tabId in tabsState) { tabsState[tabId].currentPage = 1; }
+            resetAllPages();
             renderAllTabs();
         });
     }
@@ -501,13 +536,13 @@ function setupEventListeners() {
             if (journeyUsageFilter !== 'all' && journeysList.length === 0) {
                 logger.logMessage('Aviso: no hay caché de Journeys. Cachéalos desde la vista de Journeys ("Descargar detalle") para filtrar por uso en Journeys.');
             }
-            for (const tabId in tabsState) { tabsState[tabId].currentPage = 1; }
+            resetAllPages();
             renderAllTabs();
         });
     }
 
     const onDateFilterChange = () => {
-        for (const tabId in tabsState) { tabsState[tabId].currentPage = 1; }
+        resetAllPages();
         renderAllTabs();
     };
     if (elements.contentDateField) elements.contentDateField.addEventListener('change', onDateFilterChange);
@@ -574,32 +609,8 @@ function setupEventListeners() {
             return;
         }
 
-        const header = e.target.closest('.sortable-header');
-        if (header) {
-            const tabId = header.dataset.tabId;
-            const newSortColumn = header.dataset.sortBy;
-            const tabState = tabsState[tabId];
-            if (tabState.sortColumn === newSortColumn) {
-                tabState.sortDirection = tabState.sortDirection === 'asc' ? 'desc' : 'asc';
-            } else {
-                tabState.sortColumn = newSortColumn;
-                tabState.sortDirection = 'asc';
-            }
-            tabState.currentPage = 1;
-            renderAllTabs();
-            return;
-        }
-
-        const pageButton = e.target.closest('.pagination-arrow');
-        if (pageButton) {
-            const tabId = pageButton.dataset.tabId;
-            const tabState = tabsState[tabId];
-            const totalPages = Math.ceil(tabState.currentFilteredList.length / ITEMS_PER_PAGE) || 1;
-            if (pageButton.id.startsWith('prev-') && tabState.currentPage > 1) tabState.currentPage--;
-            else if (pageButton.id.startsWith('next-') && tabState.currentPage < totalPages) tabState.currentPage++;
-            renderAllTabs();
-            return;
-        }
+        // La ordenación la gestionan los sorters por pestaña (tabSorters) y la
+        // paginación los paginadores por pestaña (tabPaginators): aquí ya no se trata.
 
         // Selección de fila para borrado (clic en cualquier parte de la fila que no sea un botón)
         const row = e.target.closest('tr[data-content-id]');
@@ -616,20 +627,7 @@ function setupEventListeners() {
         }
     });
 
-    elements.contentManagerTabContent.addEventListener('change', (e) => {
-        if (e.target.matches('.page-input')) {
-            const tabId = e.target.dataset.tabId;
-            const tabState = tabsState[tabId];
-            const totalPages = Math.ceil(tabState.currentFilteredList.length / ITEMS_PER_PAGE) || 1;
-            let newPage = parseInt(e.target.value, 10) || 1;
-            if (newPage < 1) newPage = 1;
-            if (newPage > totalPages) newPage = totalPages;
-            tabState.currentPage = newPage;
-            renderAllTabs();
-        }
-    });
-
-    
+    // El input de página lo gestiona el paginador de cada pestaña (tabPaginators)
 }
 
 // --- RENDERIZADO ---
@@ -754,52 +752,50 @@ function renderTableForTab(tabId, sourceData) {
     });
 
     tabState.currentFilteredList = tabData;
-    sortData(tabData, tabState.sortColumn, tabState.sortDirection);
-
-    const startIndex = (tabState.currentPage - 1) * ITEMS_PER_PAGE;
-    const paginatedItems = tabData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    tabSorters[tabId].sort(tabData);
+    const paginatedItems = tabPaginators[tabId].paginate(tabData);
 
     if (paginatedItems.length === 0) {
         tbody.innerHTML = `<tr><td colspan="${tabConfig.headers.length}">No se encontraron resultados.</td></tr>`;
     } else {
         tbody.innerHTML = paginatedItems.map(item => {
-            const actions = `<td style="text-align:center; white-space:nowrap;">${actionBtnsHtml(item)}</td>`;
+            const actions = `<td class="ta-center u-nowrap">${actionBtnsHtml(item)}</td>`;
 
             if (tabId === 'emails') {
-                const attributesHtml = item.attributes ? item.attributes.replace(/\n/g, '<br>') : '---';
+                const attributesHtml = item.attributes ? escapeHtml(item.attributes).replace(/\n/g, '<br>') : '---';
                 return `<tr data-content-id="${item.id}"${selectedContentIds.has(String(item.id)) ? ' class="selected"' : ''}>
                     ${actions}
                     <td>${item.id || '---'}</td>
-                    <td>${item.name || '---'}</td>
-                    <td>${item.assetTypeName || '---'}</td>
+                    <td>${escapeHtml(item.name) || '---'}</td>
+                    <td>${escapeHtml(item.assetTypeName) || '---'}</td>
                     <td>${formatDate(item.modifiedDate)}</td>
-                    <td title="${escapeHtml(item.templateName) || ''}">${item.templateName || '---'}</td>
+                    <td title="${escapeHtml(item.templateName) || ''}">${escapeHtml(item.templateName) || '---'}</td>
                     <td title="${escapeHtml(item.attributes) || ''}">${attributesHtml}</td>
                 </tr>`;
             } else if (tabId === 'plantillas') {
                 return `<tr data-content-id="${item.id}"${selectedContentIds.has(String(item.id)) ? ' class="selected"' : ''}>
                     ${actions}
                     <td>${item.id || '---'}</td>
-                    <td>${item.name || '---'}</td>
+                    <td>${escapeHtml(item.name) || '---'}</td>
                     <td>${formatDate(item.modifiedDate)}</td>
-                    <td>${item.assetTypeName || '---'}</td>
+                    <td>${escapeHtml(item.assetTypeName) || '---'}</td>
                 </tr>`;
             } else if (tabId === 'push') {
                 const actionHtml = item.actionType ? `${item.actionType}: ${item.actionUrl || ''}` : '---';
                 return `<tr data-content-id="${item.id}"${selectedContentIds.has(String(item.id)) ? ' class="selected"' : ''}>
                     ${actions}
                     <td>${item.id || '---'}</td>
-                    <td>${item.name || '---'}</td>
+                    <td>${escapeHtml(item.name) || '---'}</td>
                     <td>${formatDate(item.modifiedDate)}</td>
-                    <td title="${escapeHtml(item.title) || ''}">${item.title || '---'}</td>
-                    <td title="${escapeHtml(item.subtitle) || ''}">${item.subtitle || '---'}</td>
-                    <td title="${escapeHtml(actionHtml)}">${actionHtml}</td>
+                    <td title="${escapeHtml(item.title) || ''}">${escapeHtml(item.title) || '---'}</td>
+                    <td title="${escapeHtml(item.subtitle) || ''}">${escapeHtml(item.subtitle) || '---'}</td>
+                    <td title="${escapeHtml(actionHtml)}">${escapeHtml(actionHtml)}</td>
                 </tr>`;
             } else if (tabId === 'sms') {
                 return `<tr data-content-id="${item.id}"${selectedContentIds.has(String(item.id)) ? ' class="selected"' : ''}>
                     ${actions}
                     <td>${item.id || '---'}</td>
-                    <td>${item.name || '---'}</td>
+                    <td>${escapeHtml(item.name) || '---'}</td>
                     <td>${formatDate(item.modifiedDate)}</td>
                 </tr>`;
             } else if (tabId === 'whatsapp') {
@@ -807,8 +803,8 @@ function renderTableForTab(tabId, sourceData) {
                 return `<tr data-content-id="${item.id}"${selectedContentIds.has(String(item.id)) ? ' class="selected"' : ''}>
                     ${actions}
                     <td>${item.id || '---'}</td>
-                    <td>${item.name || '---'}</td>
-                    <td title="${escapeHtml(item.waTemplateName) || ''}">${item.waTemplateName || '---'}</td>
+                    <td>${escapeHtml(item.name) || '---'}</td>
+                    <td title="${escapeHtml(item.waTemplateName) || ''}">${escapeHtml(item.waTemplateName) || '---'}</td>
                     <td>${hasButtons}</td>
                     <td>${formatDate(item.modifiedDate)}</td>
                 </tr>`;
@@ -816,15 +812,15 @@ function renderTableForTab(tabId, sourceData) {
                 return `<tr data-content-id="${item.id}"${selectedContentIds.has(String(item.id)) ? ' class="selected"' : ''}>
                     ${actions}
                     <td>${item.id || '---'}</td>
-                    <td>${item.name || '---'}</td>
-                    <td>${item.assetTypeName || '---'}</td>
+                    <td>${escapeHtml(item.name) || '---'}</td>
+                    <td>${escapeHtml(item.assetTypeName) || '---'}</td>
                     <td>${formatDate(item.modifiedDate)}</td>
                 </tr>`;
             } else if (tabId === 'codesnippet') {
                 return `<tr data-content-id="${item.id}"${selectedContentIds.has(String(item.id)) ? ' class="selected"' : ''}>
                     ${actions}
                     <td>${item.id || '---'}</td>
-                    <td>${item.name || '---'}</td>
+                    <td>${escapeHtml(item.name) || '---'}</td>
                     <td>${formatDate(item.modifiedDate)}</td>
                 </tr>`;
             } else if (tabId === 'plantillas_wa') {
@@ -832,12 +828,12 @@ function renderTableForTab(tabId, sourceData) {
                 return `<tr data-content-id="${item.id}"${selectedContentIds.has(String(item.id)) ? ' class="selected"' : ''}>
                     ${actions}
                     <td>${item.id || '---'}</td>
-                    <td>${item.name || '---'}</td>
-                    <td title="${escapeHtml(item.waTemplateName) || ''}">${item.waTemplateName || '---'}</td>
-                    <td>${item.waCategory || '---'}</td>
-                    <td>${item.waLanguages || '---'}</td>
-                    <td>${item.waComponents || '---'}</td>
-                    <td>${item.waMediaType || '---'}</td>
+                    <td>${escapeHtml(item.name) || '---'}</td>
+                    <td title="${escapeHtml(item.waTemplateName) || ''}">${escapeHtml(item.waTemplateName) || '---'}</td>
+                    <td>${escapeHtml(item.waCategory) || '---'}</td>
+                    <td>${escapeHtml(item.waLanguages) || '---'}</td>
+                    <td>${escapeHtml(item.waComponents) || '---'}</td>
+                    <td>${escapeHtml(item.waMediaType) || '---'}</td>
                     <td>${formatDate(item.modifiedDate)}</td>
                 </tr>`;
             }
@@ -845,8 +841,8 @@ function renderTableForTab(tabId, sourceData) {
         }).join('');
     }
 
-    updatePaginationUI(tabId);
-    updateSortIndicators(tabId);
+    // Los controles de paginación los repinta paginate(); aquí solo los indicadores de orden.
+    tabSorters[tabId].updateIndicators();
 }
 
 // --- DRAWER DE DETALLE DE CONTENIDO ---
@@ -976,7 +972,7 @@ function openContentDetail(contentId) {
 }
 
 // Cabecera de celda sticky reutilizable para las tablas del drawer.
-const DRAWER_TH = 'position:sticky; top:0; z-index:2; background:#5a6d7e; color:#fff; padding:6px 8px; text-align:left;';
+const DRAWER_TH = 'position:sticky; top:0; z-index:2; background:var(--sf-blue); color:#fff; padding:6px 8px; text-align:left;';
 
 /**
  * Construye la tabla de componentes (ID, Nombre, Tipo) con altura acotada.
@@ -992,7 +988,7 @@ function buildComponentsTableHtml(comps) {
     return `<div style="margin-top:12px; flex-shrink:0;">
         <div class="code-header">Componentes (${comps.length})</div>
         <div style="overflow:auto; max-height:240px; border:1px solid #e1e4e8; border-top:none; border-radius:0 0 4px 4px;">
-            <table style="width:100%; border-collapse:collapse; font-size:0.85em;">
+            <table style="width:100%; border-collapse:separate; border-spacing:0; font-size:0.85em;">
                 <thead><tr><th style="${DRAWER_TH}">ID</th><th style="${DRAWER_TH}">Nombre</th><th style="${DRAWER_TH}">Tipo</th><th style="${DRAWER_TH}">Referenciado por</th></tr></thead>
                 <tbody>${rows}</tbody>
             </table>
@@ -1011,7 +1007,7 @@ function buildDEsTableHtml(des) {
     return `<div style="margin-top:12px; flex-shrink:0;">
         <div class="code-header">Data Extensions (${des.length})</div>
         <div style="overflow:auto; max-height:180px; border:1px solid #e1e4e8; border-top:none; border-radius:0 0 4px 4px;">
-            <table style="width:100%; border-collapse:collapse; font-size:0.85em;">
+            <table style="width:100%; border-collapse:separate; border-spacing:0; font-size:0.85em;">
                 <thead><tr><th style="${DRAWER_TH}">Data Extension</th><th style="${DRAWER_TH}">Funciones</th></tr></thead>
                 <tbody>${rows}</tbody>
             </table>
@@ -1139,54 +1135,8 @@ function getEmailReferencedDEs(item) {
 }
 
 // --- HELPERS ---
-
-function escapeHtml(str) {
-    if (str == null) return '';
-    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-}
-
-function formatDate(dateString) {
-    if (!dateString) return '---';
-    try { return new Date(dateString).toLocaleString('es-ES', { timeZone: 'Europe/Madrid' }); }
-    catch { return 'Fecha inválida'; }
-}
-
-function sortData(data, column, direction) {
-    const dir = direction === 'asc' ? 1 : -1;
-    data.sort((a, b) => {
-        let valA = a[column], valB = b[column];
-        if (valA == null) return 1;
-        if (valB == null) return -1;
-        if (column && column.includes('Date')) {
-            if (!valA || !valB) return 0;
-            return (new Date(valA) - new Date(valB)) * dir;
-        }
-        return String(valA).localeCompare(String(valB), undefined, { numeric: true, sensitivity: 'base' }) * dir;
-    });
-}
-
-function updatePaginationUI(tabId) {
-    const tabState = tabsState[tabId];
-    if (!tabState) return;
-    const totalItems = tabState.currentFilteredList.length;
-    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
-    document.getElementById(`total-pages-${tabId}`).textContent = `/ ${totalPages}`;
-    document.getElementById(`page-input-${tabId}`).value = tabState.currentPage;
-    document.getElementById(`page-input-${tabId}`).max = totalPages;
-    document.getElementById(`prev-page-${tabId}`).disabled = tabState.currentPage === 1;
-    document.getElementById(`next-page-${tabId}`).disabled = tabState.currentPage >= totalPages;
-}
-
-function updateSortIndicators(tabId) {
-    const tabState = tabsState[tabId];
-    if (!tabState) return;
-    document.querySelectorAll(`#table-${tabId} .sortable-header`).forEach(header => {
-        header.classList.remove('sort-asc', 'sort-desc');
-        if (header.dataset.sortBy === tabState.sortColumn) {
-            header.classList.add(tabState.sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
-        }
-    });
-}
+// escapeHtml y formatDate se importan de format-utils; la ordenación, paginación
+// e indicadores los gestionan los controladores por pestaña (table-utils).
 
 async function downloadCsvForTab(tabId) {
     const tabConfig = CONTENT_TYPES_CONFIG.find(t => t.id === tabId);
@@ -1197,7 +1147,7 @@ async function downloadCsvForTab(tabId) {
     }
 
     const sortedData = [...tabState.currentFilteredList];
-    sortData(sortedData, tabState.sortColumn, tabState.sortDirection);
+    tabSorters[tabId].sort(sortedData);
 
     // Columnas extra para el CSV que no están en la tabla
     const extraCsvColumns = {
@@ -1474,12 +1424,12 @@ function openReferencesDetail(contentId) {
         html = '<div style="padding:20px; color:#999; text-align:center;">Este componente no está referenciado por ningún otro contenido.</div>';
     } else {
         html = `<div style="padding:8px 12px; font-size:0.85em; color:#666; border-bottom:1px solid #e2e8f0;">${references.length} referencia${references.length !== 1 ? 's' : ''} encontrada${references.length !== 1 ? 's' : ''}</div>`;
-        html += `<div style="overflow:auto; flex-grow:1;"><table style="width:100%; border-collapse:collapse;">
+        html += `<div style="overflow:auto; flex-grow:1;"><table style="width:100%; border-collapse:separate; border-spacing:0;">
             <thead><tr>
-                <th style="position:sticky; top:0; z-index:2; background:#5a6d7e; color:#fff; padding:8px; text-align:left;">ID</th>
-                <th style="position:sticky; top:0; z-index:2; background:#5a6d7e; color:#fff; padding:8px; text-align:left;">Nombre</th>
-                <th style="position:sticky; top:0; z-index:2; background:#5a6d7e; color:#fff; padding:8px; text-align:left;">Tipo</th>
-                <th style="position:sticky; top:0; z-index:2; background:#5a6d7e; color:#fff; padding:8px; text-align:left;">Cómo se referencia</th>
+                <th style="position:sticky; top:0; z-index:2; background:var(--sf-blue); color:#fff; padding:8px; text-align:left;">ID</th>
+                <th style="position:sticky; top:0; z-index:2; background:var(--sf-blue); color:#fff; padding:8px; text-align:left;">Nombre</th>
+                <th style="position:sticky; top:0; z-index:2; background:var(--sf-blue); color:#fff; padding:8px; text-align:left;">Tipo</th>
+                <th style="position:sticky; top:0; z-index:2; background:var(--sf-blue); color:#fff; padding:8px; text-align:left;">Cómo se referencia</th>
             </tr></thead><tbody>`;
         for (const ref of references) {
             html += `<tr style="border-bottom:1px solid #eee;">
@@ -1512,11 +1462,11 @@ function openJourneysDetail(contentId) {
         html = '<div style="padding:20px; color:#999; text-align:center;">No se ha encontrado este contenido en ningún journey cacheado.</div>';
     } else {
         html = `<div style="padding:8px 12px; font-size:0.85em; color:#666; border-bottom:1px solid #e2e8f0;">${journeys.length} journey${journeys.length !== 1 ? 's' : ''} encontrado${journeys.length !== 1 ? 's' : ''}</div>`;
-        html += `<div style="overflow:auto; flex-grow:1;"><table style="width:100%; border-collapse:collapse;">
+        html += `<div style="overflow:auto; flex-grow:1;"><table style="width:100%; border-collapse:separate; border-spacing:0;">
             <thead><tr>
-                <th style="position:sticky; top:0; z-index:2; background:#5a6d7e; color:#fff; padding:8px; text-align:left;">Journey</th>
-                <th style="position:sticky; top:0; z-index:2; background:#5a6d7e; color:#fff; padding:8px; text-align:left;">Versión</th>
-                <th style="position:sticky; top:0; z-index:2; background:#5a6d7e; color:#fff; padding:8px; text-align:left;">Estado</th>
+                <th style="position:sticky; top:0; z-index:2; background:var(--sf-blue); color:#fff; padding:8px; text-align:left;">Journey</th>
+                <th style="position:sticky; top:0; z-index:2; background:var(--sf-blue); color:#fff; padding:8px; text-align:left;">Versión</th>
+                <th style="position:sticky; top:0; z-index:2; background:var(--sf-blue); color:#fff; padding:8px; text-align:left;">Estado</th>
             </tr></thead><tbody>`;
         for (const j of journeys) {
             html += `<tr style="border-bottom:1px solid #eee;">

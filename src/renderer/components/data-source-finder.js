@@ -16,17 +16,29 @@ let getAuthenticatedConfig; // Dependencia inyectada desde app.js
  * Inicializa el módulo, configurando listeners y dependencias.
  * @param {object} dependencies - Objeto con dependencias externas.
  */
+// Estado del toggle "Mostrar Query" (botón, no checkbox).
+let showSourceQuery = true;
+
+/** Actualiza el color del botón según el estado (verde activo / gris inactivo). */
+function updateShowQueryToggleUI() {
+    const btn = elements.showSourceQueryBtn;
+    if (!btn) return;
+    btn.style.color = '#fff';
+    btn.style.background = showSourceQuery ? '#27ae60' : '#95a5a6';
+}
+
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
 
     elements.findDataSourcesBtn.addEventListener('click', findDataSources);
 
-    // --- Listener para el checkbox de mostrar/ocultar descripción ---
-    elements.showSourceQueryCheckbox.addEventListener('change', () => {
-        const isChecked = elements.showSourceQueryCheckbox.checked;
-        const displayStyle = isChecked ? '' : 'none';
-        
-        // Buscamos la tabla y aplicamos el estilo a la columna 6 (Descripción / Query)
+    // --- Toggle para mostrar/ocultar la columna de descripción/query ---
+    updateShowQueryToggleUI();
+    elements.showSourceQueryBtn?.addEventListener('click', () => {
+        showSourceQuery = !showSourceQuery;
+        updateShowQueryToggleUI();
+        const displayStyle = showSourceQuery ? '' : 'none';
+        // Aplica el estilo a la columna 6 (Descripción / Query)
         const table = document.getElementById('data-sources-table');
         if (table) {
             table.querySelectorAll('thead th:nth-child(6), tbody td:nth-child(6)').forEach(cell => {
@@ -96,9 +108,8 @@ async function findDataSources() {
 function renderTable(sources) {
     elements.dataSourcesTbody.innerHTML = '';
     
-    // --- Obtener estado actual del checkbox para el renderizado ---
-    const isChecked = elements.showSourceQueryCheckbox.checked;
-    const displayStyle = isChecked ? '' : 'none';
+    // --- Estado actual del toggle para el renderizado ---
+    const displayStyle = showSourceQuery ? '' : 'none';
 
     // Ajustar la cabecera de la tabla (th de la columna 6)
     const tableHeader = document.querySelector('#data-sources-table thead th:nth-child(6)');

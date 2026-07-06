@@ -2,13 +2,13 @@
 <div id="automation-actions-modal" class="modal-overlay" style="display:none;">
     <div class="modal-content" style="width: 400px;">
         <h3>Acciones sobre Automatismos</h3>
-        <p id="automation-actions-message" style="font-size: 14px; margin-bottom: 25px;"></p>
-        <div style="display: flex; flex-direction: column; gap: 15px;">
+        <p id="automation-actions-message" class="u-mb-25" style="font-size: 14px;"></p>
+        <div class="u-flex-col u-gap-15">
             <button id="automation-actions-activate-btn" class="action-button activate-btn">Activar</button>
             <button id="automation-actions-run-btn" class="action-button">Ejecutar</button>
             <button id="automation-actions-stop-btn" class="action-button delete-btn">Parar</button>
         </div>
-        <div class="modal-actions" style="margin-top: 25px;">
+        <div class="modal-actions u-mt-25">
             <button id="automation-actions-cancel-btn" class="action-button cancel-btn">Cancelar</button>
         </div>
     </div>
@@ -28,7 +28,7 @@
             <button id="cloneAutomationBtn" class="action-button" disabled>Clonar</button>            
         </div>
     </div>
-    <h2>Gestión de Automatismos <span id="automationCount" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
+    <h2>Gestión de Automatismos <span id="automationCount" class="u-title-hint"></span></h2>
     <!-- Filtros para la tabla de automatismos -->
     <div class="header-filters">
         <input type="text" id="automationNameFilter" class="filter-input" placeholder="Buscar por nombre...">
@@ -82,7 +82,7 @@
             <span>Cerrar</span>
         </button>
         <div class="cp-detail-header">
-            <h2>Calendario de Automatismos <span id="calendarDrawerCount" style="color:#558ac7; font-weight:normal; font-size:0.75em;"></span></h2>
+            <h2>Calendario de Automatismos <span id="calendarDrawerCount" class="u-title-hint" style="font-size:0.75em;"></span></h2>
             <div class="calendar-controls">
                 <label for="calendarYearSelect">Año:</label>
                 <select id="calendarYearSelect" class="filter-input"></select>

@@ -6,16 +6,20 @@ import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import { formatCodeWithIndentation, highlightCloudPageCode, buildCodeViewer } from '../ui/code-utils.js';
+import { escapeHtml, formatDate } from '../ui/format-utils.js';
+import { createTableSorter, createPaginator } from '../ui/table-utils.js';
 
 
 // --- 1. ESTADO DEL MÓDULO ---
 
 let fullCloudPageList = [];
 let currentFilteredList = [];
-let currentPage = 1;
-let currentSortColumn = 'modifiedDate';
-let currentSortDirection = 'desc';
 const ITEMS_PER_PAGE = 10;
+
+// Controladores reutilizables de ordenación y paginación (WP-4/WP-5), instanciados en
+// init(). La ordenación inicial se mantiene: 'modifiedDate' (fecha) descendente.
+let sorter = null;
+let paginator = null;
 
 let getAuthenticatedConfig; // Dependencia que será inyectada por app.js
 
@@ -60,37 +64,35 @@ export function init(dependencies) {
     elements.cloudPageDateFrom.addEventListener('change', applyFiltersAndRender);
     elements.cloudPageDateTo.addEventListener('change', applyFiltersAndRender);
     
-    // El ordenamiento también resetea la paginación.
-    document.querySelector('#cloudpages-table thead').addEventListener('click', handleSort);
-    
+    // Ordenación — controlador reutilizable (las columnas *Date se ordenan como fecha).
+    // El reordenado también resetea la paginación, como hacía el handleSort local.
+    sorter = createTableSorter({
+        tableSelector: '#cloudpages-table',
+        initialColumn: 'modifiedDate',
+        initialDirection: 'desc',
+        types: { modifiedDate: 'date', publishDate: 'date' },
+        onSort: applyFiltersAndRender
+    });
+    sorter.attach();
+
     elements.cloudPageInternalApiLink.addEventListener('click', ui.handleExternalLink);
 
-    // Los botones de paginación llaman a la función que solo renderiza, sin resetear filtros.
-    elements.prevPageBtnCloudPages.addEventListener('click', () => {
-        if (currentPage > 1) {
-            currentPage--;
-            renderFilteredTable();
-        }
-    });
-    elements.nextPageBtnCloudPages.addEventListener('click', () => {
-        const maxPage = parseInt(elements.pageInputCloudPages.max, 10) || 1;
-        if (currentPage < maxPage) {
-            currentPage++;
-            renderFilteredTable();
-        }
-    });
-    elements.pageInputCloudPages.addEventListener('change', () => {
-        let newPage = parseInt(elements.pageInputCloudPages.value, 10) || 1;
-        const maxPage = parseInt(elements.pageInputCloudPages.max, 10) || 1;
-        if (newPage < 1) newPage = 1;
-        if (newPage > maxPage) newPage = maxPage;
-        currentPage = newPage;
-        renderFilteredTable();
-    });
+    // Paginación — controlador reutilizable sobre los 4 controles estándar
+    paginator = createPaginator(
+        {
+            pageInput: elements.pageInputCloudPages,
+            totalLabel: elements.totalPagesCloudPages,
+            prevBtn: elements.prevPageBtnCloudPages,
+            nextBtn: elements.nextPageBtnCloudPages
+        },
+        { itemsPerPage: ITEMS_PER_PAGE, onPageChange: renderFilteredTable }
+    );
+
     // Listener de seguridad para cuando el campo de página queda vacío.
     elements.pageInputCloudPages.addEventListener('blur', () => {
         if (elements.pageInputCloudPages.value === '') {
-            currentPage = 1;
+            // update() cambia de página sin disparar onPageChange; el render es explícito
+            paginator.update(0, 1);
             renderFilteredTable();
         }
     });
@@ -308,7 +310,8 @@ async function fetchData() {
  * Función principal llamada cuando se aplica un FILTRO. Resetea la paginación a 1.
  */
 function applyFiltersAndRender() {
-    currentPage = 1;
+    // update() vuelve a página 1 sin disparar onPageChange (el render lo hacemos aquí)
+    paginator?.update(0, 1);
     renderFilteredTable();
 }
 
@@ -375,8 +378,10 @@ function renderFilteredTable() {
  * @param {Array} pages - La lista de Cloud Pages a mostrar en la página actual.
  */
 function renderTable(pages) {
-    sortData(pages);
-    const paginatedItems = pages.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+    if (sorter) sorter.sort(pages);
+
+    // paginate() recalcula el total de páginas y devuelve solo la página actual
+    const paginatedItems = paginator ? paginator.paginate(pages) : pages;
 
     elements.cloudPagesTbody.innerHTML = '';
     if (paginatedItems.length === 0) {
@@ -385,32 +390,32 @@ function renderTable(pages) {
         paginatedItems.forEach(page => {
             const row = document.createElement('tr');
             row.dataset.cloudpageId = String(page.id);
-            
-            const urlCell = page.url.startsWith('http') 
-                ? `<td><a href="${page.url}" class="external-link" title="Abrir URL en el navegador">${page.url}</a></td>` 
-                : `<td>${page.url}</td>`;
-            
+
+            // Datos de la API (nombre, tipo, autor, ubicación, url): se escapan antes de interpolar
+            const urlCell = page.url.startsWith('http')
+                ? `<td><a href="${escapeHtml(page.url)}" class="external-link" title="Abrir URL en el navegador">${escapeHtml(page.url)}</a></td>`
+                : `<td>${escapeHtml(page.url)}</td>`;
+
             const inspectBtn = page.hasDetailedContent
             ? `<span class="cp-inspect-btn" data-cloudpage-id="${page.id}" title="Ver dependencias y código"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>`
             : '';
 
             row.innerHTML = `
-                <td style="text-align:center;">${inspectBtn}</td>
-                <td>${page.name || '---'}</td>
-                <td>${page.assetType.displayName || '---'}</td>
+                <td class="ta-center">${inspectBtn}</td>
+                <td>${escapeHtml(page.name) || '---'}</td>
+                <td>${escapeHtml(page.assetType.displayName) || '---'}</td>
                 <td>${formatDate(page.modifiedDate)}</td>
-                <td>${page.modifiedByName || '---'}</td>
+                <td>${escapeHtml(page.modifiedByName) || '---'}</td>
                 <td>${formatDate(page.publishDate)}</td>
-                <td>${page.location || '---'}</td>
+                <td>${escapeHtml(page.location) || '---'}</td>
                 ${urlCell}
-                <td>${page.pageId || '---'}</td>
+                <td>${escapeHtml(page.pageId) || '---'}</td>
             `;
             elements.cloudPagesTbody.appendChild(row);
         });
     }
 
-    updatePaginationUI(pages.length);
-    updateSortIndicators();
+    if (sorter) sorter.updateIndicators();
 }
 
 /**
@@ -435,45 +440,6 @@ function toggleContentRow(cloudpageId) {
     elements.cpDetailBackdrop.classList.add('active');
 }
 
-/**
- * Gestiona el evento de clic en las cabeceras para cambiar el orden.
- * @param {Event} e - El evento de clic.
- */
-function handleSort(e) {
-    const header = e.target.closest('.sortable-header');
-    if (!header) return;
-
-    const newSortColumn = header.dataset.sortBy;
-    if (currentSortColumn === newSortColumn) {
-        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
-    } else {
-        currentSortColumn = newSortColumn;
-        currentSortDirection = newSortColumn.includes('Date') ? 'desc' : 'asc';
-    }
-    currentPage = 1; // Al reordenar, siempre volvemos a la página 1
-    renderFilteredTable();
-}
-
-/**
- * Ordena un array de datos basándose en la columna y dirección actuales.
- * @param {Array} data - El array a ordenar.
- */
-function sortData(data) {
-    const getValue = (obj, key) => key.split('.').reduce((o, i) => (o ? o[i] : undefined), obj);
-    const direction = currentSortDirection === 'asc' ? 1 : -1;
-    
-    data.sort((a, b) => {
-        let valA = getValue(a, currentSortColumn);
-        let valB = getValue(b, currentSortColumn);
-        if (valA == null) return 1;
-        if (valB == null) return -1;
-        if (currentSortColumn.includes('Date')) {
-            return (new Date(valA) - new Date(valB)) * direction;
-        }
-        return String(valA).localeCompare(String(valB), undefined, { numeric: true, sensitivity: 'base' }) * direction;
-    });
-}
-
 // --- 5. HELPERS Y FUNCIONES AUXILIARES ---
 
 /**
@@ -486,31 +452,6 @@ function populateCloudPageFilters(cloudPages) {
     const types = [...new Set(cloudPages.map(p => p.assetType.displayName).filter(Boolean))].sort();
     types.forEach(type => elements.cloudPageTypeFilter.appendChild(new Option(type, type)));
     elements.cloudPageTypeFilter.value = currentType;
-}
-
-/**
- * Actualiza la UI de los controles de paginación.
- * @param {number} totalItems - El número total de items en la lista filtrada.
- */
-function updatePaginationUI(totalItems) {
-    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
-    elements.totalPagesCloudPages.textContent = `/ ${totalPages}`;
-    elements.pageInputCloudPages.value = currentPage;
-    elements.pageInputCloudPages.max = totalPages;
-    elements.prevPageBtnCloudPages.disabled = currentPage === 1;
-    elements.nextPageBtnCloudPages.disabled = currentPage >= totalPages;
-}
-
-/**
- * Actualiza los indicadores visuales (flechas) en las cabeceras de la tabla.
- */
-function updateSortIndicators() {
-    document.querySelectorAll('#cloudpages-table .sortable-header').forEach(header => {
-        header.classList.remove('sort-asc', 'sort-desc');
-        if (header.dataset.sortBy === currentSortColumn) {
-            header.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
-        }
-    });
 }
 
 /**
@@ -536,21 +477,6 @@ function extractCloudPageUrl(item) {
     
     return 'URL no encontrada';
 }
-
-/**
- * Formatea una cadena de fecha a un formato legible local.
- * @param {string} dateString - La fecha en formato ISO.
- * @returns {string} La fecha formateada o '---'.
- */
-function formatDate(dateString) {
-    if (!dateString) return '---';
-    try {
-        return new Date(dateString).toLocaleString('es-ES', { timeZone: 'Europe/Madrid' });
-    } catch {
-        return 'Fecha inválida';
-    }
-}
-
 
 /**
  * Muestra el modal para recuperar IDs, generando el enlace dinámico.
@@ -635,7 +561,7 @@ function downloadCloudPagesCsv() {
     
     // Hacemos una copia de los datos filtrados para ordenarlos
     const sortedData = [...currentFilteredList];
-    sortData(sortedData);
+    if (sorter) sorter.sort(sortedData);
     
     const rows = sortedData.map(page => [
         `"${page.pageId || ''}"`,
@@ -717,8 +643,9 @@ function extractWebPageContent(asset) {
  */
 function buildDependenciesGrid(content, pageName) {
     if (!content) return '<div class="cp-detail-no-deps">Sin contenido disponible</div>';
- 
-    const esc = (str) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    // Alias local del helper compartido de escape (sustituye a la copia que había aquí)
+    const esc = escapeHtml;
     const sections = [];
  
     // --- 1. Data Extensions ---
@@ -740,7 +667,7 @@ function buildDependenciesGrid(content, pageName) {
     if (deRefs.size > 0) {
         const items = [];
         for (const [deName, functions] of deRefs) {
-            items.push(`<strong>${esc(deName)}</strong> <span style="color:#999;">— ${Array.from(functions).join(', ')}</span>`);
+            items.push(`<strong>${esc(deName)}</strong> <span class="dep-item-fns">— ${Array.from(functions).join(', ')}</span>`);
         }
         sections.push({ title: 'Data Extensions referenciadas', items });
     }
@@ -837,7 +764,7 @@ function buildDependenciesGrid(content, pageName) {
     if (sfObjects.size > 0) {
         const items = [];
         for (const [objName, ops] of sfObjects) {
-            items.push(`<strong>${esc(objName)}</strong> <span style="color:#999;">— ${Array.from(ops).join(', ')}</span>`);
+            items.push(`<strong>${esc(objName)}</strong> <span class="dep-item-fns">— ${Array.from(ops).join(', ')}</span>`);
         }
         sections.push({ title: 'Objetos Salesforce', items });
     }

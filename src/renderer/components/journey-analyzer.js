@@ -4,6 +4,7 @@ import * as ui from '../ui/ui-helpers.js';
 import elements from '../ui/dom-elements.js';
 import * as logger from '../ui/logger.js';
 import { loadCustomFonts } from '../ui/fonts.js';
+import { escapeHtml } from '../ui/format-utils.js';
 
 let goBackFunction;
 let getAuthenticatedConfig;
@@ -98,7 +99,7 @@ export async function view(journeyDetails) {
         const flowResult = generateFlow(journeyDetails); 
         elements.journeyAnalyzerFlowWrapper.innerHTML = createCollapsibleHtml(
             "Flujo Lógico del Journey", 
-            `<pre style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-size: 0.9em; line-height: 1.4; overflow-x: auto; margin:0; border: 1px solid #eee;">${flowResult.text}</pre>`,
+            `<pre class="ja-flow-pre">${flowResult.text}</pre>`,
             "flow-logic",
             false
         );
@@ -135,8 +136,8 @@ function renderGlobalSettings(j) {
         const goal = j.goals[0];
         const unit = goal.metaData?.conversionUnit === 'percentage' ? '%' : goal.metaData?.conversionUnit || '';
         innerHtml += `
-            <div style="border: 1px solid #f3e5ab; background: #fffaf0; padding:15px; border-radius:4px; margin-bottom:15px;">
-                <h5 style="margin:0 0 5px 0; color:#e67e22;">🎯 GOAL: ${goal.name || 'Objetivo'}</h5>
+            <div class="ja-box ja-box-warn" style="padding:15px; margin-bottom:15px;">
+                <h5 style="margin:0 0 5px 0; color:#e67e22;">🎯 GOAL: ${escapeHtml(goal.name) || 'Objetivo'}</h5>
                 <p style="font-size:0.85rem; margin-bottom:8px;"><strong>Meta:</strong> ${goal.metaData?.conversionValue || ''}${unit} | <strong>¿Sale?:</strong> ${goal.metaData?.isExitCriteria ? 'Sí' : 'No'}</p>
                 <div style="font-size:0.85rem; background:#fff; padding:10px; border:1px solid #f3e5ab; border-radius:4px;">${parseXmlToLogic(goal.configurationArguments.criteria)}</div>
             </div>`;
@@ -144,7 +145,7 @@ function renderGlobalSettings(j) {
     if (hasExits) {
         const exit = j.exits[0];
         innerHtml += `
-            <div style="border: 1px solid #f5c6cb; background: #fdf2f2; padding:15px; border-radius:4px;">
+            <div class="ja-box ja-box-error" style="padding:15px;">
                 <h5 style="margin:0 0 5px 0; color:#c0392b;">🚪 EXIT CRITERIA</h5>
                 <div style="font-size:0.85rem; background:#fff; padding:10px; border:1px solid #f5c6cb; border-radius:4px;">${parseXmlToLogic(exit.configurationArguments.criteria)}</div>
             </div>`;
@@ -186,8 +187,8 @@ function renderActivities(activities, numberMap) {
             const outcomes = act.outcomes || [];
             let rows = outcomes.map(o => `
                 <tr>
-                    <td style="padding:5px; border:1px solid #eee;"><b>${o.metaData?.label || o.metaData?.name || o.key}</b></td>
-                    <td style="padding:5px; border:1px solid #eee; color:#e67e22; font-weight:bold; text-align:center;">
+                    <td><b>${escapeHtml(o.metaData?.label || o.metaData?.name || o.key)}</b></td>
+                    <td style="color:#e67e22; font-weight:bold; text-align:center;">
                         ${o.arguments?.percentage}%
                     </td>
                 </tr>
@@ -195,11 +196,11 @@ function renderActivities(activities, numberMap) {
 
             extraConfig = `
                 <h5 style="margin-top:10px;">Distribución de Probabilidad:</h5>
-                <table style="width:100%; border-collapse:collapse; font-size:0.85em; background:#fff;">
+                <table class="ja-table">
                     <thead style="background:#fef5e7;">
                         <tr>
-                            <th style="text-align:left; padding:5px; border:1px solid #eee;">Rama / Camino</th>
-                            <th style="text-align:center; padding:5px; border:1px solid #eee; width:80px;">Porcentaje</th>
+                            <th>Rama / Camino</th>
+                            <th style="text-align:center; width:80px;">Porcentaje</th>
                         </tr>
                     </thead>
                     <tbody>${rows}</tbody>
@@ -210,18 +211,18 @@ function renderActivities(activities, numberMap) {
             const fields = act.arguments?.activityData?.updateContactFields || [];
             let rows = fields.map(f => `
                 <tr>
-                    <td style="padding:5px; border:1px solid #eee;"><b>${f.resolvedFieldName || f.field}</b></td>
-                    <td style="padding:5px; border:1px solid #eee; color:#2980b9;">${f.value === 0 ? '0' : (f.value || '<i>vacío</i>')}</td>
+                    <td><b>${escapeHtml(f.resolvedFieldName || f.field)}</b></td>
+                    <td style="color:#2980b9;">${f.value === 0 ? '0' : (escapeHtml(f.value) || '<i>vacío</i>')}</td>
                 </tr>
             `).join('');
 
             extraConfig = `
-                <div style="background:#fdfefe; border:1px solid #d4e6f1; padding:10px; border-radius:4px; margin-top:10px;">
-                    <p style="margin:0 0 10px 0;"><strong>Data Extension de Destino:</strong> <span style="color:#1f618d;">${act.resolvedDeName || 'No detectada'}</span></p>
+                <div class="ja-box ja-box-info" style="padding:10px; margin-top:10px;">
+                    <p style="margin:0 0 10px 0;"><strong>Data Extension de Destino:</strong> <span style="color:#1f618d;">${escapeHtml(act.resolvedDeName) || 'No detectada'}</span></p>
                     <h5 style="margin:10px 0 5px 0;">Mapeo de Atributos:</h5>
-                    <table style="width:100%; border-collapse:collapse; font-size:0.85em; background:#fff;">
+                    <table class="ja-table">
                         <thead style="background:#f1f1f1;">
-                            <tr><th style="text-align:left; padding:5px; border:1px solid #eee;">Campo Destino</th><th style="text-align:left; padding:5px; border:1px solid #eee;">Valor / Atributo</th></tr>
+                            <tr><th>Campo Destino</th><th>Valor / Atributo</th></tr>
                         </thead>
                         <tbody>${rows}</tbody>
                     </table>
@@ -247,10 +248,10 @@ function renderActivities(activities, numberMap) {
             const ts = act.configurationArguments?.triggeredSend || {};
             
             extraConfig = `
-                <div style="background:#f4f9f4; border:1px solid #c8e6c9; padding:10px; border-radius:4px; margin-top:10px;">
-                    <p style="margin:0 0 5px 0;"><strong>Email ID:</strong> ${ts.emailId || '---'}</p>
-                    <p style="margin:0 0 5px 0;"><strong>Asunto:</strong> <span style="color:#2e7d32;">${ts.emailSubject || '---'}</span></p>
-                    <p style="margin:0 0 5px 0;"><strong>Preheader:</strong> <span style="color:#666; font-style:italic;">${ts.preHeader || '---'}</span></p>
+                <div class="ja-box ja-box-ok" style="padding:10px; margin-top:10px;">
+                    <p style="margin:0 0 5px 0;"><strong>Email ID:</strong> ${escapeHtml(ts.emailId) || '---'}</p>
+                    <p style="margin:0 0 5px 0;"><strong>Asunto:</strong> <span style="color:#2e7d32;">${escapeHtml(ts.emailSubject) || '---'}</span></p>
+                    <p style="margin:0 0 5px 0;"><strong>Preheader:</strong> <span style="color:#666; font-style:italic;">${escapeHtml(ts.preHeader) || '---'}</span></p>
                     <hr style="border:0; border-top:1px solid #c8e6c9; margin:8px 0;">
                     <p style="margin:0 0 5px 0;"><strong>Clasificación:</strong> ${act.resolvedSendClassification || ts.sendClassificationId || '---'}</p>
                     <p style="margin:0;"><strong>Lista Publicación:</strong> ${act.resolvedListName || (ts.publicationListId === 0 ? 'All Subscribers' : ts.publicationListId)}</p>
@@ -288,7 +289,7 @@ function renderActivities(activities, numberMap) {
             }
 
             extraConfig = `
-                <div style="background:#f4f6f7; border:1px solid #d5dbdb; padding:10px; border-radius:4px; margin-top:10px; border-left: 4px solid ${typeInfo.color};">
+                <div class="ja-box ja-box-neutral" style="padding:10px; margin-top:10px; border-left: 4px solid ${typeInfo.color};">
                     <p style="margin:0 0 5px 0;"><strong>Evento esperado:</strong> <span style="color:${typeInfo.color}; font-weight:bold;">${typeInfo.label}</span></p>
                     <p style="margin:0;"><strong>Email de referencia:</strong> <span style="color:#2e86c1;">${refEmailName}</span></p>
                     ${urlDetail}
@@ -306,8 +307,8 @@ function renderActivities(activities, numberMap) {
             const applicationName = config.application?.name || '---';
 
             extraConfig = `
-                <div style="background:#fdf4ff; border:1px solid #f5d0fe; padding:10px; border-radius:4px; margin-top:10px; border-left: 4px solid #a21caf;">
-                    <p style="margin:0 0 5px 0;"><strong>Nombre del mensaje:</strong> <span style="color:#701a75; font-weight:bold;">${act.name || '---'}</span></p>
+                <div class="ja-box ja-box-push" style="padding:10px; margin-top:10px;">
+                    <p style="margin:0 0 5px 0;"><strong>Nombre del mensaje:</strong> <span style="color:#701a75; font-weight:bold;">${escapeHtml(act.name) || '---'}</span></p>
                     <p style="margin:0 0 5px 0;"><strong>Asset ID:</strong> <span style="color:#666;">${assetId}</span></p>
                     <p style="margin:0;"><strong>Aplicación móvil:</strong> <span style="color:#86198f;">${applicationName}</span></p>
                 </div>
@@ -319,7 +320,7 @@ function renderActivities(activities, numberMap) {
             const paths = meta.pathsAdded ? Object.keys(meta.pathsAdded).join(', ') : '---';
 
             extraConfig = `
-                <div style="background:#e8f4f8; border:1px solid #a9cce3; padding:10px; border-radius:4px; margin-bottom:10px; border-left: 5px solid #032e61;">
+                <div class="ja-box ja-box-einstein" style="padding:10px; margin-bottom:10px;">
                     <p style="margin:0 0 5px 0;"><strong>Canal Einstein:</strong> <span style="text-transform:uppercase;">${meta.channel || '---'}</span></p>
                     <p style="margin:0 0 5px 0;"><strong>Tipo de Split:</strong> <span style="text-transform:uppercase;">${meta.splitType || '---'}</span></p>
                     <p style="margin:0;"><strong>Caminos configurados:</strong> ${paths}</p>
@@ -335,7 +336,7 @@ function renderActivities(activities, numberMap) {
             };
 
             let metricsHtml = `
-                <div style="background:#fffcf5; border:1px solid #f3e5ab; padding:12px; border-radius:4px; margin-top:10px; border-left: 4px solid #e67e22;">
+                <div class="ja-box ja-box-amber" style="padding:12px; margin-top:10px; border-left: 4px solid #e67e22;">
                     <h5 style="margin:0 0 8px 0; color:#d35400; font-size:0.9em;">Evaluación del Ganador (Winner Evaluation)</h5>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size:0.85em;">
                         <div><strong>Tipo:</strong> ${config.winnerEvaluationType === 'Engagement' ? 'Email Engagement' : 'Manual'}</div>
@@ -350,16 +351,16 @@ function renderActivities(activities, numberMap) {
                 const outcomes = act.outcomes || [];
                 let rows = outcomes.map(o => `
                     <tr>
-                        <td style="padding:5px; border:1px solid #eee;"><b>${o.metaData?.pathName || o.metaData?.label || o.key}</b></td>
-                        <td style="padding:5px; border:1px solid #eee; color:#2980b9; font-weight:bold; text-align:center;">${o.arguments?.percentage}%</td>
+                        <td><b>${escapeHtml(o.metaData?.pathName || o.metaData?.label || o.key)}</b></td>
+                        <td style="color:#2980b9; font-weight:bold; text-align:center;">${o.arguments?.percentage}%</td>
                     </tr>
                 `).join('');
 
                 extraConfig = metricsHtml + `
                     <h5 style="margin-top:10px; font-size:0.85em;">Distribución de Caminos:</h5>
-                    <table style="width:100%; border-collapse:collapse; font-size:0.85em; background:#fff;">
+                    <table class="ja-table">
                         <thead style="background:#f0f7ff;">
-                            <tr><th style="text-align:left; padding:5px; border:1px solid #eee;">Camino</th><th style="text-align:center; padding:5px; border:1px solid #eee; width:80px;">Porcentaje</th></tr>
+                            <tr><th>Camino</th><th style="text-align:center; width:80px;">Porcentaje</th></tr>
                         </thead>
                         <tbody>${rows}</tbody>
                     </table>
@@ -375,7 +376,7 @@ function renderActivities(activities, numberMap) {
             const isRandom = params.enableRandomTime ? 'Activada' : 'Desactivada';
 
             extraConfig = `
-                <div style="background:#f0f4f8; border:1px solid #d6dbdf; padding:12px; border-radius:4px; margin-top:10px; border-left: 5px solid #032e61;">
+                <div class="ja-box ja-box-sto" style="padding:12px; margin-top:10px;">
                     <div style="display:flex; flex-direction:column; gap:8px; font-size:0.85em;">
                         <div style="display:flex; align-items:center; gap:10px;">
                             <strong>Ventana de tiempo (Time Frame):</strong>
@@ -418,7 +419,7 @@ function renderActivities(activities, numberMap) {
             }).join('');
 
             extraConfig = `
-                <div style="background:#f4f6f7; border:1px solid #d5dbdb; padding:12px; border-radius:4px; margin-top:10px; border-left: 5px solid #032e61;">
+                <div class="ja-box ja-box-neutral" style="padding:12px; margin-top:10px; border-left: 5px solid #032e61;">
                     <h5 style="margin:0 0 8px 0; color:#032e61; font-size:0.9em;">Einstein Engagement Frequency</h5>
                     <div style="font-size:0.85em; line-height:1.6;">
                         <p style="margin:0 0 5px 0;"><strong>Canal:</strong> <span style="text-transform:uppercase;">${params.type || 'email'}</span></p>
@@ -448,7 +449,7 @@ function renderActivities(activities, numberMap) {
             } catch (e) { console.error("Error parseando WhatsApp blockout", e); }
 
             extraConfig = `
-                <div style="background:#f0fff4; border:1px solid #c6f6d5; padding:12px; border-radius:4px; margin-top:10px; border-left: 5px solid #25d366;">
+                <div class="ja-box ja-box-whatsapp" style="padding:12px; margin-top:10px;">
                     <h5 style="margin:0 0 10px 0; color:#128c7e; font-size:0.9em; display:flex; align-items:center;">
                         WhatsApp Message Configuration
                     </h5>
@@ -479,7 +480,7 @@ function renderActivities(activities, numberMap) {
                 ).join('') || '<i>No configuradas</i>';
 
             extraConfig = `
-                <div style="background:#fffcf5; border:1px solid #f3e5ab; padding:12px; border-radius:4px; margin-top:10px; border-left: 5px solid #f39c12;">
+                <div class="ja-box ja-box-amber" style="padding:12px; margin-top:10px; border-left: 5px solid #f39c12;">
                     <h5 style="margin:0 0 10px 0; color:#d35400; font-size:0.9em; display:flex; align-items:center;">
                         Engagement: Wait Until Chat Response
                     </h5>
@@ -513,7 +514,7 @@ function renderActivities(activities, numberMap) {
             const config = act.configurationArguments || {};
 
             extraConfig = `
-                <div style="background:#f0f9ff; border:1px solid #bae6fd; padding:12px; border-radius:4px; margin-top:10px; border-left: 5px solid #0ea5e9;">
+                <div class="ja-box ja-box-sky" style="padding:12px; margin-top:10px;">
                     <h5 style="margin:0 0 10px 0; color:#0369a1; font-size:0.9em; display:flex; align-items:center;">
                         WhatsApp Session Transfer
                     </h5>
@@ -532,8 +533,8 @@ function renderActivities(activities, numberMap) {
                 // Mapeo de campos
                 const fieldRows = (obj.fields || []).map(f => `
                     <tr>
-                        <td style="padding:5px; border:1px solid #eee;"><b>${f.FieldLabel}</b> <small style="color:#666;">(${f.FieldName})</small></td>
-                        <td style="padding:5px; border:1px solid #eee; color:#2980b9;">${f.FieldValueLabel || f.FieldValue}</td>
+                        <td><b>${escapeHtml(f.FieldLabel)}</b> <small style="color:#666;">(${escapeHtml(f.FieldName)})</small></td>
+                        <td style="color:#2980b9;">${escapeHtml(f.FieldValueLabel || f.FieldValue)}</td>
                     </tr>
                 `).join('');
 
@@ -556,7 +557,7 @@ function renderActivities(activities, numberMap) {
                 }
 
                 objectsHtml += `
-                    <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:12px; border-radius:4px; margin-top:10px; border-left: 5px solid #00a1e0;">
+                    <div class="ja-box ja-box-sf" style="padding:12px; margin-top:10px;">
                         <div style="display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid #e2e8f0; padding-bottom:5px;">
                             <span style="font-weight:bold; color:#2d3748;">Objeto: <span style="color:#00a1e0;">${obj.type}</span></span>
                             <span style="background:#edf2f7; padding:2px 8px; border-radius:10px; font-size:0.8em; font-weight:bold;">Acción: ${obj.action}</span>
@@ -565,9 +566,9 @@ function renderActivities(activities, numberMap) {
                         ${lookupHtml}
 
                         <h5 style="margin:10px 0 5px 0; font-size:0.85em;">Mapeo de Campos:</h5>
-                        <table style="width:100%; border-collapse:collapse; font-size:0.85em; background:#fff;">
+                        <table class="ja-table">
                             <thead style="background:#f1f5f9;">
-                                <tr><th style="text-align:left; padding:5px; border:1px solid #eee;">Campo Salesforce</th><th style="text-align:left; padding:5px; border:1px solid #eee;">Valor / Atributo</th></tr>
+                                <tr><th>Campo Salesforce</th><th>Valor / Atributo</th></tr>
                             </thead>
                             <tbody>${fieldRows}</tbody>
                         </table>
@@ -587,7 +588,7 @@ function renderActivities(activities, numberMap) {
             const blackout = config.honorBlackoutWindowEnum === 1 ? 'Respetar ventana' : 'No usar ventana de exclusión';
 
             extraConfig = `
-                <div style="background:#fff5f7; border:1px solid #fed7e2; padding:12px; border-radius:4px; margin-top:10px; border-left: 5px solid #d53f8c;">
+                <div class="ja-box ja-box-sms" style="padding:12px; margin-top:10px;">
                     <h5 style="margin:0 0 10px 0; color:#b83280; font-size:0.9em; display:flex; align-items:center;">
                         SMS MobileConnect Configuration
                     </h5>
@@ -619,7 +620,7 @@ function renderActivities(activities, numberMap) {
             const uiLink = `https://mc.${stack}.exacttarget.com/cloud/#app/MobilePush/mobilepush/%23!/message/view/${msgId}`;
 
             extraConfig = `
-                <div style="background:#fffcf2; border:1px solid #fef3c7; padding:12px; border-radius:4px; margin-top:10px; border-left: 5px solid #d97706;">
+                <div class="ja-box ja-box-inbox" style="padding:12px; margin-top:10px;">
                     <h5 style="margin:0 0 10px 0; color:#92400e; font-size:0.9em; display:flex; align-items:center;">
                         MobilePush: Inbox Activity
                     </h5>
@@ -850,7 +851,7 @@ function parseDecisionCriteria(act) {
             const logicHtml = rootSet ? buildLogicString(rootSet) : 'Sin lógica definida';
 
             html += `
-                <div style="margin-bottom:12px; padding:12px; background:#fff; border:1px solid #d6dbdf; border-left:4px solid #5499c7; border-radius:4px; font-family: sans-serif;">
+                <div class="ja-branch-box">
                     <strong style="color:#1b4f72; display:block; margin-bottom:8px; border-bottom:1px solid #f1f1f1; padding-bottom:4px;">Rama: ${branchLabel}</strong>
                     <div style="font-size:0.85rem; color:#2c3e50; line-height:1.8;">
                         ${logicHtml}
@@ -866,8 +867,8 @@ function parseDecisionCriteria(act) {
     const remainder = outcomes.find(o => o.key === 'remainder_path');
     if (remainder) {
         html += `
-            <div style="padding:10px; background:#fdfefe; border:1px solid #d6dbdf; border-left:4px solid #abb2b9; border-radius:4px;">
-                <strong style="color:#566573;">Rama: ${remainder.metaData?.label || 'Resto'}</strong><br>
+            <div class="ja-branch-rest">
+                <strong style="color:#566573;">Rama: ${escapeHtml(remainder.metaData?.label) || 'Resto'}</strong><br>
                 <small style="color:#7f8c8d;">Cualquier contacto que no cumpla los criterios anteriores.</small>
             </div>
         `;
@@ -1365,7 +1366,7 @@ function generatePDF() {
                 ).join('') || '<i>No configuradas</i>';
 
             extraConfig = `
-                <div style="background:#fffcf5; border:1px solid #f3e5ab; padding:12px; border-radius:4px; margin-top:10px; border-left: 5px solid #f39c12;">
+                <div class="ja-box ja-box-amber" style="padding:12px; margin-top:10px; border-left: 5px solid #f39c12;">
                     <h5 style="margin:0 0 10px 0; color:#d35400; font-size:0.9em;">Wait Until Chat Response</h5>
                     <div style="font-size:0.85em;">
                         <div style="margin-bottom:10px; padding:8px; background:#fff; border:1px solid #eee; border-radius:4px;">
@@ -1504,7 +1505,7 @@ function createCollapsibleHtml(title, content, id, isExpanded = false) {
                 <span class="analyzer-icon">${isExpanded ? '▼' : '▶'}</span>
             </div>
             <div class="analyzer-collapsible-content" style="max-height: ${isExpanded ? 'none' : '0'};">
-                <div style="padding: 15px; background: #fff; border: 1px solid #e2e8f0; border-top: none;">
+                <div class="ja-collapsible-inner">
                     ${content}
                 </div>
             </div>

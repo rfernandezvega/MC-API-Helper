@@ -4,6 +4,7 @@ import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import { formatCodeWithIndentation, highlightCloudPageCode } from '../ui/code-utils.js';
+import { escapeHtml } from '../ui/format-utils.js';
 
 // --- 1. ESTADO ---
 let getAuthenticatedConfig;
@@ -463,11 +464,11 @@ function createCollapsibleBlock(title, innerHtml, id, expanded, maxHeight) {
     return `
         <div id="container-${id}" style="margin-bottom:10px; border-radius:4px;">
             <div class="content-collapsible-header" style="
-                background-color:${expanded ? '#558ac7' : '#f1f5f9'};
+                background-color:${expanded ? 'var(--sf-blue)' : '#f1f5f9'};
                 color:${expanded ? '#fff' : '#475569'};
                 padding:12px 15px; cursor:pointer; display:flex;
                 justify-content:space-between; align-items:center;
-                font-weight:bold; border:1px solid ${expanded ? '#558ac7' : '#e2e8f0'}; border-radius:4px 4px 0 0;
+                font-weight:bold; border:1px solid ${expanded ? 'var(--sf-blue)' : '#e2e8f0'}; border-radius:4px 4px 0 0;
                 user-select:none; transition:background-color 0.2s;">
                 <span>${title}</span>
                 <span style="font-size:0.8em;">${expanded ? '▼' : '▶'}</span>
@@ -501,9 +502,9 @@ function initCollapsibleListeners(container) {
                 icon.textContent = '▶';
             } else {
                 body.style.display = 'block';
-                this.style.backgroundColor = '#558ac7';
+                this.style.backgroundColor = 'var(--sf-blue)';
                 this.style.color = '#fff';
-                this.style.borderColor = '#558ac7';
+                this.style.borderColor = 'var(--sf-blue)';
                 icon.textContent = '▼';
             }
         };
@@ -581,16 +582,14 @@ function buildComponentsTable(components) {
     if (components.length === 0) {
         return '<p style="color:#888;">No se encontraron componentes hijos.</p>';
     }
-    const thStyle = 'position:sticky; top:0; z-index:2; background:#6faad8; color:#fff; padding:8px;';
-    
-    let html = `<table style="width:100%; border-collapse:collapse;">
+    let html = `<table class="finder-detail-table">
         <thead><tr>
-            <th style="${thStyle} width:40px;"></th>
-            <th style="${thStyle}">ID</th>
-            <th style="${thStyle}">Nombre</th>
-            <th style="${thStyle}">Tipo</th>
-            <th style="${thStyle}">Ruta</th>
-            <th style="${thStyle}">Referenciado por</th>
+            <th style="width:40px;"></th>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Tipo</th>
+            <th>Ruta</th>
+            <th>Referenciado por</th>
         </tr></thead><tbody>`;
     components.forEach((c, index) => {
         const refBy = c.referencedBy ? `<small style="color:#888;">${c.referencedBy}</small>` : '---';
@@ -620,27 +619,21 @@ function buildDEsTable(des) {
     if (des.length === 0) {
         return '<p style="color:#888;">No se detectaron referencias a Data Extensions en el código.</p>';
     }
-    const thStyle = 'position:sticky; top:0; z-index:2; background:#6faad8; color:#fff; padding:8px;';
-    let html = `<table style="width:100%; border-collapse:collapse;">
+    let html = `<table class="finder-detail-table">
         <thead><tr>
-            <th style="${thStyle}">Nombre DE</th>
-            <th style="${thStyle}">Funciones</th>
-            <th style="${thStyle}">Usado en componente</th>
+            <th>Nombre DE</th>
+            <th>Funciones</th>
+            <th>Usado en componente</th>
         </tr></thead><tbody>`;
     des.forEach(d => {
         html += `<tr>
-            <td>${d.deName}</td>
-            <td><small>${d.functions}</small></td>
-            <td><small style="color:#888;">${d.sources}</small></td>
+            <td>${escapeHtml(d.deName)}</td>
+            <td><small>${escapeHtml(d.functions)}</small></td>
+            <td><small style="color:#888;">${escapeHtml(d.sources)}</small></td>
         </tr>`;
     });
     html += '</tbody></table>';
     return html;
-}
-
-function escapeHtml(str) {
-    if (str == null) return '';
-    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 function openFinderCodeDrawer(comp) {

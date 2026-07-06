@@ -5,6 +5,8 @@ import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
+import { escapeHtml, formatDate } from '../ui/format-utils.js';
+import { createTableSorter, createPaginator } from '../ui/table-utils.js';
 
 // --- 1. ESTADO DEL MÓDULO ---
 
@@ -13,10 +15,11 @@ let eventDefinitionsMap = {};
 let allEventDefsCache = [];
 let journeyFolderMap = {};
 
-let currentPage = 1;
-let currentSortColumn = 'modifiedDate';
-let currentSortDirection = 'desc';
 const ITEMS_PER_PAGE = 15;
+
+// Controladores de ordenación y paginación (helpers de table-utils, se crean en init)
+let journeysSorter;
+let journeysPaginator;
 
 let currentFilteredList = []; 
 
@@ -41,9 +44,7 @@ const TARGET_DE_ACTIVITIES = [
  * Se llama cuando se cambia un FILTRO. Resetea la paginación y renderiza.
  */
 function applyFiltersAndRender() {
-    currentPage = 1;
-
-    let filtered = fullJourneyList; 
+    let filtered = fullJourneyList;
 
     const nameFilter = elements.journeyNameFilter.value.toLowerCase().trim();
     if (nameFilter) {
@@ -116,6 +117,9 @@ function applyFiltersAndRender() {
     currentFilteredList = filtered; // Guardamos la lista filtrada
     updateJourneyCount(); // Actualizamos el contador
 
+    // Al cambiar un filtro se vuelve a la página 1 (update no dispara onPageChange)
+    journeysPaginator.update(currentFilteredList.length, 1);
+
     renderFilteredTable();
 }
 
@@ -132,9 +136,9 @@ function renderFilteredTable() {
  * @param {Array} journeys - La lista (ya filtrada) de journeys a mostrar.
  */
 function renderTable(journeys) {
-    sortData(journeys);
-    const paginatedItems = journeys.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-    
+    journeysSorter.sort(journeys);
+    const paginatedItems = journeysPaginator.paginate(journeys);
+
     elements.journeysTbody.innerHTML = '';
     paginatedItems.forEach(j => {
         const row = document.createElement('tr');
@@ -142,29 +146,28 @@ function renderTable(journeys) {
 
         // Botón para abrir el drawer de comunicaciones (solo si el journey tiene comunicaciones reales)
         const commsBtn = journeyHasComms(j)
-            ? `<span class="journey-comms-btn" data-journey-id="${j.id}" title="Ver comunicaciones" style="cursor:pointer;"><svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:#558ac7;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>`
+            ? `<span class="journey-comms-btn" data-journey-id="${j.id}" title="Ver comunicaciones"><svg class="jm-comms-icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>`
             : '';
 
         row.innerHTML = `
-            <td style="text-align:center;">${commsBtn}</td>
-            <td>${j.name || '---'}</td>
-            <td>${j.version || '---'}</td>
+            <td class="ta-center">${commsBtn}</td>
+            <td>${escapeHtml(j.name) || '---'}</td>
+            <td>${escapeHtml(j.version) || '---'}</td>
             <td>${formatDate(j.createdDate)}</td>
             <td>${formatDate(j.modifiedDate)}</td>
             <td>${formatDate(j.activity?.lastContactProcessed) || '---'}</td>
-            <td>${j.eventType || '---'}</td> 
-            <td>${j.definitionType || '---'}</td>
-            <td>${j.status || '---'}</td> 
-            <td>${j.dataExtensionName || '---'}</td>
-            <td class="col-des" style="font-size: 0.85em; color: #333; text-align: left !important; vertical-align: middle; padding: 10px; min-width: 200px;">
-                ${j.usedDEs ? j.usedDEs : '<span style="color:#ddd;">---</span>'}
+            <td>${escapeHtml(j.eventType) || '---'}</td>
+            <td>${escapeHtml(j.definitionType) || '---'}</td>
+            <td>${escapeHtml(j.status) || '---'}</td>
+            <td>${escapeHtml(j.dataExtensionName) || '---'}</td>
+            <td class="col-des jm-col-des">
+                ${j.usedDEs ? escapeHtml(j.usedDEs) : '<span class="jm-empty-dash">---</span>'}
             </td>
         `;
         elements.journeysTbody.appendChild(row);
     });
 
-    updatePaginationUI(journeys.length);
-    updateSortIndicators();
+    journeysSorter.updateIndicators();
     updateButtonsState();
     updateColumnsVisibility();
 }
@@ -191,14 +194,6 @@ function etaSub(startTime, done, total) {
 }
 
 /**
- * Escapa caracteres HTML para insertar texto de forma segura.
- */
-function escapeHtml(str) {
-    if (str == null) return '';
-    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-}
-
-/**
  * Abre el drawer lateral mostrando las comunicaciones (emails/sms/push/whatsapp) de un journey.
  */
 function openCommsDrawer(journeyId) {
@@ -211,10 +206,10 @@ function openCommsDrawer(journeyId) {
 
     // Emails — tabla completa si hay datos SOAP, si no lista simple
     if (journey.emails && journey.emails.length > 0) {
-        html += '<h4 style="margin:0 0 10px 0;">Emails</h4>';
+        html += '<h4 class="jm-drawer-title">Emails</h4>';
         const hasDetailedData = journey.emails.some(e => typeof e === 'object' && e.customerKey);
         if (hasDetailedData) {
-            html += `<table class="data-table" style="width:100%; margin-bottom:20px;">
+            html += `<table class="data-table jm-drawer-table">
                 <thead><tr>
                     <th>Nombre</th><th>Customer Key</th><th>Estado</th><th>Descripción</th>
                     <th>Creado</th><th>Modificado</th><th>Completados</th><th>En cola</th><th>Errores</th>
@@ -227,24 +222,24 @@ function openCommsDrawer(journeyId) {
                         <td>${escapeHtml(email.description) || '-'}</td>
                         <td>${email.created ? new Date(email.created).toLocaleDateString('es-ES') : 'N/A'}</td>
                         <td>${email.modified ? new Date(email.modified).toLocaleDateString('es-ES') : 'N/A'}</td>
-                        <td>${email.completed || '0'}</td>
-                        <td>${email.queued || '0'}</td>
-                        <td style="font-weight:bold; color:${parseInt(email.errored || '0') > 0 ? '#d32f2f' : '#666'};">${email.errored || '0'}</td>
+                        <td>${escapeHtml(email.completed) || '0'}</td>
+                        <td>${escapeHtml(email.queued) || '0'}</td>
+                        <td style="font-weight:bold; color:${parseInt(email.errored || '0') > 0 ? '#d32f2f' : '#666'};">${escapeHtml(email.errored) || '0'}</td>
                     </tr>`).join('')}
                 </tbody></table>`;
         } else {
-            html += `<div style="margin:0 0 20px 10px;">${journey.emails.map(e => escapeHtml(typeof e === 'string' ? e : e.name)).join(', ')}</div>`;
+            html += `<div class="jm-drawer-list">${journey.emails.map(e => escapeHtml(typeof e === 'string' ? e : e.name)).join(', ')}</div>`;
         }
     }
 
     // SMS, Push, WhatsApp
     [['sms', 'SMS'], ['pushes', 'PUSH'], ['whatsapps', 'WHATSAPP']].forEach(([key, label]) => {
         if (journey[key] && journey[key].length > 0) {
-            html += `<h4 style="margin:0 0 5px 0;">${label}</h4><div style="margin:0 0 15px 10px;">${journey[key].map(escapeHtml).join(', ')}</div>`;
+            html += `<h4 class="jm-drawer-subtitle">${label}</h4><div class="jm-drawer-sublist">${journey[key].map(escapeHtml).join(', ')}</div>`;
         }
     });
 
-    if (!html) html = '<div style="padding:20px; color:#999;">Este journey no tiene comunicaciones registradas.</div>';
+    if (!html) html = '<div class="jm-drawer-empty">Este journey no tiene comunicaciones registradas.</div>';
 
     elements.journeyCommsBody.innerHTML = html;
     elements.journeyCommsDrawer.classList.add('open');
@@ -266,6 +261,34 @@ export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
     showJourneyAnalyzerView = dependencies.showJourneyAnalyzerView;
 
+    // Controlador de ordenación de la tabla (fechas y versión con su tipo propio;
+    // la fecha de actividad es una ruta anidada que resuelve getPropertyByPath)
+    journeysSorter = createTableSorter({
+        tableSelector: '#journeys-table',
+        initialColumn: 'modifiedDate',
+        initialDirection: 'desc',
+        types: {
+            createdDate: 'date',
+            modifiedDate: 'date',
+            'activity.lastContactProcessed': 'date',
+            version: 'number'
+        },
+        // Igual que antes: ordenar re-aplica filtros y vuelve a la página 1
+        onSort: applyFiltersAndRender
+    });
+    journeysSorter.attach();
+
+    // Controlador de paginación sobre los 4 controles estándar de la vista
+    journeysPaginator = createPaginator(
+        {
+            pageInput: elements.pageInputJourneys,
+            totalLabel: elements.totalPagesJourneys,
+            prevBtn: elements.prevPageBtnJourneys,
+            nextBtn: elements.nextPageBtnJourneys
+        },
+        { itemsPerPage: ITEMS_PER_PAGE, onPageChange: renderFilteredTable }
+    );
+
     // Listeners de filtros
     elements.journeyNameFilter.addEventListener('input', applyFiltersAndRender);
     elements.journeyTypeFilter.addEventListener('change', applyFiltersAndRender);
@@ -280,10 +303,8 @@ export function init(dependencies) {
         const btn = elements.journeyCommsFilter;
         const isActive = btn.dataset.active === 'true';
         btn.dataset.active = isActive ? 'false' : 'true';
-        btn.textContent = isActive ? 'Comunicaciones' : 'Comunicaciones';
-        btn.style.backgroundColor = isActive ? '#f9f9f9' : '#558ac7';
-        btn.style.color = isActive ? '' : '#fff';
-        btn.style.borderColor = isActive ? '' : '#558ac7';
+        // El estado visual lo gestiona la clase compartida .type-card
+        btn.classList.toggle('active', !isActive);
         applyFiltersAndRender();
     });
 
@@ -298,8 +319,7 @@ export function init(dependencies) {
     elements.getJourneyErrorsBtn.addEventListener('click', handleErrorsButton);
     elements.analyzeJourneyBtn.addEventListener('click', () => inspectAndShowAnalyzer());
 
-    // Listeners de la tabla
-    document.querySelector('#journeys-table thead').addEventListener('click', handleSort);
+    // Listeners de la tabla (la ordenación la gestiona journeysSorter.attach)
     elements.journeysTbody.addEventListener('click', handleRowSelection);
 
     // Drawer de comunicaciones
@@ -312,34 +332,7 @@ export function init(dependencies) {
     });
 
 
-    // Listeners de paginación
-    elements.prevPageBtnJourneys.addEventListener('click', () => {
-        if (currentPage > 1) {
-            currentPage--;
-            renderFilteredTable();
-        }
-    });
-    elements.nextPageBtnJourneys.addEventListener('click', () => { 
-        const maxPage = parseInt(elements.pageInputJourneys.max, 10) || 1;
-        if (currentPage < maxPage) {
-            currentPage++;
-            renderFilteredTable(); 
-        } 
-    });
-    elements.pageInputJourneys.addEventListener('change', () => {
-        let newPage = parseInt(elements.pageInputJourneys.value, 10) || 1;
-        const maxPage = parseInt(elements.pageInputJourneys.max, 10) || 1;
-        if (newPage < 1) newPage = 1;
-        if (newPage > maxPage) newPage = maxPage;
-        currentPage = newPage;
-        renderFilteredTable(); 
-    });
-    elements.pageInputJourneys.addEventListener('blur', () => {
-        if (elements.pageInputJourneys.value === '') {
-            currentPage = 1;
-            renderFilteredTable(); 
-        }
-    });
+    // La paginación (prev/next/input) la gestiona journeysPaginator
 
     // Listeners del modal de flujo
     elements.closeFlowBtn.addEventListener('click', closeJourneyFlowModal);
@@ -769,6 +762,11 @@ async function copyAutomationAudienceJourney(journey) {
         logger.logMessage(`-> ¡Journey "${newJourney.name}" creado con éxito!`);
 
         ui.showCustomAlert(`¡Éxito! Se ha creado la copia "${newJourney.name}".`);
+
+        // Refresca la lista para que aparezca el journey recién clonado.
+        await fetchData();
+        await loadJourneysCache();
+        applyFiltersAndRender();
     } catch (error) {
         logger.logMessage(`ERROR en la copia del AutomationAudience Journey: ${error.message}`);
         ui.showCustomAlert(`Error en la copia: ${error.message}`);
@@ -830,6 +828,11 @@ async function copyEmailAudienceJourney(journey) {
         logger.logMessage(`-> ¡Journey "${newJourney.name}" creado con éxito!`);
 
         ui.showCustomAlert(`¡Éxito! Se ha creado la copia "${newJourney.name}".`);
+
+        // Refresca la lista para que aparezca el journey recién clonado.
+        await fetchData();
+        await loadJourneysCache();
+        applyFiltersAndRender();
     } catch (error) {
         logger.logMessage(`ERROR en la copia: ${error.message}`);
         ui.showCustomAlert(`Error en la copia: ${error.message}`);
@@ -922,67 +925,6 @@ async function deleteJourneys() {
 // --- 6. GESTIÓN DE LA TABLA ---
 
 /**
- * Gestiona el evento de clic en las cabeceras para ordenar la tabla.
- * @param {Event} e - El evento de clic.
- */
-function handleSort(e) {
-    const header = e.target.closest('.sortable-header');
-    if (!header) return;
-    const newSortColumn = header.dataset.sortBy;
-    if (currentSortColumn === newSortColumn) {
-        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
-    } else {
-        currentSortColumn = newSortColumn;
-        currentSortDirection = 'asc';
-    }
-    applyFiltersAndRender();
-}
-
-/**
- * Ordena un array de journeys basándose en la columna y dirección seleccionadas.
- * @param {Array} data - El array de journeys a ordenar.
- */
-function sortData(data) {
-    data.sort((a, b) => {
-        let valA, valB;
-
-        // La fecha de actividad está anidada en a.activity.lastContactProcessed,
-        // no directamente en a['activity'], así que la extraemos explícitamente.
-        if (currentSortColumn === 'activityDate') {
-            valA = a.activity?.lastContactProcessed ?? null;
-            valB = b.activity?.lastContactProcessed ?? null;
-        } else {
-            valA = a[currentSortColumn];
-            valB = b[currentSortColumn];
-        }
-
-        const direction = currentSortDirection === 'asc' ? 1 : -1;
-
-        // Nulls siempre al final, sin importar la dirección de orden
-        if (valA == null && valB == null) return 0;
-        if (valA == null) return 1;
-        if (valB == null) return -1;
-
-        // Fechas: columnas con 'Date' en el nombre + la columna de actividad
-        if (currentSortColumn.includes('Date') || currentSortColumn === 'activityDate') {
-            return (new Date(valA) - new Date(valB)) * direction;
-        }
-
-        if (typeof valA === 'boolean') {
-            return (valA === valB ? 0 : valA ? -1 : 1) * direction;
-        }
-
-        // Si ambos valores son números (ej: version), comparar como número,
-        // no como string — evita que "10" < "2" por orden alfabético.
-        if (typeof valA === 'number' && typeof valB === 'number') {
-            return (valA - valB) * direction;
-        }
-
-        return String(valA).localeCompare(String(valB), undefined, { sensitivity: 'base' }) * direction;
-    });
-}
-
-/**
  * Gestiona la selección y deselección de filas en la tabla.
  * @param {Event} e - El evento de clic.
  */
@@ -1056,29 +998,6 @@ function updateColumnsVisibility() {
    
     document.querySelectorAll('.col-des').forEach(el => {
         el.style.display = showDes ? '' : 'none';
-    });
-}
-
-/**
- * Actualiza los controles de paginación basándose en el total de elementos.
- * @param {number} totalItems - El número total de elementos (filtrados).
- */
-function updatePaginationUI(totalItems) {
-    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
-    elements.totalPagesJourneys.textContent = `/ ${totalPages}`;
-    elements.pageInputJourneys.value = currentPage;
-    elements.pageInputJourneys.max = totalPages;
-}
-
-/**
- * Actualiza los indicadores visuales de ordenación en las cabeceras de la tabla.
- */
-function updateSortIndicators() {
-    document.querySelectorAll('#journeys-table .sortable-header').forEach(header => {
-        header.classList.remove('sort-asc', 'sort-desc');
-        if (header.dataset.sortBy === currentSortColumn) {
-            header.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
-        }
     });
 }
 
@@ -1201,20 +1120,6 @@ function prepareJourneyForCopy(journeyType, originalJourney, originalEventDef, n
 }
 
 /**
- * Formatea una cadena de fecha a un formato legible local.
- * @param {string} dateString - La fecha en formato ISO.
- * @returns {string} La fecha formateada o '---'.
- */
-function formatDate(dateString) {
-    if (!dateString) return '---';
-    try {
-        return new Date(dateString).toLocaleString('es-ES', { timeZone: 'Europe/Madrid' });
-    } catch {
-        return 'Fecha inválida';
-    }
-}
-
-/**
  * Actualiza el contador de journeys.
  */
 function updateJourneyCount() {
@@ -1235,7 +1140,7 @@ function downloadJourneysCsv() {
     const headers = ['Nombre Journey', 'Versión', 'Fecha creación', 'Fecha modificación', 'Fecha actividad', 'Tipo', 'Subtipo', 'Estado', 'Data Extension', 'DEs en Actividades', 'Descargado', 'Emails', 'SMSs', 'Pushes', 'Whatsapps'];
 
     const sortedData = [...currentFilteredList]; // Copiamos para no modificar la original
-    sortData(sortedData); // Usamos la función de ordenación existente
+    journeysSorter.sort(sortedData); // Usamos el controlador de ordenación de la tabla
     
     const rows = sortedData.map(j => [
         `"${j.name || ''}"`,

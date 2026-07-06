@@ -1,13 +1,51 @@
 /* ===================================================================
    common.css
    Estilos globales y componentes reutilizables de la aplicación.
-   
+
    ÍNDICE:
+   0. TOKENS DE DISEÑO (variables --sf-*) Y BADGES DE ESTADO
    1. ESTILOS GLOBALES Y LAYOUT PRINCIPAL
    2. BARRAS LATERALES (IZQUIERDA Y DERECHA)
    3. COMPONENTES COMUNES (Secciones, Botones, Formularios, etc.)
    4. UTILIDADES GENERALES
+   5. BUSCADOR EN PÁGINA (CTRL+F)
+   6. CLASES UTILITARIAS u-* (para sustituir estilos inline)
    =================================================================== */
+
+
+/* ==========================================================
+   0. TOKENS DE DISEÑO
+   Paleta única de la aplicación (estética Salesforce Lightning).
+   No usar hex sueltos en CSS nuevo: referenciar siempre estos tokens.
+   ========================================================== */
+:root {
+    --sf-blue: #0070d2;          /* acción primaria (antes #69a3db) */
+    --sf-blue-dark: #005fb2;     /* hover primario (antes #558ac7) */
+    --sf-border: #dddbda;        /* bordes (antes #e9ecef / #b9d4e7 / #ccc) */
+    --sf-bg: #f3f2f2;            /* fondo app (antes #f0f6fc) */
+    --sf-bg-alt: #fafaf9;        /* fondo paneles/cabeceras suaves (antes #f8f9fa) */
+    --sf-text: #081c3b;          /* texto principal (antes #333/#2c3e50) */
+    --sf-text-muted: #706e6b;    /* texto secundario (antes #666/#888/#999) */
+    --sf-text-soft: #514f4d;     /* texto de labels/botón secundario */
+    --sf-green: #4caf50;         /* éxito (antes #28a745) */
+    --sf-red: #c23934;           /* peligro (antes #dc3545) */
+    --sf-red-bg: #fff1f1;        /* hover de acciones peligrosas */
+    --sf-radius: 4px;
+    --sf-radius-lg: 8px;
+    --sf-shadow-menu: 0 8px 24px rgba(0,0,0,0.15);
+    --sf-shadow-modal: 0 20px 60px rgba(0,0,0,0.25);
+    --sf-code-bg: #1e1e1e;       /* bloques de código */
+    --sf-code-text: #d4d4d4;
+}
+
+/* Badges de estado globales (pastel, estilo Lightning) */
+.badge { padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: bold; display: inline-block; }
+.badge-info    { background: #e1f5fe; color: #0277bd; }  /* antes badge-save */
+.badge-success { background: #e6f6e6; color: #1b5e20; }  /* antes badge-publish */
+.badge-warning { background: #fff4e5; color: #8a5a00; }  /* antes badge-run */
+.badge-purple  { background: #f0e6ff; color: #5b3a99; }
+.badge-neutral { background: #f3f2f2; color: #514f4d; }
+.badge-danger  { background: #fdecea; color: #b3261e; }
 
 
 /* ==========================================================
@@ -17,21 +55,22 @@
 /* Estilos base para toda la aplicación */
 body {
   margin: 0;
-  background-color: #f0f6fc;
-  font-family: Arial, sans-serif;
+  background-color: var(--sf-bg);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: var(--sf-text);
   box-sizing: border-box;
 }
 
-*, *::before, *::after { 
-  box-sizing: inherit; 
+*, *::before, *::after {
+  box-sizing: inherit;
 }
 
-/* Layout principal de 3 columnas con CSS Grid */
+/* Layout principal a pantalla completa: sin huecos ni bordes exteriores */
 .app-container {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
-  gap: 20px;
-  padding: 20px;
+  gap: 0;
+  padding: 0;
   min-height: 100vh;
   align-items: start;
 }
@@ -39,20 +78,22 @@ body {
 /* Estilo base para los 3 paneles principales (barras laterales y contenido) */
 #macros-sidebar, #main-content {
   background-color: #fff;
-  border-radius: 10px;
   padding: 20px;
 }
 
 /* Evita que el contenido de las barras laterales se desborde visualmente */
-#macros-sidebar { 
-  overflow: hidden; 
+#macros-sidebar {
+  overflow: hidden;
 }
 
-/* Contenedor principal del contenido central con scroll interno */
+/* Contenedor principal del contenido central con scroll interno.
+   El padding inferior deja sitio al chip del log y a la versión, que
+   quedan pegados al borde de la ventana. */
 #main-content {
-    height: calc(100vh - 40px);
+    height: 100vh;
     display: flex; /* Permite que el contenido hijo crezca para ocupar el espacio */
     flex-direction: column;
+    padding-bottom: 28px;
 }
 
 /* Permite que los contenedores de vistas (tablas, formularios) crezcan y tengan su propio scroll */
@@ -72,14 +113,14 @@ body {
 /* --- 2.1. Barra Izquierda (Navegación) --- */
 
 
-#macros-sidebar { 
-  display: flex; 
+#macros-sidebar {
+  display: flex;
   flex-direction: column;
-  height: calc(100vh - 40px);
-  background-color: #fff;
-  border-radius: 10px;
-  overflow: hidden; 
-  padding: 0; 
+  height: 100vh;
+  background-color: var(--sf-bg-alt); /* Fondo ligeramente gris para destacar del contenido */
+  border-right: 1px solid var(--sf-border); /* Separador con el contenido */
+  overflow: hidden;
+  padding: 0;
 }
 
 
@@ -88,7 +129,7 @@ body {
   flex-direction: column;
   height: 100%;
   width: 100%;
-  padding: 20px; 
+  padding: 20px;
 }
 
 
@@ -99,15 +140,15 @@ body {
 
 .sidebar-client-selector {
   padding-bottom: 15px;
-  border-bottom: 2px solid #f0f6fc;
+  border-bottom: 2px solid var(--sf-border);
   margin-bottom: 10px;
 }
 .sidebar-client-selector h2, #sidebar-views-title {
-  color: #69a3db;
+  color: var(--sf-blue);
   margin-top: 0;
   text-align: center;
   padding-bottom: 10px;
-  border-bottom: 2px solid #f0f6fc; 
+  border-bottom: 2px solid var(--sf-border);
 }
 
 /* --- Selector de cliente de dos niveles (Cliente → BU) --- */
@@ -115,7 +156,7 @@ body {
 .client-selector-btn {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--sf-border);
   border-radius: 6px;
   background: #fff;
   cursor: pointer;
@@ -123,24 +164,25 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  font-size: 0.9em;
-  color: #2c3e50;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: inherit; /* Los <button> no heredan la fuente por defecto */
+  font-size: 0.95em;
+  color: var(--sf-text);
+  transition: border-color 0.15s;
 }
-.client-selector-btn:hover { border-color: #69a3db; }
-.client-selector-btn.open { border-color: #69a3db; box-shadow: 0 0 0 2px rgba(105,163,219,0.2); }
+.client-selector-btn:hover { border-color: var(--sf-blue); }
+.client-selector-btn.open { border-color: var(--sf-blue); }
 .client-selector-btn > span:first-child {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; flex: 1;
 }
-.client-selector-caret { color: #69a3db; font-size: 0.85em; flex-shrink: 0; }
+.client-selector-caret { color: var(--sf-blue); font-size: 0.85em; flex-shrink: 0; }
 
 /* Menús flotantes (se insertan en <body> con position:fixed para no recortarse). */
 .client-selector-menu, .client-selector-submenu {
   position: fixed;
   background: #fff;
-  border: 1px solid #d0d7de;
+  border: 1px solid var(--sf-border);
   border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.14);
+  box-shadow: var(--sf-shadow-menu);
   padding: 4px;
   z-index: 4000;
   max-height: 60vh;
@@ -151,19 +193,19 @@ body {
   padding: 8px 10px;
   border-radius: 5px;
   font-size: 0.88em;
-  color: #2c3e50;
+  color: var(--sf-text);
   cursor: pointer;
   white-space: nowrap;
 }
 .cs-client {
   display: flex; justify-content: space-between; align-items: center; gap: 12px; cursor: default;
 }
-.cs-client:hover { background: #f0f6fc; }
-.cs-client.active > .cs-client-name { font-weight: 700; color: #1c5fa8; }
-.cs-client .cs-arrow { color: #9aa7b4; font-size: 0.8em; }
-.cs-bu:hover { background: #e8f1fb; color: #1c5fa8; }
-.cs-bu.active { font-weight: 700; color: #1c5fa8; background: #eaf3fc; }
-.cs-empty { padding: 8px 10px; color: #94a3b8; font-size: 0.85em; white-space: nowrap; }
+.cs-client:hover { background: var(--sf-bg); }
+.cs-client.active > .cs-client-name { font-weight: 700; color: var(--sf-blue); }
+.cs-client .cs-arrow { color: var(--sf-text-muted); font-size: 0.8em; }
+.cs-bu:hover { background: var(--sf-bg); }
+.cs-bu.active { font-weight: 700; color: #fff; background: var(--sf-blue); }
+.cs-empty { padding: 8px 10px; color: var(--sf-text-muted); font-size: 0.85em; white-space: nowrap; }
 .chan-tag {
     display: inline-block; background: #e1f5fe; color: #0277bd; padding: 3px 10px;
     border-radius: 4px; font-size: 0.85em; margin: 2px; border: 1px solid #b3e5fc; font-weight: bold;
@@ -184,13 +226,14 @@ body {
   margin-right: -10px;
 }
 
-/* Estilos para los menús colapsables. */
+/* Estilos para los menús colapsables (estilo folder-header de referencia). */
 .collapsible-header {
-  color: #558ac7; margin: 20px 0 10px 0; font-size: 1.1em; cursor: pointer;
+  color: var(--sf-text-soft); margin: 20px 0 10px 0; font-size: 0.95em; font-weight: 600; cursor: pointer;
   display: flex; justify-content: space-between; align-items: center;
-  padding: 5px 0; user-select: none;
+  padding: 5px 4px; user-select: none; border-radius: 6px;
 }
-.collapsible-header::after { content: '▶'; font-size: 0.7em; transition: transform 0.3s ease; }
+.collapsible-header:hover { background-color: #e8f1fb; }
+.collapsible-header::after { content: '▶'; font-size: 0.7em; color: var(--sf-text-muted); transition: transform 0.3s ease; }
 .collapsible-header.active::after { transform: rotate(90deg); }
 .collapsible-content {
   list-style: none; padding: 0; margin: 0; max-height: 0;
@@ -198,14 +241,17 @@ body {
 }
 
 .sidebar-content-wrapper .macro-item {
-  display: block; padding: 10px 12px; margin-bottom: 5px; background-color: #f8f9fa;
-  border-radius: 5px; color: #333; text-decoration: none; transition: background-color 0.2s, color 0.2s;
-  cursor: pointer; 
+  display: block; padding: 10px 12px; margin-bottom: 2px; background-color: transparent;
+  border-radius: 6px; color: var(--sf-text); font-size: 0.95em; font-weight: 500; text-decoration: none;
+  transition: background-color 0.2s, color 0.2s; cursor: pointer;
 }
-.sidebar-content-wrapper .macro-item:hover,
-.sidebar-content-wrapper .macro-item.active { 
-  background-color: #69a3db; 
-  color: #fff; 
+.sidebar-content-wrapper .macro-item:hover {
+  background-color: #e8f1fb; /* Azul suave al pasar por encima */
+  color: var(--sf-text);
+}
+.sidebar-content-wrapper .macro-item.active {
+  background-color: var(--sf-blue);
+  color: #fff;
 }
 /* --- 2.2. Log Drawer (Panel inferior flotante) --- */
 
@@ -220,9 +266,10 @@ body {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  background-color: #d6e4f0;
-  color: #5a7da8;
-  border: none;
+  background-color: #fff;
+  color: var(--sf-blue);
+  border: 1px solid var(--sf-border);
+  border-bottom: none;
   border-radius: 8px 8px 0 0;
   padding: 3px 20px;
   font-size: 0.75em;
@@ -231,8 +278,8 @@ body {
   transition: background-color 0.2s, color 0.2s, opacity 0.2s;
 }
 .log-tab:hover {
-  background-color: #c2d6ea;
-  color: #3d6fa0;
+  background-color: var(--sf-bg);
+  color: var(--sf-blue-dark);
 }
 
 /* Ocultar cuando el drawer está abierto */
@@ -271,11 +318,13 @@ body {
   padding: 16px 20px 20px;
   transform: translateY(100%);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform;
   overflow: hidden;
 }
+/* Abierto: transform none (no translateY(0)) para que el drawer salga de la
+   capa compuesta y el texto recupere el antialiasing normal (evita el texto
+   "difuminado" en Windows). */
 .log-drawer.open {
-  transform: translateY(0);
+  transform: none;
   overflow: visible;
 }
 
@@ -286,14 +335,14 @@ body {
   justify-content: space-between;
   align-items: center;
   padding-bottom: 10px;
-  border-bottom: 2px solid #f0f6fc;
+  border-bottom: 2px solid var(--sf-bg);
   flex-shrink: 0;
 }
 .log-drawer .log-header h2 {
   margin: 0;
   padding: 0;
   font-size: 1.1em;
-  color: #333;
+  color: var(--sf-text);
   border-bottom: none;
 }
 
@@ -302,7 +351,7 @@ body {
   transition: color 0.2s;
 }
 #log-header-title:hover {
-  color: #558ac7;
+  color: var(--sf-blue-dark);
 }
 /* Pestaña para cerrar el drawer (centrada arriba) */
 .log-close-tab {
@@ -314,9 +363,10 @@ body {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  background-color: #d6e4f0;
-  color: #5a7da8;
-  border: none;
+  background-color: #fff;
+  color: var(--sf-blue);
+  border: 1px solid var(--sf-border);
+  border-bottom: none;
   border-radius: 8px 8px 0 0;
   padding: 3px 20px;
   font-size: 0.75em;
@@ -325,8 +375,8 @@ body {
   transition: background-color 0.2s, color 0.2s;
 }
 .log-close-tab:hover {
-  background-color: #c2d6ea;
-  color: #3d6fa0;
+  background-color: var(--sf-bg);
+  color: var(--sf-blue-dark);
 }
 /* Contenedor horizontal de los 3 bloques */
 .log-blocks-row {
@@ -351,14 +401,14 @@ body {
 
 .log-drawer .log-block h4 {
   margin: 0 0 8px 0;
-  color: #558ac7;
+  color: var(--sf-blue-dark);
   font-size: 0.9em;
   flex-shrink: 0;
 }
 
 .log-drawer .log-block pre {
   flex-grow: 1;
-  background-color: #f4f6f8;
+  background-color: var(--sf-bg-alt);
   padding: 10px;
   border-radius: 6px;
   margin: 0;
@@ -367,7 +417,7 @@ body {
   word-break: break-all;
   font-size: 0.8em;
   min-height: 0;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--sf-border);
 }
 
 /* --- Transcript colapsable de llamadas (petición ▸ respuesta) --- */
@@ -376,23 +426,23 @@ body {
   overflow-y: auto;
   min-height: 0;
   padding: 4px;
-  background-color: #f4f6f8;
-  border: 1px solid #e9ecef;
+  background-color: var(--sf-bg-alt);
+  border: 1px solid var(--sf-border);
   border-radius: 6px;
   font-size: 0.8em;
 }
 .log-entry {
   background: #fff;
-  border: 1px solid #e3e8ee;
+  border: 1px solid var(--sf-border);
   border-radius: 6px;
   margin-bottom: 6px;
 }
-.log-entry.error { border-color: #f0b4bb; }
+.log-entry.error { border-color: #ffb0b0; }
 .log-entry > summary {
   cursor: pointer;
   padding: 7px 10px;
   font-family: monospace;
-  color: #2c3e50;
+  color: var(--sf-text);
   list-style: none;
   white-space: nowrap;
   overflow: hidden;
@@ -401,20 +451,20 @@ body {
   border-radius: 6px;
 }
 .log-entry > summary::-webkit-details-marker { display: none; }
-.log-entry > summary::before { content: '▸ '; color: #69a3db; font-weight: bold; }
+.log-entry > summary::before { content: '▸ '; color: var(--sf-blue); font-weight: bold; }
 .log-entry[open] > summary::before { content: '▾ '; }
-.log-entry[open] > summary { border-bottom: 1px solid #e3e8ee; border-radius: 6px 6px 0 0; }
-.log-entry.error > summary { color: #b5303c; }
+.log-entry[open] > summary { border-bottom: 1px solid var(--sf-border); border-radius: 6px 6px 0 0; }
+.log-entry.error > summary { color: var(--sf-red); }
 .log-entry-body { padding: 8px 10px; }
-.log-entry-body .log-label { font-weight: bold; font-size: 0.92em; color: #558ac7; margin: 6px 0 2px; }
+.log-entry-body .log-label { font-weight: bold; font-size: 0.92em; color: var(--sf-blue-dark); margin: 6px 0 2px; }
 /* Especificidad (0,0,2,1) para ganar a ".log-drawer .log-block pre". */
 .log-transcript .log-entry-body pre {
   flex-grow: 0;
   margin: 0 0 6px;
   white-space: pre-wrap;
   word-break: break-all;
-  background: #f8fafc;
-  border: 1px solid #eef0f2;
+  background: var(--sf-bg-alt);
+  border: 1px solid var(--sf-border);
   border-radius: 4px;
   padding: 6px;
   font-size: 1em;
@@ -426,49 +476,68 @@ body {
    ========================================================== */
 
 /* --- 3.1. Secciones y Cabeceras --- */
-.section { 
-  display: none; 
-  flex-direction: column; 
-  height: 100%; 
+.section {
+  display: none;
+  flex-direction: column;
+  height: 100%;
 }
-.section h2 { 
-  color: #69a3db; 
-  text-align: center; 
-  margin: 0 0 20px 0; 
+.section h2 {
+  color: var(--sf-blue);
+  text-align: center;
+  margin: 0 0 20px 0;
 }
 .section-header {
-    background-color: #fff; 
-    display: flex; 
-    justify-content: space-between; 
+    background-color: #fff;
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    padding-bottom: 20px; 
-    border-bottom: 1px solid #e9ecef; 
-    margin-bottom: 20px; 
-    flex-shrink: 0; 
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--sf-border);
+    margin-bottom: 20px;
+    flex-shrink: 0;
 }
-.header-actions { 
-  display: flex; 
-  gap: 10px; 
-  flex-wrap: wrap; 
-  justify-content: flex-end; 
+.header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 /* --- 3.2. Botones --- */
+/* Primario (estilo btn-primary de referencia): azul sólido, sin sombra */
 .action-button, .back-button {
-    background-color: #69a3db; color: #fff; border: none; border-radius: 5px;
-    padding: 10px 15px; cursor: pointer; transition: background-color 0.2s; font-weight: bold;
+    background-color: var(--sf-blue); color: #fff; border: none; border-radius: var(--sf-radius);
+    padding: 8px 14px; font-size: 13px; cursor: pointer; transition: background-color 0.2s; font-weight: 600;
 }
-.action-button:hover { background-color: #558ac7; }
-.back-button { background-color: #6c757d; }
-.back-button:hover { background-color: #5a6268; }
-.action-button.activate-btn, #saveConfigBtn { background-color: #28a745; }
-.action-button.activate-btn:hover, #saveConfigBtn:hover { background-color: #218838; }
-.action-button.delete-btn { background-color: #dc3545; }
-.action-button.delete-btn:hover { background-color: #c82333; }
-.action-button.delete-btn-darker { background-color: #b02a37; }
-.action-button.delete-btn-darker:hover { background-color: #8b212b; }
+.action-button:hover { background-color: var(--sf-blue-dark); }
+/* Secundario (atrás / cancelar): gris sólido con texto blanco, misma
+   tipografía y tamaño que el resto de botones */
+.back-button, .action-button.cancel-btn {
+  background-color: #6c757d;
+  color: #fff;
+  border: none;
+}
+.back-button:hover, .action-button.cancel-btn:hover { background-color: #5a6268; }
+/* Botones secundarios (subir/bajar filas, etc.): gris como el de atrás */
+.action-button.secondary-btn { background-color: #6c757d; }
+.action-button.secondary-btn:hover { background-color: #5a6268; }
+.action-button.activate-btn, #saveConfigBtn { background-color: var(--sf-green); }
+.action-button.activate-btn:hover, #saveConfigBtn:hover { background-color: #43a047; }
+/* Peligro: rojo sólido con texto blanco para destacar acciones delicadas */
+.action-button.delete-btn {
+  background-color: var(--sf-red);
+  color: #fff;
+  border: none;
+}
+.action-button.delete-btn:hover { background-color: #a52f2b; }
+/* Variante sólida para confirmaciones destructivas */
+.action-button.delete-btn-solid { background-color: var(--sf-red); color: #fff; border: none; }
+.action-button.delete-btn-solid:hover { background-color: #a52f2b; }
+.action-button.delete-btn-darker { background-color: var(--sf-red); color: #fff; border: none; }
+.action-button.delete-btn-darker:hover { background-color: #a52f2b; }
 .action-button[disabled] {
-  background-color: #cccccc !important; color: #888888 !important;
+  background-color: var(--sf-border) !important; color: var(--sf-text-muted) !important;
+  border-color: var(--sf-border) !important;
   cursor: not-allowed !important; opacity: 0.7 !important;
 }
 /* Estilo para botones con texto pequeño */
@@ -480,14 +549,14 @@ body {
 
 /* --- 3.3. Formularios y Bloques de Configuración --- */
 .config-section-container .config-block {
-    background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px;
+    background-color: var(--sf-bg-alt); border: 1px solid var(--sf-border); border-radius: 8px;
     padding: 20px; margin-bottom: 20px;
 }
-.config-section-container h3 { color: #558ac7; margin-top: 0; }
+.config-section-container h3 { color: var(--sf-blue-dark); margin-top: 0; }
 .config-block-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
 .config-block-header h3 { margin: 0; }
 .config-section-container .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
-.config-section-container label { font-weight: bold; margin-bottom: 5px; color: #333; }
+.config-section-container label { font-weight: bold; margin-bottom: 5px; color: var(--sf-text); }
 #folder-selector-modal input[type="text"],
 .config-section-container input[type="text"],
 .config-section-container input[type="email"],
@@ -496,16 +565,26 @@ body {
     -webkit-appearance: none;
     appearance: none;
     background-color: #fff; /* Fondo blanco para que parezca un input */
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    padding: 8px;
+    border: 1px solid var(--sf-border);
+    border-radius: var(--sf-radius);
+    padding: 9px 12px;
+    font-size: 13px;
     width: 100%;
     cursor: pointer;
     background-repeat: no-repeat;
     background-position: right .7em top 50%, 0 0;
     background-size: .65em auto, 100%;
 }
-.config-section-container input[disabled] { background-color: #e9ecef; cursor: not-allowed; }
+/* Focus unificado: borde azul, sin box-shadow */
+#folder-selector-modal input[type="text"]:focus,
+.config-section-container input[type="text"]:focus,
+.config-section-container input[type="email"]:focus,
+.config-section-container input[type="password"]:focus,
+.config-section-container select:focus {
+    outline: none;
+    border-color: var(--sf-blue);
+}
+.config-section-container input[disabled] { background-color: var(--sf-bg); cursor: not-allowed; }
 .config-section-container .checkbox-group { flex-direction: row; align-items: center; }
 .config-section-container .checkbox-group label { margin: 0 8px 0 0; }
 .config-section-container .checkbox-group input[type="checkbox"] { width: auto; }
@@ -554,78 +633,125 @@ body {
     /* Este contenedor debe ser flexible para que .table-scroll-wrapper se estire. */
     display: flex;
     /* El scroll no va aquí, sino en el hijo, por eso lo ocultamos. */
-    overflow: hidden; 
+    overflow: hidden;
 }
 
-/* --- 3.4. Tablas Genéricas --- */
+/* --- 3.4. Tablas Genéricas (cabecera azul, contenido centrado) --- */
 .table-container { width: 100%; overflow-x: auto; }
 .table-scroll-wrapper {
     flex-grow: 1; /* Hace que la tabla ocupe todo el ancho posible */
     overflow-y: auto; /* Habilita el scroll vertical SOLO para la tabla */
     height: 100%; /* Ocupa toda la altura del padre para que el scroll funcione */
-    padding-right: 40px; 
 }
-table { border-collapse: collapse; width: 100%; }
-th, td { border: 1px solid #b9d4e7; padding: 10px; text-align: center; vertical-align: middle; }
-th { background-color: #69a3db; color: #fff; position: sticky; top: 0; z-index: 2; }
-tr.selected { background-color: #c5dce6 !important; }
+/* Solo la tabla de campos usa el botón flotante de borrar fuera de la fila:
+   necesita hueco a la derecha para que no se recorte. */
+#tab-config .table-scroll-wrapper { padding-right: 40px; }
+/* border-collapse: separate (y no collapse) es OBLIGATORIO con cabeceras
+   sticky: con collapse los bordes no acompañan a la celda fija y las filas
+   asoman por encima de la cabecera al hacer scroll (bug de Chromium). */
+table { border-collapse: separate; border-spacing: 0; width: 100%; }
+/* Rejilla direccional (derecha + abajo) para no duplicar líneas entre celdas. */
+th, td {
+  border: none;
+  border-right: 1px solid var(--sf-border);
+  border-bottom: 1px solid var(--sf-border);
+  padding: 10px; text-align: center; vertical-align: middle;
+}
+th:first-child, td:first-child { border-left: 1px solid var(--sf-border); }
+/* Cabecera azul: los bordes exteriores son del mismo azul para que no
+   aparezca una línea clara que "recorte" la cabecera en los extremos;
+   la separación entre columnas es blanca translúcida. */
+th {
+  background-color: var(--sf-blue);
+  color: #fff;
+  font-size: 0.95em;
+  font-weight: 600;
+  border-top: 1px solid var(--sf-blue);
+  border-right: 1px solid rgba(255, 255, 255, 0.45);
+  border-bottom: 2px solid var(--sf-blue-dark);
+  position: sticky; top: 0; z-index: 2; /* Cabecera fija al hacer scroll (requisito del repo) */
+}
+th:first-child { border-left: 1px solid var(--sf-blue); }
+th:last-child { border-right: 1px solid var(--sf-blue); }
+/* Hover de fila y fila seleccionada (solo fondo azul claro, sin recuadro) */
+tbody tr:hover { background-color: var(--sf-bg-alt); }
+tr.selected {
+  background-color: #d8ecfb !important;
+}
+/* Utilidades de alineación para celdas concretas */
+.ta-center { text-align: center !important; }
+.ta-right { text-align: right !important; }
 .sortable-header { cursor: pointer; position: relative; user-select: none; }
-.sortable-header:hover { background-color: #558ac7; }
+.sortable-header:hover { background-color: var(--sf-blue-dark); }
+/* Flechas de ordenación en blanco sobre la cabecera azul */
 .sortable-header::after {
   content: ''; position: absolute; right: 8px; top: 50%;
-  transform: translateY(-50%); border: 4px solid transparent; opacity: 0.5;
+  transform: translateY(-50%); border: 4px solid transparent;
+  border-top-color: #fff; opacity: 0.5; margin-top: 2px;
 }
-.sortable-header.sort-asc::after { border-bottom-color: #fff; opacity: 1; }
+.sortable-header.sort-asc::after { border-top-color: transparent; border-bottom-color: #fff; opacity: 1; margin-top: -2px; }
 .sortable-header.sort-desc::after { border-top-color: #fff; opacity: 1; }
-#de-selection-table th:first-child, #de-selection-table td:first-child { 
-    width: 50px; text-align: center; 
+#de-selection-table th:first-child, #de-selection-table td:first-child {
+    width: 50px; text-align: center;
 }
-td a { color: #005A9C; text-decoration: none; font-weight: bold; }
-td a:hover { color: #003366; text-decoration: underline; }
+td a { color: var(--sf-blue); text-decoration: none; font-weight: bold; }
+td a:hover { color: var(--sf-blue-dark); text-decoration: underline; }
 .editable-row-table tbody tr, #automations-table tbody tr, #journeys-table tbody tr, .folder-results-table tbody tr { cursor: pointer; }
 .editable-row-table tbody tr { position: relative; }
 .delete-row-btn {
   position: absolute; right: -35px; top: 50%; transform: translateY(-50%);
-  background-color: #fce8e6; border: 1px solid #f6ccc7; color: #c5221f;
+  background-color: var(--sf-red-bg); border: 1px solid #ffb0b0; color: var(--sf-red);
   border-radius: 50%; width: 24px; height: 24px; line-height: 22px; text-align: center;
   font-weight: bold; cursor: pointer; opacity: 0; pointer-events: none; transition: all 0.2s;
 }
 .editable-row-table tbody tr.selected .delete-row-btn { opacity: 1; pointer-events: auto; }
-.delete-row-btn:hover { background-color: #dc3545; color: #fff; }
+.delete-row-btn:hover { background-color: var(--sf-red); color: #fff; }
+/* Botón "Eliminar" dentro de una celda de acciones (canales WhatsApp,
+   búsqueda dinámica de DEs...): rojo suave con borde */
+.row-del-btn {
+  background: #fce8e6;
+  border: 1px solid #f6ccc7;
+  color: #c5221f;
+  border-radius: 4px;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-weight: bold;
+}
+.row-del-btn:hover { background-color: var(--sf-red); border-color: var(--sf-red); color: #fff; }
 
 /* --- 3.5. Pestañas (Tabs) --- */
-.tabs-container { 
-    width: 100%; 
+.tabs-container {
+    width: 100%;
     /* Convierte el contenedor en una columna flexible */
     display: flex;
     flex-direction: column;
     /* Quitamos el scroll de aquí para dárselo al contenido */
     overflow-y: hidden;
 }
-.tab-buttons { 
-    display: flex; 
-    border-bottom: 2px solid #e0e7ef; 
-    margin-bottom: 20px; 
+.tab-buttons {
+    display: flex;
+    border-bottom: 2px solid var(--sf-border);
+    margin-bottom: 20px;
     /* Evita que los botones se encojan si el espacio es reducido */
     flex-shrink: 0;
 }
 .tab-button {
   padding: 10px 20px; cursor: pointer; background-color: transparent; border: none;
-  border-bottom: 3px solid transparent; font-size: 1em; color: #558ac7; transition: all 0.2s;
+  border-bottom: 3px solid transparent; font-size: 1em; color: var(--sf-text-soft); transition: all 0.2s;
 }
-.tab-button.active { border-bottom-color: #69a3db; font-weight: bold; }
-.tab-button:hover { background-color: #f8f9fa; }
+.tab-button.active { border-bottom-color: var(--sf-blue); color: var(--sf-blue); font-weight: bold; }
+.tab-button:hover { background-color: var(--sf-bg-alt); }
 .tab-content { display: none; }
-.tab-content.active { 
+.tab-content.active {
     display: block;
     /* Le dice al contenido que ocupe todo el espacio vertical sobrante */
-    flex-grow: 1; 
+    flex-grow: 1;
     /* Añadimos el scroll aquí */
     overflow-y: auto;
     /* Truco de Flexbox para que el scroll funcione correctamente */
     min-height: 0;
 }
-.info-grid-container { display: flex; gap: 30px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd; }
+.info-grid-container { display: flex; gap: 30px; background: var(--sf-bg-alt); padding: 15px; border-radius: 8px; border: 1px solid var(--sf-border); }
 /* --- 3.6. Modales y Overlays --- */
 .loader-overlay, .modal-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -633,16 +759,16 @@ td a:hover { color: #003366; text-decoration: underline; }
   justify-content: center; align-items: center; flex-direction: column; z-index: 9999;
 }
 .loader-spinner {
-  border: 8px solid #f3f3f3; border-top: 8px solid #69a3db;
+  border: 8px solid var(--sf-bg); border-top: 8px solid var(--sf-blue);
   border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite;
 }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-.loader-text { margin-top: 20px; font-size: 1.2em; font-weight: bold; color: #558ac7; }
+.loader-text { margin-top: 20px; font-size: 1.2em; font-weight: bold; color: var(--sf-blue-dark); }
 .app-container.app-locked { filter: blur(5px); pointer-events: none; user-select: none; }
-.modal-overlay { background-color: rgba(0,0,0,0.5); }
+.modal-overlay { background-color: rgba(8, 28, 59, 0.45); }
 .modal-content {
-  background-color: #fefefe; padding: 20px; border-radius: 10px;
-  width: 80%; max-width: 500px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  background-color: #fff; padding: 24px; border-radius: 10px;
+  width: 80%; max-width: 500px; box-shadow: var(--sf-shadow-modal);
   position: relative;
 }
 #custom-confirm-message,
@@ -657,7 +783,7 @@ td a:hover { color: #003366; text-decoration: underline; }
 .modal-content.modal-lg {
     max-width: 800px;
 }
-.modal-content h3 { margin-top: 0; color: #558ac7; }
+.modal-content h3 { margin-top: 0; font-size: 17px; font-weight: 700; color: var(--sf-text); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; }
 /* El overlay del loader que vivirá dentro de la modal */
 .modal-loader-overlay {
@@ -689,7 +815,16 @@ td a:hover { color: #003366; text-decoration: underline; }
     display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;
 }
 .filter-input {
-    padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9em;
+    padding: 9px 12px; border: 1px solid var(--sf-border); border-radius: var(--sf-radius); font-size: 13px;
+}
+.filter-input:focus { outline: none; border-color: var(--sf-blue); }
+/* Altura uniforme para todos los filtros de cabecera: los input[type=date]
+   son más altos por defecto y desalineaban la fila. */
+.header-filters input:not([type="checkbox"]),
+.header-filters select,
+.filter-input {
+    height: 36px;
+    box-sizing: border-box;
 }
 .pagination-controls {
     display: flex; justify-content: center; align-items: center;
@@ -707,15 +842,15 @@ td a:hover { color: #003366; text-decoration: underline; }
    4. UTILIDADES GENERALES
    ========================================================== */
 
-.info-text { 
-  font-size: 0.9em; color: #6c757d; text-align: center; margin-top: 20px; 
+.info-text {
+  font-size: 0.9em; color: var(--sf-text-muted); text-align: center; margin-top: 20px;
 }
 .error-text {
-    color: #c5221f; background-color: #fce8e6; border: 1px solid #f6ccc7; padding: 10px;
+    color: var(--sf-red); background-color: var(--sf-red-bg); border: 1px solid #ffb0b0; padding: 10px;
     border-radius: 5px; margin: 10px 0 15px 0; text-align: center; font-size: 0.9em; font-weight: bold;
 }
-.hidden { 
-  display: none !important; 
+.hidden {
+  display: none !important;
 }
 
 /* ==========================================================
@@ -727,33 +862,32 @@ td a:hover { color: #003366; text-decoration: underline; }
     left: 25px;
     background-color: #ffffff;
     border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    box-shadow: var(--sf-shadow-menu);
     z-index: 10001;
     display: flex;
     align-items: center;
     padding: 8px;
     gap: 8px;
-    border: 1px solid #e0e7ef;
+    border: 1px solid var(--sf-border);
     transition: top 0.3s ease;
 }
 
 #find-input {
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    padding: 8px; /* Más padding vertical */
+    border: 1px solid var(--sf-border);
+    border-radius: var(--sf-radius);
+    padding: 9px 12px;
+    font-size: 13px;
     outline: none;
     width: 220px;
-    font-size: 0.9em;
 }
 #find-input:focus {
-    border-color: #69a3db;
-    box-shadow: 0 0 0 2px rgba(105, 163, 219, 0.3);
+    border-color: var(--sf-blue);
 }
 
 #find-results {
     font-size: 0.9em;
-    color: #555;
-    background-color: #f0f6fc;
+    color: var(--sf-text-soft);
+    background-color: var(--sf-bg);
     padding: 6px 10px;
     border-radius: 4px;
     user-select: none;
@@ -764,7 +898,7 @@ td a:hover { color: #003366; text-decoration: underline; }
 #find-in-page-box button {
     background-color: transparent;
     border: none;
-    color: #5a6268;
+    color: var(--sf-text-soft);
     border-radius: 5px;
     width: 32px;
     height: 32px;
@@ -778,8 +912,8 @@ td a:hover { color: #003366; text-decoration: underline; }
 }
 
 #find-in-page-box button:hover {
-    background-color: #e9ecef;
-    color: #333;
+    background-color: var(--sf-bg);
+    color: var(--sf-text);
 }
 
 #find-close {
@@ -788,21 +922,14 @@ td a:hover { color: #003366; text-decoration: underline; }
 }
 
 #find-input::selection {
-    background-color: #69a3db; /* Un color de selección normal */
+    background-color: var(--sf-blue); /* Un color de selección normal */
     color: white;
-}
-
-.action-button.cancel-btn {
-  background-color: #6c757d; /* Color gris del back-button */
-}
-.action-button.cancel-btn:hover {
-  background-color: #5a6268; /* Color gris oscuro del hover */
 }
 
 /* Elementos para la vista de contenidos */
 #content-manager-tab-content {
-    flex-grow: 1; 
-    min-height: 0;  
+    flex-grow: 1;
+    min-height: 0;
     display: flex;
 }
 
@@ -814,14 +941,28 @@ td a:hover { color: #003366; text-decoration: underline; }
 }
 
 #gestion-contenidos-section .table-container {
-    flex-grow: 1; 
+    flex-grow: 1;
     display: flex;
     flex-direction: column;
-    min-height: 0; 
+    min-height: 0;
 }
 
 #gestion-contenidos-section table {
     table-layout: fixed;
+}
+
+/* --- Automatismos: solo hacen scroll las filas; cabecera fija --- */
+#gestion-automatismos-section .table-container {
+    flex-grow: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+/* `.sortable-header` pone position:relative y anula el sticky global de th;
+   este selector (id + thead + th) tiene más especificidad y lo restaura. */
+#automations-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
 }
 #gestion-contenidos-section td {
     word-wrap: break-word;
@@ -829,7 +970,7 @@ td a:hover { color: #003366; text-decoration: underline; }
 
 #table-json th:nth-child(3),
 #table-json td:nth-child(3) {
-    width: 8%; 
+    width: 8%;
 }
 
 #table-json th:nth-child(11),
@@ -885,10 +1026,10 @@ td a:hover { color: #003366; text-decoration: underline; }
     flex-grow: 1;          /* Hace que ocupe todo el espacio vertical disponible dentro del padre */
     overflow-y: auto;      /* Muestra la barra de scroll vertical SÓLO cuando el contenido se desborda */
     min-height: 0;         /* Un truco de Flexbox para que el scroll interno funcione correctamente */
-    
+
     /* Estilos adicionales inspirados en tu CloudPage para que se vea mejor */
     padding: 5px 15px 5px 5px;
-    border: 1px solid #e9ecef;
+    border: 1px solid var(--sf-border);
     border-radius: 5px;
     background-color: #fff;
 }
@@ -901,26 +1042,26 @@ td a:hover { color: #003366; text-decoration: underline; }
 }
 
 .analyzer-collapsible-header {
-    background-color: #f1f5f9;
+    background-color: var(--sf-bg-alt);
     padding: 12px 15px;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-weight: bold;
-    color: #475569;
-    border: 1px solid #e2e8f0;
+    color: var(--sf-text-soft);
+    border: 1px solid var(--sf-border);
     transition: background-color 0.2s;
 }
 
 .analyzer-collapsible-header:hover {
-    background-color: #e2e8f0;
+    background-color: #f0f0f0;
 }
 
 .analyzer-collapsible.active .analyzer-collapsible-header {
-    background-color: #558ac7;
+    background-color: var(--sf-blue);
     color: white;
-    border-color: #558ac7;
+    border-color: var(--sf-blue);
 }
 
 .analyzer-collapsible-content {
@@ -945,13 +1086,13 @@ td a:hover { color: #003366; text-decoration: underline; }
 
 .impact-exclusive {
     background-color: #e6f4ea; /* Verde muy claro */
-    border-left-color: #28a745;
+    border-left-color: var(--sf-green);
     color: #1e7e34;
 }
 
 .impact-shared {
-    background-color: #fce8e6; /* Rojo muy claro */
-    border-left-color: #dc3545;
+    background-color: var(--sf-red-bg); /* Rojo muy claro */
+    border-left-color: var(--sf-red);
     color: #a50e0e;
 }
 
@@ -964,13 +1105,13 @@ td a:hover { color: #003366; text-decoration: underline; }
 /* Contenedor SQL Colapsable */
 .sql-wrapper {
     margin-top: 10px;
-    border: 1px solid #d1d9e0;
+    border: 1px solid var(--sf-border);
     border-radius: 6px;
     overflow: hidden;
 }
 
 .sql-toggle-btn {
-    background-color: #f6f8fa;
+    background-color: var(--sf-bg-alt);
     padding: 6px 12px;
     cursor: pointer;
     font-size: 0.8em;
@@ -978,24 +1119,23 @@ td a:hover { color: #003366; text-decoration: underline; }
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #d1d9e0;
+    border-bottom: 1px solid var(--sf-border);
     user-select: none;
 }
 
 .sql-toggle-btn:hover {
-    background-color: #ebeff2;
+    background-color: #f0f0f0;
 }
 
-/* Contenedor unificado para SQL y JS */
+/* Contenedor unificado para SQL y JS (estilo code-block de referencia) */
 .sql-content, .js-content {
-    display: none; 
-    background-color: #282c34 !important; /* Gris oscuro azulado */
-    color: #abb2bf;
+    display: none;
+    background-color: var(--sf-code-bg) !important;
+    color: var(--sf-code-text);
     padding: 16px;
-    border-radius: 0 0 4px 4px;
+    border-radius: 0 0 6px 6px;
     overflow-x: auto;
-    border: 1px solid #181a1f;
-    border-top: none;
+    border: none;
 }
 
 .sql-content pre, .js-content pre {
@@ -1036,14 +1176,10 @@ td a:hover { color: #003366; text-decoration: underline; }
     min-height: 0;
 }
 
-#sendManagement-section table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-#sendManagement-section th, 
+/* Bordes y esquema de rejilla: los hereda del estilo global de tablas
+   (separate + bordes direccionales, necesario para las cabeceras sticky). */
+#sendManagement-section th,
 #sendManagement-section td {
-    border: 1px solid #b9d4e7;
     padding: 10px;
     text-align: center;
     word-wrap: break-word;
@@ -1051,8 +1187,7 @@ td a:hover { color: #003366; text-decoration: underline; }
 }
 
 #sendManagement-section th {
-    background-color: #69a3db;
-    color: white;
+    font-size: 0.9em;
     position: sticky;
     top: 0;
     z-index: 10;
@@ -1072,6 +1207,32 @@ td a:hover { color: #003366; text-decoration: underline; }
     width: 8px;
 }
 #sendManagement-section .table-container::-webkit-scrollbar-thumb {
-    background: #ccc;
+    background: var(--sf-border);
     border-radius: 4px;
 }
+
+/* ==========================================================
+   6. CLASES UTILITARIAS u-*
+   Para sustituir estilos inline repetidos (Fase 3 del plan).
+   ========================================================== */
+
+/* Utilidades de layout (para sustituir estilos inline repetidos) */
+.u-flex { display: flex; }
+.u-flex-col { display: flex; flex-direction: column; }
+.u-flex-center { display: flex; align-items: center; }
+.u-flex-end { display: flex; align-items: flex-end; }
+.u-flex-between { display: flex; justify-content: space-between; align-items: center; }
+.u-flex-right { display: flex; justify-content: flex-end; }
+.u-flex-wrap { flex-wrap: wrap; }
+.u-flex-1 { flex: 1; }
+.u-grow { flex-grow: 1; }
+.u-gap-6 { gap: 6px; } .u-gap-8 { gap: 8px; } .u-gap-10 { gap: 10px; } .u-gap-15 { gap: 15px; } .u-gap-20 { gap: 20px; }
+.u-mt-0 { margin-top: 0; } .u-mt-10 { margin-top: 10px; } .u-mt-20 { margin-top: 20px; } .u-mt-25 { margin-top: 25px; }
+.u-mb-0 { margin-bottom: 0; } .u-mb-10 { margin-bottom: 10px; } .u-mb-15 { margin-bottom: 15px; } .u-mb-20 { margin-bottom: 20px; } .u-mb-25 { margin-bottom: 25px; }
+.u-m-0 { margin: 0; }
+.u-text-center { text-align: center; } .u-text-left { text-align: left; }
+.u-nowrap { white-space: nowrap; }
+.u-break-all { word-break: break-all; }
+.u-muted { color: var(--sf-text-muted); }
+.u-hint { font-size: 0.85em; color: var(--sf-text-muted); font-weight: normal; }
+.u-title-hint { color: var(--sf-blue-dark); font-weight: normal; font-size: 0.9em; } /* sustituye el inline repetido en cabeceras de sección */

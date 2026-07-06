@@ -50,9 +50,9 @@ import * as journeyErrors from './components/journey-errors.js';
 // --- 2. PUNTO DE ENTRADA PRINCIPAL ---
 // Espera a que todo el HTML esté cargado antes de ejecutar cualquier código.
 document.addEventListener('DOMContentLoaded', function () {
-	// Inicializa el objeto 'elements' para que contenga todas las referencias al DOM.
-	initDomElements();
-	
+	// La inicialización de 'elements' (initDomElements) se hace dentro de initializeApp,
+	// justo antes de setupEventListeners, para evitar inicializarla dos veces.
+
 	// ==========================================================
 	// --- VARIABLES DE ESTADO GLOBALES ---
 	// Almacenan el estado de la sesión y la navegación actual.
@@ -89,7 +89,10 @@ document.addEventListener('DOMContentLoaded', function () {
 			'gestion-journeys-section': 'gestionJourneys',
 			'gestion-cloudpages-section': 'gestionCloudPages',
 			'gestion-contenidos-section': 'gestionContenidos',
-			'carpetas-section':'gestionCarpetas',
+			'gestion-usuarios-section': 'usuarios',
+			'erd-generator-section': 'erdGenerator',
+			'sendManagement-section': 'sendManagement',
+			'carpetas-section': 'carpetas',
 			'email-validator-section':'validadorEmail',
 			'gestion-de-unificada-section': 'gestionDEs',
 			'auditoria-section': 'auditoria'

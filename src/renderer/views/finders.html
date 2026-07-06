@@ -16,27 +16,27 @@
     <!-- ============== Pestaña: Búsqueda de Data Extension ============== -->
     <div id="busqueda-de-tab" class="tab-content active config-section-container">
         <div class="config-block">
-            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
-                <div class="form-group" style="margin:0; min-width:120px;">
+            <div class="finder-filter-row">
+                <div class="form-group u-m-0" style="min-width:120px;">
                     <label for="deSearchProperty">Buscar por:</label>
                     <select id="deSearchProperty" class="filter-input">
                         <option value="Name">Nombre</option>
                         <option value="CustomerKey">External Key</option>
                     </select>
                 </div>
-                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+                <div class="form-group finder-field">
                     <label for="deSearchValue">Valor:</label>
                     <input type="text" id="deSearchValue" placeholder="Ingresa el valor de búsqueda" maxlength="128">
                 </div>
-                <button id="searchDEBtn" class="action-button" style="height:36px;">Buscar</button>
+                <button id="searchDEBtn" class="action-button finder-btn">Buscar</button>
             </div>
         </div>
-        <div class="config-block" style="flex-grow:1;">
+        <div class="config-block u-grow">
             <h3>Resultados</h3>
             <div class="table-container">
                 <table id="de-search-results-table">
                     <thead><tr><th>Nombre Data Extension</th><th>Ruta de Carpeta</th></tr></thead>
-                    <tbody id="de-search-results-tbody"></tbody>
+                    <tbody id="de-search-results-tbody"><tr><td colspan="2">Inicia una búsqueda...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -45,24 +45,21 @@
     <!-- ============== Pestaña: Buscador de Orígenes de Datos ============== -->
     <div id="origenes-tab" class="tab-content config-section-container">
         <div class="config-block">
-            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
-                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+            <div class="finder-filter-row">
+                <div class="form-group finder-field">
                     <label for="deNameToFind">Nombre exacto de la Data Extension:</label>
                     <input type="text" id="deNameToFind" placeholder="Introduce el nombre exacto de la DE">
                 </div>
-                <div class="form-group" style="margin:0; display:flex; align-items:center; gap:6px;">
-                    <input type="checkbox" id="showSourceQueryCheckbox" checked>
-                    <label for="showSourceQueryCheckbox" style="white-space:nowrap;">Mostrar Query</label>
-                </div>
-                <button id="findDataSourcesBtn" class="action-button" style="height:36px;">Buscar Orígenes</button>
+                <button id="showSourceQueryBtn" class="action-button finder-btn" type="button" title="Mostrar u ocultar la columna de query">Mostrar Query</button>
+                <button id="findDataSourcesBtn" class="action-button finder-btn">Buscar Orígenes</button>
             </div>
         </div>
-        <div class="config-block" style="flex-grow:1;">
+        <div class="config-block u-grow">
             <h3>Actividades Encontradas</h3>
             <div class="table-container">
                 <table id="data-sources-table">
                     <thead><tr><th>Actividad</th><th>Tipo</th><th>Automatización</th><th>Paso</th><th>Acción</th><th>Descripción / Query</th></tr></thead>
-                    <tbody id="data-sources-tbody"></tbody>
+                    <tbody id="data-sources-tbody"><tr><td colspan="6">Inicia una búsqueda...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -71,19 +68,19 @@
     <!-- ============== Pestaña: Buscador de Clientes ============== -->
     <div id="clientes-tab" class="tab-content config-section-container">
         <div class="config-block">
-            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
-                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+            <div class="finder-filter-row">
+                <div class="form-group finder-field">
                     <label for="customerSearchValue">Subscriber Key, Email o Teléfono:</label>
                     <input type="text" id="customerSearchValue" placeholder="Ingresa el valor a buscar">
                 </div>
-                <button id="searchCustomerBtn" class="action-button" style="height:36px;">Buscar Cliente</button>
-                <button id="waToggleBtn" class="action-button" type="button" style="height:36px;" title="Incluir búsqueda en la audiencia de WhatsApp">Incluir WhatsApp</button>
+                <button id="waToggleBtn" class="action-button finder-btn" type="button" title="Incluir búsqueda en la audiencia de WhatsApp">Incluir WhatsApp</button>
+                <button id="searchCustomerBtn" class="action-button finder-btn">Buscar Cliente</button>
             </div>
         </div>
-        <div class="config-block" style="flex-grow:1;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h3 style="margin:0;">Resultados</h3>
-                <div style="display:flex; gap:8px;">
+        <div class="config-block u-grow">
+            <div class="u-flex-between u-mb-10">
+                <h3 class="u-m-0">Resultados</h3>
+                <div class="u-flex u-gap-8">
                     <button id="selectTablesBtn" class="action-button" disabled>Seleccionar Tablas</button>
                     <button id="getCustomerJourneysBtn" class="action-button" disabled>Journeys</button>
                 </div>
@@ -91,7 +88,7 @@
             <div class="table-container">
                 <table id="customer-search-table">
                     <thead><tr><th>Subscriber Key</th><th>Email</th><th>Estado</th><th>Fecha Creación</th><th>Fecha Baja</th><th>Es Suscriptor</th></tr></thead>
-                    <tbody id="customer-search-tbody"></tbody>
+                    <tbody id="customer-search-tbody"><tr><td colspan="6">Inicia una búsqueda...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -100,18 +97,18 @@
             <h3>Seleccionar Tablas para la Búsqueda</h3>
             <div class="table-container">
                 <table id="de-selection-table">
-                    <thead><tr><th style="width:50px; text-align:center;"><input type="checkbox" id="selectAllDEsCheckbox"></th><th>Nombre de Tabla</th></tr></thead>
+                    <thead><tr><th class="ta-center" style="width:50px;"><input type="checkbox" id="selectAllDEsCheckbox"></th><th>Nombre de Tabla</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
-            <div class="header-actions" style="justify-content:flex-end; margin-top:10px;">
+            <div class="header-actions u-flex-right u-mt-10">
                 <button id="searchSelectedDEsBtn" class="action-button">Buscar en Tablas Seleccionadas</button>
             </div>
         </div>
 
         <div id="customer-journeys-results-block" class="config-block hidden">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h3 style="margin:0;">Journeys del Cliente Seleccionado</h3>
+            <div class="u-flex-between u-mb-10">
+                <h3 class="u-m-0">Journeys del Cliente Seleccionado</h3>
                 <button id="ejectCustomerFromJourneysBtn" class="action-button delete-btn" disabled>Expulsar</button>
             </div>
             <div class="table-container">
@@ -129,7 +126,7 @@
 
         <!-- Resultados de Audiencia WhatsApp (cuando se incluye WhatsApp en la búsqueda) -->
         <div id="wa-results-block" class="config-block hidden">
-            <h3 style="margin:0 0 10px;">Audiencia WhatsApp</h3>
+            <h3 class="u-mt-0 u-mb-10">Audiencia WhatsApp</h3>
             <div class="table-container">
                 <table id="wa-results-table">
                     <thead><tr><th>Contact Key</th><th>Teléfono</th><th>Locale</th><th>Canales</th></tr></thead>
@@ -140,19 +137,19 @@
 
         <!-- Alta WhatsApp (si no se encuentra en la audiencia) -->
         <div id="wa-register-block" class="config-block hidden">
-            <h3 style="margin:0 0 10px;">No encontrado en WhatsApp — Alta de contacto</h3>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                <div class="form-group" style="margin:0;"><label for="waNewSubKey">Contact Key</label><input type="text" id="waNewSubKey"></div>
-                <div class="form-group" style="margin:0;"><label for="waNewMobile">Teléfono</label><input type="text" id="waNewMobile"></div>
-                <div class="form-group" style="margin:0;"><label for="waNewLocale">Locale (país)</label>
+            <h3 class="u-mt-0 u-mb-10">No encontrado en WhatsApp — Alta de contacto</h3>
+            <div class="wa-register-grid">
+                <div class="form-group u-m-0"><label for="waNewSubKey">Contact Key</label><input type="text" id="waNewSubKey"></div>
+                <div class="form-group u-m-0"><label for="waNewMobile">Teléfono</label><input type="text" id="waNewMobile"></div>
+                <div class="form-group u-m-0"><label for="waNewLocale">Locale (país)</label>
                     <input type="text" id="waNewLocale" list="wa-locale-list" placeholder="Escribe país o código (p. ej. ES)" autocomplete="off">
                     <datalist id="wa-locale-list"></datalist>
                 </div>
-                <div class="form-group" style="margin:0;"><label for="waNewChannel">Channel ID</label>
+                <div class="form-group u-m-0"><label for="waNewChannel">Channel ID</label>
                     <select id="waNewChannel"></select>
                 </div>
             </div>
-            <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+            <div class="u-flex-right u-mt-10">
                 <button id="waRegisterBtn" class="action-button activate-btn" type="button">Dar de alta</button>
             </div>
         </div>
@@ -161,24 +158,21 @@
     <!-- ============== Pestaña: Buscador de Texto en Queries ============== -->
     <div id="queries-tab" class="tab-content config-section-container">
         <div class="config-block">
-            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
-                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+            <div class="finder-filter-row">
+                <div class="form-group finder-field">
                     <label for="querySearchText">Texto a buscar en la Query:</label>
                     <input type="text" id="querySearchText" placeholder="Ej: _Subscribers o Nombre_DE">
                 </div>
-                <div class="form-group" style="margin:0; display:flex; align-items:center; gap:6px;">
-                    <input type="checkbox" id="showQueryTextCheckbox" checked>
-                    <label for="showQueryTextCheckbox" style="white-space:nowrap;">Mostrar Query</label>
-                </div>
-                <button id="searchQueriesByTextBtn" class="action-button" style="height:36px;">Buscar en Queries</button>
+                <button id="showQueryTextBtn" class="action-button finder-btn" type="button" title="Mostrar u ocultar la columna de query">Mostrar Query</button>
+                <button id="searchQueriesByTextBtn" class="action-button finder-btn">Buscar en Queries</button>
             </div>
         </div>
-        <div class="config-block" style="flex-grow:1;">
+        <div class="config-block u-grow">
             <h3>Queries Encontradas</h3>
             <div class="table-container">
                 <table id="query-search-results-table">
                     <thead><tr><th>Nombre de la Query</th><th>Automatización</th><th>Paso</th><th>Query Text</th></tr></thead>
-                    <tbody id="query-search-results-tbody"></tbody>
+                    <tbody id="query-search-results-tbody"><tr><td colspan="4">Inicia una búsqueda...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -187,15 +181,15 @@
     <!-- ============== Pestaña: Buscador de Texto en Scripts ============== -->
     <div id="script-texto-tab" class="tab-content config-section-container">
         <div class="config-block">
-            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
-                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+            <div class="finder-filter-row">
+                <div class="form-group finder-field">
                     <label for="scriptSearchText">Texto a buscar en el Script (SSJS):</label>
                     <input type="text" id="scriptSearchText" placeholder="Ej: Platform.Function o Nombre_DE">
                 </div>
-                <button id="searchScriptsByTextBtn" class="action-button" style="height:36px;">Buscar en Scripts</button>
+                <button id="searchScriptsByTextBtn" class="action-button finder-btn">Buscar en Scripts</button>
             </div>
         </div>
-        <div class="config-block" style="flex-grow:1;">
+        <div class="config-block u-grow">
             <h3>Scripts Encontrados</h3>
             <div class="table-container">
                 <table id="script-search-results-table">
@@ -209,17 +203,17 @@
     <!-- ============== Pestaña: Contenidos ============== -->
     <div id="contenido-tab" class="tab-content config-section-container">
         <div class="config-block">
-            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
-                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+            <div class="finder-filter-row">
+                <div class="form-group finder-field">
                     <label for="contentSearchValue">Buscar por Nombre o ID:</label>
                     <input type="text" id="contentSearchValue" placeholder="Ingresa el nombre (parcial) o el ID (exacto)">
                 </div>
-                <button id="searchContentBtn" class="action-button" style="height:36px;">Buscar Contenido</button>
+                <button id="searchContentBtn" class="action-button finder-btn">Buscar Contenido</button>
             </div>
         </div>
-        <div class="config-block" style="flex-grow:1;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h3 style="margin:0;">Resultados</h3>
+        <div class="config-block u-grow">
+            <div class="u-flex-between u-mb-10">
+                <h3 class="u-m-0">Resultados</h3>
                 <button id="contentDetailBtn" class="action-button" disabled>Ver detalle</button>
             </div>
             <div class="table-container">
@@ -230,11 +224,11 @@
             </div>
 
             <!-- Detalle (oculto por defecto) -->
-            <div id="content-detail-block" style="display:none; margin-top:20px; border-top:2px solid #558ac7; padding-top:15px;">
-                <h3 id="content-detail-title" style="color:#558ac7; margin-bottom:15px;"></h3>
-                <div id="content-tree-wrapper" style="margin-bottom:10px;"></div>
-                <div id="content-components-wrapper" style="margin-bottom:10px;"></div>
-                <div id="content-des-wrapper" style="margin-bottom:10px;"></div>
+            <div id="content-detail-block" class="finder-content-detail" style="display:none;">
+                <h3 id="content-detail-title" class="finder-content-detail-title u-mb-15"></h3>
+                <div id="content-tree-wrapper" class="u-mb-10"></div>
+                <div id="content-components-wrapper" class="u-mb-10"></div>
+                <div id="content-des-wrapper" class="u-mb-10"></div>
             </div>
         </div>
     </div>
@@ -257,8 +251,8 @@
     <!-- ============== Pestaña: Actividades ============== -->
     <div id="actividades-tab" class="tab-content config-section-container">
         <div class="config-block">
-            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
-                <div class="form-group" style="margin:0; min-width:160px;">
+            <div class="finder-filter-row">
+                <div class="form-group u-m-0" style="min-width:160px;">
                     <label for="activityTypeSelect">Tipo de Actividad:</label>
                     <select id="activityTypeSelect" class="filter-input">
                         <option value="QueryDefinition">SQL Query</option>
@@ -270,17 +264,17 @@
                         <option value="Script">Script (SSJS)</option>
                     </select>
                 </div>
-                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+                <div class="form-group finder-field">
                     <label for="activitySearchValue">Nombre(s) o Key(s):</label>
                     <input type="text" id="activitySearchValue" placeholder="Ej: Query1; Query2; Key_3">
                 </div>
-                <button id="searchActivityBtn" class="action-button" style="height:36px;">Buscar Actividades</button>
+                <button id="searchActivityBtn" class="action-button finder-btn">Buscar Actividades</button>
             </div>
         </div>
 
         <div id="activity-info-block" class="config-block hidden">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h3 style="margin:0;">Actividades Encontradas</h3>
+            <div class="u-flex-between u-mb-10">
+                <h3 class="u-m-0">Actividades Encontradas</h3>
                 <button id="deleteActivityBtn" class="action-button delete-btn">Borrar Seleccionadas</button>
             </div>
             <div class="table-container">

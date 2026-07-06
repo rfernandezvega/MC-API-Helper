@@ -8,6 +8,7 @@ import * as logger from '../ui/logger.js';
 import { generateAuditPDF } from './audit-pdf-generator.js';
 import { auditContent } from './audit-content.js';
 import { ensureJourneysDetailCache } from './journeys-cache.js';
+import { escapeHtml } from '../ui/format-utils.js';
 
 let getAuthenticatedConfig;
 
@@ -321,11 +322,11 @@ function renderCachedAudit(cached) {
     // Banner de estadísticas + aviso de caché (compacto para caber en la fila de pestañas)
     const savedDate = cached.savedAt ? new Date(cached.savedAt).toLocaleString('es-ES') : '';
     const statsHtml = cached.stats
-        ? `<span style="font-size:0.78em; color:#64748b;">Tiempo: <b>${cached.stats.timeStr}</b> &nbsp;·&nbsp; Llamadas API: <b>${cached.stats.calls}</b></span>`
+        ? `<span class="audit-stats-line">Tiempo: <b>${cached.stats.timeStr}</b> &nbsp;·&nbsp; Llamadas API: <b>${cached.stats.calls}</b></span>`
         : '';
-    const cacheHtml = `<span style="font-size:0.75em; color:#94a3b8; font-style:italic;">Datos del ${savedDate}</span>`;
+    const cacheHtml = `<span class="audit-stats-cache">Datos del ${savedDate}</span>`;
     document.getElementById('audit-stats-container').innerHTML =
-        `<div style="display:flex; flex-direction:column; align-items:flex-end; gap:2px; line-height:1.3;">${statsHtml}${cacheHtml}</div>`;
+        `<div class="audit-stats-box">${statsHtml}${cacheHtml}</div>`;
 }
 
 // ==========================================
@@ -517,8 +518,8 @@ async function runAudit() {
         currentStats = { timeStr, calls: currentAuditApiCalls };
 
         document.getElementById('audit-stats-container').innerHTML =
-            `<div style="display:flex; flex-direction:column; align-items:flex-end; gap:2px; line-height:1.3;">
-                <span style="font-size:0.78em; color:#64748b;">Tiempo: <b>${timeStr}</b> &nbsp;·&nbsp; Llamadas API: <b>${currentAuditApiCalls}</b></span>
+            `<div class="audit-stats-box">
+                <span class="audit-stats-line">Tiempo: <b>${timeStr}</b> &nbsp;·&nbsp; Llamadas API: <b>${currentAuditApiCalls}</b></span>
             </div>`;
         document.getElementById('downloadAuditPdfBtn').style.display    = 'block';
         document.getElementById('downloadAuditDetailsBtn').style.display = 'block';
@@ -1683,7 +1684,7 @@ function buildStatsBanner(timeStr, calls) {
 }
 
 function buildTabWrapper(content) {
-    return `<div style="padding:20px 24px;">${content}</div>`;
+    return `<div class="audit-tab-pad">${content}</div>`;
 }
 
 // Helpers de render/drill que se pasan a los módulos de pestaña externos (p.ej. audit-content.js)
@@ -1696,13 +1697,14 @@ function contentAuditHelpers() {
 
 function buildKpiRow(items) {
     const cards = items.map(({ value, label, color = '#69a3db', drillKey }) => {
-        const drillAttr = drillKey ? `data-drill="${drillKey}" class="drillable" title="Ver detalle"` : '';
-        return `<div ${drillAttr} style="background:#fff; border-radius:10px; padding:14px 16px; text-align:center; box-shadow:0 1px 4px rgba(0,0,0,0.08); border-top:3px solid ${color}; min-width:90px; flex:1;">
-            <div style="font-size:2em; font-weight:800; color:${color}; line-height:1.1;">${value}</div>
-            <div style="font-size:0.71em; color:#777; margin-top:5px; font-weight:500; text-transform:uppercase; letter-spacing:0.03em;">${label}</div>
+        // El color de acento depende del dato: se mantiene inline sobre la clase base
+        const drillAttr = drillKey ? `data-drill="${drillKey}" class="drillable audit-kpi-card" title="Ver detalle"` : 'class="audit-kpi-card"';
+        return `<div ${drillAttr} style="border-top:3px solid ${color};">
+            <div class="audit-kpi-value" style="color:${color};">${value}</div>
+            <div class="audit-kpi-label">${label}</div>
         </div>`;
     }).join('');
-    return `<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px;">${cards}</div>`;
+    return `<div class="audit-kpi-row">${cards}</div>`;
 }
 
 function buildCallout(type, title, message) {
@@ -1711,7 +1713,7 @@ function buildCallout(type, title, message) {
 }
 
 function buildSectionHeader(text) {
-    return `<div style="font-size:0.82em; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#69a3db; border-bottom:1px solid #d5e8f7; padding-bottom:6px; margin:22px 0 14px 0;">${text}</div>`;
+    return `<div class="audit-section-header">${text}</div>`;
 }
 
 function buildGrid(cards) {
@@ -1722,30 +1724,31 @@ function buildGrid(cards) {
 
 function buildMetricCard(title, help, bars, options = {}) {
     const barsHtml = (bars || []).map(({ label, value, total, color, drillKey }) => {
+        // El color de la barra y del valor depende del dato: se mantiene inline
         const resolvedColor = color || resolveBarColor(label);
         const pct       = total > 0 ? Math.min(100, Math.round((value / total) * 100)) : 0;
-        const drillAttr = drillKey ? `data-drill="${drillKey}" class="drillable-bar" title="Ver detalle"` : '';
-        return `<div ${drillAttr} style="display:flex; align-items:center; gap:8px; margin-bottom:9px; font-size:0.86em; padding:4px;">
-            <div style="flex:0 0 190px; color:#444; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:190px;" title="${label}">${label}</div>
-            <div style="flex:1; background:#f0f0f0; border-radius:20px; height:9px; overflow:hidden; min-width:40px;">
-                <div style="background:${resolvedColor}; width:${pct}%; height:100%; border-radius:20px;"></div>
+        const drillAttr = drillKey ? `data-drill="${drillKey}" class="drillable-bar audit-bar-row" title="Ver detalle"` : 'class="audit-bar-row"';
+        return `<div ${drillAttr}>
+            <div class="audit-bar-label" title="${escapeHtml(label)}">${escapeHtml(label)}</div>
+            <div class="audit-bar-track">
+                <div class="audit-bar-fill" style="background:${resolvedColor}; width:${pct}%;"></div>
             </div>
-            <div style="flex:0 0 32px; font-weight:700; color:${resolvedColor}; text-align:right;">${value}</div>
-            <div style="flex:0 0 34px; color:#aaa; text-align:right; font-size:0.9em;">${pct}%</div>
+            <div class="audit-bar-value" style="color:${resolvedColor};">${value}</div>
+            <div class="audit-bar-pct">${pct}%</div>
         </div>`;
     }).join('');
 
-    // wide: ocupa las 2 columnas del grid; normal: ocupa 1 columna
-    const gridSpan = options.wide ? 'grid-column:1 / -1;' : '';
-    return `<div style="background:#fff; border-radius:10px; padding:16px 18px; box-shadow:0 1px 3px rgba(0,0,0,0.07); ${gridSpan}">
-        <div style="font-weight:700; font-size:0.93em; color:#2c3e50; margin-bottom:4px;">${title}</div>
-        <div style="font-size:0.77em; color:#aaa; margin-bottom:14px; line-height:1.4;">${help}</div>
-        ${barsHtml || '<div style="color:#ccc; font-size:0.85em; font-style:italic;">Sin datos disponibles.</div>'}
+    // wide: ocupa las 2 columnas del grid; normal: ocupa 1 columna (dinámico → inline)
+    const gridSpan = options.wide ? ' style="grid-column:1 / -1;"' : '';
+    return `<div class="audit-metric-card"${gridSpan}>
+        <div class="audit-metric-title">${title}</div>
+        <div class="audit-metric-help">${help}</div>
+        ${barsHtml || '<div class="audit-metric-empty">Sin datos disponibles.</div>'}
     </div>`;
 }
 
 function buildLoadingPlaceholder() {
-    return `<div style="padding:40px; text-align:center; color:#bbb;"><div style="font-size:1.8em; margin-bottom:10px;">⏳</div><div style="font-size:0.9em;">Cargando datos del escaneo…</div></div>`;
+    return `<div class="audit-loading"><div style="font-size:1.8em; margin-bottom:10px;">⏳</div><div style="font-size:0.9em;">Cargando datos del escaneo…</div></div>`;
 }
 
 function parsePdfCallout(htmlString) {

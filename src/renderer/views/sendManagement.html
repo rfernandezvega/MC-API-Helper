@@ -7,7 +7,7 @@
         </div>
     </div>
 
-    <h2>Gestión de Envíos <span id="send-management-count" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
+    <h2>Gestión de Envíos <span id="send-management-count" class="u-title-hint"></span></h2>
 
     <div class="tabs-container">
         <div class="tab-buttons">
@@ -87,22 +87,22 @@
 
             <!-- Zona de captura (visible cuando no hay datos) -->
             <div id="dp-import-zone">
-                <div class="config-block" style="background:#f8f9fa; border:2px dashed #69a3db; border-radius:10px; padding:30px; margin:10px 0;">
-                    <div style="text-align:left; max-width:900px; margin:0 auto;">
-                        <h3 style="color:#69a3db;">1. Abrir SFMC</h3>
-                        <a id="dp-sfmc-link" href="#" style="color:#69a3db; font-weight:bold; cursor:pointer;">IR A DELIVERY PROFILES</a>
+                <div class="config-block empty-instructions">
+                    <div class="empty-instructions-inner">
+                        <h3>1. Abrir SFMC</h3>
+                        <a id="dp-sfmc-link" href="#" class="empty-instructions-link">IR A DELIVERY PROFILES</a>
 
-                        <h3 style="color:#69a3db;">2. Ejecutar Script</h3>
+                        <h3>2. Ejecutar Script</h3>
                         <p>Copia este código y pégalo en la consola (F12) de SFMC:</p>
-                        <div style="background-color:#282c34; border-radius:6px; overflow:hidden; margin-top:15px; border:1px solid #181a1f;">
-                            <div style="display:flex; justify-content:flex-end; padding:5px 10px; background-color:#21252b; border-bottom:1px solid #181a1f;">
-                                <button id="dp-copy-script-btn" class="action-button small-text-btn" style="background-color:#3b4048; border:none; color:#fff;">Copiar Código</button>
+                        <div class="code-panel">
+                            <div class="code-panel-header">
+                                <button id="dp-copy-script-btn" class="action-button small-text-btn code-panel-btn">Copiar Código</button>
                             </div>
-                            <pre id="dp-script-to-copy" style="color:#abb2bf; padding:15px; max-height:200px; overflow-y:auto; font-family:'Consolas',monospace; font-size:12px; margin:0; white-space:pre; line-height:1.4;"></pre>
+                            <pre id="dp-script-to-copy" class="code-panel-pre"></pre>
                         </div>
 
-                        <h3 style="color:#69a3db;">3. Pegar Resultado</h3>
-                        <textarea id="dp-json-input" style="width:100%; height:100px; margin-top:5px; padding:10px; border-radius:5px; border:1px solid #ccc; font-family:monospace; font-size:11px; resize:none; box-sizing:border-box;" placeholder="Pega aquí el JSON generado por el script..."></textarea>
+                        <h3>3. Pegar Resultado</h3>
+                        <textarea id="dp-json-input" class="code-paste-area" placeholder="Pega aquí el JSON generado por el script..."></textarea>
                     </div>
                 </div>
             </div>

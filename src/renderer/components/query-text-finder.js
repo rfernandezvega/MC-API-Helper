@@ -6,18 +6,30 @@ import * as logger from '../ui/logger.js';
 
 let getAuthenticatedConfig;
 
+// Estado del toggle "Mostrar Query" (botón, no checkbox).
+let showQueryText = true;
+
+/** Actualiza el color del botón según el estado (verde activo / gris inactivo). */
+function updateShowQueryToggleUI() {
+    const btn = elements.showQueryTextBtn;
+    if (!btn) return;
+    btn.style.color = '#fff';
+    btn.style.background = showQueryText ? '#27ae60' : '#95a5a6';
+}
+
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
     elements.searchQueriesByTextBtn.addEventListener('click', searchQueriesByText);
-    
+
     // Delegación de eventos para abrir enlaces externos
     elements.querySearchResultsTbody.addEventListener('click', ui.handleExternalLink);
 
-    elements.showQueryTextCheckbox.addEventListener('change', () => {
-        const isChecked = elements.showQueryTextCheckbox.checked;
-        const displayStyle = isChecked ? '' : 'none';
-        const table = elements.querySearchResultsTable;
-        table.querySelectorAll('thead th:nth-child(4), tbody td:nth-child(4)').forEach(cell => {
+    updateShowQueryToggleUI();
+    elements.showQueryTextBtn?.addEventListener('click', () => {
+        showQueryText = !showQueryText;
+        updateShowQueryToggleUI();
+        const displayStyle = showQueryText ? '' : 'none';
+        elements.querySearchResultsTable.querySelectorAll('thead th:nth-child(4), tbody td:nth-child(4)').forEach(cell => {
             cell.style.display = displayStyle;
         });
     });
@@ -88,7 +100,7 @@ async function searchQueriesByText() {
 
 function renderTable(queries) {
     elements.querySearchResultsTbody.innerHTML = '';
-    const showQuery = elements.showQueryTextCheckbox.checked;
+    const showQuery = showQueryText;
     const displayStyle = showQuery ? '' : 'none';
     
     // Sincronizar cabecera

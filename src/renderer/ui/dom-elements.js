@@ -134,7 +134,7 @@ export function init() {
     elements.deSelectionTable = document.getElementById('de-selection-table');
     elements.selectAllDEsCheckbox = document.getElementById('selectAllDEsCheckbox');
     elements.searchSelectedDEsBtn = document.getElementById('searchSelectedDEsBtn');
-    elements.showSourceQueryCheckbox = document.getElementById('showSourceQueryCheckbox');
+    elements.showSourceQueryBtn = document.getElementById('showSourceQueryBtn');
 
     // --- 8c. Pestaña: Clientes ---
     elements.customerSearchValue = document.getElementById('customerSearchValue');
@@ -165,7 +165,7 @@ export function init() {
     elements.searchQueriesByTextBtn = document.getElementById('searchQueriesByTextBtn');
     elements.querySearchResultsTable = document.getElementById('query-search-results-table');
     elements.querySearchResultsTbody = document.querySelector('#query-search-results-tbody');
-    elements.showQueryTextCheckbox = document.getElementById('showQueryTextCheckbox');
+    elements.showQueryTextBtn = document.getElementById('showQueryTextBtn');
 
     // --- 8e. Pestaña: Texto en Scripts ---
     elements.scriptSearchText = document.getElementById('scriptSearchText');

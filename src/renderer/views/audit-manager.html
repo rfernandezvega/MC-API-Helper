@@ -22,7 +22,8 @@
         .audit-modal-close { background: none; border: none; font-size: 1.5em; cursor: pointer; color: #95a5a6; transition: color 0.2s; }
         .audit-modal-close:hover { color: #e74c3c; }
         .audit-modal-body { overflow-y: auto; flex: 1; }
-        .audit-drill-table { width: 100%; border-collapse: collapse; font-size: 0.88em; text-align: left; }
+        /* separate + spacing 0: con collapse los bordes no acompañan al th sticky */
+        .audit-drill-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.88em; text-align: left; }
         .audit-drill-table th { background-color: #f8fafc; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; color: #475569; position: sticky; top: 0; z-index: 2; }
         .audit-drill-table td { padding: 9px 12px; border-bottom: 1px solid #e2e8f0; color: #334155; word-break: break-word; }
         .audit-drill-table tr:hover td { background-color: #f1f5f9; }
@@ -32,20 +33,20 @@
     <div class="section-header">
         <button class="back-button">← Atrás</button>
         <div class="header-actions" style="display:flex; gap:10px; align-items:center;">
-            <button id="backToAuditBtn"          class="action-button activate-btn" style="display:none; background-color:#2980b9;">Volver a la Auditoría</button>
-            <button id="downloadAuditPdfBtn"     class="action-button activate-btn" style="display:none; background-color:#2980b9;">Descargar Informe</button>
-            <button id="downloadAuditDetailsBtn" class="action-button activate-btn" style="display:none; background-color:#27ae60;">Descargar Detalles</button>
+            <button id="backToAuditBtn"          class="action-button activate-btn audit-btn-blue" style="display:none;">Volver a la Auditoría</button>
+            <button id="downloadAuditPdfBtn"     class="action-button activate-btn audit-btn-blue" style="display:none;">Descargar Informe</button>
+            <button id="downloadAuditDetailsBtn" class="action-button activate-btn audit-btn-green" style="display:none;">Descargar Detalles</button>
             <button id="runAuditBtn" class="action-button activate-btn">Iniciar Escaneo de Instancia</button>
         </div>
     </div>
 
-    <h2 style="color:#69a3db; text-align:center; margin-bottom:6px;">Auditoría de Instancia</h2>
+    <h2 class="u-mb-10">Auditoría de Instancia</h2>
     <p style="text-align:center; color:#888; font-size:0.88em; margin-bottom:24px;">
         Auditoría: usuarios, automatismos, journeys, cloud pages, configuración de envío, data extensions y contenidos.
     </p>
 
     <!-- PANEL DE CONFIGURACIÓN — ocupa todo el ancho disponible -->
-    <div id="audit-options" class="config-block" style="width:100%; margin:0 0 30px 0; border-top:4px solid #69a3db;">
+    <div id="audit-options" class="config-block" style="width:100%; margin:0 0 30px 0;">
 
         <h3 style="margin-top:0; color:#2c3e50;">Cómo lanzar la auditoría</h3>
         <ol style="color:#444; font-size:0.88em; line-height:1.8; margin:0 0 6px 0; padding-left:22px;">
@@ -65,49 +66,49 @@
         </p>
 
         <h3 style="color:#2c3e50; margin-bottom:10px;">Qué se analiza en cada pestaña</h3>
-        <table style="width:100%; border-collapse:collapse; font-size:0.84em; margin-bottom:4px;">
+        <table class="audit-info-table">
             <thead>
-                <tr style="text-align:left;">
-                    <th style="padding:9px 12px; background:#69a3db; color:#fff; border-bottom:2px solid #e2e8f0; width:15%;">Pestaña</th>
-                    <th style="padding:9px 12px; background:#69a3db; color:#fff; border-bottom:2px solid #e2e8f0; width:52%;">Descripción</th>
-                    <th style="padding:9px 12px; background:#69a3db; color:#fff; border-bottom:2px solid #e2e8f0; width:33%;">Origen del dato</th>
+                <tr>
+                    <th style="width:15%;">Pestaña</th>
+                    <th style="width:52%;">Descripción</th>
+                    <th style="width:33%;">Origen del dato</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; font-weight:600; color:#2c3e50;">Usuarios</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Roles, estados (activo/bloqueado), tipo de usuario y último acceso.</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Se descarga durante el escaneo (no depende de otra vista).</td>
+                    <td class="audit-info-name">Usuarios</td>
+                    <td>Roles, estados (activo/bloqueado), tipo de usuario y último acceso.</td>
+                    <td>Se descarga durante el escaneo (no depende de otra vista).</td>
                 </tr>
-                <tr style="background:#fbfcfe;">
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; font-weight:600; color:#2c3e50;">Automatismos</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Tipos de actividad, estados, programación, email de alerta por error, descripciones en SQL/SSJS y actividades compartidas.</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Se descarga durante el escaneo (no depende de otra vista).</td>
-                </tr>
-                <tr>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; font-weight:600; color:#2c3e50;">Journeys</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Estado, subtipo, Goals/salidas, actividad reciente, mix multicanal (Email/SMS/Push/WhatsApp) y nodos Salesforce.</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Caché compartida con la vista de <b>Journeys</b> (y de Contenidos). Se descarga aquí si falta.</td>
-                </tr>
-                <tr style="background:#fbfcfe;">
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; font-weight:600; color:#2c3e50;">Cloud Pages</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Cantidad, tipo y estado de publicación de las páginas.</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Se descarga durante el escaneo (no depende de otra vista).</td>
+                <tr class="audit-info-alt">
+                    <td class="audit-info-name">Automatismos</td>
+                    <td>Tipos de actividad, estados, programación, email de alerta por error, descripciones en SQL/SSJS y actividades compartidas.</td>
+                    <td>Se descarga durante el escaneo (no depende de otra vista).</td>
                 </tr>
                 <tr>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; font-weight:600; color:#2c3e50;">Send Management</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Send Classifications, Sender/Delivery Profiles y configuración de envío.</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Se descarga durante el escaneo (no depende de otra vista).</td>
+                    <td class="audit-info-name">Journeys</td>
+                    <td>Estado, subtipo, Goals/salidas, actividad reciente, mix multicanal (Email/SMS/Push/WhatsApp) y nodos Salesforce.</td>
+                    <td>Caché compartida con la vista de <b>Journeys</b> (y de Contenidos). Se descarga aquí si falta.</td>
                 </tr>
-                <tr style="background:#fbfcfe;">
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; font-weight:600; color:#2c3e50;">Data Extensions</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Volumetría, campos, retención y uso de las DEs.</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">JSON pegado del script de abajo (Contact Builder). No consume llamadas de la app.</td>
+                <tr class="audit-info-alt">
+                    <td class="audit-info-name">Cloud Pages</td>
+                    <td>Cantidad, tipo y estado de publicación de las páginas.</td>
+                    <td>Se descarga durante el escaneo (no depende de otra vista).</td>
                 </tr>
                 <tr>
-                    <td style="padding:9px 12px; font-weight:600; color:#2c3e50;">Contenidos</td>
-                    <td style="padding:9px 12px; color:#555;">Contenidos por tipo, plantillas inexistentes, bloques/plantillas sin uso y comunicaciones dentro/fuera de journeys.</td>
-                    <td style="padding:9px 12px; color:#555;">Caché de la vista de <b>Contenidos</b> (refréscala antes) + caché de <b>Journeys</b>. No consume llamadas aquí.</td>
+                    <td class="audit-info-name">Send Management</td>
+                    <td>Send Classifications, Sender/Delivery Profiles y configuración de envío.</td>
+                    <td>Se descarga durante el escaneo (no depende de otra vista).</td>
+                </tr>
+                <tr class="audit-info-alt">
+                    <td class="audit-info-name">Data Extensions</td>
+                    <td>Volumetría, campos, retención y uso de las DEs.</td>
+                    <td>JSON pegado del script de abajo (Contact Builder). No consume llamadas de la app.</td>
+                </tr>
+                <tr>
+                    <td class="audit-info-name">Contenidos</td>
+                    <td>Contenidos por tipo, plantillas inexistentes, bloques/plantillas sin uso y comunicaciones dentro/fuera de journeys.</td>
+                    <td>Caché de la vista de <b>Contenidos</b> (refréscala antes) + caché de <b>Journeys</b>. No consume llamadas aquí.</td>
                 </tr>
             </tbody>
         </table>
@@ -122,37 +123,35 @@
             </p>
 
             <!-- Script copiable con stack dinámico -->
-            <div style="background:#1e1e2e; border-radius:8px; padding:14px 16px; margin-bottom:14px; position:relative;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <span style="font-size:0.75em; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Script — pegar en la consola del navegador (F12) estando en Contact Builder</span>
-                    <button id="audit-de-copy-script" style="background:#3b82f6; color:#fff; border:none; border-radius:5px; padding:4px 12px; font-size:0.78em; cursor:pointer; font-weight:600;">Copiar script</button>
+            <div class="audit-prompt-card">
+                <div class="audit-prompt-head">
+                    <span class="audit-prompt-label">Script — pegar en la consola del navegador (F12) estando en Contact Builder</span>
+                    <button id="audit-de-copy-script" class="audit-prompt-copy">Copiar script</button>
                 </div>
-                <pre id="audit-de-script-pre" style="margin:0; font-size:0.75em; font-family:monospace; color:#e2e8f0; white-space:pre-wrap; word-break:break-all; max-height:140px; overflow-y:auto;"></pre>
+                <pre id="audit-de-script-pre" class="audit-prompt-pre"></pre>
             </div>
 
             <!-- JSON resultante -->
-            <label style="font-size:0.82em; font-weight:600; color:#374151; display:block; margin-bottom:4px;">JSON obtenido del script:</label>
-            <textarea id="audit-de-json" placeholder="Pega aquí el JSON de Data Extensions (array de objetos)…"
-                style="width:100%; height:110px; font-size:0.78em; font-family:monospace; border:1px solid #d1d5db;
-                       border-radius:8px; padding:10px; resize:vertical; color:#374151; background:#f9fafb; box-sizing:border-box;"></textarea>
+            <label class="audit-json-label">JSON obtenido del script:</label>
+            <textarea id="audit-de-json" class="audit-json-area" placeholder="Pega aquí el JSON de Data Extensions (array de objetos)…"></textarea>
         </div>
     </div>
 
     <!-- DASHBOARD CON PESTAÑAS -->
     <div id="audit-dashboard" class="tabs-container" style="display:none; height:100%;">
 
-        <div class="tab-buttons" style="justify-content:flex-start; margin-bottom:0; border-bottom:2px solid #e0e7ef; gap:2px; flex-wrap:wrap; display:flex; align-items:center;">
-            <button class="tab-button active" data-tab="audit-tab-users"    style="padding:10px 18px; font-size:0.88em;">Usuarios</button>
-            <button class="tab-button"        data-tab="audit-tab-autos"    style="padding:10px 18px; font-size:0.88em;">Automatismos</button>
-            <button class="tab-button"        data-tab="audit-tab-journeys" style="padding:10px 18px; font-size:0.88em;">Journeys</button>
-            <button class="tab-button"        data-tab="audit-tab-cp"       style="padding:10px 18px; font-size:0.88em;">Cloud Pages</button>
-            <button class="tab-button"        data-tab="audit-tab-sm"       style="padding:10px 18px; font-size:0.88em;">Send Management</button>
-            <button class="tab-button" data-tab="audit-tab-de" style="padding:10px 18px; font-size:0.88em;">Data Extensions</button>
-            <button class="tab-button" data-tab="audit-tab-content" style="padding:10px 18px; font-size:0.88em;">Contenidos</button>
+        <div class="tab-buttons audit-dashboard-tabs" style="justify-content:flex-start; margin-bottom:0; border-bottom:2px solid #e0e7ef; gap:2px; flex-wrap:wrap; display:flex; align-items:center;">
+            <button class="tab-button active" data-tab="audit-tab-users">Usuarios</button>
+            <button class="tab-button"        data-tab="audit-tab-autos">Automatismos</button>
+            <button class="tab-button"        data-tab="audit-tab-journeys">Journeys</button>
+            <button class="tab-button"        data-tab="audit-tab-cp">Cloud Pages</button>
+            <button class="tab-button"        data-tab="audit-tab-sm">Send Management</button>
+            <button class="tab-button" data-tab="audit-tab-de">Data Extensions</button>
+            <button class="tab-button" data-tab="audit-tab-content">Contenidos</button>
             <div id="audit-stats-container" style="margin-left:auto; padding-right:8px;"></div>
         </div>
 
-        <div style="background:#f4f7fb; border-radius:0 0 10px 10px; flex:1; overflow-y:auto; min-height:0;">
+        <div class="audit-tabs-body">
             <div id="audit-tab-users"    class="tab-content active"></div>
             <div id="audit-tab-autos"    class="tab-content"></div>
             <div id="audit-tab-journeys" class="tab-content"></div>
@@ -170,7 +169,7 @@
             <div class="audit-modal-header">
                 <div>
                     <h3 id="audit-drill-title">Detalles</h3>
-                    <button id="audit-drill-download" style="background:#27ae60; color:#fff; border:none; border-radius:4px; padding:6px 12px; cursor:pointer; font-size:0.85em; font-weight:bold; transition:background 0.2s;">Descargar CSV</button>
+                    <button id="audit-drill-download" class="audit-drill-download-btn">Descargar CSV</button>
                 </div>
                 <button class="audit-modal-close" id="audit-drill-close">&times;</button>
             </div>

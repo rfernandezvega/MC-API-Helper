@@ -8,7 +8,7 @@
             <button id="getCloudPageIdsBtn" class="action-button">Recuperar IDs</button>
         </div>          
     </div>
-    <h2>Gestión de Cloud Pages <span id="cloudpage-count" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
+    <h2>Gestión de Cloud Pages <span id="cloudpage-count" class="u-title-hint"></span></h2>
     <!-- Filtros para la tabla -->
     <div class="header-filters">
         <input type="text" id="cloudPageNameFilter" class="filter-input" placeholder="Buscar por nombre...">
@@ -40,7 +40,7 @@
       <table id="cloudpages-table">
         <thead>
         <tr>
-            <th style="width:42px;"></th>
+            <th class="cp-inspect-col"></th>
             <th class="sortable-header" data-sort-by="name">Nombre</th>
             <th class="sortable-header" data-sort-by="assetType.displayName">Tipo</th>
             <th class="sortable-header" data-sort-by="modifiedDate">Fecha Modificación</th>
@@ -48,7 +48,7 @@
             <th class="sortable-header" data-sort-by="publishDate">Fecha Publicación</th>
             <th class="sortable-header" data-sort-by="location">Ubicación</th>
             <th class="sortable-header" data-sort-by="url">URL</th>
-            <th class="sortable-header" data-sort-by="pageId">Page ID</th>
+            <th class="sortable-header" data-sort-by="pageId">ID</th>
         </tr>
         </thead>
         <tbody id="cloudpages-tbody"></tbody>
@@ -71,7 +71,7 @@
         </p>
         <p>
           <!--<b>Landing Pages:</b><br>-->
-          <a href="#" id="cloudpage-internal-api-link" class="external-link" style="word-break: break-all;">Generando enlace...</a>
+          <a href="#" id="cloudpage-internal-api-link" class="external-link u-break-all">Generando enlace...</a>
         </p>
         <!--<p>
           <b>Code Resources:</b><br>
@@ -80,7 +80,7 @@
         <p>
             2. Copia TODO el contenido JSON que se abre y pégalo en el cuadro de abajo. Pega uno y dale a Importar.
         </p>
-        <textarea id="cloudpage-ids-paste-area" placeholder="Pega aquí el contenido del JSON..." style="width: 100%; height: 150px; margin-top: 10px;"></textarea>
+        <textarea id="cloudpage-ids-paste-area" class="cp-ids-paste-area" placeholder="Pega aquí el contenido del JSON..."></textarea>
         <div class="modal-actions">
             <button id="cloudpage-ids-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="cloudpage-ids-import-btn" class="action-button activate-btn">Importar</button>

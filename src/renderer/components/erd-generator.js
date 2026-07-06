@@ -2,6 +2,7 @@ import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as mcApiService from '../api/mc-api-service.js';
 import * as logger from '../ui/logger.js';
+import { escapeHtml } from '../ui/format-utils.js';
 
 let tables = [], relations = [], tableEls = {}, tableMap = {}, activeKey = null, isContactsHidden = false;
 let tableGeom = {};
@@ -32,6 +33,8 @@ export function init(dependencies) {
         elements.erdResetBtn.classList.add('hidden');
         elements.erdDownloadCsvBtn.classList.add('hidden');
         elements.erdDownloadImgBtn.classList.add('hidden');
+        elements.erdGenerateBtn.classList.remove('hidden');
+        elements.erdRefreshGroupsBtn.classList.remove('hidden');
         elements.erdCanvas.querySelectorAll('.erd-tbl').forEach(el => el.remove());
         elements.erdSvgLines.innerHTML = '';
         clearActive();
@@ -52,6 +55,8 @@ export async function view() {
     elements.erdResetBtn.classList.add('hidden');
     elements.erdDownloadCsvBtn.classList.add('hidden');
     elements.erdDownloadImgBtn.classList.add('hidden');
+    elements.erdGenerateBtn.classList.remove('hidden');
+    elements.erdRefreshGroupsBtn.classList.remove('hidden');
 
     const clientName = document.getElementById('clientName')?.value || '';
     // Recargar solo si cambió de cliente o no hay datos
@@ -176,12 +181,12 @@ function renderGroupList() {
         const n = g.setIds.length;
         const sel = g.id === selectedGroupId;
         const badge = g.system
-            ? '<span style="font-size:0.65rem; font-weight:bold; color:#fff; background:#9b59b6; border-radius:4px; padding:1px 6px;">Sistema</span>'
-            : '<span style="font-size:0.65rem; font-weight:bold; color:#fff; background:#28a745; border-radius:4px; padding:1px 6px;">Usuario</span>';
+            ? '<span class="badge badge-neutral">Sistema</span>'
+            : '<span class="badge badge-info">Usuario</span>';
         return `
-        <div class="erd-group-item" data-group-id="${g.id}" style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border-radius:6px; cursor:pointer; border:1px solid ${sel ? '#69a3db' : '#e2e8f0'}; margin-bottom:6px;${sel ? ' background:#e8f3fc;' : ''}">
+        <div class="erd-group-item" data-group-id="${g.id}" style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border-radius:6px; cursor:pointer; border:1px solid ${sel ? 'var(--sf-blue)' : 'var(--sf-border)'}; margin-bottom:6px;${sel ? ' background:#e8f3fc;' : ''}">
             <div style="flex:1;">
-                <div style="display:flex; align-items:center; gap:8px;"><span style="font-weight:bold; color:#333; font-size:0.88rem;">${escapeHtmlErd(g.name)}</span>${badge}</div>
+                <div style="display:flex; align-items:center; gap:8px;"><span style="font-weight:bold; color:#333; font-size:0.88rem;">${escapeHtml(g.name)}</span>${badge}</div>
                 <div style="font-size:0.72rem; color:#6c757d; margin-top:2px;">${n} ${n === 1 ? 'entidad' : 'entidades'}</div>
             </div>
         </div>`;
@@ -199,11 +204,6 @@ function renderGroupList() {
             el.style.borderColor = '#69a3db';
         });
     });
-}
-
-function escapeHtmlErd(str) {
-    if (str == null) return '';
-    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 /**
@@ -482,6 +482,8 @@ function generate() {
     elements.erdResetBtn.classList.remove('hidden');
     elements.erdDownloadCsvBtn.classList.remove('hidden');
     elements.erdDownloadImgBtn.classList.remove('hidden');
+    elements.erdGenerateBtn.classList.add('hidden');
+    elements.erdRefreshGroupsBtn.classList.add('hidden');
 
     renderERD();
   } catch(e) { ui.showCustomAlert(e.message); }

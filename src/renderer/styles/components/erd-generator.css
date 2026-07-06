@@ -1,7 +1,7 @@
 /* Reset de tipografía para toda la sección */
 #erd-generator-section, 
 #erd-generator-section * {
-    font-family: Arial, sans-serif !important;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
 }
 
 /* Contenedor principal sin scrolls innecesarios */
@@ -17,47 +17,158 @@
     max-width: none !important;
 }
 
-.erd-wrap { background: #f0f6fc; flex: 1; position: relative; overflow: auto; }
+.erd-wrap { background: var(--sf-bg); flex: 1; position: relative; overflow: auto; }
 
 /* Tablas más compactas */
 .erd-tbl { 
-    position:absolute; background:#fff; border:1px solid #cdd8e3; border-radius:8px; 
+    position:absolute; background:#fff; border:1px solid var(--sf-border); border-radius:8px;
     min-width:180px; max-width:240px; cursor:grab; user-select:none; 
     box-shadow:0 2px 6px rgba(58,111,168,0.10); transition:box-shadow .2s,border-color .2s; 
     overflow:hidden; z-index: 10;
 }
-.erd-tbl:hover { border-color:#69a3db; box-shadow:0 6px 16px rgba(58,111,168,0.22); }
-.erd-tbl.dragging { cursor:grabbing; box-shadow:0 10px 24px rgba(58,111,168,.28); z-index:100; border-color:#69a3db; }
-.erd-tbl.hl { border-color:#558ac7; box-shadow:0 0 0 2px #69a3db, 0 6px 16px rgba(58,111,168,0.22); }
-.erd-tbl .tbl-hdr { background:#69a3db; padding:.4rem .6rem; display:flex; align-items:center; justify-content:space-between; }
+.erd-tbl:hover { border-color:var(--sf-blue); box-shadow:0 6px 16px rgba(58,111,168,0.22); }
+.erd-tbl.dragging { cursor:grabbing; box-shadow:0 10px 24px rgba(58,111,168,.28); z-index:100; border-color:var(--sf-blue); }
+.erd-tbl.hl { border-color:var(--sf-blue-dark); box-shadow:0 0 0 2px var(--sf-blue), 0 6px 16px rgba(58,111,168,0.22); }
+.erd-tbl .tbl-hdr { background:var(--sf-blue); padding:.4rem .6rem; display:flex; align-items:center; justify-content:space-between; }
 .erd-tbl .tbl-name { font-weight:bold; font-size:.75rem; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px; }
 .erd-tbl .tbl-badge { font-size:.55rem; background:rgba(255,255,255,.22); color:#fff; padding:.1rem .3rem; border-radius:3px; flex-shrink:0; margin-left:.3rem; }
 .erd-tbl .tbl-fields { padding:.2rem 0; }
 .erd-tbl .frow { display:flex; align-items:center; gap:.4rem; padding:.2rem .6rem; font-size:.65rem; border-left:3px solid transparent; cursor:pointer; transition:background .12s; }
-.erd-tbl .frow:hover { background:rgba(105,163,219,0.12); }
+.erd-tbl .frow:hover { background:rgba(0,112,210,0.08); }
 .erd-tbl .frow.pk  { border-left-color:#e67e22; }
-.erd-tbl .frow.fk  { border-left-color:#28a745; }
+.erd-tbl .frow.fk  { border-left-color:var(--sf-green); }
 .erd-tbl .frow.ref { border-left-color:#9b59b6; }
 .erd-tbl .frow.act  { background:rgba(230,126,34,.10); }
 .erd-tbl .frow.tgt  { background:rgba(155,89,182,.10); }
 .erd-tbl .ftag { font-size:.5rem; font-weight:bold; padding:.1rem .2rem; border-radius:3px; text-transform:uppercase; letter-spacing:.04em; flex-shrink:0; }
 .erd-tbl .ftag.pk  { background:#fef3e2; color:#e67e22; border:1px solid rgba(230,126,34,.3); }
-.erd-tbl .ftag.fk  { background:#e6f4ea; color:#28a745; border:1px solid rgba(40,167,69,.3); }
+.erd-tbl .ftag.fk  { background:#e6f4ea; color:var(--sf-green); border:1px solid rgba(76,175,80,.35); }
 .erd-tbl .ftag.ref { background:#f5eef8; color:#9b59b6; border:1px solid rgba(155,89,182,.3); }
 .erd-tbl .ftag.ck  { background:#fff8e1; color:#f39c12; border:1px solid rgba(243,156,18,.3); font-size:0.55rem; }
-.erd-tbl .fname { color:#333; flex:1; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.erd-tbl .ftype { color:#6c757d; font-size:.6rem; flex-shrink:0; }
+.erd-tbl .fname { color:var(--sf-text); flex:1; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.erd-tbl .ftype { color:var(--sf-text-muted); font-size:.6rem; flex-shrink:0; }
 
 /* Tooltip corregido para textos largos */
 .erd-tt { 
-    position:fixed; z-index:10000; background:#fff; border:1px solid #69a3db; border-radius:6px; 
+    position:fixed; z-index:10000; background:#fff; border:1px solid var(--sf-blue); border-radius:6px;
     padding:.6rem .8rem; font-size:.7rem; box-shadow:0 6px 20px rgba(58,111,168,.25); 
     width: auto; min-width: 200px; max-width:350px; pointer-events:none; 
 }
-.erd-tt .tt-ttl { font-weight:bold; color:#558ac7; margin-bottom:.3rem; font-size:.75rem; border-bottom:1px solid #e2e8f0; padding-bottom:.3rem; overflow-wrap: break-word; }
-.erd-tt .tt-row { color:#6c757d; margin-top:.3rem; line-height:1.4; word-break: break-word; overflow-wrap: break-word; }
+.erd-tt .tt-ttl { font-weight:bold; color:var(--sf-blue-dark); margin-bottom:.3rem; font-size:.75rem; border-bottom:1px solid var(--sf-border); padding-bottom:.3rem; overflow-wrap: break-word; }
+.erd-tt .tt-row { color:var(--sf-text-muted); margin-top:.3rem; line-height:1.4; word-break: break-word; overflow-wrap: break-word; }
 
-.erd-legend { position:absolute; bottom:1rem; right:1rem; background:#fff; border:1px solid #cdd8e3; border-radius:6px; padding:.5rem .8rem; display:flex; flex-direction:column; gap:.4rem; font-size:.65rem; box-shadow:0 2px 8px rgba(58,111,168,0.10); z-index:15; }
-.erd-legend .leg-ttl { color:#558ac7; font-size:.6rem; font-weight:bold; text-transform:uppercase; letter-spacing:.08em; }
-.erd-legend .leg-row { display:flex; align-items:center; gap:.4rem; color:#6c757d; }
+.erd-legend { position:absolute; bottom:1rem; right:1rem; background:#fff; border:1px solid var(--sf-border); border-radius:6px; padding:.5rem .8rem; display:flex; flex-direction:column; gap:.4rem; font-size:.65rem; box-shadow:0 2px 8px rgba(58,111,168,0.10); z-index:15; }
+.erd-legend .leg-ttl { color:var(--sf-blue-dark); font-size:.6rem; font-weight:bold; text-transform:uppercase; letter-spacing:.08em; }
+.erd-legend .leg-row { display:flex; align-items:center; gap:.4rem; color:var(--sf-text-muted); }
 .erd-legend .leg-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+
+/* ===================================================================
+   Clases añadidas en la extracción de estilos inline de erd-generator.html
+   (WP-6g). Sustituyen 1:1 los style="..." estáticos de la vista.
+   =================================================================== */
+
+/* Colores de los puntos de la leyenda (PK / FK / REF). Sustituyen a
+   los inline "background:#e67e22 / #28a745 / #9b59b6". */
+.erd-legend .leg-dot.leg-dot-pk  { background: #e67e22; }
+.erd-legend .leg-dot.leg-dot-fk  { background: #28a745; }
+.erd-legend .leg-dot.leg-dot-ref { background: #9b59b6; }
+
+/* Título principal de la sección. Sustituye a
+   "color: #69a3db; text-align: center; margin-bottom: 20px". */
+.erd-title {
+    color: var(--sf-blue);
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Subtítulo del bloque de selección. Sustituye a
+   "color:#558ac7; margin-bottom: 12px". */
+.erd-subtitle {
+    color: var(--sf-blue-dark);
+    margin-bottom: 12px;
+}
+
+/* Texto de ayuda del bloque de selección. Sustituye a
+   "font-size: 0.9rem; color:#6c757d; margin-bottom: 12px". */
+.erd-help-text {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-bottom: 12px;
+}
+
+/* Fila con el buscador de grupo, el checkbox de ocultar sistema y refrescar.
+   Sustituye a "display:flex; gap:10px; align-items:center; margin-bottom:12px". */
+.erd-search-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+/* El input de búsqueda de grupo con ancho contenido; los checks quedan
+   a su derecha, todos alineados a la izquierda. */
+.erd-search-row .erd-group-search { flex: 0 0 260px; }
+/* Etiqueta del checkbox "Ocultar grupos de sistema" en la fila de búsqueda.
+   Sustituye a "display:flex; align-items:center; gap:6px; font-size:0.85rem;
+   color:#555; white-space:nowrap; cursor:pointer". */
+.erd-hide-system-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: #555;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+/* El bloque de selección ocupa toda la altura disponible y la lista de
+   grupos hace scroll aprovechándola entera. */
+#erd-selection-zone {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+.erd-group-list.erd-group-list-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* Zona del lienzo del diagrama. Sustituye a
+   "flex: 1; padding: 0; position: relative; overflow: hidden; display: flex;
+   flex-direction: column; min-height: 500px; border: 1px solid #e2e8f0". */
+.erd-canvas-zone {
+    flex: 1;
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 500px;
+    border: 1px solid #e2e8f0;
+}
+
+/* Barra de ayuda superior del lienzo. Sustituye a
+   "background:rgba(105,163,219,.1); border-bottom:1px solid #e2e8f0;
+   padding:.5rem 1.2rem; font-size:.72rem; color:#558ac7; flex-shrink:0". */
+.erd-canvas-hint {
+    background: rgba(105, 163, 219, .1);
+    border-bottom: 1px solid #e2e8f0;
+    padding: .5rem 1.2rem;
+    font-size: .72rem;
+    color: var(--sf-blue-dark);
+    flex-shrink: 0;
+}
+
+/* Lienzo posicionado (contexto de las tablas y el SVG absolutos).
+   Sustituye al inline "position: relative". */
+.erd-canvas { position: relative; }
+/* SVG de líneas superpuesto al lienzo. Sustituye a
+   "position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible". */
+.erd-svg-lines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    overflow: visible;
+}

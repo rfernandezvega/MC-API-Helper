@@ -16,7 +16,7 @@
 }
 .folder-column h4 {
     text-align: center;
-    color: #558ac7;
+    color: var(--sf-blue-dark);
     margin-top: 0;
 }
 .folder-results-table tbody tr {
@@ -35,16 +35,16 @@
 }
 #query-selection-table td[contenteditable="true"] {
   cursor: text;
-  background-color: #f8f9fa;
+  background-color: var(--sf-bg-alt);
   transition: background-color 0.2s;
 }
 #query-selection-table td[contenteditable="true"]:hover {
-  background-color: #e9ecef;
+  background-color: var(--sf-bg);
 }
+/* Focus unificado: borde azul, sin box-shadow */
 #query-selection-table td[contenteditable="true"]:focus {
   background-color: #fff;
-  outline: 2px solid #69a3db;
-  box-shadow: 0 0 5px rgba(105, 163, 219, 0.5);
+  outline: 2px solid var(--sf-blue);
 }
 #query-selection-table td.name-mismatch {
   background-color: #f8bcc5; /* Un rojo muy sutil */

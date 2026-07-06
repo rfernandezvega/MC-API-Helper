@@ -7,49 +7,44 @@
             <button id="erd-reset-btn" class="action-button hidden">Nuevo Diagrama</button>
             <button id="erd-download-csv-btn" class="action-button activate-btn hidden">Descargar CSV</button>
             <button id="erd-download-img-btn" class="action-button hidden">Descargar Imagen</button>
+            <button id="erd-refresh-groups-btn" class="action-button">Refrescar</button>
+            <button id="erd-generate-btn" class="action-button activate-btn" disabled>Generar ERD</button>
         </div>
     </div>
 
-    <h2 style="color: #69a3db; text-align: center; margin-bottom: 20px;">Generador de Diagramas Entidad-Relación (ERD)</h2>
+    <h2 class="erd-title">Generador de Diagramas Entidad-Relación (ERD)</h2>
 
     <div class="tabs-container erd-full-width">
         <!-- SELECCIÓN DE GRUPO -->
         <div id="erd-selection-zone" class="config-block erd-full-width">
-            <h3 style="color:#558ac7; margin-bottom: 12px;">Selecciona un Grupo de Atributos</h3>
-            <p style="font-size: 0.9rem; color:#6c757d; margin-bottom: 12px;">
+            <h3 class="erd-subtitle">Selecciona un Grupo de Atributos</h3>
+            <p class="erd-help-text">
                 Elige el grupo de atributos del modelo de datos de contactos y pulsa "Generar ERD" para ver su diagrama
                 con todas las entidades (Data Extensions y Attribute Sets) que contiene.
             </p>
 
-            <div style="display:flex; gap:10px; align-items:center; margin-bottom:12px;">
-                <input type="text" id="erd-group-search" class="filter-input" placeholder="Buscar grupo..." style="flex:1;">
-                <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; color:#555; white-space:nowrap; cursor:pointer;">
+            <div class="erd-search-row">
+                <input type="text" id="erd-group-search" class="filter-input erd-group-search" placeholder="Buscar grupo...">
+                <label class="erd-hide-system-label">
                     <input type="checkbox" id="erd-hide-system"> Ocultar grupos de sistema
                 </label>
-                <button id="erd-refresh-groups-btn" class="action-button">Refrescar</button>
+                <label class="erd-hide-system-label">
+                    <input type="checkbox" id="erd-chk-hide-contacts"> Ocultar tabla <strong>Contacts</strong>
+                </label>
             </div>
 
-            <div id="erd-group-list" class="erd-group-list" style="max-height: 48vh; overflow-y: auto;"></div>
-
-            <div class="form-group checkbox-group" style="margin-top: 12px; justify-content: flex-start;">
-                <input type="checkbox" id="erd-chk-hide-contacts">
-                <label for="erd-chk-hide-contacts" style="font-size: 0.9rem;">Ocultar tabla <strong>Contacts</strong> (se identificará con 🔑)</label>
-            </div>
-
-            <div style="text-align: center; margin-top: 15px;">
-                <button id="erd-generate-btn" class="action-button activate-btn" style="padding: 10px 40px;" disabled>Generar ERD</button>
-            </div>
+            <div id="erd-group-list" class="erd-group-list erd-group-list-scroll"></div>
         </div>
 
         <!-- Lienzo del Diagrama -->
-        <div id="erd-canvas-zone" class="config-block hidden erd-full-width" style="flex: 1; padding: 0; position: relative; overflow: hidden; display: flex; flex-direction: column; min-height: 500px; border: 1px solid #e2e8f0;">
-            <div style="background:rgba(105,163,219,.1); border-bottom:1px solid #e2e8f0; padding:.5rem 1.2rem; font-size:.72rem; color:#558ac7; flex-shrink:0;">
+        <div id="erd-canvas-zone" class="config-block hidden erd-full-width erd-canvas-zone">
+            <div class="erd-canvas-hint">
                 💡 Clic en un campo para ver su relación · ESC para deseleccionar · Arrastra las tablas para reorganizar
             </div>
 
             <div class="erd-wrap" id="erd-wrap">
-                <div id="erd-canvas" style="position: relative;">
-                    <svg id="erd-svg-lines" style="position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible;"></svg>
+                <div id="erd-canvas" class="erd-canvas">
+                    <svg id="erd-svg-lines" class="erd-svg-lines"></svg>
                 </div>
             </div>
 
@@ -63,9 +58,9 @@
             <!-- Leyenda -->
             <div class="erd-legend">
                 <div class="leg-ttl">Leyenda</div>
-                <div class="leg-row"><div class="leg-dot" style="background:#e67e22"></div> PK</div>
-                <div class="leg-row"><div class="leg-dot" style="background:#28a745"></div> FK</div>
-                <div class="leg-row"><div class="leg-dot" style="background:#9b59b6"></div> REF</div>
+                <div class="leg-row"><div class="leg-dot leg-dot-pk"></div> PK</div>
+                <div class="leg-row"><div class="leg-dot leg-dot-fk"></div> FK</div>
+                <div class="leg-row"><div class="leg-dot leg-dot-ref"></div> REF</div>
             </div>
         </div>
     </div>

@@ -8,6 +8,7 @@ import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import * as mcApiService from '../api/mc-api-service.js';
+import { escapeHtml } from '../ui/format-utils.js';
 
 
 // --- ESTADO DEL MÓDULO ---
@@ -18,12 +19,6 @@ let activeContext = { clientName: '', mid: '', buName: '', cacheKey: '' };
 // Selector de dos niveles (Cliente → BU) de la barra lateral (menú flotante propio).
 let sidebarClientsData = [];        // [{ name, bus: [{name, mid}] }]
 let csMenuEl = null, csSubmenuEl = null, csSubmenuHideTimer = null, csOpen = false;
-
-function escapeHtml(s) {
-    return String(s == null ? '' : s)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
 
 // Consola de la app de WhatsApp (para que el usuario consulte los channelId de cada canal).
 const WA_CONSOLE_URL = 'https://mc.exacttarget.com/cloud/#app/WhatsApp/';
@@ -498,12 +493,8 @@ function addBuRow(name = '', mid = '', hidden = false) {
         <option value="show"${hidden ? '' : ' selected'}>Mostrar</option>
         <option value="hide"${hidden ? ' selected' : ''}>Ocultar</option>
     </select>`;
-    row.innerHTML = `<td contenteditable="true">${escapeHtml(name)}</td><td contenteditable="true">${escapeHtml(mid)}</td><td>${sel}</td>`;
-    const deleteButton = document.createElement('button');
-    deleteButton.className = 'delete-row-btn';
-    deleteButton.title = 'Eliminar fila';
-    deleteButton.textContent = '×';
-    row.appendChild(deleteButton);
+    row.innerHTML = `<td contenteditable="true">${escapeHtml(name)}</td><td contenteditable="true">${escapeHtml(mid)}</td><td>${sel}</td>` +
+        `<td class="ta-center"><button type="button" class="bu-del-btn row-del-btn" title="Eliminar fila">Eliminar</button></td>`;
 }
 
 function populateBuTable(bus = []) {
@@ -537,8 +528,7 @@ function addWaChannelRow(mid = '', channelId = '', name = '', bus = null) {
     row.innerHTML = `<td>${buSelectHtml(buList, mid)}</td>` +
         `<td contenteditable="true">${escapeHtml(channelId)}</td>` +
         `<td contenteditable="true">${escapeHtml(name)}</td>` +
-        `<td style="text-align:center;"><button type="button" class="wa-del-btn" title="Eliminar canal" ` +
-        `style="background:#fce8e6; border:1px solid #f6ccc7; color:#c5221f; border-radius:4px; padding:4px 12px; cursor:pointer; font-weight:bold;">Eliminar</button></td>`;
+        `<td class="ta-center"><button type="button" class="wa-del-btn row-del-btn" title="Eliminar canal">Eliminar</button></td>`;
 }
 
 /** Pinta la tabla de canales a partir de waChannels ({mid: [{id, name}]}). */
@@ -585,12 +575,8 @@ function populateDvConfigsTable(configs = []) {
     }
     configs.forEach(config => {
         const newRow = elements.sendsConfigTbody.insertRow();
-        newRow.innerHTML = `<td contenteditable="true">${config.title}</td><td contenteditable="true">${config.deKey}</td><td contenteditable="true">${config.field}</td>`;
-        const deleteButton = document.createElement('button');
-        deleteButton.className = 'delete-row-btn';
-        deleteButton.title = 'Eliminar fila';
-        deleteButton.textContent = '×';
-        newRow.appendChild(deleteButton);
+        newRow.innerHTML = `<td contenteditable="true">${escapeHtml(config.title)}</td><td contenteditable="true">${escapeHtml(config.deKey)}</td><td contenteditable="true">${escapeHtml(config.field)}</td>` +
+            `<td class="ta-center"><button type="button" class="dv-del-btn row-del-btn" title="Eliminar fila">Eliminar</button></td>`;
     });
 }
 
@@ -636,7 +622,7 @@ export async function init(dependencies) {
     elements.addBuRowBtn?.addEventListener('click', () => addBuRow('', ''));
     elements.syncBuBtn?.addEventListener('click', syncBusinessUnits);
     elements.buListTbody?.addEventListener('click', (e) => {
-        if (e.target.matches('.delete-row-btn')) {
+        if (e.target.matches('.bu-del-btn')) {
             e.target.closest('tr')?.remove();
         }
     });
@@ -660,19 +646,15 @@ export async function init(dependencies) {
 
     elements.addSendConfigRowBtn.addEventListener('click', () => {
         const newRow = elements.sendsConfigTbody.insertRow();
-        newRow.innerHTML = `<td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td>`;
-        const deleteButton = document.createElement('button');
-        deleteButton.className = 'delete-row-btn';
-        deleteButton.title = 'Eliminar fila';
-        deleteButton.textContent = '×';
-        newRow.appendChild(deleteButton);
+        newRow.innerHTML = `<td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td>` +
+            `<td class="ta-center"><button type="button" class="dv-del-btn row-del-btn" title="Eliminar fila">Eliminar</button></td>`;
     });
 
     elements.sendsConfigTbody.addEventListener('click', (e) => {
         const targetRow = e.target.closest('tr');
         if (!targetRow) return;
 
-        if (e.target.matches('.delete-row-btn')) {
+        if (e.target.matches('.dv-del-btn')) {
             if (targetRow === selectedConfigRow) selectedConfigRow = null;
             targetRow.remove();
         } else {

@@ -12,7 +12,7 @@
 .docu-container .tab-content ol { padding-left: 20px; }
 .docu-container .tab-content li { margin-bottom: 10px; }
 .docu-container code {
-  background-color: #e9ecef;
+  background-color: var(--sf-bg);
   padding: 2px 5px;
   border-radius: 4px;
   font-family: monospace;
@@ -21,10 +21,14 @@
 /* ===================================================================
    LAYOUT POR VISTA: menú lateral + paneles
    =================================================================== */
+/* Ocupa el alto disponible del tabs-container (que tiene overflow hidden)
+   para que el scroll real lo haga el panel de contenido. */
 #documentacion-section .docu-layout {
     display: flex;
     gap: 20px;
     align-items: flex-start;
+    flex: 1;
+    min-height: 0;
 }
 
 /* Menú lateral vertical (sobrescribe el comportamiento horizontal de .tab-buttons) */
@@ -38,7 +42,7 @@
     flex-direction: column;
     gap: 2px;
     border-bottom: none;
-    border-right: 2px solid #e0e7ef;
+    border-right: 2px solid var(--sf-border);
     max-height: calc(100vh - 150px);
     overflow-y: auto;
     padding: 4px 10px 10px 0;
@@ -55,15 +59,15 @@
     margin: 0;
     font-size: 0.9em;
     font-weight: 500;
-    color: #444;
+    color: var(--sf-text-soft);
     background: transparent;
     white-space: normal;
     cursor: pointer;
     transition: background-color 0.15s, color 0.15s;
 }
-#documentacion-section .docu-vnav .tab-button:hover { background: #f0f6fc; }
+#documentacion-section .docu-vnav .tab-button:hover { background: #e8f1fb; } /* Azul suave, como el panel izquierdo */
 #documentacion-section .docu-vnav .tab-button.active {
-    background: #69a3db;
+    background: var(--sf-blue);
     color: #fff;
     font-weight: 600;
 }
@@ -71,24 +75,31 @@
     font-size: 0.7em;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: #94a3b8;
+    color: var(--sf-text-muted);
     font-weight: 700;
     padding: 14px 12px 4px;
 }
 #documentacion-section .docu-vnav-title:first-child { padding-top: 2px; }
 
-/* Panel de contenido */
-#documentacion-section .docu-panels { flex: 1 1 auto; min-width: 0; }
+/* Panel de contenido: hace scroll vertical propio (en pantallas pequeñas
+   el contenido no cabe y sin esto quedaba recortado sin scroll). */
+#documentacion-section .docu-panels {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-self: stretch;
+    min-height: 0;
+    overflow-y: auto;
+}
 #documentacion-section .docu-view { padding: 4px 6px 40px; line-height: 1.6; }
 #documentacion-section .docu-view h3 {
-    color: #005A9C;
+    color: var(--sf-blue-dark);
     font-size: 1.35em;
     margin: 0 0 12px;
     padding-bottom: 8px;
-    border-bottom: 2px solid #e0e7ef;
+    border-bottom: 2px solid var(--sf-border);
 }
 #documentacion-section .docu-view h4 {
-    color: #558ac7;
+    color: var(--sf-blue-dark);
     font-size: 1.05em;
     margin: 22px 0 8px;
 }
@@ -100,7 +111,7 @@
 /* Caja de nota / aviso */
 #documentacion-section .docu-note {
     background: #e7f3ff;
-    border-left: 4px solid #69a3db;
+    border-left: 4px solid var(--sf-blue);
     border-radius: 4px;
     padding: 10px 14px;
     margin: 16px 0;
@@ -112,7 +123,7 @@
     #documentacion-section .docu-layout { flex-direction: column; }
     #documentacion-section .docu-vnav {
         flex-direction: row; flex-wrap: wrap; width: 100%; flex-basis: auto;
-        border-right: none; border-bottom: 2px solid #e0e7ef; max-height: none; position: static;
+        border-right: none; border-bottom: 2px solid var(--sf-border); max-height: none; position: static;
     }
     #documentacion-section .docu-vnav-title { width: 100%; }
 }

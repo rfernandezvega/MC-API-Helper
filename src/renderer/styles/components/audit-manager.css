@@ -1,0 +1,331 @@
+/* ===================================================================
+   styles/components/audit-manager.css
+   Estilos específicos del Audit Manager.
+   Rellenado en WP-6a / WP-7b: extracción de estilos inline repetidos
+   de audit-manager.html (tabla de "qué se analiza", tarjeta de script
+   copiable, botones y pestañas).
+   Los paneles KPI/gráficos generados por JS mantienen sus estilos inline
+   porque usan colores dinámicos por dato y, en el caso de los callouts,
+   están acoplados al parseo de audit-manager.js (parsePdfCallout).
+   =================================================================== */
+
+/* La sección de auditoría hace scroll completa (config-section-container):
+   la cabecera con Atrás/Iniciar Escaneo queda fija arriba como en el resto
+   de vistas. */
+#auditoria-section > .section-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background-color: #fff;
+}
+
+/* --- Tabla informativa "Qué se analiza en cada pestaña" ---
+   Repetía el mismo estilo de celda ~20 veces en el HTML. */
+.audit-info-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.84em;
+    margin-bottom: 4px;
+}
+
+/* Cabecera con los mismos estilos que el resto de tablas de la app. */
+.audit-info-table th {
+    padding: 9px 12px;
+    background: var(--sf-blue);
+    color: #fff;
+    font-weight: 600;
+    border: 1px solid var(--sf-blue);
+    border-bottom: 2px solid var(--sf-blue-dark);
+    text-align: center;
+}
+.audit-info-table th + th { border-left: 1px solid rgba(255, 255, 255, 0.45); }
+
+.audit-info-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid #eef2f6;
+    color: #555;
+}
+
+/* Primera columna (nombre de la pestaña): resaltada. */
+.audit-info-table td.audit-info-name {
+    font-weight: 600;
+    color: var(--sf-text);
+}
+
+/* Filas alternas (antes background:#fbfcfe inline). */
+.audit-info-table tr.audit-info-alt {
+    background: #fbfcfe;
+}
+
+/* --- Tarjeta oscura del script copiable de Data Extensions --- */
+.audit-prompt-card {
+    background: #1e1e2e;
+    border-radius: var(--sf-radius-lg);
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    position: relative;
+}
+
+/* Cabecera de la tarjeta (etiqueta + botón). */
+.audit-prompt-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.audit-prompt-label {
+    font-size: 0.75em;
+    color: #94a3b8;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Botón "Copiar script" dentro de la tarjeta oscura. */
+.audit-prompt-copy {
+    background: #3b82f6;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 4px 12px;
+    font-size: 0.78em;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+/* <pre> con el contenido del script. */
+.audit-prompt-pre {
+    margin: 0;
+    font-size: 0.75em;
+    font-family: monospace;
+    color: #e2e8f0;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 140px;
+    overflow-y: auto;
+}
+
+/* Etiqueta del textarea del JSON resultante. */
+.audit-json-label {
+    font-size: 0.82em;
+    font-weight: 600;
+    color: #374151;
+    display: block;
+    margin-bottom: 4px;
+}
+
+/* Textarea del JSON de Data Extensions. */
+.audit-json-area {
+    width: 100%;
+    height: 110px;
+    font-size: 0.78em;
+    font-family: monospace;
+    border: 1px solid #d1d5db;
+    border-radius: var(--sf-radius-lg);
+    padding: 10px;
+    resize: vertical;
+    color: #374151;
+    background: #f9fafb;
+    box-sizing: border-box;
+}
+
+/* --- Variantes de color de los botones de la cabecera de auditoría ---
+   El HTML original fijaba estos colores con background-color inline sobre
+   .activate-btn (verde). Se conservan tal cual como clases. */
+.action-button.activate-btn.audit-btn-blue {
+    background-color: #2980b9;
+}
+.action-button.activate-btn.audit-btn-blue:hover {
+    background-color: #2471a3;
+}
+.action-button.activate-btn.audit-btn-green {
+    background-color: #27ae60;
+}
+.action-button.activate-btn.audit-btn-green:hover {
+    background-color: #229954;
+}
+
+/* --- Botones de las pestañas del dashboard ---
+   Todos repetían padding:10px 18px; font-size:0.88em. */
+.audit-dashboard-tabs .tab-button {
+    padding: 10px 18px;
+    font-size: 0.88em;
+}
+
+/* --- Contenedor scrollable de las pestañas --- */
+.audit-tabs-body {
+    background: #f4f7fb;
+    border-radius: 0 0 10px 10px;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+/* --- Botón "Descargar CSV" del modal de detalle --- */
+.audit-drill-download-btn {
+    background: #27ae60;
+    color: #fff;
+    border: none;
+    border-radius: var(--sf-radius);
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: bold;
+    transition: background 0.2s;
+}
+
+/* ===================================================================
+   Panel de resultados generado por JS (audit-manager.js).
+   Los colores por dato (barras, KPIs) siguen inline en el JS; aquí
+   solo va la parte estática de cada bloque. buildCallout y buildGrid
+   se quedan con estilos inline a propósito (ver comentarios en el JS).
+   =================================================================== */
+
+/* Relleno interior de cada pestaña del dashboard. */
+.audit-tab-pad {
+    padding: 20px 24px;
+}
+
+/* Caja de estadísticas (tiempo / llamadas API) en la fila de pestañas.
+   Se muestran como chips con el mismo estilo que los badges de la app. */
+.audit-stats-box {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    line-height: 1.3;
+}
+.audit-stats-line {
+    background: #e1f5fe;
+    color: #0277bd;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 0.78em;
+    font-weight: 600;
+}
+.audit-stats-cache {
+    background: var(--sf-bg);
+    color: var(--sf-text-soft);
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 0.75em;
+}
+
+/* Fila de tarjetas KPI. El color del borde superior y del valor es
+   por dato y se mantiene inline. */
+.audit-kpi-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+.audit-kpi-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    min-width: 90px;
+    flex: 1;
+}
+.audit-kpi-value {
+    font-size: 2em;
+    font-weight: 800;
+    line-height: 1.1;
+}
+.audit-kpi-label {
+    font-size: 0.71em;
+    color: #777;
+    margin-top: 5px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+/* Cabecera de sección dentro de una pestaña. */
+.audit-section-header {
+    font-size: 0.82em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--sf-blue);
+    border-bottom: 1px solid #d5e8f7;
+    padding-bottom: 6px;
+    margin: 22px 0 14px 0;
+}
+
+/* Tarjeta de métricas con barras. El span de columnas (wide) es
+   dinámico y se mantiene inline. */
+.audit-metric-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 16px 18px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+}
+.audit-metric-title {
+    font-weight: 700;
+    font-size: 0.93em;
+    color: #2c3e50;
+    margin-bottom: 4px;
+}
+.audit-metric-help {
+    font-size: 0.77em;
+    color: #aaa;
+    margin-bottom: 14px;
+    line-height: 1.4;
+}
+.audit-metric-empty {
+    color: #ccc;
+    font-size: 0.85em;
+    font-style: italic;
+}
+
+/* Fila de barra de progreso dentro de una tarjeta de métricas.
+   El color de la barra y del valor es por dato y se mantiene inline. */
+.audit-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 9px;
+    font-size: 0.86em;
+    padding: 4px;
+}
+.audit-bar-label {
+    flex: 0 0 190px;
+    color: #444;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 190px;
+}
+.audit-bar-track {
+    flex: 1;
+    background: #f0f0f0;
+    border-radius: 20px;
+    height: 9px;
+    overflow: hidden;
+    min-width: 40px;
+}
+.audit-bar-fill {
+    height: 100%;
+    border-radius: 20px;
+}
+.audit-bar-value {
+    flex: 0 0 32px;
+    font-weight: 700;
+    text-align: right;
+}
+.audit-bar-pct {
+    flex: 0 0 34px;
+    color: #aaa;
+    text-align: right;
+    font-size: 0.9em;
+}
+
+/* Placeholder de carga mientras se escanea cada pestaña. */
+.audit-loading {
+    padding: 40px;
+    text-align: center;
+    color: #bbb;
+}
