@@ -22,11 +22,11 @@
         .audit-modal-close { background: none; border: none; font-size: 1.5em; cursor: pointer; color: #95a5a6; transition: color 0.2s; }
         .audit-modal-close:hover { color: #e74c3c; }
         .audit-modal-body { overflow-y: auto; flex: 1; }
-        /* separate + spacing 0: con collapse los bordes no acompañan al th sticky */
-        .audit-drill-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.88em; text-align: left; }
-        .audit-drill-table th { background-color: #f8fafc; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; color: #475569; position: sticky; top: 0; z-index: 2; }
-        .audit-drill-table td { padding: 9px 12px; border-bottom: 1px solid #e2e8f0; color: #334155; word-break: break-word; }
-        .audit-drill-table tr:hover td { background-color: #f1f5f9; }
+        /* La tabla del drill-down hereda el estilo global de tablas de la app
+           (cabecera azul sticky, celdas centradas, rejilla direccional):
+           aquí solo se ajusta el tamaño y el corte de palabras largas. */
+        .audit-drill-table { width: 100%; font-size: 0.88em; }
+        .audit-drill-table td { word-break: break-word; }
     </style>
 
     <!-- CABECERA -->

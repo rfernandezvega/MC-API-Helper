@@ -284,11 +284,11 @@
         .audit-modal-close { background: none; border: none; font-size: 1.5em; cursor: pointer; color: #95a5a6; transition: color 0.2s; }
         .audit-modal-close:hover { color: #e74c3c; }
         .audit-modal-body { overflow-y: auto; flex: 1; }
-        /* separate + spacing 0: con collapse los bordes no acompañan al th sticky */
-        .audit-drill-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.88em; text-align: left; }
-        .audit-drill-table th { background-color: #f8fafc; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; color: #475569; position: sticky; top: 0; z-index: 2; }
-        .audit-drill-table td { padding: 9px 12px; border-bottom: 1px solid #e2e8f0; color: #334155; word-break: break-word; }
-        .audit-drill-table tr:hover td { background-color: #f1f5f9; }
+        /* La tabla del drill-down hereda el estilo global de tablas de la app
+           (cabecera azul sticky, celdas centradas, rejilla direccional):
+           aquí solo se ajusta el tamaño y el corte de palabras largas. */
+        .audit-drill-table { width: 100%; font-size: 0.88em; }
+        .audit-drill-table td { word-break: break-word; }
     </style>
 
     <!-- CABECERA -->
@@ -2158,13 +2158,13 @@
                 </summary>
                 <ul class="changelog-items">
                     <li><span class="changelog-tag new">Nuevo</span> Rediseño visual completo de la aplicación: nueva paleta de colores, botones, tablas, modales, menú lateral y badges de estado unificados en todas las vistas.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Refactorización completa de clases CSS sin estilos inline y refactorización de auditoría con orquestador y varios archivos con lógica.</li>
                     <li><span class="changelog-tag improved">Mejora</span> Ya no es necesario dar de alta cada BU de cada cliente. Solo hace falta logearse en la BU principal y en Confogiración de APIs > Business Units darle a Sincronizar.</li>
                     <li><span class="changelog-tag improved">Mejora</span> La selección de clientes ahora solo muestra 1 cliente y desde este se puede seleccionar la Business Unit. Es necesario dar el permiso Accounts: Read y volver a logearse.</li>
                     <li><span class="changelog-tag improved">Mejora</span> El panel de logs y el fichero descargado ahora muestra las llamadas y respuestas agrupadas y colapsadas.</li>
                     <li><span class="changelog-tag new">Nuevo</span> El Buscador de Clientes ahora permite buscar en los canales de Whatsapp y dar de alta un registro directamente en un canal, por ejemplo para pruebas.</li>   
                     <li><span class="changelog-tag new">Nuevo</span> La Auditoría ahora tiene en cuenta la cache de contenidos para sacar métricas.</li>
                     <li><span class="changelog-tag improved">Mejora</span> El Calendario ya no es una vista aparte: ahora es un botón dentro de Automatismos que abre un panel con el calendario de los automatismos que tengas filtrados en la vista.</li>
-                    <li><span class="changelog-tag improved">Mejora</span> La Auditoría se ha rediseñado con la paleta de la aplicación (dashboard e informe PDF) y su código se ha reorganizado por pestañas.</li>
                 </ul>
             </details>
 
