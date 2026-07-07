@@ -1,7 +1,17 @@
-// Fichero: src/renderer/components/audit-content.js
+// Fichero: src/renderer/components/audit/audit-content.js
 // Descripción: Pestaña "Contenidos" de la Auditoría. Se calcula a partir de la MISMA caché
 // que usa la vista de Contenidos (ClientContents) y de la caché de Journeys (ClientJourneys),
-// sin llamadas a la API. La lógica de render/drill se recibe desde audit-manager (ctx.helpers).
+// sin llamadas a la API.
+// Patrón: antes recibía los helpers por ctx (ctx.helpers); ahora importa directamente de
+// audit-ui/audit-state como el resto de módulos de pestaña (ver nota en audit-users.js).
+
+import {
+    AUDIT_PALETTE,
+    buildTabWrapper, buildKpiRow, buildGrid, buildMetricCard, buildCallout, renderCallouts,
+} from './audit-ui.js';
+import {
+    registerDrill, addDrillRow, registerPdfData,
+} from './audit-state.js';
 
 const EMAIL_IDS = [207, 208, 209];
 const EMAIL_TYPE_LABEL = { 207: 'Template-Based', 208: 'HTML', 209: 'Text-only' };
@@ -11,6 +21,7 @@ const WA_TEMPLATE_ID = 235;
 const SNIPPET_ID = 220;
 const BLOCK_IDS = [195, 197, 212, 223, 201, 193, 196, 213, 199, 224];
 
+/** Formatea una fecha ISO como dd/mm/aaaa (solo fecha) para las tablas de drill. */
 function fmtDate(ds) {
     if (!ds) return '---';
     try { return new Date(ds).toLocaleDateString('es-ES'); } catch { return '---'; }
@@ -78,16 +89,10 @@ function computeJourneyRefs(journeys) {
 }
 
 /**
- * Pinta la pestaña de Contenidos de la auditoría.
- * @param {object} ctx - { clientName, helpers }
+ * Pinta la pestaña de Contenidos de la auditoría a partir de las cachés locales.
+ * @param {string} clientName - Clave de caché del contexto activo (Cliente - BU).
  */
-export async function auditContent(ctx) {
-    const { clientName, helpers } = ctx;
-    const {
-        registerDrill, addDrillRow, registerPdfData,
-        buildTabWrapper, buildKpiRow, buildGrid, buildMetricCard, buildCallout, parsePdfCallout
-    } = helpers;
-
+export async function auditContent(clientName) {
     const tabEl = document.getElementById('audit-tab-content');
     if (!tabEl) return;
 
@@ -95,8 +100,8 @@ export async function auditContent(ctx) {
     const contentRes = await window.electronAPI.loadClientContents(clientName);
     const contents = (contentRes && contentRes.success && Array.isArray(contentRes.contents)) ? contentRes.contents : [];
     if (contents.length === 0) {
-        tabEl.innerHTML = buildTabWrapper(buildCallout('warning', 'Sin caché de contenidos',
-            'No hay contenidos cacheados para este cliente. Ve a la vista de <b>Contenidos</b> y pulsa <b>Refrescar</b> para poder auditarlos aquí (se reutiliza esa misma caché).'));
+        tabEl.innerHTML = buildTabWrapper(buildCallout({ type: 'warning', title: 'Sin caché de contenidos',
+            message: 'No hay contenidos cacheados para este cliente. Ve a la vista de <b>Contenidos</b> y pulsa <b>Refrescar</b> para poder auditarlos aquí (se reutiliza esa misma caché).' }));
         registerPdfData('content', [], [], []);
         return;
     }
@@ -165,8 +170,8 @@ export async function auditContent(ctx) {
         if (exists) { tplOk++; addDrillRow('ct_tpl_ok', [e.id, e.name, e.templateName || `ID ${e.templateId}`, fmtDate(e.modifiedDate)]); }
         else { tplMissing++; addDrillRow('ct_tpl_missing', [e.id, e.name, e.templateName || `ID ${e.templateId}`, fmtDate(e.modifiedDate)]); }
     });
-    if (tplMissing > 0) callouts.push(buildCallout('warning', 'Emails con plantilla inexistente',
-        `${tplMissing} email(s) usan una plantilla que ya no existe en Content Builder.`));
+    if (tplMissing > 0) callouts.push({ type: 'warning', title: 'Emails con plantilla inexistente',
+        message: `${tplMissing} email(s) usan una plantilla que ya no existe en Content Builder.` });
 
     // ── 4. Bloques sin uso por tipo ───────────────────────────────────────
     const blockLikeIds = [...BLOCK_IDS, SNIPPET_ID];
@@ -187,7 +192,7 @@ export async function auditContent(ctx) {
     const unusedBlockBars = Object.entries(unusedByType)
         .filter(([, v]) => v.unused > 0)
         .sort((a, b) => b[1].unused - a[1].unused)
-        .map(([label, v]) => ({ label, value: v.unused, total: v.total, color: '#e74c3c', drillKey: `ct_unused_${label.replace(/[^a-z0-9]/gi, '')}` }));
+        .map(([label, v]) => ({ label, value: v.unused, total: v.total, color: AUDIT_PALETTE.red, drillKey: `ct_unused_${label.replace(/[^a-z0-9]/gi, '')}` }));
 
     // ── 5. Plantillas WhatsApp sin uso ────────────────────────────────────
     const usedWaTemplateRefs = new Set();
@@ -248,19 +253,19 @@ export async function auditContent(ctx) {
         commsInJourney += used; commsTotal += ch.items.length;
         journeyBars.push({ label: `${ch.label} en journeys`, value: used, total: ch.items.length || 1, drillKey: inKey });
     });
-    if (!hasJourneys) callouts.push(buildCallout('info', 'Sin caché de Journeys',
-        'No hay journeys cacheados: las métricas de "en/fuera de Journeys" no son fiables. Cachéalos desde la vista de Journeys ("Descargar detalle → Todos").'));
+    if (!hasJourneys) callouts.push({ type: 'info', title: 'Sin caché de Journeys',
+        message: 'No hay journeys cacheados: las métricas de "en/fuera de Journeys" no son fiables. Cachéalos desde la vista de Journeys ("Descargar detalle → Todos").' });
 
     // ── KPIs ──────────────────────────────────────────────────────────────
     const kpis = [
-        { value: contents.length, label: 'Total contenidos', color: '#69a3db', drillKey: 'ct_overview' },
-        { value: emails.length, label: 'Emails', color: '#2980b9', drillKey: 'ct_cat_Emails' },
-        { value: sms.length, label: 'SMS', color: '#16a085', drillKey: 'ct_cat_SMS' },
-        { value: push.length, label: 'Push', color: '#e67e22', drillKey: 'ct_cat_Push' },
-        { value: whatsapps.length, label: 'WhatsApp', color: '#25a35a', drillKey: 'ct_cat_WhatsApp' },
-        { value: tplMissing, label: 'Plantilla inexistente', color: tplMissing > 0 ? '#e74c3c' : '#bdc3c7', drillKey: 'ct_tpl_missing' },
-        { value: unusedBlocksTotal, label: 'Bloques sin uso', color: unusedBlocksTotal > 0 ? '#f39c12' : '#bdc3c7', drillKey: null },
-        { value: waTplUnused, label: 'Plantillas WA sin uso', color: waTplUnused > 0 ? '#9b59b6' : '#bdc3c7', drillKey: 'ct_wa_tpl_unused' },
+        { value: contents.length, label: 'Total contenidos', color: AUDIT_PALETTE.blue, drillKey: 'ct_overview' },
+        { value: emails.length, label: 'Emails', color: AUDIT_PALETTE.blueDark, drillKey: 'ct_cat_Emails' },
+        { value: sms.length, label: 'SMS', color: AUDIT_PALETTE.teal, drillKey: 'ct_cat_SMS' },
+        { value: push.length, label: 'Push', color: AUDIT_PALETTE.orange, drillKey: 'ct_cat_Push' },
+        { value: whatsapps.length, label: 'WhatsApp', color: AUDIT_PALETTE.green, drillKey: 'ct_cat_WhatsApp' },
+        { value: tplMissing, label: 'Plantilla inexistente', color: tplMissing > 0 ? AUDIT_PALETTE.red : AUDIT_PALETTE.gray, drillKey: 'ct_tpl_missing' },
+        { value: unusedBlocksTotal, label: 'Bloques sin uso', color: unusedBlocksTotal > 0 ? AUDIT_PALETTE.orange : AUDIT_PALETTE.gray, drillKey: null },
+        { value: waTplUnused, label: 'Plantillas WA sin uso', color: waTplUnused > 0 ? AUDIT_PALETTE.purple : AUDIT_PALETTE.gray, drillKey: 'ct_wa_tpl_unused' },
     ];
 
     // ── Tarjetas ──────────────────────────────────────────────────────────
@@ -272,8 +277,8 @@ export async function auditContent(ctx) {
         { title: 'WhatsApp · componentes', help: 'Tipos de componentes usados en mensajes y plantillas de WhatsApp.', bars: waComponentBars },
     ];
 
-    registerPdfData('content', kpis, cards, callouts.map(c => parsePdfCallout(c)));
+    registerPdfData('content', kpis, cards, callouts);
     tabEl.innerHTML = buildTabWrapper(
-        buildKpiRow(kpis) + callouts.join('') + buildGrid(cards.map(c => buildMetricCard(c.title, c.help, c.bars, { wide: c.wide })))
+        buildKpiRow(kpis) + renderCallouts(callouts) + buildGrid(cards.map(c => buildMetricCard(c.title, c.help, c.bars, { wide: c.wide })))
     );
 }

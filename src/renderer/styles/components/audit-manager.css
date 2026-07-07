@@ -4,9 +4,9 @@
    Rellenado en WP-6a / WP-7b: extracción de estilos inline repetidos
    de audit-manager.html (tabla de "qué se analiza", tarjeta de script
    copiable, botones y pestañas).
-   Los paneles KPI/gráficos generados por JS mantienen sus estilos inline
-   porque usan colores dinámicos por dato y, en el caso de los callouts,
-   están acoplados al parseo de audit-manager.js (parsePdfCallout).
+   Los paneles KPI/gráficos generados por JS (audit/audit-ui.js) usan
+   estas clases para la parte estática; los colores por dato (acento de
+   KPI, color/ancho de barra, fondo de callout por tipo) siguen inline.
    =================================================================== */
 
 /* La sección de auditoría hace scroll completa (config-section-container):
@@ -227,6 +227,29 @@
     letter-spacing: 0.03em;
 }
 
+/* Callout (aviso) al estilo de los badges de la app: fondo pastel + texto
+   oscuro del mismo tono, sin borde lateral. El par fondo/texto depende del
+   tipo (danger/warning/info/success) y lo pone inline audit-ui.buildCallout. */
+.audit-callout {
+    border-radius: 6px;
+    padding: 11px 15px;
+    margin-bottom: 12px;
+    font-size: 0.87em;
+    line-height: 1.55;
+}
+.audit-callout-title {
+    font-weight: 700;
+}
+
+/* Grid de 2 columnas de las tarjetas de métricas. Las tarjetas "wide"
+   ocupan las 2 columnas vía grid-column inline (depende del dato). */
+.audit-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
 /* Cabecera de sección dentro de una pestaña. */
 .audit-section-header {
     font-size: 0.82em;
@@ -307,9 +330,19 @@
     font-size: 0.9em;
 }
 
-/* Placeholder de carga mientras se escanea cada pestaña. */
+/* Placeholder de carga mientras se escanea cada pestaña.
+   Reutiliza el spinner de common.css (.loader-spinner) en tamaño reducido. */
 .audit-loading {
     padding: 40px;
     text-align: center;
     color: #bbb;
+}
+.audit-loading-spinner {
+    width: 34px;
+    height: 34px;
+    border-width: 5px;
+    margin: 0 auto 12px;
+}
+.audit-loading-text {
+    font-size: 0.9em;
 }
