@@ -7,6 +7,7 @@ import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import { escapeHtml, formatDate } from '../ui/format-utils.js';
 import { createTableSorter, createPaginator } from '../ui/table-utils.js';
+import { getRowsPerPage } from './settings.js';
 
 // --- 1. ESTADO DEL MÓDULO ---
 
@@ -14,8 +15,6 @@ let fullJourneyList = [];
 let eventDefinitionsMap = {};
 let allEventDefsCache = [];
 let journeyFolderMap = {};
-
-const ITEMS_PER_PAGE = 15;
 
 // Controladores de ordenación y paginación (helpers de table-utils, se crean en init)
 let journeysSorter;
@@ -218,13 +217,13 @@ function openCommsDrawer(journeyId) {
                     <tr>
                         <td>${escapeHtml(email.name) || 'N/A'}</td>
                         <td>${escapeHtml(email.customerKey) || 'N/A'}</td>
-                        <td style="font-weight:bold; color:${email.status === 'Active' ? '#2e7d32' : '#666'};">${escapeHtml(email.status) || 'N/A'}</td>
+                        <td style="font-weight:bold; color:${email.status === 'Active' ? '#2e7d32' : 'var(--sf-text-muted)'};">${escapeHtml(email.status) || 'N/A'}</td>
                         <td>${escapeHtml(email.description) || '-'}</td>
                         <td>${email.created ? new Date(email.created).toLocaleDateString('es-ES') : 'N/A'}</td>
                         <td>${email.modified ? new Date(email.modified).toLocaleDateString('es-ES') : 'N/A'}</td>
                         <td>${escapeHtml(email.completed) || '0'}</td>
                         <td>${escapeHtml(email.queued) || '0'}</td>
-                        <td style="font-weight:bold; color:${parseInt(email.errored || '0') > 0 ? '#d32f2f' : '#666'};">${escapeHtml(email.errored) || '0'}</td>
+                        <td style="font-weight:bold; color:${parseInt(email.errored || '0') > 0 ? '#d32f2f' : 'var(--sf-text-muted)'};">${escapeHtml(email.errored) || '0'}</td>
                     </tr>`).join('')}
                 </tbody></table>`;
         } else {
@@ -286,7 +285,7 @@ export function init(dependencies) {
             prevBtn: elements.prevPageBtnJourneys,
             nextBtn: elements.nextPageBtnJourneys
         },
-        { itemsPerPage: ITEMS_PER_PAGE, onPageChange: renderFilteredTable }
+        { itemsPerPage: () => getRowsPerPage('journeys'), onPageChange: renderFilteredTable }
     );
 
     // Listeners de filtros

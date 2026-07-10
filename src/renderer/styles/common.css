@@ -24,6 +24,10 @@
     --sf-border: #dddbda;        /* bordes (antes #e9ecef / #b9d4e7 / #ccc) */
     --sf-bg: #f3f2f2;            /* fondo app (antes #f0f6fc) */
     --sf-bg-alt: #fafaf9;        /* fondo paneles/cabeceras suaves (antes #f8f9fa) */
+    --sf-surface: #fff;          /* superficie: paneles, tarjetas, celdas, modales, inputs */
+    --sf-hover: #f0f0f0;         /* hover neutro (items de menú, cabeceras claras) */
+    --sf-hover-blue: #e8f1fb;    /* hover azul suave (menú lateral, colapsables) */
+    --sf-selected: #d8ecfb;      /* fila/elemento seleccionado */
     --sf-text: #081c3b;          /* texto principal (antes #333/#2c3e50) */
     --sf-text-muted: #706e6b;    /* texto secundario (antes #666/#888/#999) */
     --sf-text-soft: #514f4d;     /* texto de labels/botón secundario */
@@ -40,6 +44,47 @@
     --sf-shadow-modal: 0 20px 60px rgba(0,0,0,0.25);
     --sf-code-bg: #1e1e1e;       /* bloques de código */
     --sf-code-text: #d4d4d4;
+    /* Acentos del dashboard de auditoría (gráficos): theme-reactive para que
+       las tarjetas y barras se relean bien en oscuro aunque el HTML esté
+       cacheado. El informe PDF usa los HEX de AUDIT_PALETTE (papel blanco). */
+    --audit-green: #4caf50; --audit-red: #c23934; --audit-orange: #dd7a01;
+    --audit-blue: #0070d2; --audit-teal: #0b827c; --audit-purple: #7f5fc7; --audit-gray: #706e6b;
+}
+
+/* ==========================================================
+   MODO OSCURO
+   Se activa con el atributo data-theme="dark" en <html> (lo pone el
+   módulo de ajustes). Solo redefine los tokens y unos pocos matices que
+   no pueden derivarse de ellos (pastel de badges, resaltado, etc.).
+   Todo lo que usa var(--sf-*) se adapta automáticamente.
+   ========================================================== */
+:root[data-theme="dark"] {
+    --sf-blue: #2b8ceb;          /* azul más luminoso para leerse sobre fondos oscuros */
+    --sf-blue-dark: #57a6f0;     /* en oscuro el "hover" aclara en vez de oscurecer */
+    --sf-border: #383d45;
+    --sf-bg: #15171c;            /* fondo de la app (lo más oscuro) */
+    --sf-bg-alt: #262b33;        /* superficies suaves / cabeceras / hover de tabla */
+    --sf-surface: #1e2228;       /* paneles, tarjetas, celdas, modales, inputs */
+    --sf-hover: #2d333d;
+    --sf-hover-blue: #21344a;
+    --sf-selected: #22405c;
+    --sf-text: #e5e8ec;
+    --sf-text-muted: #99a0aa;
+    --sf-text-soft: #c3c8d0;
+    --sf-green: #4caf50;
+    --sf-red: #d65b54;
+    --sf-red-bg: #37211f;
+    --sf-teal: #17998f;
+    --sf-teal-dark: #34b3a9;
+    --sf-orange: #e08a2e;
+    --sf-orange-dark: #eda151;
+    --sf-code-bg: #14161a;
+    --sf-code-text: #d4d4d4;
+    --sf-shadow-menu: 0 8px 24px rgba(0,0,0,0.5);
+    --sf-shadow-modal: 0 20px 60px rgba(0,0,0,0.6);
+    /* Acentos de auditoría: versiones más luminosas para leerse en oscuro. */
+    --audit-green: #5cc463; --audit-red: #e0685f; --audit-orange: #eda151;
+    --audit-blue: #4ea3ea; --audit-teal: #34b3a9; --audit-purple: #a98fe0; --audit-gray: #99a0aa;
 }
 
 /* Badges de estado globales (pastel, estilo Lightning) */
@@ -50,6 +95,33 @@
 .badge-purple  { background: #f0e6ff; color: #5b3a99; }
 .badge-neutral { background: #f3f2f2; color: #514f4d; }
 .badge-danger  { background: #fdecea; color: #b3261e; }
+/* En oscuro los pastel se invierten: fondo tintado oscuro + texto claro del tono. */
+:root[data-theme="dark"] .badge-info    { background: #10344a; color: #7fc9f5; }
+:root[data-theme="dark"] .badge-success { background: #143a1c; color: #82d989; }
+:root[data-theme="dark"] .badge-warning { background: #3d2f10; color: #f0c066; }
+:root[data-theme="dark"] .badge-purple  { background: #2a1f3d; color: #c4a6f0; }
+:root[data-theme="dark"] .badge-neutral { background: #2d333d; color: #b8bdc4; }
+:root[data-theme="dark"] .badge-danger  { background: #3d1f1c; color: #f0938c; }
+
+/* Overrides oscuros para otros elementos pastel (estado de sesión, tags,
+   avisos de error e impacto): misma lógica que los badges. */
+:root[data-theme="dark"] .chan-tag { background: #10344a; color: #7fc9f5; border-color: #1d4a63; }
+:root[data-theme="dark"] .login-status.active   { color: #82d989; background-color: #143a1c; }
+:root[data-theme="dark"] .login-status.inactive { color: #f0938c; background-color: #3d1f1c; }
+:root[data-theme="dark"] .error-text { color: #f0938c; background-color: #3d1f1c; border-color: #5a2a26; }
+:root[data-theme="dark"] .impact-exclusive { background-color: #143a1c; color: #82d989; }
+:root[data-theme="dark"] .impact-shared    { background-color: #3d1f1c; color: #f0938c; }
+
+/* Callouts del dashboard de auditoría por tipo (theme-reactive vía clase, no
+   inline, para que el color se relea al cambiar de tema aunque estén cacheados). */
+.audit-callout-info    { background: #e1f5fe; color: #0277bd; }
+.audit-callout-success { background: #e6f6e6; color: #1b5e20; }
+.audit-callout-warning { background: #fff4e5; color: #8a5a00; }
+.audit-callout-danger  { background: #fdecea; color: #b3261e; }
+:root[data-theme="dark"] .audit-callout-info    { background: #10344a; color: #7fc9f5; }
+:root[data-theme="dark"] .audit-callout-success { background: #143a1c; color: #82d989; }
+:root[data-theme="dark"] .audit-callout-warning { background: #3d2f10; color: #f0c066; }
+:root[data-theme="dark"] .audit-callout-danger  { background: #3d1f1c; color: #f0938c; }
 
 
 /* ==========================================================
@@ -81,7 +153,7 @@ body {
 
 /* Estilo base para los 3 paneles principales (barras laterales y contenido) */
 #macros-sidebar, #main-content {
-  background-color: #fff;
+  background-color: var(--sf-surface);
   padding: 20px;
 }
 
@@ -162,7 +234,7 @@ body {
   padding: 8px 10px;
   border: 1px solid var(--sf-border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--sf-surface);
   cursor: pointer;
   display: flex;
   justify-content: space-between;
@@ -183,7 +255,7 @@ body {
 /* Menús flotantes (se insertan en <body> con position:fixed para no recortarse). */
 .client-selector-menu, .client-selector-submenu {
   position: fixed;
-  background: #fff;
+  background: var(--sf-surface);
   border: 1px solid var(--sf-border);
   border-radius: 8px;
   box-shadow: var(--sf-shadow-menu);
@@ -236,7 +308,7 @@ body {
   display: flex; justify-content: space-between; align-items: center;
   padding: 5px 4px; user-select: none; border-radius: 6px;
 }
-.collapsible-header:hover { background-color: #e8f1fb; }
+.collapsible-header:hover { background-color: var(--sf-hover-blue); }
 .collapsible-header::after { content: '▶'; font-size: 0.7em; color: var(--sf-text-muted); transition: transform 0.3s ease; }
 .collapsible-header.active::after { transform: rotate(90deg); }
 .collapsible-content {
@@ -250,7 +322,7 @@ body {
   transition: background-color 0.2s, color 0.2s; cursor: pointer;
 }
 .sidebar-content-wrapper .macro-item:hover {
-  background-color: #e8f1fb; /* Azul suave al pasar por encima */
+  background-color: var(--sf-hover-blue); /* Azul suave al pasar por encima */
   color: var(--sf-text);
 }
 .sidebar-content-wrapper .macro-item.active {
@@ -270,7 +342,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  background-color: #fff;
+  background-color: var(--sf-surface);
   color: var(--sf-blue);
   border: 1px solid var(--sf-border);
   border-bottom: none;
@@ -314,7 +386,7 @@ body {
   height: 45vh;
   min-height: 280px;
   max-height: 70vh;
-  background-color: #fff;
+  background-color: var(--sf-surface);
   border-radius: 12px 12px 0 0;
   box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
   display: flex;
@@ -367,7 +439,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  background-color: #fff;
+  background-color: var(--sf-surface);
   color: var(--sf-blue);
   border: 1px solid var(--sf-border);
   border-bottom: none;
@@ -436,7 +508,7 @@ body {
   font-size: 0.8em;
 }
 .log-entry {
-  background: #fff;
+  background: var(--sf-surface);
   border: 1px solid var(--sf-border);
   border-radius: 6px;
   margin-bottom: 6px;
@@ -491,7 +563,7 @@ body {
   margin: 0 0 20px 0;
 }
 .section-header {
-    background-color: #fff;
+    background-color: var(--sf-surface);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -574,7 +646,7 @@ body {
 .config-section-container select {
     -webkit-appearance: none;
     appearance: none;
-    background-color: #fff; /* Fondo blanco para que parezca un input */
+    background-color: var(--sf-surface); /* Fondo blanco para que parezca un input */
     border: 1px solid var(--sf-border);
     border-radius: var(--sf-radius);
     padding: 9px 12px;
@@ -595,6 +667,17 @@ body {
     border-color: var(--sf-blue);
 }
 .config-section-container input[disabled] { background-color: var(--sf-bg); cursor: not-allowed; }
+/* Controles de formulario: heredan color de texto Y superficie del tema, para
+   que en modo oscuro no queden con texto negro ni fondo blanco por defecto de UA.
+   Se excluyen checkbox/radio (se pintan nativos). El <option> del desplegable
+   también se tinta (Chromium usa estos valores). */
+input:not([type="checkbox"]):not([type="radio"]),
+select, textarea {
+    color: var(--sf-text);
+    background-color: var(--sf-surface);
+}
+select option { background-color: var(--sf-surface); color: var(--sf-text); }
+.filter-input { background-color: var(--sf-surface); color: var(--sf-text); }
 .config-section-container .checkbox-group { flex-direction: row; align-items: center; }
 .config-section-container .checkbox-group label { margin: 0 8px 0 0; }
 .config-section-container .checkbox-group input[type="checkbox"] { width: auto; }
@@ -686,7 +769,7 @@ th:last-child { border-right: 1px solid var(--sf-blue); }
 /* Hover de fila y fila seleccionada (solo fondo azul claro, sin recuadro) */
 tbody tr:hover { background-color: var(--sf-bg-alt); }
 tr.selected {
-  background-color: #d8ecfb !important;
+  background-color: var(--sf-selected) !important;
 }
 /* Utilidades de alineación para celdas concretas */
 .ta-center { text-align: center !important; }
@@ -774,10 +857,13 @@ td a:hover { color: var(--sf-blue-dark); text-decoration: underline; }
 }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 .loader-text { margin-top: 20px; font-size: 1.2em; font-weight: bold; color: var(--sf-blue-dark); }
+/* En oscuro el velo del loader se oscurece (en claro es blanco translúcido). */
+:root[data-theme="dark"] .loader-overlay { background-color: rgba(0, 0, 0, 0.6); }
+:root[data-theme="dark"] .modal-loader-overlay { background-color: rgba(20, 22, 26, 0.85); }
 .app-container.app-locked { filter: blur(5px); pointer-events: none; user-select: none; }
 .modal-overlay { background-color: rgba(8, 28, 59, 0.45); }
 .modal-content {
-  background-color: #fff; padding: 24px; border-radius: 10px;
+  background-color: var(--sf-surface); padding: 24px; border-radius: 10px;
   width: 80%; max-width: 500px; box-shadow: var(--sf-shadow-modal);
   position: relative;
 }
@@ -870,7 +956,7 @@ td a:hover { color: var(--sf-blue-dark); text-decoration: underline; }
     position: fixed;
     bottom: 25px;
     left: 25px;
-    background-color: #ffffff;
+    background-color: var(--sf-surface);
     border-radius: 8px;
     box-shadow: var(--sf-shadow-menu);
     z-index: 10001;
@@ -993,7 +1079,7 @@ td a:hover { color: var(--sf-blue-dark); text-decoration: underline; }
     bottom: 2px;     /* 2px desde el borde inferior */
     right: 20px;     /* 20px desde el borde derecho */
     font-size: 0.75em; /* Texto pequeño */
-    color: #a0a0a0;    /* Un gris suave */
+    color: var(--sf-text-muted);    /* Un gris suave */
     user-select: none; /* Evita que el texto se pueda seleccionar */
     pointer-events: none; /* Hace que el texto sea 'invisible' a los clics */
     z-index: 99999;  /* Se asegura de que esté por encima de casi todo */
@@ -1041,7 +1127,7 @@ td a:hover { color: var(--sf-blue-dark); text-decoration: underline; }
     padding: 5px 15px 5px 5px;
     border: 1px solid var(--sf-border);
     border-radius: 5px;
-    background-color: #fff;
+    background-color: var(--sf-surface);
 }
 
 /* Estilos para el Journey Analyzer Colapsable */
@@ -1065,7 +1151,7 @@ td a:hover { color: var(--sf-blue-dark); text-decoration: underline; }
 }
 
 .analyzer-collapsible-header:hover {
-    background-color: #f0f0f0;
+    background-color: var(--sf-hover);
 }
 
 .analyzer-collapsible.active .analyzer-collapsible-header {
@@ -1134,7 +1220,7 @@ td a:hover { color: var(--sf-blue-dark); text-decoration: underline; }
 }
 
 .sql-toggle-btn:hover {
-    background-color: #f0f0f0;
+    background-color: var(--sf-hover);
 }
 
 /* Contenedor unificado para SQL y JS (estilo code-block de referencia) */

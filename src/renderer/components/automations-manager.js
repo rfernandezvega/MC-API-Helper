@@ -8,10 +8,10 @@ import * as logger from '../ui/logger.js';
 import * as calendar from './calendar.js';
 import { escapeHtml, formatDate } from '../ui/format-utils.js';
 import { createTableSorter, createPaginator, renderStatusBadge } from '../ui/table-utils.js';
+import { getRowsPerPage } from './settings.js';
 
 // --- 1. ESTADO DEL MÓDULO ---
 let fullAutomationList = [];
-const ITEMS_PER_PAGE = 15;
 
 // Controladores reutilizables de ordenación y paginación (WP-4/WP-5), instanciados en
 // init(). La ordenación inicial se mantiene: 'lastRunTime' (fecha) descendente.
@@ -177,7 +177,7 @@ export function init(dependencies) {
             prevBtn: elements.prevPageBtnAutomations,
             nextBtn: elements.nextPageBtnAutomations
         },
-        { itemsPerPage: ITEMS_PER_PAGE, onPageChange: renderFilteredTable }
+        { itemsPerPage: () => getRowsPerPage('automations'), onPageChange: renderFilteredTable }
     );
 
     // Si el input de página queda vacío al perder el foco, volvemos a la página 1

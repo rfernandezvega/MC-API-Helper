@@ -6,6 +6,28 @@ import elements from '../ui/dom-elements.js';
 let selectedRow = null;
 
 /**
+ * Devuelve el HTML de un botón conmutable (PK o Requerido) que sustituye al
+ * checkbox: es más cómodo de pulsar. El estado se guarda en la clase .active.
+ * @param {string} kind - 'pk' o 'req' (define la clase específica).
+ * @param {boolean} active - Si arranca marcado.
+ * @returns {string}
+ */
+function fieldToggleHtml(kind, active) {
+    return `<button type="button" class="field-toggle ${kind}-toggle${active ? ' active' : ''}">${active ? 'Sí' : 'No'}</button>`;
+}
+
+/**
+ * Cambia el estado de un botón conmutable de campo y actualiza su texto.
+ * @param {HTMLButtonElement} btn
+ * @param {boolean} [force] - Estado a forzar; si se omite, alterna.
+ */
+function toggleFieldButton(btn, force) {
+    const active = force !== undefined ? force : !btn.classList.contains('active');
+    btn.classList.toggle('active', active);
+    btn.textContent = active ? 'Sí' : 'No';
+}
+
+/**
  * Añade una nueva fila vacía a la tabla de campos.
  */
 function addRow(selectIt = true) {
@@ -25,8 +47,8 @@ function addRow(selectIt = true) {
         </select></td>
         <td contenteditable="true"></td>
         <td contenteditable="true"></td>
-        <td><input type="checkbox" class="pk-checkbox"></td>
-        <td><input type="checkbox" class="req-checkbox"></td>
+        <td>${fieldToggleHtml('pk', false)}</td>
+        <td>${fieldToggleHtml('req', false)}</td>
         <button class="delete-row-btn" title="Eliminar fila">×</button>
     `;
     
@@ -107,6 +129,15 @@ export function init() {
                 selectedRow = null;
             }
             targetRow.remove();
+        } else if (e.target.matches('.field-toggle')) {
+            // Alterna el botón PK/Requerido. Al marcar PK, se marca Requerido
+            // automáticamente (una PK siempre es obligatoria).
+            toggleFieldButton(e.target);
+            if (e.target.classList.contains('pk-toggle') && e.target.classList.contains('active')) {
+                const reqBtn = targetRow.querySelector('.req-toggle');
+                if (reqBtn) toggleFieldButton(reqBtn, true);
+            }
+            selectRow(targetRow);
         } else {
             selectRow(targetRow);
         }
@@ -178,8 +209,8 @@ export function populate(fieldsData) {
             </select></td>
             <td contenteditable="true">${field.length || ''}</td>
             <td contenteditable="true">${field.defaultValue || ''}</td>
-            <td><input type="checkbox" class="pk-checkbox" ${field.isPrimaryKey ? 'checked' : ''}></td>
-            <td><input type="checkbox" class="req-checkbox" ${field.isRequired ? 'checked' : ''}></td>
+            <td>${fieldToggleHtml('pk', !!field.isPrimaryKey)}</td>
+            <td>${fieldToggleHtml('req', !!field.isRequired)}</td>
             <button class="delete-row-btn" title="Eliminar fila">×</button>
         `;
         const typeSelect = newRow.querySelector('.type-select');
@@ -201,8 +232,8 @@ export function getFieldsData() {
             type: row.querySelector('.type-select').value,
             length: row.cells[2].textContent.trim(),
             defaultValue: row.cells[3].textContent.trim(),
-            isPrimaryKey: row.querySelector('.pk-checkbox').checked,
-            isRequired: row.querySelector('.req-checkbox').checked,
+            isPrimaryKey: row.querySelector('.pk-toggle').classList.contains('active'),
+            isRequired: row.querySelector('.req-toggle').classList.contains('active'),
         };
         if (field.name && field.type) data.push(field);
     });

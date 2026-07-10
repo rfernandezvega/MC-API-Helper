@@ -43,9 +43,14 @@
 }
 /* Focus unificado: borde azul, sin box-shadow */
 #query-selection-table td[contenteditable="true"]:focus {
-  background-color: #fff;
+  background-color: var(--sf-surface);
   outline: 2px solid var(--sf-blue);
 }
 #query-selection-table td.name-mismatch {
-  background-color: #f8bcc5; /* Un rojo muy sutil */
+  background-color: #f8bcc5; /* Un rojo muy sutil (pastel danger) */
+}
+/* En tema oscuro el resaltado de desajuste usa el par danger oscuro/claro. */
+:root[data-theme="dark"] #query-selection-table td.name-mismatch {
+  background-color: #3d1f1c;
+  color: #f0938c;
 }

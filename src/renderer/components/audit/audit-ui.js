@@ -36,6 +36,32 @@ export const CALLOUT_STYLES = {
     success: { bg: '#e6f6e6', fg: '#1b5e20', accent: AUDIT_PALETTE.green },
 };
 
+/** Clase CSS por tipo de callout (los colores viven en common.css con soporte de tema). */
+const CALLOUT_CLASS = {
+    danger: 'audit-callout-danger', warning: 'audit-callout-warning',
+    info: 'audit-callout-info', success: 'audit-callout-success',
+};
+
+/**
+ * Mapea un HEX de AUDIT_PALETTE a su variable CSS theme-reactive (--audit-*),
+ * para que las tarjetas/barras del dashboard se relean bien en modo oscuro
+ * aunque el HTML esté cacheado. Si el color no es de la paleta, se deja tal cual.
+ * El PDF NO usa esto (imprime sobre papel blanco con los HEX de AUDIT_PALETTE).
+ */
+const HEX_TO_VAR = {
+    [AUDIT_PALETTE.green]:  'var(--audit-green)',
+    [AUDIT_PALETTE.red]:    'var(--audit-red)',
+    [AUDIT_PALETTE.orange]: 'var(--audit-orange)',
+    [AUDIT_PALETTE.blue]:   'var(--audit-blue)',
+    [AUDIT_PALETTE.blueDark]: 'var(--audit-blue)',
+    [AUDIT_PALETTE.teal]:   'var(--audit-teal)',
+    [AUDIT_PALETTE.purple]: 'var(--audit-purple)',
+    [AUDIT_PALETTE.gray]:   'var(--audit-gray)',
+};
+function themeColor(hex) {
+    return HEX_TO_VAR[(hex || '').toLowerCase()] || hex;
+}
+
 /**
  * Formatea una fecha de SFMC como dd/mm/aaaa hh:mm (sin segundos, con cero a la izquierda).
  * Se mantiene esta variante local en vez de ui/format-utils.formatDate porque el formato NO
@@ -95,7 +121,7 @@ export function buildKpiRow(items) {
             ? `data-drill="${drillKey}" class="drillable audit-kpi-card" title="Ver detalle"`
             : 'class="audit-kpi-card"';
         return `<div ${drillAttr}>
-            <div class="audit-kpi-value" style="color:${color};">${value}</div>
+            <div class="audit-kpi-value" style="color:${themeColor(color)};">${value}</div>
             <div class="audit-kpi-label">${label}</div>
         </div>`;
     }).join('');
@@ -111,8 +137,8 @@ export function buildKpiRow(items) {
  */
 export function buildCallout(callout) {
     const { type = 'info', title = '', message = '' } = callout || {};
-    const s = CALLOUT_STYLES[type] || CALLOUT_STYLES.info;
-    return `<div class="audit-callout" style="background:${s.bg}; color:${s.fg};">` +
+    const cls = CALLOUT_CLASS[type] || CALLOUT_CLASS.info;
+    return `<div class="audit-callout ${cls}">` +
         `<span class="audit-callout-title">${title}</span><br>${message}</div>`;
 }
 
@@ -141,7 +167,8 @@ export function buildGrid(cards) {
  */
 export function buildMetricCard(title, help, bars, options = {}) {
     const barsHtml = (bars || []).map(({ label, value, total, color, drillKey }) => {
-        const resolvedColor = color || resolveBarColor(label);
+        // Color theme-reactive para la barra (se relee bien en oscuro aunque esté cacheado).
+        const barColor = themeColor(color || resolveBarColor(label));
         const pct       = total > 0 ? Math.min(100, Math.round((value / total) * 100)) : 0;
         const drillAttr = drillKey
             ? `data-drill="${drillKey}" class="drillable-bar audit-bar-row" title="Ver detalle"`
@@ -149,9 +176,9 @@ export function buildMetricCard(title, help, bars, options = {}) {
         return `<div ${drillAttr}>
             <div class="audit-bar-label" title="${escapeHtml(label)}">${escapeHtml(label)}</div>
             <div class="audit-bar-track">
-                <div class="audit-bar-fill" style="background:${resolvedColor}; width:${pct}%;"></div>
+                <div class="audit-bar-fill" style="background:${barColor}; width:${pct}%;"></div>
             </div>
-            <div class="audit-bar-value" style="color:${resolvedColor};">${value}</div>
+            <div class="audit-bar-value" style="color:${barColor};">${value}</div>
             <div class="audit-bar-pct">${pct}%</div>
         </div>`;
     }).join('');

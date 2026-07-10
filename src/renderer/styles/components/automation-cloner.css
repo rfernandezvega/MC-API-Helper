@@ -69,7 +69,7 @@
 }
 
 #automationClonerStepsContainer td.folder-cell:hover {
-    background-color: #f5faff;
+    background-color: var(--sf-selected);
     text-decoration: underline;
 }
 

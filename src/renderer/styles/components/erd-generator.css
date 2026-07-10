@@ -20,8 +20,8 @@
 .erd-wrap { background: var(--sf-bg); flex: 1; position: relative; overflow: auto; }
 
 /* Tablas más compactas */
-.erd-tbl { 
-    position:absolute; background:#fff; border:1px solid var(--sf-border); border-radius:8px;
+.erd-tbl {
+    position:absolute; background:var(--sf-surface); border:1px solid var(--sf-border); border-radius:8px;
     min-width:180px; max-width:240px; cursor:grab; user-select:none; 
     box-shadow:0 2px 6px rgba(58,111,168,0.10); transition:box-shadow .2s,border-color .2s; 
     overflow:hidden; z-index: 10;
@@ -49,15 +49,15 @@
 .erd-tbl .ftype { color:var(--sf-text-muted); font-size:.6rem; flex-shrink:0; }
 
 /* Tooltip corregido para textos largos */
-.erd-tt { 
-    position:fixed; z-index:10000; background:#fff; border:1px solid var(--sf-blue); border-radius:6px;
+.erd-tt {
+    position:fixed; z-index:10000; background:var(--sf-surface); border:1px solid var(--sf-blue); border-radius:6px;
     padding:.6rem .8rem; font-size:.7rem; box-shadow:0 6px 20px rgba(58,111,168,.25); 
     width: auto; min-width: 200px; max-width:350px; pointer-events:none; 
 }
 .erd-tt .tt-ttl { font-weight:bold; color:var(--sf-blue-dark); margin-bottom:.3rem; font-size:.75rem; border-bottom:1px solid var(--sf-border); padding-bottom:.3rem; overflow-wrap: break-word; }
 .erd-tt .tt-row { color:var(--sf-text-muted); margin-top:.3rem; line-height:1.4; word-break: break-word; overflow-wrap: break-word; }
 
-.erd-legend { position:absolute; bottom:1rem; right:1rem; background:#fff; border:1px solid var(--sf-border); border-radius:6px; padding:.5rem .8rem; display:flex; flex-direction:column; gap:.4rem; font-size:.65rem; box-shadow:0 2px 8px rgba(58,111,168,0.10); z-index:15; }
+.erd-legend { position:absolute; bottom:1rem; right:1rem; background:var(--sf-surface); border:1px solid var(--sf-border); border-radius:6px; padding:.5rem .8rem; display:flex; flex-direction:column; gap:.4rem; font-size:.65rem; box-shadow:0 2px 8px rgba(58,111,168,0.10); z-index:15; }
 .erd-legend .leg-ttl { color:var(--sf-blue-dark); font-size:.6rem; font-weight:bold; text-transform:uppercase; letter-spacing:.08em; }
 .erd-legend .leg-row { display:flex; align-items:center; gap:.4rem; color:var(--sf-text-muted); }
 .erd-legend .leg-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
@@ -115,7 +115,7 @@
     align-items: center;
     gap: 6px;
     font-size: 0.85rem;
-    color: #555;
+    color: var(--sf-text-soft);
     white-space: nowrap;
     cursor: pointer;
 }
@@ -145,7 +145,7 @@
     display: flex;
     flex-direction: column;
     min-height: 500px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--sf-border);
 }
 
 /* Barra de ayuda superior del lienzo. Sustituye a
@@ -153,7 +153,7 @@
    padding:.5rem 1.2rem; font-size:.72rem; color:#558ac7; flex-shrink:0". */
 .erd-canvas-hint {
     background: rgba(105, 163, 219, .1);
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--sf-border);
     padding: .5rem 1.2rem;
     font-size: .72rem;
     color: var(--sf-blue-dark);
@@ -172,3 +172,16 @@
     pointer-events: none;
     overflow: visible;
 }
+
+/* ===================================================================
+   Overrides de tema oscuro.
+   Las etiquetas de tipo de campo (.ftag.*) son pasteles claros; en oscuro
+   solo se oscurece el fondo al tinte del mismo matiz y se mantienen texto
+   y borde saturados (categorías fijas PK/FK/REF/CK que se leen en ambos
+   temas). Los colores de líneas, nodos y puntos de la leyenda son datos
+   del diagrama y se dejan intactos.
+   =================================================================== */
+:root[data-theme="dark"] .erd-tbl .ftag.pk  { background: #3d2f10; } /* naranja -> warning */
+:root[data-theme="dark"] .erd-tbl .ftag.fk  { background: #143a1c; } /* verde -> success */
+:root[data-theme="dark"] .erd-tbl .ftag.ref { background: #2a1f3d; } /* púrpura */
+:root[data-theme="dark"] .erd-tbl .ftag.ck  { background: #3d2f10; } /* ámbar -> warning */

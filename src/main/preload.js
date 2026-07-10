@@ -177,10 +177,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   saveGlobalConfigs: (configs) => ipcRenderer.invoke('save-global-configs', configs),
   loadGlobalConfigs: () => ipcRenderer.invoke('load-global-configs'),
-  saveCalendarCache: (data) => ipcRenderer.invoke('save-calendar-cache', data),
-  loadCalendarCache: (clientName) => ipcRenderer.invoke('load-calendar-cache', clientName),
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
   getSettings: () => ipcRenderer.invoke('get-settings'),
+  setZoom: (factor) => ipcRenderer.invoke('set-zoom', factor),
+  getCacheInfo: () => ipcRenderer.invoke('get-cache-info'),
+  clearCache: (key) => ipcRenderer.invoke('clear-cache', key),
+  deleteCacheFile: (catKey, fileName) => ipcRenderer.invoke('delete-cache-file', catKey, fileName),
   selectFolder: () => ipcRenderer.invoke('select-folder'),
   saveMultipleCsvs: (data) => ipcRenderer.invoke('save-multiple-csvs', data),
   

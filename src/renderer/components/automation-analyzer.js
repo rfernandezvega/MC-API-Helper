@@ -272,7 +272,7 @@ async function renderAnalysis(automation) {
                                 </div>
                             </div>`;
                     } else {
-                        detailsHtml += `<div style="color:#999; margin-top:5px; font-style:italic;">(Script vacío o sin código disponible)</div>`;
+                        detailsHtml += `<div style="color:var(--sf-text-muted); margin-top:5px; font-style:italic;">(Script vacío o sin código disponible)</div>`;
                     }
                 }
                 else if (act.objectTypeId === 43) { // Import
@@ -300,7 +300,7 @@ async function renderAnalysis(automation) {
                         const autos = ds.automations.map(a => `<li>${escapeHtml(a.automationName)} (Paso: ${escapeHtml(a.step)})</li>`).join('');
                         return `
                             <li class="ja-ds-item">
-                                <div class="ja-ds-name">${escapeHtml(ds.name)} <small style="color:#666; font-weight:normal;">[${escapeHtml(ds.type)}]</small></div>
+                                <div class="ja-ds-name">${escapeHtml(ds.name)} <small style="color:var(--sf-text-muted); font-weight:normal;">[${escapeHtml(ds.type)}]</small></div>
                                 <ul class="ja-ds-autos">${autos}</ul>
                             </li>`;
                     }).join('');

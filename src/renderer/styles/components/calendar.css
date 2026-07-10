@@ -65,8 +65,11 @@
 }
 .calendar-month td.weekend { background-color: var(--sf-bg-alt); }
 .calendar-month td.has-automation { background-color: #a2d9ff; font-weight: bold; }
+/* En tema oscuro el día con automatismos usa el par info oscuro/claro:
+   con el fondo claro original el número de día (texto claro) quedaba ilegible. */
+:root[data-theme="dark"] .calendar-month td.has-automation { background-color: #10344a; color: #7fc9f5; }
 .calendar-month td.selected { background-color: var(--sf-blue); color: white; }
-.calendar-month td:hover { background-color: #f0f0f0; }
+.calendar-month td:hover { background-color: var(--sf-hover); }
 
 #automation-list-header.clickable {
     cursor: pointer;

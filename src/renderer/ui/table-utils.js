@@ -188,6 +188,13 @@ export function createPaginator(els, opts) {
     const { pageInput, totalLabel, prevBtn, nextBtn } = els || {};
     const { itemsPerPage = 20, onPageChange } = opts || {};
 
+    // itemsPerPage puede ser un número fijo o una función (para que el tamaño de
+    // página configurable por el usuario se relea en cada render sin recrear el paginador).
+    const resolvePerPage = () => {
+        const n = typeof itemsPerPage === 'function' ? itemsPerPage() : itemsPerPage;
+        return Number(n) > 0 ? Number(n) : 20;
+    };
+
     let currentPage = 1;
     let totalPages = 1;
 
@@ -220,7 +227,7 @@ export function createPaginator(els, opts) {
      * @param {number} [currentPageArg] - Página a mostrar (por defecto, la actual).
      */
     const update = (totalItems, currentPageArg = currentPage) => {
-        totalPages = Math.ceil((totalItems || 0) / itemsPerPage) || 1;
+        totalPages = Math.ceil((totalItems || 0) / resolvePerPage()) || 1;
         currentPage = clamp(parseInt(currentPageArg, 10) || 1);
         refreshUI();
     };
@@ -258,8 +265,9 @@ export function createPaginator(els, opts) {
     const paginate = (array) => {
         const list = Array.isArray(array) ? array : [];
         update(list.length);
-        const start = (currentPage - 1) * itemsPerPage;
-        return list.slice(start, start + itemsPerPage);
+        const per = resolvePerPage();
+        const start = (currentPage - 1) * per;
+        return list.slice(start, start + per);
     };
 
     // Listeners de los controles: se enganchan una sola vez al crear el paginador.

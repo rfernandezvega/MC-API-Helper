@@ -10,6 +10,7 @@ import { formatCodeWithIndentation, highlightCloudPageCode, buildCodeViewer } fr
 import { searchAndShowDetail } from './content-finder.js';
 import { escapeHtml, formatDate } from '../ui/format-utils.js';
 import { createTableSorter, createPaginator } from '../ui/table-utils.js';
+import { getRowsPerPage } from './settings.js';
 
 // --- CONFIGURACIÓN CENTRAL DE LA VISTA ---
 // ===================================================================
@@ -143,8 +144,6 @@ const CONTENT_TYPES_CONFIG = [
         ]
     }    
 ];
-
-const ITEMS_PER_PAGE = 15;
 
 // --- ESTADO DEL MÓDULO ---
 let fullContentList = [];
@@ -484,7 +483,7 @@ function createDynamicTabs() {
                 prevBtn: document.getElementById(`prev-page-${tab.id}`),
                 nextBtn: document.getElementById(`next-page-${tab.id}`)
             },
-            { itemsPerPage: ITEMS_PER_PAGE, onPageChange: renderAllTabs }
+            { itemsPerPage: () => getRowsPerPage('content'), onPageChange: renderAllTabs }
         );
     });
 
@@ -731,7 +730,7 @@ function actionBtnsHtml(item) {
     if ([207, 208, 209, 230].includes(item.assetTypeId) && getJourneysForContent(item).length > 0) {
         html += `<span class="cp-journeys-btn" data-content-id="${item.id}" title="Journeys donde se usa"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#8e44ad;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></span>`;
     }
-    html += `<span class="cp-analyze-btn" data-content-id="${item.id}" title="Analizar en Buscadores"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#558ac7;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>`;
+    html += `<span class="cp-analyze-btn" data-content-id="${item.id}" title="Analizar en Buscadores"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:var(--sf-blue-dark);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>`;
     return html;
 }
 
@@ -979,15 +978,15 @@ const DRAWER_TH = 'position:sticky; top:0; z-index:2; background:var(--sf-blue);
  */
 function buildComponentsTableHtml(comps) {
     const inlineTag = '<span style="font-size:0.72em; color:#fff; background:#9b59b6; border-radius:3px; padding:0 5px; margin-left:6px;">inline</span>';
-    const rows = comps.map(c => `<tr style="border-bottom:1px solid #eee;">
-            <td style="padding:5px 8px; color:#888;">${c.id || '---'}</td>
+    const rows = comps.map(c => `<tr style="border-bottom:1px solid var(--sf-border);">
+            <td style="padding:5px 8px; color:var(--sf-text-muted);">${c.id || '---'}</td>
             <td style="padding:5px 8px;">${escapeHtml(c.name)}${c.inline ? inlineTag : ''}</td>
-            <td style="padding:5px 8px; color:#666;">${escapeHtml(c.type) || '---'}</td>
-            <td style="padding:5px 8px; color:#888; font-size:0.95em;">${escapeHtml(c.ref) || '---'}</td>
+            <td style="padding:5px 8px; color:var(--sf-text-muted);">${escapeHtml(c.type) || '---'}</td>
+            <td style="padding:5px 8px; color:var(--sf-text-muted); font-size:0.95em;">${escapeHtml(c.ref) || '---'}</td>
         </tr>`).join('');
     return `<div style="margin-top:12px; flex-shrink:0;">
         <div class="code-header">Componentes (${comps.length})</div>
-        <div style="overflow:auto; max-height:240px; border:1px solid #e1e4e8; border-top:none; border-radius:0 0 4px 4px;">
+        <div style="overflow:auto; max-height:240px; border:1px solid var(--sf-border); border-top:none; border-radius:0 0 4px 4px;">
             <table style="width:100%; border-collapse:separate; border-spacing:0; font-size:0.85em;">
                 <thead><tr><th style="${DRAWER_TH}">ID</th><th style="${DRAWER_TH}">Nombre</th><th style="${DRAWER_TH}">Tipo</th><th style="${DRAWER_TH}">Referenciado por</th></tr></thead>
                 <tbody>${rows}</tbody>
@@ -1000,13 +999,13 @@ function buildComponentsTableHtml(comps) {
  * Construye la tabla de Data Extensions referenciadas (Data Extension, Funciones) con altura acotada.
  */
 function buildDEsTableHtml(des) {
-    const rows = des.map(d => `<tr style="border-bottom:1px solid #eee;">
+    const rows = des.map(d => `<tr style="border-bottom:1px solid var(--sf-border);">
             <td style="padding:5px 8px;">${escapeHtml(d.de)}</td>
-            <td style="padding:5px 8px; color:#666;">${escapeHtml(d.functions)}</td>
+            <td style="padding:5px 8px; color:var(--sf-text-muted);">${escapeHtml(d.functions)}</td>
         </tr>`).join('');
     return `<div style="margin-top:12px; flex-shrink:0;">
         <div class="code-header">Data Extensions (${des.length})</div>
-        <div style="overflow:auto; max-height:180px; border:1px solid #e1e4e8; border-top:none; border-radius:0 0 4px 4px;">
+        <div style="overflow:auto; max-height:180px; border:1px solid var(--sf-border); border-top:none; border-radius:0 0 4px 4px;">
             <table style="width:100%; border-collapse:separate; border-spacing:0; font-size:0.85em;">
                 <thead><tr><th style="${DRAWER_TH}">Data Extension</th><th style="${DRAWER_TH}">Funciones</th></tr></thead>
                 <tbody>${rows}</tbody>
@@ -1421,9 +1420,9 @@ function openReferencesDetail(contentId) {
 
     let html = '';
     if (references.length === 0) {
-        html = '<div style="padding:20px; color:#999; text-align:center;">Este componente no está referenciado por ningún otro contenido.</div>';
+        html = '<div style="padding:20px; color:var(--sf-text-muted); text-align:center;">Este componente no está referenciado por ningún otro contenido.</div>';
     } else {
-        html = `<div style="padding:8px 12px; font-size:0.85em; color:#666; border-bottom:1px solid #e2e8f0;">${references.length} referencia${references.length !== 1 ? 's' : ''} encontrada${references.length !== 1 ? 's' : ''}</div>`;
+        html = `<div style="padding:8px 12px; font-size:0.85em; color:var(--sf-text-muted); border-bottom:1px solid var(--sf-border);">${references.length} referencia${references.length !== 1 ? 's' : ''} encontrada${references.length !== 1 ? 's' : ''}</div>`;
         html += `<div style="overflow:auto; flex-grow:1;"><table style="width:100%; border-collapse:separate; border-spacing:0;">
             <thead><tr>
                 <th style="position:sticky; top:0; z-index:2; background:var(--sf-blue); color:#fff; padding:8px; text-align:left;">ID</th>
@@ -1432,11 +1431,11 @@ function openReferencesDetail(contentId) {
                 <th style="position:sticky; top:0; z-index:2; background:var(--sf-blue); color:#fff; padding:8px; text-align:left;">Cómo se referencia</th>
             </tr></thead><tbody>`;
         for (const ref of references) {
-            html += `<tr style="border-bottom:1px solid #eee;">
+            html += `<tr style="border-bottom:1px solid var(--sf-border);">
                 <td style="padding:6px 8px;">${ref.id}</td>
                 <td style="padding:6px 8px;">${escapeHtml(ref.name)}</td>
                 <td style="padding:6px 8px;">${escapeHtml(ref.type)}</td>
-                <td style="padding:6px 8px; font-size:0.85em; color:#888;">${escapeHtml(ref.refType)}</td>
+                <td style="padding:6px 8px; font-size:0.85em; color:var(--sf-text-muted);">${escapeHtml(ref.refType)}</td>
             </tr>`;
         }
         html += '</tbody></table></div>';
@@ -1459,9 +1458,9 @@ function openJourneysDetail(contentId) {
 
     let html = '';
     if (journeys.length === 0) {
-        html = '<div style="padding:20px; color:#999; text-align:center;">No se ha encontrado este contenido en ningún journey cacheado.</div>';
+        html = '<div style="padding:20px; color:var(--sf-text-muted); text-align:center;">No se ha encontrado este contenido en ningún journey cacheado.</div>';
     } else {
-        html = `<div style="padding:8px 12px; font-size:0.85em; color:#666; border-bottom:1px solid #e2e8f0;">${journeys.length} journey${journeys.length !== 1 ? 's' : ''} encontrado${journeys.length !== 1 ? 's' : ''}</div>`;
+        html = `<div style="padding:8px 12px; font-size:0.85em; color:var(--sf-text-muted); border-bottom:1px solid var(--sf-border);">${journeys.length} journey${journeys.length !== 1 ? 's' : ''} encontrado${journeys.length !== 1 ? 's' : ''}</div>`;
         html += `<div style="overflow:auto; flex-grow:1;"><table style="width:100%; border-collapse:separate; border-spacing:0;">
             <thead><tr>
                 <th style="position:sticky; top:0; z-index:2; background:var(--sf-blue); color:#fff; padding:8px; text-align:left;">Journey</th>
@@ -1469,7 +1468,7 @@ function openJourneysDetail(contentId) {
                 <th style="position:sticky; top:0; z-index:2; background:var(--sf-blue); color:#fff; padding:8px; text-align:left;">Estado</th>
             </tr></thead><tbody>`;
         for (const j of journeys) {
-            html += `<tr style="border-bottom:1px solid #eee;">
+            html += `<tr style="border-bottom:1px solid var(--sf-border);">
                 <td style="padding:6px 8px;">${escapeHtml(j.name)}</td>
                 <td style="padding:6px 8px;">${j.version != null ? j.version : '---'}</td>
                 <td style="padding:6px 8px;">${escapeHtml(j.status) || '---'}</td>
@@ -1497,11 +1496,11 @@ function updateJourneyCacheDate(dateString) {
     if (!elements.contentJourneyCacheDate) return;
     if (!dateString) {
         elements.contentJourneyCacheDate.textContent = 'Sin caché de Journeys';
-        elements.contentJourneyCacheDate.style.color = '#dc3545';
+        elements.contentJourneyCacheDate.style.color = 'var(--sf-red)';
         return;
     }
     const date = new Date(dateString);
-    elements.contentJourneyCacheDate.style.color = '#bbb';
+    elements.contentJourneyCacheDate.style.color = 'var(--sf-text-muted)';
     elements.contentJourneyCacheDate.textContent = `Journeys: ${date.toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })}`;
 }
 

@@ -95,6 +95,11 @@
     display: inline-block;
     letter-spacing: 0.3px;
 }
+/* Badge informativo (pastel): apagado en tema oscuro para que no cante. */
+:root[data-theme="dark"] .changelog-badge {
+    background-color: #10344a;
+    color: #7fc9f5;
+}
 
 .changelog-date {
     color: var(--sf-text-muted);
@@ -108,7 +113,7 @@
     margin: 0;
     padding: 10px 14px 12px 18px;
     list-style: none;
-    background-color: #fff;
+    background-color: var(--sf-surface);
     border-top: 1px solid var(--sf-border);
 }
 .changelog-items li {
@@ -131,3 +136,7 @@
 .changelog-tag.new      { background-color: #d4edda; color: #155724; }
 .changelog-tag.improved { background-color: #cce5ff; color: #004085; }
 .changelog-tag.fix      { background-color: #fff3cd; color: #856404; }
+/* Etiquetas pastel: pares oscuro/claro en tema oscuro (success / info / warning). */
+:root[data-theme="dark"] .changelog-tag.new      { background-color: #143a1c; color: #82d989; }
+:root[data-theme="dark"] .changelog-tag.improved { background-color: #10344a; color: #7fc9f5; }
+:root[data-theme="dark"] .changelog-tag.fix      { background-color: #3d2f10; color: #f0c066; }

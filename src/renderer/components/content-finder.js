@@ -464,19 +464,19 @@ function createCollapsibleBlock(title, innerHtml, id, expanded, maxHeight) {
     return `
         <div id="container-${id}" style="margin-bottom:10px; border-radius:4px;">
             <div class="content-collapsible-header" style="
-                background-color:${expanded ? 'var(--sf-blue)' : '#f1f5f9'};
-                color:${expanded ? '#fff' : '#475569'};
+                background-color:${expanded ? 'var(--sf-blue)' : 'var(--sf-bg-alt)'};
+                color:${expanded ? '#fff' : 'var(--sf-text-soft)'};
                 padding:12px 15px; cursor:pointer; display:flex;
                 justify-content:space-between; align-items:center;
-                font-weight:bold; border:1px solid ${expanded ? 'var(--sf-blue)' : '#e2e8f0'}; border-radius:4px 4px 0 0;
+                font-weight:bold; border:1px solid ${expanded ? 'var(--sf-blue)' : 'var(--sf-border)'}; border-radius:4px 4px 0 0;
                 user-select:none; transition:background-color 0.2s;">
                 <span>${title}</span>
                 <span style="font-size:0.8em;">${expanded ? '▼' : '▶'}</span>
             </div>
             <div class="content-collapsible-body" style="
                 display:${expanded ? 'block' : 'none'};
-                background:#fff;
-                border:1px solid #e2e8f0; border-top:none;
+                background:var(--sf-surface);
+                border:1px solid var(--sf-border); border-top:none;
                 border-radius:0 0 4px 4px; ${scrollStyle}">
                 ${innerHtml}
             </div>
@@ -496,9 +496,9 @@ function initCollapsibleListeners(container) {
 
             if (isOpen) {
                 body.style.display = 'none';
-                this.style.backgroundColor = '#f1f5f9';
-                this.style.color = '#475569';
-                this.style.borderColor = '#e2e8f0';
+                this.style.backgroundColor = 'var(--sf-bg-alt)';
+                this.style.color = 'var(--sf-text-soft)';
+                this.style.borderColor = 'var(--sf-border)';
                 icon.textContent = '▶';
             } else {
                 body.style.display = 'block';
@@ -563,7 +563,7 @@ function renderTree(rootAsset, components) {
         }
     });
 
-    const treeContent = `<pre style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-size: 0.85em; line-height: 1.5; overflow-x: auto; margin: 0; border: 1px solid #eee; white-space: pre; font-family: 'Consolas', 'Monaco', monospace;">${lines.join('\n')}</pre>`;
+    const treeContent = `<pre style="background: var(--sf-bg-alt); padding: 15px; border-radius: 5px; font-size: 0.85em; line-height: 1.5; overflow-x: auto; margin: 0; border: 1px solid var(--sf-border); white-space: pre; font-family: 'Consolas', 'Monaco', monospace;">${lines.join('\n')}</pre>`;
 
     elements.contentTreeWrapper.innerHTML = createCollapsibleBlock(
         'Estructura del Contenido',
@@ -580,7 +580,7 @@ function renderTree(rootAsset, components) {
  */
 function buildComponentsTable(components) {
     if (components.length === 0) {
-        return '<p style="color:#888;">No se encontraron componentes hijos.</p>';
+        return '<p style="color:var(--sf-text-muted);">No se encontraron componentes hijos.</p>';
     }
     let html = `<table class="finder-detail-table">
         <thead><tr>
@@ -592,8 +592,8 @@ function buildComponentsTable(components) {
             <th>Referenciado por</th>
         </tr></thead><tbody>`;
     components.forEach((c, index) => {
-        const refBy = c.referencedBy ? `<small style="color:#888;">${c.referencedBy}</small>` : '---';
-        const bgColor = c.depth === 0 ? '#eef3f8' : '#ffffff';
+        const refBy = c.referencedBy ? `<small style="color:var(--sf-text-muted);">${c.referencedBy}</small>` : '---';
+        const bgColor = c.depth === 0 ? 'var(--sf-bg-alt)' : 'var(--sf-surface)';
         const paddingLeft = 8 + (c.depth * 16);
         const codeBtn = c.content
             ? `<span class="cp-inspect-btn" data-comp-index="${index}" title="Ver código"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>`
@@ -617,7 +617,7 @@ function buildComponentsTable(components) {
  */
 function buildDEsTable(des) {
     if (des.length === 0) {
-        return '<p style="color:#888;">No se detectaron referencias a Data Extensions en el código.</p>';
+        return '<p style="color:var(--sf-text-muted);">No se detectaron referencias a Data Extensions en el código.</p>';
     }
     let html = `<table class="finder-detail-table">
         <thead><tr>
@@ -629,7 +629,7 @@ function buildDEsTable(des) {
         html += `<tr>
             <td>${escapeHtml(d.deName)}</td>
             <td><small>${escapeHtml(d.functions)}</small></td>
-            <td><small style="color:#888;">${escapeHtml(d.sources)}</small></td>
+            <td><small style="color:var(--sf-text-muted);">${escapeHtml(d.sources)}</small></td>
         </tr>`;
     });
     html += '</tbody></table>';

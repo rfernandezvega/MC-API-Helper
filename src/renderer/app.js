@@ -44,6 +44,7 @@ import * as erdGenerator from './components/erd-generator.js';
 import * as sendManagement from './components/sendManagement.js';
 import * as auditManager from './components/audit-manager.js';
 import * as journeyErrors from './components/journey-errors.js';
+import * as settings from './components/settings.js';                   // Ajustes de la app (tema claro/oscuro).
 
 
 
@@ -81,8 +82,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		// Mapeo inverso para encontrar el 'data-macro' que corresponde a la sección activa.
 		const sectionToMacroMap = {
+			'ajustes-section': 'ajustes',
 			'documentacion-section': 'docu',
-			'configuracion-apis-section': 'configuracionAPIs',			
+			'configuracion-apis-section': 'configuracionAPIs',
 			'buscadores-section': 'buscadores',
 			'clonador-queries-section': 'clonadorQueries',
 			'gestion-automatismos-section': 'gestionAutomatismos',
@@ -379,19 +381,24 @@ document.addEventListener('DOMContentLoaded', function () {
 				e.preventDefault();
 				const macro = e.target.getAttribute('data-macro');
 				// Mapeo de vistas simples que solo necesitan mostrarse.
-				const sectionMap = { 
-                    'docu': 'documentacion-section', 'configuracionAPIs': 'configuracion-apis-section', 
-                    'configuracionDE': 'configuracion-de-section', 'gestionCampos': 'configuracion-campos-section', 
-					'validadorEmail': 'email-validator-section', 'buscadores': 'buscadores-section', 
+				const sectionMap = {
+                    'docu': 'documentacion-section', 'configuracionAPIs': 'configuracion-apis-section',
+                    'configuracionDE': 'configuracion-de-section', 'gestionCampos': 'configuracion-campos-section',
+					'validadorEmail': 'email-validator-section', 'buscadores': 'buscadores-section',
 					'clonadorQueries': 'clonador-queries-section'
                 };
 				const macroToActionMap = { //Un mapa para vistas simples
 					'carpetas': 'carpetas-section'
 				};
-				
+
 				if (sectionMap[macro]) {
 					showSection(sectionMap[macro]);
-				} 
+				}
+				// Ajustes: refresca clientes y tamaños de caché cada vez que se abre.
+				else if (macro === 'ajustes') {
+					showSection('ajustes-section');
+					settings.view();
+				}
 				// Vistas complejas que necesitan cargar datos antes de mostrarse.
 				else if (macro === 'campos') {
                     showSection('campos-section');
@@ -546,6 +553,8 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	async function initializeApp() {
 		initDomElements();
+		// Aplica cuanto antes el tema guardado (claro/oscuro) para evitar parpadeo.
+		await settings.applyStoredTheme();
 		setupEventListeners();
 
 		elements.licenseModal.style.display = 'flex';
@@ -631,9 +640,10 @@ document.addEventListener('DOMContentLoaded', function () {
 		erdGenerator.init({ getAuthenticatedConfig });
 		sendManagement.init({ getAuthenticatedConfig });
 		auditManager.init({ getAuthenticatedConfig });
+		settings.init();
 
-		// ESPERAMOS A QUE CARGUE EL CLIENTE POR DEFECTO (VACÍO AL INICIO)
-		await orgManager.loadAndSyncClientConfig('');
+		// Carga el cliente + BU por defecto configurados en Ajustes (o ninguno si no hay).
+		await orgManager.loadAndSyncClientConfig(settings.getDefaultClient(), settings.getDefaultBU());
 
 		initializeCollapsibleMenus();
 

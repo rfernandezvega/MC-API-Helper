@@ -307,7 +307,9 @@
     text-align: center;
     min-width: 140px;
     transition: all 0.2s;
-    background-color: #f9f9f9;
+    background-color: var(--sf-bg-alt);
+    color: var(--sf-text);
+    border: 1px solid var(--sf-border);
 }
 .type-card:hover {
     border-color: var(--sf-blue);
@@ -330,7 +332,7 @@
 /* Contador de la pestaña (número pequeño sobre el nombre) */
 .cm-tab-count {
     font-size: 0.75em;
-    color: #999;
+    color: var(--sf-text-muted);
     font-weight: normal;
 }
 /* Columna de información (total + fechas de caché) a la derecha de las pestañas */
@@ -346,11 +348,11 @@
 }
 .cm-info-hint {
     font-size: 0.85em;
-    color: #999;
+    color: var(--sf-text-muted);
 }
 .cm-info-date {
     font-size: 0.75em;
-    color: #bbb;
+    color: var(--sf-text-muted);
 }
 
 /* Texto de error en celdas/párrafos de resultados. Compartido con el Buscador
@@ -358,3 +360,23 @@
 .cf-error {
     color: var(--sf-red);
 }
+
+/* ===================================================================
+   MODO OSCURO: botones de acción de la tabla (pasteles). Se conserva el
+   valor claro por defecto y aquí se sustituye por tintes oscuros que
+   preservan el código de color (azul/verde/naranja/morado). Los iconos
+   SVG saturados siguen leyéndose sobre estos fondos.
+   =================================================================== */
+:root[data-theme="dark"] .cp-analyze-btn { background-color: #17324a; border-color: #2a5a86; }
+:root[data-theme="dark"] .cp-analyze-btn:hover { background-color: #1d466b; }
+
+:root[data-theme="dark"] .cp-resolve-btn,
+:root[data-theme="dark"] .cp-preview-btn { background-color: #163a20; border-color: #2c6b3a; }
+:root[data-theme="dark"] .cp-resolve-btn:hover,
+:root[data-theme="dark"] .cp-preview-btn:hover { background-color: #1e502c; }
+
+:root[data-theme="dark"] .cp-refs-btn { background-color: #3d2f10; border-color: #6b5320; }
+:root[data-theme="dark"] .cp-refs-btn:hover { background-color: #523f11; }
+
+:root[data-theme="dark"] .cp-journeys-btn { background-color: #2a1f3d; border-color: #4a3568; }
+:root[data-theme="dark"] .cp-journeys-btn:hover { background-color: #382a52; }

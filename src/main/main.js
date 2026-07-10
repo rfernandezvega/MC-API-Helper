@@ -27,6 +27,11 @@ app.disableHardwareAcceleration();
 
 // --- Variables de estado ---
 let mainWindow;
+
+// Límites de zoom de la ventana (setZoomFactor: 1 = 100%). Fuera de este rango
+// el diseño empieza a romperse, por eso se acota.
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 1.0;
 // Sesiones cacheadas por combinación cliente+BU. Clave: `${clientName}::${mid}`.
 // Un mismo cliente (tenant) puede tener varias BUs activas; cada una tiene su propio
 // access token (acuñado desde el refresh token compartido usando account_id=mid).
@@ -69,9 +74,17 @@ function createWindow() {
 
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
 
-    // Establecer zoom por defecto
+    // Aplica el zoom guardado por el usuario (o 0.85 por defecto) al cargar.
     mainWindow.webContents.on('did-finish-load', () => {
-        mainWindow.webContents.setZoomFactor(0.85); // Ajusta este valor (0.8, 0.85, 0.9, etc.)
+        let zoom = 0.85;
+        try {
+            const filePath = path.join(app.getPath('userData'), 'settings.json');
+            if (fs.existsSync(filePath)) {
+                const s = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+                if (typeof s.zoom === 'number') zoom = s.zoom;
+            }
+        } catch (e) { /* si falla, se usa el valor por defecto */ }
+        mainWindow.webContents.setZoomFactor(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom)));
     });
 }
 
@@ -236,31 +249,70 @@ ipcMain.handle('get-settings', (event) => {
     return fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf-8')) : {};
 });
 
-ipcMain.handle('save-calendar-cache', (event, { clientName, data }) => {
+// Cambia el zoom de la ventana en caliente (el renderer lo persiste en settings).
+ipcMain.handle('set-zoom', (event, factor) => {
+    const z = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Number(factor) || 0.85));
+    if (mainWindow) mainWindow.webContents.setZoomFactor(z);
+    return z;
+});
+
+// Categorías de caché de la app (carpetas dentro de userData). ClientCache agrupa
+// las cachés de Auditoría (audit_) y Cloud Pages (cloudpages_).
+const CACHE_DIRS = [
+    { key: 'contents',  label: 'Contenidos',            dir: 'ClientContents' },
+    { key: 'journeys',  label: 'Journeys',              dir: 'ClientJourneys' },
+    { key: 'clientcache', label: 'Auditoría y Cloud Pages', dir: 'ClientCache' }
+];
+
+// Devuelve, por cada categoría de caché, su tamaño total y la lista de ficheros
+// (cada fichero es la caché de un cliente/BU) con su tamaño, para mostrarlos en Ajustes.
+ipcMain.handle('get-cache-info', () => {
+    const userDataPath = app.getPath('userData');
+    return CACHE_DIRS.map(c => {
+        const dirPath = path.join(userDataPath, c.dir);
+        const files = [];
+        if (fs.existsSync(dirPath)) {
+            for (const name of fs.readdirSync(dirPath)) {
+                try {
+                    const st = fs.statSync(path.join(dirPath, name));
+                    if (st.isFile()) files.push({ name, sizeBytes: st.size });
+                } catch (e) { /* se ignora */ }
+            }
+        }
+        files.sort((a, b) => b.sizeBytes - a.sizeBytes);
+        const sizeBytes = files.reduce((s, f) => s + f.sizeBytes, 0);
+        return { key: c.key, label: c.label, sizeBytes, files };
+    });
+});
+
+// Borra el contenido de una categoría de caché (o de todas con key === 'all').
+ipcMain.handle('clear-cache', (event, key) => {
+    const userDataPath = app.getPath('userData');
+    const targets = key === 'all' ? CACHE_DIRS : CACHE_DIRS.filter(c => c.key === key);
+    for (const c of targets) {
+        const dirPath = path.join(userDataPath, c.dir);
+        if (!fs.existsSync(dirPath)) continue;
+        for (const entry of fs.readdirSync(dirPath)) {
+            try { fs.rmSync(path.join(dirPath, entry), { recursive: true, force: true }); } catch (e) { /* se ignora */ }
+        }
+    }
+    return true;
+});
+
+// Borra un fichero concreto de una categoría de caché. Valida el nombre para
+// evitar salir de la carpeta (path traversal).
+ipcMain.handle('delete-cache-file', (event, catKey, fileName) => {
+    const cat = CACHE_DIRS.find(c => c.key === catKey);
+    if (!cat || !fileName || /[\\/]|\.\./.test(fileName)) return false;
+    const filePath = path.join(app.getPath('userData'), cat.dir, fileName);
     try {
-        const userDataPath = app.getPath('userData');
-        const cacheDirPath = path.join(userDataPath, 'CalendarCache');
-        if (!fs.existsSync(cacheDirPath)) fs.mkdirSync(cacheDirPath);
-        const filePath = path.join(cacheDirPath, `${clientName}.json`);
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-        return { success: true };
-    } catch (error) {
-        return { success: false };
+        if (fs.existsSync(filePath)) fs.rmSync(filePath, { force: true });
+        return true;
+    } catch (e) {
+        return false;
     }
 });
 
-ipcMain.handle('load-calendar-cache', (event, clientName) => {
-    try {
-        const userDataPath = app.getPath('userData');
-        const filePath = path.join(userDataPath, 'CalendarCache', `${clientName}.json`);
-        if (fs.existsSync(filePath)) {
-            return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-        }
-        return null;
-    } catch (error) {
-        return null;
-    }
-});
 
 // Escucha la petición de búsqueda desde el renderizador.
 ipcMain.on('find-in-page', (event, { text, options }) => {

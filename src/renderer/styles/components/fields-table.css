@@ -3,6 +3,27 @@
    Estilos específicos para la tabla de campos y sus controles.
    =================================================================== */
 
+/* Botón conmutable de las columnas PK y Requerido (sustituye al checkbox).
+   Píldora fácil de pulsar: gris "No" cuando está inactivo, azul "Sí" activo. */
+.field-toggle {
+    min-width: 46px;
+    padding: 4px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--sf-border);
+    background: var(--sf-surface);
+    color: var(--sf-text-muted);
+    font-size: 0.8em;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+.field-toggle:hover { border-color: var(--sf-blue); }
+.field-toggle.active {
+    background: var(--sf-blue);
+    border-color: var(--sf-blue);
+    color: #fff;
+}
+
 /* Contenedor principal de la sección "Campos" que usa Flexbox para alinear la tabla y los botones. */
 #campos-section .table-container {
     display: flex;
@@ -35,7 +56,7 @@
    (secundario blanco con borde, estilo btn-secondary de referencia) */
 .control-buttons button {
     width: 100px;
-    background-color: #fff;
+    background-color: var(--sf-surface);
     color: var(--sf-text-soft);
     border: 1px solid var(--sf-border);
     border-radius: var(--sf-radius);

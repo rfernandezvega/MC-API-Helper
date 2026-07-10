@@ -127,7 +127,7 @@
 
 /* Fecha de caché junto al título de la sección */
 .jm-cache-date {
-    color: #bbb;
+    color: var(--sf-text-muted);
     font-weight: normal;
     font-size: 0.75em;
     margin-left: 10px;
@@ -144,7 +144,7 @@
 }
 /* Guion de celda vacía en la columna de DEs */
 .jm-empty-dash {
-    color: #ddd;
+    color: var(--sf-border);
 }
 
 /* Icono y botón del drawer de comunicaciones */

@@ -4,6 +4,7 @@ import * as logger from '../ui/logger.js';
 import elements from '../ui/dom-elements.js';
 import { escapeHtml, formatDate } from '../ui/format-utils.js';
 import { createTableSorter, createPaginator } from '../ui/table-utils.js';
+import { getRowsPerPage } from './settings.js';
 
 // Scope raíz de toda la sección — todos los querySelector van contra este nodo
 const ROOT_ID = 'gestion-usuarios-section';
@@ -15,7 +16,6 @@ let usersMasterList = [];
 let selectedUserIds = [];   // máximo 2 elementos
 let statusFilter = 'all';
 let selectedRoles = new Set();
-const ITEMS_PER_PAGE = 10;
 
 let importedData = [];
 let _lastFilteredCount = 0;
@@ -73,7 +73,7 @@ function _bind() {
             prevBtn: $id('prevPageBtnUsers'),
             nextBtn: $id('nextPageBtnUsers')
         },
-        { itemsPerPage: ITEMS_PER_PAGE, onPageChange: renderUserTable }
+        { itemsPerPage: () => getRowsPerPage('users'), onPageChange: renderUserTable }
     );
 
     // Selección de filas — delegación sobre el tbody

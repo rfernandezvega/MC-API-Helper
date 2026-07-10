@@ -184,9 +184,9 @@ function renderGroupList() {
             ? '<span class="badge badge-neutral">Sistema</span>'
             : '<span class="badge badge-info">Usuario</span>';
         return `
-        <div class="erd-group-item" data-group-id="${g.id}" style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border-radius:6px; cursor:pointer; border:1px solid ${sel ? 'var(--sf-blue)' : 'var(--sf-border)'}; margin-bottom:6px;${sel ? ' background:#e8f3fc;' : ''}">
+        <div class="erd-group-item" data-group-id="${g.id}" style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border-radius:6px; cursor:pointer; border:1px solid ${sel ? 'var(--sf-blue)' : 'var(--sf-border)'}; margin-bottom:6px;${sel ? ' background:var(--sf-hover-blue);' : ''}">
             <div style="flex:1;">
-                <div style="display:flex; align-items:center; gap:8px;"><span style="font-weight:bold; color:#333; font-size:0.88rem;">${escapeHtml(g.name)}</span>${badge}</div>
+                <div style="display:flex; align-items:center; gap:8px;"><span style="font-weight:bold; color:var(--sf-text); font-size:0.88rem;">${escapeHtml(g.name)}</span>${badge}</div>
                 <div style="font-size:0.72rem; color:#6c757d; margin-top:2px;">${n} ${n === 1 ? 'entidad' : 'entidades'}</div>
             </div>
         </div>`;
@@ -198,10 +198,10 @@ function renderGroupList() {
             elements.erdGenerateBtn.disabled = false;
             elements.erdGroupList.querySelectorAll('.erd-group-item').forEach(i => {
                 i.style.background = '';
-                i.style.borderColor = '#e2e8f0';
+                i.style.borderColor = 'var(--sf-border)';
             });
-            el.style.background = '#e8f3fc';
-            el.style.borderColor = '#69a3db';
+            el.style.background = 'var(--sf-hover-blue)';
+            el.style.borderColor = 'var(--sf-blue)';
         });
     });
 }

@@ -116,9 +116,9 @@
 .ja-branch-box {
     margin-bottom: 12px;
     padding: 12px;
-    background: #fff;
-    border: 1px solid #d6dbdf;
-    border-left: 4px solid #5499c7;
+    background: var(--sf-surface);
+    border: 1px solid var(--sf-border);
+    border-left: 4px solid #5499c7; /* acento azul fijo, se lee en ambos temas */
     border-radius: var(--sf-radius);
     font-family: sans-serif;
 }
@@ -126,9 +126,9 @@
 /* Rama "Resto" (contactos que no cumplen ningún criterio). */
 .ja-branch-rest {
     padding: 10px;
-    background: #fdfefe;
-    border: 1px solid #d6dbdf;
-    border-left: 4px solid #abb2b9;
+    background: var(--sf-bg-alt);
+    border: 1px solid var(--sf-border);
+    border-left: 4px solid #abb2b9; /* acento gris fijo, se lee en ambos temas */
     border-radius: var(--sf-radius);
 }
 
@@ -139,14 +139,14 @@
     width: 100%;
     border-collapse: collapse;
     font-size: 0.85em;
-    background: #fff;
+    background: var(--sf-surface);
 }
 
 /* Celdas de las tablas embebidas: padding:5px; border:1px solid #eee. */
 .ja-table th,
 .ja-table td {
     padding: 5px;
-    border: 1px solid #eee;
+    border: 1px solid var(--sf-border);
     text-align: left;
 }
 
@@ -155,8 +155,8 @@
    superior. */
 .ja-collapsible-inner {
     padding: 15px;
-    background: #fff;
-    border: 1px solid #e2e8f0;
+    background: var(--sf-surface);
+    border: 1px solid var(--sf-border);
     border-top: none;
 }
 
@@ -169,7 +169,7 @@
     line-height: 1.4;
     overflow-x: auto;
     margin: 0;
-    border: 1px solid #eee;
+    border: 1px solid var(--sf-border);
 }
 
 /* --- Nombre del journey/automatismo en el <h2> de las cabeceras --- */
@@ -249,7 +249,7 @@
 /* Panel derecho de configuración detallada de cada actividad (sin borde decorativo). */
 .ja-details-panel {
     padding: 10px;
-    background: #f0f7ff;
+    background: var(--sf-bg-alt);
     border-radius: var(--sf-radius);
     font-size: 0.85em;
     line-height: 1.5;
@@ -259,20 +259,20 @@
 .ja-de-block {
     margin-bottom: 12px;
     padding-bottom: 8px;
-    border-bottom: 1px solid #d1e3f5;
+    border-bottom: 1px solid var(--sf-border);
 }
 .ja-de-name {
     font-weight: bold;
-    color: #2c3e50;
+    color: var(--sf-text);
     font-size: 1.1em;
 }
 .ja-de-key {
-    color: #666;
+    color: var(--sf-text-muted);
     font-size: 0.85em;
     margin-bottom: 4px;
 }
 .ja-de-path {
-    color: #444;
+    color: var(--sf-text-soft);
     font-size: 0.9em;
     display: flex;
     align-items: center;
@@ -304,7 +304,7 @@
     margin: 4px 0;
 }
 .ja-act-desc {
-    color: #666;
+    color: var(--sf-text-muted);
     display: block;
     margin-bottom: 10px;
 }
@@ -316,28 +316,28 @@
     margin: 0;
     padding-left: 20px;
     font-size: 0.85em;
-    color: #333333 !important;
+    color: var(--sf-text) !important;
 }
 .ja-ds-list {
     margin: 0;
     padding: 10px;
     list-style: none;
-    color: #333333 !important;
+    color: var(--sf-text) !important;
 }
 .ja-ds-item {
     margin-bottom: 10px;
     padding-bottom: 8px;
-    border-bottom: 1px dashed #ddd;
+    border-bottom: 1px dashed var(--sf-border);
 }
 .ja-ds-name {
     font-weight: bold;
-    color: #b03a2e;
+    color: var(--sf-red);
 }
 .ja-ds-autos {
     margin: 4px 0 0 0;
     padding-left: 15px;
     font-size: 0.9em;
-    color: #333333 !important;
+    color: var(--sf-text) !important;
 }
 
 /* Rejilla de detalles técnicos de una importación. */
@@ -346,17 +346,62 @@
     grid-template-columns: 1fr 1fr;
     gap: 6px;
     font-size: 0.9em;
-    border-top: 1px solid #d1d9e0;
+    border-top: 1px solid var(--sf-border);
     margin-top: 5px;
     padding-top: 8px;
 }
 
 /* Valores acentuados repetidos en los paneles de detalle. */
 .ja-val-green {
-    color: #27ae60;
+    color: var(--sf-green);
 }
 .ja-val-action {
     text-transform: capitalize;
-    color: #2980b9;
+    color: var(--sf-blue);
     font-weight: bold;
+}
+
+/* ===================================================================
+   Overrides de tema oscuro para las cajas pastel de ambos analizadores.
+   Los pasteles claros se mantienen para el tema claro (reglas de arriba)
+   y aquí se sustituyen por un tinte oscuro del mismo matiz + texto claro,
+   siguiendo los valores ya usados en common.css (badges). El border-left
+   de acento de cada caja se deja con su color saturado: se lee en ambos
+   temas.
+   =================================================================== */
+
+/* Cajas de aviso base. */
+:root[data-theme="dark"] .ja-box-warn    { background: #3d2f10; color: #f0c066; }
+:root[data-theme="dark"] .ja-box-error   { background: #3d1f1c; color: #f0938c; }
+:root[data-theme="dark"] .ja-box-info    { background: #10344a; color: #7fc9f5; }
+:root[data-theme="dark"] .ja-box-ok      { background: #143a1c; color: #82d989; }
+:root[data-theme="dark"] .ja-box-neutral { background: #2d333d; color: #b8bdc4; }
+
+/* Cajas por tipo de actividad (matiz más cercano de la paleta oscura). */
+:root[data-theme="dark"] .ja-box-push     { background: #2a1f3d; color: #c4a6f0; } /* magenta -> púrpura */
+:root[data-theme="dark"] .ja-box-einstein { background: #10344a; color: #7fc9f5; } /* azul -> info */
+:root[data-theme="dark"] .ja-box-amber    { background: #3d2f10; color: #f0c066; } /* ámbar -> warning */
+:root[data-theme="dark"] .ja-box-sto      { background: #10344a; color: #7fc9f5; } /* azul -> info */
+:root[data-theme="dark"] .ja-box-whatsapp { background: #143a1c; color: #82d989; } /* verde -> success */
+:root[data-theme="dark"] .ja-box-sky      { background: #10344a; color: #7fc9f5; } /* azul cielo -> info */
+:root[data-theme="dark"] .ja-box-sf       { background: #10344a; color: #7fc9f5; } /* azul -> info */
+:root[data-theme="dark"] .ja-box-sms      { background: #2a1f3d; color: #c4a6f0; } /* rosa -> púrpura */
+:root[data-theme="dark"] .ja-box-inbox    { background: #3d2f10; color: #f0c066; } /* naranja -> warning */
+
+/* Botón/contenido colapsable de impacto (danger) y caja "exclusiva" (success).
+   Llevan !important en las reglas claras, así que el override oscuro también
+   lo necesita para ganar. */
+:root[data-theme="dark"] .sql-toggle-btn.ja-toggle-danger {
+    background: #3d1f1c !important;
+    color: #f0938c !important;
+    border-color: #5a2a26 !important;
+}
+:root[data-theme="dark"] .sql-content.ja-content-light {
+    background: #2a1f1f !important;
+    border-color: #5a2a26 !important;
+}
+:root[data-theme="dark"] .ja-impact-exclusive {
+    background: #143a1c !important;
+    color: #82d989 !important;
+    border-color: #1f5a2a !important;
 }

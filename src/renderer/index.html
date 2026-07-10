@@ -69,6 +69,7 @@
 			<div class="collapsible-group">
 				<h3 class="collapsible-header">General</h3>
 				<ul class="collapsible-content">
+					<li><a class="macro-item" data-macro="ajustes">Ajustes</a></li>
 					<li><a class="macro-item" data-macro="docu">Documentación</a></li>
 					<li><a class="macro-item" data-macro="configuracionAPIs">Configuración de Cuentas</a></li>
 				</ul>
@@ -201,7 +202,7 @@
                 <p class="info-text u-text-left u-m-0 u-mb-15">
                     Cada canal se asocia a una <b>Business Unit</b> y se usa en el alta de contactos de la
                     <b>Audiencia WhatsApp</b> (Buscadores → Clientes). Para conocer los <i>channelId</i>, accede a la app de WhatsApp
-                    (<a id="wa-console-link" href="#" class="external-link" style="color:#0070d2; text-decoration:underline; font-weight:bold;">abrir</a>)
+                    (<a id="wa-console-link" href="#" class="external-link" style="color:var(--sf-blue); text-decoration:underline; font-weight:bold;">abrir</a>)
                     con la BU correspondiente, consulta los canales y añádelos aquí (Business Unit, Channel ID y un nombre descriptivo).
                 </p>
 
@@ -264,25 +265,25 @@
 
     <style>
         .drillable { cursor: pointer; transition: all 0.2s ease; }
-        .drillable:hover { background-color: #f8fafc !important; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.12) !important; }
+        .drillable:hover { background-color: var(--sf-bg-alt) !important; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.12) !important; }
         .drillable-bar { cursor: pointer; transition: background 0.2s ease; }
-        .drillable-bar:hover { background-color: #f1f5f9 !important; border-radius: 4px; }
+        .drillable-bar:hover { background-color: var(--sf-bg-alt) !important; border-radius: 4px; }
 
         #audit-drill-modal {
             display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; backdrop-filter: blur(2px);
         }
         .audit-modal-content {
-            background-color: #fff; padding: 25px; border-radius: 12px; width: 85%; max-width: 1000px;
+            background-color: var(--sf-surface); padding: 25px; border-radius: 12px; width: 85%; max-width: 1000px;
             max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
         .audit-modal-header {
             display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 15px;
+            border-bottom: 2px solid var(--sf-border); padding-bottom: 12px; margin-bottom: 15px;
         }
-        .audit-modal-header h3 { margin: 0; color: #2c3e50; font-size: 1.25em; display: inline-block; margin-right: 15px; }
-        .audit-modal-close { background: none; border: none; font-size: 1.5em; cursor: pointer; color: #95a5a6; transition: color 0.2s; }
-        .audit-modal-close:hover { color: #e74c3c; }
+        .audit-modal-header h3 { margin: 0; color: var(--sf-text); font-size: 1.25em; display: inline-block; margin-right: 15px; }
+        .audit-modal-close { background: none; border: none; font-size: 1.5em; cursor: pointer; color: var(--sf-text-muted); transition: color 0.2s; }
+        .audit-modal-close:hover { color: var(--sf-red); }
         .audit-modal-body { overflow-y: auto; flex: 1; }
         /* La tabla del drill-down hereda el estilo global de tablas de la app
            (cabecera azul sticky, celdas centradas, rejilla direccional):
@@ -303,31 +304,31 @@
     </div>
 
     <h2 class="u-mb-10">Auditoría de Instancia</h2>
-    <p style="text-align:center; color:#888; font-size:0.88em; margin-bottom:24px;">
+    <p style="text-align:center; color:var(--sf-text-muted); font-size:0.88em; margin-bottom:24px;">
         Auditoría: usuarios, automatismos, journeys, cloud pages, configuración de envío, data extensions y contenidos.
     </p>
 
     <!-- PANEL DE CONFIGURACIÓN — ocupa todo el ancho disponible -->
     <div id="audit-options" class="config-block" style="width:100%; margin:0 0 30px 0;">
 
-        <h3 style="margin-top:0; color:#2c3e50;">Cómo lanzar la auditoría</h3>
-        <ol style="color:#444; font-size:0.88em; line-height:1.8; margin:0 0 6px 0; padding-left:22px;">
+        <h3 style="margin-top:0; color:var(--sf-text);">Cómo lanzar la auditoría</h3>
+        <ol style="color:var(--sf-text-soft); font-size:0.88em; line-height:1.8; margin:0 0 6px 0; padding-left:22px;">
             <li>Para que la pestaña <b>Contenidos</b> tenga datos, entra antes a la vista de <b>Contenidos</b> y pulsa <b>Refrescar</b> (la auditoría reutiliza esa caché, no descarga contenidos).</li>
             <li>Para auditar <b>Data Extensions</b> (opcional), copia el script de abajo, ejecútalo en la consola de <b>Contact Builder</b> y pega el JSON resultante en el cuadro.</li>
             <li>Pulsa <b>«Iniciar Escaneo de Instancia»</b> (arriba a la derecha) y confirma. <b>No cierres la aplicación</b> mientras dura el proceso.</li>
             <li>Al terminar, revisa las pestañas del panel y descarga el <b>Informe (PDF)</b> o los <b>Detalles</b>.</li>
         </ol>
-        <p style="color:#666; font-size:0.84em; line-height:1.6; margin:0 0 6px 0;">
+        <p style="color:var(--sf-text-soft); font-size:0.84em; line-height:1.6; margin:0 0 6px 0;">
             Los <b>Journeys</b> se descargan durante el escaneo y quedan en una caché compartida con las vistas de Journeys y Contenidos:
             si ya están descargados (misma versión), se reutilizan y solo se bajan los nuevos o modificados. En cualquier caso, siempre se
             muestran el <b>total de llamadas API</b> y el <b>tiempo</b> del escaneo. Hay un <b>límite anual de llamadas API</b>: como referencia,
             un cliente con 700 Journeys y 200 automatismos puede tardar unos 10 minutos.
         </p>
-        <p style="color:#888; font-size:0.82em; margin-bottom:18px; font-style:italic;">
+        <p style="color:var(--sf-text-muted); font-size:0.82em; margin-bottom:18px; font-style:italic;">
             Si ya existe una auditoría guardada para este cliente, se cargará automáticamente al entrar a esta vista.
         </p>
 
-        <h3 style="color:#2c3e50; margin-bottom:10px;">Qué se analiza en cada pestaña</h3>
+        <h3 style="color:var(--sf-text); margin-bottom:10px;">Qué se analiza en cada pestaña</h3>
         <table class="audit-info-table">
             <thead>
                 <tr>
@@ -376,10 +377,10 @@
         </table>
 
         <!-- OPCIÓN: Data Extensions (JSON) — fuera del grid, ocupa todo el ancho -->
-        <div style="margin-top:24px; border-top:1px solid #e2e8f0; padding-top:20px;">
-            <div style="font-weight:700; font-size:1em; color:#2c3e50; margin-bottom:6px;">Data Extensions — Análisis desde JSON</div>
-            <p style="font-size:0.83em; color:#555; margin:0 0 12px 0; line-height:1.6;">
-                Cada escaneo <b>sobreescribe la caché anterior</b> — si relanzas el escaneo sin volver a pegar el JSON, se perderán estos datos.<br>Para auditar las DEs de la instancia, accede <a id="audit-de-cb-link" href="#" class="external-link" style="color: #0070d2; text-decoration: underline; font-weight: bold;">aquí</a>  y ejecuta el script de abajo en la consola del navegador
+        <div style="margin-top:24px; border-top:1px solid var(--sf-border); padding-top:20px;">
+            <div style="font-weight:700; font-size:1em; color:var(--sf-text); margin-bottom:6px;">Data Extensions — Análisis desde JSON</div>
+            <p style="font-size:0.83em; color:var(--sf-text-soft); margin:0 0 12px 0; line-height:1.6;">
+                Cada escaneo <b>sobreescribe la caché anterior</b> — si relanzas el escaneo sin volver a pegar el JSON, se perderán estos datos.<br>Para auditar las DEs de la instancia, accede <a id="audit-de-cb-link" href="#" class="external-link" style="color: var(--sf-blue); text-decoration: underline; font-weight: bold;">aquí</a>  y ejecuta el script de abajo en la consola del navegador
                 estando logado en <b>Contact Builder</b>. El script recorre todas las carpetas (para ~6.000 DEs tarda aproximadamente 20 minutos) y te mostrará
                 un popup para copiar el JSON resultante. Las DEs compartidas (carpeta <i>Shared</i>) se excluyen automáticamente del análisis.
             </p>
@@ -1898,9 +1899,9 @@
 
             <!-- Multipicklist de Filtrado -->
             <div class="um-filter-group" style="position:relative; margin-bottom: 0;">
-                <div id="analyzerActivityTypeFilterTrigger" class="um-dropdown-trigger" style="min-width: 200px; background: white;">
+                <div id="analyzerActivityTypeFilterTrigger" class="um-dropdown-trigger" style="min-width: 200px; background: var(--sf-surface);">
                     <span id="analyzerActivityTypeFilterLabel">Todos los tipos</span>
-                    <span style="font-size:10px; color:#888;">▼</span>
+                    <span style="font-size:10px; color:var(--sf-text-muted);">▼</span>
                 </div>
                 <div id="analyzerActivityTypeFilterMenu" class="um-dropdown-menu" style="display:none; position:fixed; z-index: 1000;">
                     <div id="analyzerActivityTypeCheckboxList"></div>
@@ -2150,8 +2151,25 @@
     <div class="menu-group changelog-group">
         <h3>Novedades</h3>
         <div class="changelog-list">
-            <!-- ======================== v2.6.1 ======================== -->
+            <!-- ======================== v2.6.2 ======================== -->
             <details class="changelog-entry" open>
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.6.2</span>
+                    <span class="changelog-date">X Julio 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Nueva vista de Ajustes de la aplicación. Las preferencias se guardan entre sesiones.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Tema: donde puedes elegir tema claro u oscuro. </li>
+                    <li><span class="changelog-tag new">Nuevo</span> Zoom de la interfaz. Ya no es un valor por defecto y se puede ajustar para que se vea mejor según el tamaño de pantalla.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Filas por página configurables en cada tabla (Automatismos, Journeys, Cloud Pages, Usuarios y Contenidos) y cliente + Business Unit por defecto al arrancar.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Cliente + Business Unit por defecto al arrancar.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Gestión de almacenamiento: tamaño de cada caché (Contenidos, Journeys, Auditoría y Cloud Pages) con sus elementos, y borrado individual o completo.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> En Configuración de campos de Data Extensions, los PK y Requerido son ahora botones (más cómodos de pulsar) y marcar PK activa Requerido automáticamente.</li>                    
+                </ul>
+            </details>
+
+            <!-- ======================== v2.6.1 ======================== -->
+            <details class="changelog-entry">
                 <summary class="changelog-version">
                     <span class="changelog-badge">v2.6.1</span>
                     <span class="changelog-date">7 Julio 2026</span>
@@ -2597,6 +2615,88 @@
         </div>
     </div>
 </div>
+
+<!-- SECCIÓN: AJUSTES DE LA APLICACIÓN -->
+<div id="ajustes-section" class="section config-section-container">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>
+    </div>
+    <h2>Ajustes</h2>
+
+    <div class="config-block">
+        <h3>Tema</h3>
+        <div class="settings-row">
+            <div class="settings-row-info">
+                <div class="settings-row-desc">Elige el aspecto claro u oscuro de la aplicación.</div>
+            </div>
+            <div class="settings-theme-options" id="settings-theme-options">
+                <button type="button" class="settings-theme-btn" data-theme-value="light">Claro</button>
+                <button type="button" class="settings-theme-btn" data-theme-value="dark">Oscuro</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="config-block">
+        <h3>Zoom de la interfaz</h3>
+        <div class="settings-row">
+            <div class="settings-row-info">
+                <div class="settings-row-desc">Ajusta el tamaño general de la aplicación. Con un zoom muy alto o muy bajo algunos elementos pueden no verse correctamente.</div>
+            </div>
+            <div class="settings-zoom">
+                <button type="button" class="settings-zoom-btn" id="settings-zoom-dec" title="Reducir">−</button>
+                <span class="settings-zoom-value" id="settings-zoom-value">85%</span>
+                <button type="button" class="settings-zoom-btn" id="settings-zoom-inc" title="Aumentar">+</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="config-block" id="settings-rows-card">
+        <h3>Filas por página</h3>
+        <p class="settings-row-desc u-mb-15">Número de registros por página en cada tabla.</p>
+        <div class="settings-row">
+            <div class="settings-row-info"><div class="settings-row-title">Automatismos</div></div>
+            <select class="filter-input settings-select settings-rows-select" data-view="automations"></select>
+        </div>
+        <div class="settings-row">
+            <div class="settings-row-info"><div class="settings-row-title">Journeys</div></div>
+            <select class="filter-input settings-select settings-rows-select" data-view="journeys"></select>
+        </div>
+        <div class="settings-row">
+            <div class="settings-row-info"><div class="settings-row-title">Cloud Pages</div></div>
+            <select class="filter-input settings-select settings-rows-select" data-view="cloudpages"></select>
+        </div>
+        <div class="settings-row">
+            <div class="settings-row-info"><div class="settings-row-title">Usuarios</div></div>
+            <select class="filter-input settings-select settings-rows-select" data-view="users"></select>
+        </div>
+        <div class="settings-row">
+            <div class="settings-row-info"><div class="settings-row-title">Contenidos</div></div>
+            <select class="filter-input settings-select settings-rows-select" data-view="content"></select>
+        </div>
+    </div>
+
+    <div class="config-block">
+        <h3>Cliente por defecto</h3>
+        <div class="settings-row">
+            <div class="settings-row-info">
+                <div class="settings-row-title">Cliente</div>
+                <div class="settings-row-desc">Cliente y Business Unit que se seleccionarán automáticamente al abrir la aplicación.</div>
+            </div>
+            <select id="settings-client-select" class="filter-input settings-select"></select>
+        </div>
+        <div class="settings-row" id="settings-bu-row">
+            <div class="settings-row-info"><div class="settings-row-title">Business Unit</div></div>
+            <select id="settings-bu-select" class="filter-input settings-select"></select>
+        </div>
+    </div>
+
+    <div class="config-block">
+        <h3>Almacenamiento</h3>
+        <p class="settings-row-desc u-mb-15">Cachés guardadas en tu equipo, con los elementos cacheados de cada una. Al borrarlas se liberará espacio; los datos se volverán a descargar al refrescar cada vista.</p>
+        <div id="settings-cache-list"></div>
+    </div>
+</div>
+
 
 <div id="gestion-usuarios-section" class="section">
     <div class="section-header">

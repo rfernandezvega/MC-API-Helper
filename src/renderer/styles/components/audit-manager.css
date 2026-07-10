@@ -16,7 +16,7 @@
     position: sticky;
     top: 0;
     z-index: 30;
-    background-color: #fff;
+    background-color: var(--sf-surface);
 }
 
 /* --- Tabla informativa "Qué se analiza en cada pestaña" ---
@@ -42,8 +42,8 @@
 
 .audit-info-table td {
     padding: 9px 12px;
-    border-bottom: 1px solid #eef2f6;
-    color: #555;
+    border-bottom: 1px solid var(--sf-border);
+    color: var(--sf-text-soft);
 }
 
 /* Primera columna (nombre de la pestaña): resaltada. */
@@ -54,7 +54,7 @@
 
 /* Filas alternas (antes background:#fbfcfe inline). */
 .audit-info-table tr.audit-info-alt {
-    background: #fbfcfe;
+    background: var(--sf-bg-alt);
 }
 
 /* --- Tarjeta oscura del script copiable de Data Extensions --- */
@@ -110,7 +110,7 @@
 .audit-json-label {
     font-size: 0.82em;
     font-weight: 600;
-    color: #374151;
+    color: var(--sf-text-soft);
     display: block;
     margin-bottom: 4px;
 }
@@ -121,12 +121,12 @@
     height: 110px;
     font-size: 0.78em;
     font-family: monospace;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--sf-border);
     border-radius: var(--sf-radius-lg);
     padding: 10px;
     resize: vertical;
-    color: #374151;
-    background: #f9fafb;
+    color: var(--sf-text-soft);
+    background: var(--sf-bg-alt);
     box-sizing: border-box;
 }
 
@@ -139,7 +139,7 @@
 
 /* --- Contenedor scrollable de las pestañas --- */
 .audit-tabs-body {
-    background: #f4f7fb;
+    background: var(--sf-bg-alt);
     border-radius: 0 0 10px 10px;
     flex: 1;
     overflow-y: auto;
@@ -148,7 +148,7 @@
 
 /* --- Botón "Descargar CSV" del modal de detalle --- */
 .audit-drill-download-btn {
-    background: #27ae60;
+    background: var(--sf-green);
     color: #fff;
     border: none;
     border-radius: var(--sf-radius);
@@ -188,6 +188,11 @@
     font-size: 0.78em;
     font-weight: 600;
 }
+/* Chip informativo (pastel): en oscuro se apaga el azul claro para que no cante. */
+:root[data-theme="dark"] .audit-stats-line {
+    background: #10344a;
+    color: #7fc9f5;
+}
 .audit-stats-cache {
     background: var(--sf-bg);
     color: var(--sf-text-soft);
@@ -205,7 +210,7 @@
     margin-bottom: 18px;
 }
 .audit-kpi-card {
-    background: #fff;
+    background: var(--sf-surface);
     border-radius: 10px;
     padding: 14px 16px;
     text-align: center;
@@ -220,7 +225,7 @@
 }
 .audit-kpi-label {
     font-size: 0.71em;
-    color: #777;
+    color: var(--sf-text-muted);
     margin-top: 5px;
     font-weight: 500;
     text-transform: uppercase;
@@ -257,7 +262,7 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--sf-blue);
-    border-bottom: 1px solid #d5e8f7;
+    border-bottom: 1px solid var(--sf-border);
     padding-bottom: 6px;
     margin: 22px 0 14px 0;
 }
@@ -265,7 +270,7 @@
 /* Tarjeta de métricas con barras. El span de columnas (wide) es
    dinámico y se mantiene inline. */
 .audit-metric-card {
-    background: #fff;
+    background: var(--sf-surface);
     border-radius: 10px;
     padding: 16px 18px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
@@ -273,17 +278,17 @@
 .audit-metric-title {
     font-weight: 700;
     font-size: 0.93em;
-    color: #2c3e50;
+    color: var(--sf-text);
     margin-bottom: 4px;
 }
 .audit-metric-help {
     font-size: 0.77em;
-    color: #aaa;
+    color: var(--sf-text-muted);
     margin-bottom: 14px;
     line-height: 1.4;
 }
 .audit-metric-empty {
-    color: #ccc;
+    color: var(--sf-text-muted);
     font-size: 0.85em;
     font-style: italic;
 }
@@ -300,7 +305,7 @@
 }
 .audit-bar-label {
     flex: 0 0 190px;
-    color: #444;
+    color: var(--sf-text-soft);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -308,7 +313,7 @@
 }
 .audit-bar-track {
     flex: 1;
-    background: #f0f0f0;
+    background: var(--sf-hover);
     border-radius: 20px;
     height: 9px;
     overflow: hidden;
@@ -325,7 +330,7 @@
 }
 .audit-bar-pct {
     flex: 0 0 34px;
-    color: #aaa;
+    color: var(--sf-text-muted);
     text-align: right;
     font-size: 0.9em;
 }
@@ -335,7 +340,7 @@
 .audit-loading {
     padding: 40px;
     text-align: center;
-    color: #bbb;
+    color: var(--sf-text-muted);
 }
 .audit-loading-spinner {
     width: 34px;

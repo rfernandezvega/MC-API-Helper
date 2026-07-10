@@ -139,7 +139,7 @@ function renderGlobalSettings(j) {
             <div class="ja-box ja-box-warn" style="padding:15px; margin-bottom:15px;">
                 <h5 style="margin:0 0 5px 0; color:#e67e22;">🎯 GOAL: ${escapeHtml(goal.name) || 'Objetivo'}</h5>
                 <p style="font-size:0.85rem; margin-bottom:8px;"><strong>Meta:</strong> ${goal.metaData?.conversionValue || ''}${unit} | <strong>¿Sale?:</strong> ${goal.metaData?.isExitCriteria ? 'Sí' : 'No'}</p>
-                <div style="font-size:0.85rem; background:#fff; padding:10px; border:1px solid #f3e5ab; border-radius:4px;">${parseXmlToLogic(goal.configurationArguments.criteria)}</div>
+                <div style="font-size:0.85rem; background:var(--sf-surface); padding:10px; border:1px solid var(--sf-border); border-radius:4px;">${parseXmlToLogic(goal.configurationArguments.criteria)}</div>
             </div>`;
     }
     if (hasExits) {
@@ -147,7 +147,7 @@ function renderGlobalSettings(j) {
         innerHtml += `
             <div class="ja-box ja-box-error" style="padding:15px;">
                 <h5 style="margin:0 0 5px 0; color:#c0392b;">🚪 EXIT CRITERIA</h5>
-                <div style="font-size:0.85rem; background:#fff; padding:10px; border:1px solid #f5c6cb; border-radius:4px;">${parseXmlToLogic(exit.configurationArguments.criteria)}</div>
+                <div style="font-size:0.85rem; background:var(--sf-surface); padding:10px; border:1px solid var(--sf-border); border-radius:4px;">${parseXmlToLogic(exit.configurationArguments.criteria)}</div>
             </div>`;
     }
 
@@ -177,7 +177,7 @@ function renderActivities(activities, numberMap) {
         const logicNumber = numberMap.get(act.key);
         const div = document.createElement('div');
         div.className = 'config-block';
-        div.style.border = "1px solid #ddd";
+        div.style.border = "1px solid var(--sf-border)";
         let extraConfig = '';
 
         if (act.type === 'MULTICRITERIADECISION') {
@@ -197,7 +197,7 @@ function renderActivities(activities, numberMap) {
             extraConfig = `
                 <h5 style="margin-top:10px;">Distribución de Probabilidad:</h5>
                 <table class="ja-table">
-                    <thead style="background:#fef5e7;">
+                    <thead style="background:var(--sf-bg-alt);">
                         <tr>
                             <th>Rama / Camino</th>
                             <th style="text-align:center; width:80px;">Porcentaje</th>
@@ -218,10 +218,10 @@ function renderActivities(activities, numberMap) {
 
             extraConfig = `
                 <div class="ja-box ja-box-info" style="padding:10px; margin-top:10px;">
-                    <p style="margin:0 0 10px 0;"><strong>Data Extension de Destino:</strong> <span style="color:#1f618d;">${escapeHtml(act.resolvedDeName) || 'No detectada'}</span></p>
+                    <p style="margin:0 0 10px 0;"><strong>Data Extension de Destino:</strong> <span style="color:var(--sf-blue);">${escapeHtml(act.resolvedDeName) || 'No detectada'}</span></p>
                     <h5 style="margin:10px 0 5px 0;">Mapeo de Atributos:</h5>
                     <table class="ja-table">
-                        <thead style="background:#f1f1f1;">
+                        <thead style="background:var(--sf-bg-alt);">
                             <tr><th>Campo Destino</th><th>Valor / Atributo</th></tr>
                         </thead>
                         <tbody>${rows}</tbody>
@@ -242,7 +242,7 @@ function renderActivities(activities, numberMap) {
                 waitLabel = `Hasta el atributo: ${config.waitEndDateAttributeExpression}`;
             }
 
-            extraConfig = `<p style="color: #666; background: #f1f1f1; padding: 5px;"><strong>Configuración Espera:</strong> ${waitLabel}</p>`;
+            extraConfig = `<p style="color: var(--sf-text-muted); background: var(--sf-bg-alt); padding: 5px;"><strong>Configuración Espera:</strong> ${waitLabel}</p>`;
         }
         else if (act.type === 'EMAILV2') {
             const ts = act.configurationArguments?.triggeredSend || {};
@@ -251,8 +251,8 @@ function renderActivities(activities, numberMap) {
                 <div class="ja-box ja-box-ok" style="padding:10px; margin-top:10px;">
                     <p style="margin:0 0 5px 0;"><strong>Email ID:</strong> ${escapeHtml(ts.emailId) || '---'}</p>
                     <p style="margin:0 0 5px 0;"><strong>Asunto:</strong> <span style="color:#2e7d32;">${escapeHtml(ts.emailSubject) || '---'}</span></p>
-                    <p style="margin:0 0 5px 0;"><strong>Preheader:</strong> <span style="color:#666; font-style:italic;">${escapeHtml(ts.preHeader) || '---'}</span></p>
-                    <hr style="border:0; border-top:1px solid #c8e6c9; margin:8px 0;">
+                    <p style="margin:0 0 5px 0;"><strong>Preheader:</strong> <span style="color:var(--sf-text-muted); font-style:italic;">${escapeHtml(ts.preHeader) || '---'}</span></p>
+                    <hr style="border:0; border-top:1px solid var(--sf-border); margin:8px 0;">
                     <p style="margin:0 0 5px 0;"><strong>Clasificación:</strong> ${act.resolvedSendClassification || ts.sendClassificationId || '---'}</p>
                     <p style="margin:0;"><strong>Lista Publicación:</strong> ${act.resolvedListName || (ts.publicationListId === 0 ? 'All Subscribers' : ts.publicationListId)}</p>
                 </div>
@@ -279,13 +279,13 @@ function renderActivities(activities, numberMap) {
                 }).join('');
 
                 urlDetail = `
-                    <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #d5dbdb;">
+                    <div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--sf-border);">
                         <strong style="font-size:0.85em;">URLs específicas monitoreadas:</strong>
-                        <ul style="margin:5px 0 0 15px; padding:0; font-size:0.8em; color:#566573; word-break: break-all;">${urlList}</ul>
+                        <ul style="margin:5px 0 0 15px; padding:0; font-size:0.8em; color:var(--sf-text-soft); word-break: break-all;">${urlList}</ul>
                     </div>
                 `;
             } else if (config.statsTypeId === 3) {
-                urlDetail = `<p style="margin-top:5px; font-size:0.85em; color:#7f8c8d;"><i>Monitoreando cualquier enlace del email.</i></p>`;
+                urlDetail = `<p style="margin-top:5px; font-size:0.85em; color:var(--sf-text-muted);"><i>Monitoreando cualquier enlace del email.</i></p>`;
             }
 
             extraConfig = `
@@ -309,7 +309,7 @@ function renderActivities(activities, numberMap) {
             extraConfig = `
                 <div class="ja-box ja-box-push" style="padding:10px; margin-top:10px;">
                     <p style="margin:0 0 5px 0;"><strong>Nombre del mensaje:</strong> <span style="color:#701a75; font-weight:bold;">${escapeHtml(act.name) || '---'}</span></p>
-                    <p style="margin:0 0 5px 0;"><strong>Asset ID:</strong> <span style="color:#666;">${assetId}</span></p>
+                    <p style="margin:0 0 5px 0;"><strong>Asset ID:</strong> <span style="color:var(--sf-text-muted);">${assetId}</span></p>
                     <p style="margin:0;"><strong>Aplicación móvil:</strong> <span style="color:#86198f;">${applicationName}</span></p>
                 </div>
             `;
@@ -359,7 +359,7 @@ function renderActivities(activities, numberMap) {
                 extraConfig = metricsHtml + `
                     <h5 style="margin-top:10px; font-size:0.85em;">Distribución de Caminos:</h5>
                     <table class="ja-table">
-                        <thead style="background:#f0f7ff;">
+                        <thead style="background:var(--sf-bg-alt);">
                             <tr><th>Camino</th><th style="text-align:center; width:80px;">Porcentaje</th></tr>
                         </thead>
                         <tbody>${rows}</tbody>
@@ -367,7 +367,7 @@ function renderActivities(activities, numberMap) {
                 `;
             } else {
                 // Para el STOP, solo mostramos la configuración de evaluación
-                extraConfig = metricsHtml + `<p style="font-size:0.8em; color:#666; margin-top:5px;"><i>Punto de unión y finalización de la prueba.</i></p>`;
+                extraConfig = metricsHtml + `<p style="font-size:0.8em; color:var(--sf-text-muted); margin-top:5px;"><i>Punto de unión y finalización de la prueba.</i></p>`;
             }
         }
         else if (act.type === 'STOWAIT') {
@@ -413,18 +413,18 @@ function renderActivities(activities, numberMap) {
                 let detail = '';
                 // Si es la rama de "Casi saturado", mostramos el delta seleccionado
                 if (splitResult === 'almostsaturated' && delta) {
-                    detail = ` <small style="color:#666;">(Límite alcanzado en ${delta} emails)</small>`;
+                    detail = ` <small style="color:var(--sf-text-muted);">(Límite alcanzado en ${delta} emails)</small>`;
                 }
                 return `<li><b>${labelMap[splitResult] || splitResult}</b>${detail}</li>`;
             }).join('');
 
             extraConfig = `
                 <div class="ja-box ja-box-neutral" style="padding:12px; margin-top:10px; border-left: 5px solid #032e61;">
-                    <h5 style="margin:0 0 8px 0; color:#032e61; font-size:0.9em;">Einstein Engagement Frequency</h5>
+                    <h5 style="margin:0 0 8px 0; color:var(--sf-blue-dark); font-size:0.9em;">Einstein Engagement Frequency</h5>
                     <div style="font-size:0.85em; line-height:1.6;">
                         <p style="margin:0 0 5px 0;"><strong>Canal:</strong> <span style="text-transform:uppercase;">${params.type || 'email'}</span></p>
                         <p style="margin:0 0 5px 0;"><strong>Configuración "Almost Saturated":</strong> Saturación en <b>${delta}</b> emails.</p>
-                        <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #ccc;">
+                        <div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--sf-border);">
                             <strong>Caminos activos en el flujo:</strong>
                             <ul style="margin:5px 0 0 15px; padding:0;">${pathsHtml}</ul>
                         </div>
@@ -455,14 +455,14 @@ function renderActivities(activities, numberMap) {
                     </h5>
                     <div style="display:grid; grid-template-columns: 1fr; gap: 8px; font-size:0.85em;">
                         <div><strong>App Channel (ID):</strong> ${config.channelId || '---'}</div>
-                        <div><strong>Mobile Number Attribute:</strong> <span style="color:#2c5282;">${config.mobileNumberAttributeName || '---'}</span></div>
+                        <div><strong>Mobile Number Attribute:</strong> <span style="color:var(--sf-blue);">${config.mobileNumberAttributeName || '---'}</span></div>
                         
-                        <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #c6f6d5;">
+                        <div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--sf-border);">
                             <p style="margin:0 0 5px 0;"><strong>Message Timing:</strong> ${config.messagePriority || 'Anytime'}</p>
                             <p style="margin:0;"><strong>Blockout Window:</strong><br>${blockoutHtml}</p>
                         </div>
 
-                        <div style="margin-top:5px; font-size:0.8em; color:#718096;">
+                        <div style="margin-top:5px; font-size:0.8em; color:var(--sf-text-muted);">
                             <strong>Plantilla:</strong> ${act.resolvedTemplateName || config.assetId} (${config.assetId}) (${config.assetType})
                         </div>
                     </div>
@@ -486,23 +486,23 @@ function renderActivities(activities, numberMap) {
                     </h5>
                     
                     <div style="font-size:0.85em;">
-                        <div style="margin-bottom:10px; padding:8px; background:#fff; border:1px solid #eee; border-radius:4px;">
+                        <div style="margin-bottom:10px; padding:8px; background:var(--sf-surface); border:1px solid var(--sf-border); border-radius:4px;">
                             <strong>Coincidencia de Palabras Clave:</strong><br>
-                            <div style="margin-top:5px; color:#2c3e50;">${keywordsHtml}</div>
+                            <div style="margin-top:5px; color:var(--sf-text);">${keywordsHtml}</div>
                         </div>
 
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                            <div style="padding:8px; background:#fdfefe; border:1px solid #eee;">
+                            <div style="padding:8px; background:var(--sf-bg-alt); border:1px solid var(--sf-border);">
                                 <strong>Espera Máxima:</strong><br>
                                 <span style="color:#2980b9; font-weight:bold;">${config.waitDuration} ${config.waitUnit}</span>
                             </div>
-                            <div style="padding:8px; background:#fdfefe; border:1px solid #eee;">
+                            <div style="padding:8px; background:var(--sf-bg-alt); border:1px solid var(--sf-border);">
                                 <strong>Canal:</strong><br>
                                 <span>${config.channelType || 'WhatsApp'}</span>
                             </div>
                         </div>
 
-                        <div style="margin-top:10px; font-size:0.8em; color:#7f8c8d;">
+                        <div style="margin-top:10px; font-size:0.8em; color:var(--sf-text-muted);">
                             <p style="margin:2px 0;">• <b>Invalid Response:</b> Rama para palabras no reconocidas.</p>
                             <p style="margin:2px 0;">• <b>No Response:</b> Rama si expira el tiempo de espera.</p>
                         </div>
@@ -520,7 +520,7 @@ function renderActivities(activities, numberMap) {
                     </h5>
                     <div style="font-size:0.85em; line-height:1.5;">
                         <p style="margin:0 0 5px 0;"><strong>WhatsApp Channel:</strong> ${config.channelName || '---'} - ${config.channelId || '---'}</p>
-                        <p style="margin:0;"><strong>Mobile Number Attribute:</strong> <span style="color:#2c5282;">${config.mobileNumberAttributeName || '---'}</span></p>
+                        <p style="margin:0;"><strong>Mobile Number Attribute:</strong> <span style="color:var(--sf-blue);">${config.mobileNumberAttributeName || '---'}</span></p>
                     </div>
                 </div>
             `;
@@ -533,7 +533,7 @@ function renderActivities(activities, numberMap) {
                 // Mapeo de campos
                 const fieldRows = (obj.fields || []).map(f => `
                     <tr>
-                        <td><b>${escapeHtml(f.FieldLabel)}</b> <small style="color:#666;">(${escapeHtml(f.FieldName)})</small></td>
+                        <td><b>${escapeHtml(f.FieldLabel)}</b> <small style="color:var(--sf-text-muted);">(${escapeHtml(f.FieldName)})</small></td>
                         <td style="color:#2980b9;">${escapeHtml(f.FieldValueLabel || f.FieldValue)}</td>
                     </tr>
                 `).join('');
@@ -546,10 +546,10 @@ function renderActivities(activities, numberMap) {
                     ).join('<br>');
                     
                     lookupHtml = `
-                        <div style="margin-bottom:10px; padding:8px; background:#fff; border:1px solid #e2e8f0; border-radius:4px;">
-                            <strong style="font-size:0.8em; color:#4a5568; text-transform:uppercase;">Identificación del Registro (Lookup):</strong><br>
+                        <div style="margin-bottom:10px; padding:8px; background:var(--sf-surface); border:1px solid var(--sf-border); border-radius:4px;">
+                            <strong style="font-size:0.8em; color:var(--sf-text-soft); text-transform:uppercase;">Identificación del Registro (Lookup):</strong><br>
                             <div style="font-size:0.9em; margin-top:4px;">${criteria}</div>
-                            <div style="font-size:0.75em; color:#718096; margin-top:4px;">
+                            <div style="font-size:0.75em; color:var(--sf-text-muted); margin-top:4px;">
                                 Si hay varios: <i>${obj.lookup.MultiOutComeOption}</i> | Si no hay: <i>${obj.lookup.ZeroOutComeOption}</i>
                             </div>
                         </div>
@@ -558,16 +558,16 @@ function renderActivities(activities, numberMap) {
 
                 objectsHtml += `
                     <div class="ja-box ja-box-sf" style="padding:12px; margin-top:10px;">
-                        <div style="display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid #e2e8f0; padding-bottom:5px;">
-                            <span style="font-weight:bold; color:#2d3748;">Objeto: <span style="color:#00a1e0;">${obj.type}</span></span>
-                            <span style="background:#edf2f7; padding:2px 8px; border-radius:10px; font-size:0.8em; font-weight:bold;">Acción: ${obj.action}</span>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid var(--sf-border); padding-bottom:5px;">
+                            <span style="font-weight:bold; color:var(--sf-text);">Objeto: <span style="color:#00a1e0;">${obj.type}</span></span>
+                            <span style="background:var(--sf-bg-alt); padding:2px 8px; border-radius:10px; font-size:0.8em; font-weight:bold;">Acción: ${obj.action}</span>
                         </div>
                         
                         ${lookupHtml}
 
                         <h5 style="margin:10px 0 5px 0; font-size:0.85em;">Mapeo de Campos:</h5>
                         <table class="ja-table">
-                            <thead style="background:#f1f5f9;">
+                            <thead style="background:var(--sf-bg-alt);">
                                 <tr><th>Campo Salesforce</th><th>Valor / Atributo</th></tr>
                             </thead>
                             <tbody>${fieldRows}</tbody>
@@ -596,14 +596,14 @@ function renderActivities(activities, numberMap) {
                         <div><strong>Mensaje:</strong> ${act.resolvedTemplateName || '---'} (${config.assetId})</div>
                         <div><strong>Código corto/largo:</strong> ${code}</div>
                         
-                        <div style="grid-column: span 2; margin-top:5px; padding-top:5px; border-top:1px dashed #fed7e2;">
+                        <div style="grid-column: span 2; margin-top:5px; padding-top:5px; border-top:1px dashed var(--sf-border);">
                             <strong>Opciones de entrega:</strong>
-                            <div style="display:grid; grid-template-columns: 1fr 1fr; margin-top:4px; color:#4a5568;">
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; margin-top:4px; color:var(--sf-text-soft);">
                                 <span>• Opt-In: ${optIn}</span>
                                 <span>• Blackout: ${blackout}</span>
                             </div>
                             <div style="margin-top:4px;">
-                                • <strong>Keyword ID:</strong> <small style="color:#718096; word-break:break-all;">${config.keywordId || '---'}</small>
+                                • <strong>Keyword ID:</strong> <small style="color:var(--sf-text-muted); word-break:break-all;">${config.keywordId || '---'}</small>
                             </div>
                         </div>
                     </div>
@@ -621,7 +621,7 @@ function renderActivities(activities, numberMap) {
 
             extraConfig = `
                 <div class="ja-box ja-box-inbox" style="padding:12px; margin-top:10px;">
-                    <h5 style="margin:0 0 10px 0; color:#92400e; font-size:0.9em; display:flex; align-items:center;">
+                    <h5 style="margin:0 0 10px 0; color:var(--sf-orange); font-size:0.9em; display:flex; align-items:center;">
                         MobilePush: Inbox Activity
                     </h5>
                     <div style="font-size:0.85em;">
@@ -641,7 +641,7 @@ function renderActivities(activities, numberMap) {
         }
 
         const innerContent = `
-            <p style="font-size: 0.8rem; color: #666; margin-bottom: 8px;">
+            <p style="font-size: 0.8rem; color: var(--sf-text-muted); margin-bottom: 8px;">
                 <strong>Tipo:</strong> ${act.type} | <strong>ID:</strong> ${act.key}
             </p>
             ${extraConfig}
@@ -852,8 +852,8 @@ function parseDecisionCriteria(act) {
 
             html += `
                 <div class="ja-branch-box">
-                    <strong style="color:#1b4f72; display:block; margin-bottom:8px; border-bottom:1px solid #f1f1f1; padding-bottom:4px;">Rama: ${branchLabel}</strong>
-                    <div style="font-size:0.85rem; color:#2c3e50; line-height:1.8;">
+                    <strong style="color:var(--sf-blue-dark); display:block; margin-bottom:8px; border-bottom:1px solid var(--sf-border); padding-bottom:4px;">Rama: ${branchLabel}</strong>
+                    <div style="font-size:0.85rem; color:var(--sf-text); line-height:1.8;">
                         ${logicHtml}
                     </div>
                 </div>
@@ -868,8 +868,8 @@ function parseDecisionCriteria(act) {
     if (remainder) {
         html += `
             <div class="ja-branch-rest">
-                <strong style="color:#566573;">Rama: ${escapeHtml(remainder.metaData?.label) || 'Resto'}</strong><br>
-                <small style="color:#7f8c8d;">Cualquier contacto que no cumpla los criterios anteriores.</small>
+                <strong style="color:var(--sf-text-soft);">Rama: ${escapeHtml(remainder.metaData?.label) || 'Resto'}</strong><br>
+                <small style="color:var(--sf-text-muted);">Cualquier contacto que no cumpla los criterios anteriores.</small>
             </div>
         `;
     }
@@ -1006,16 +1006,16 @@ function renderHeader(j) {
     const definitionKey = j.definitionKey || j.key || 'No disponible';
     const innerHtml = `
         <div style="display: grid; grid-template-columns: 300px 1fr; gap: 30px; align-items: start;">
-            <div style="border-right: 1px solid #f0f3f7; padding-right: 10px;">
+            <div style="border-right: 1px solid var(--sf-border); padding-right: 10px;">
                 <p style="margin:0 0 5px 0;"><strong>Versión:</strong> ${j.version}</p>
                 <p style="margin:0 0 5px 0;"><strong>Estado:</strong> <span class="status-badge">${j.status}</span></p>
                 <p style="margin:0 0 5px 0;"><strong>Creado:</strong> ${new Date(j.createdDate).toLocaleString()}</p>
                 <p style="margin:0 0 5px 0;"><strong>Modificado:</strong> ${new Date(j.modifiedDate).toLocaleString()}</p>
-                <p style="margin:0; font-size:0.8rem; color:#666; word-break: break-all;"><strong>Key:</strong> ${definitionKey}</p>
+                <p style="margin:0; font-size:0.8rem; color:var(--sf-text-muted); word-break: break-all;"><strong>Key:</strong> ${definitionKey}</p>
             </div>
             <div>
                 <p style="margin:0 0 8px 0; font-size:0.9rem;"><strong>Tipo:</strong> ${j.entryDetails.type}</p>
-                <div style="margin:0; font-size:0.85rem; color:#444; line-height:1.6;">${j.entryDetails.summary}</div>
+                <div style="margin:0; font-size:0.85rem; color:var(--sf-text-soft); line-height:1.6;">${j.entryDetails.summary}</div>
             </div>
         </div>
     `;
@@ -1369,16 +1369,16 @@ function generatePDF() {
                 <div class="ja-box ja-box-amber" style="padding:12px; margin-top:10px; border-left: 5px solid #f39c12;">
                     <h5 style="margin:0 0 10px 0; color:#d35400; font-size:0.9em;">Wait Until Chat Response</h5>
                     <div style="font-size:0.85em;">
-                        <div style="margin-bottom:10px; padding:8px; background:#fff; border:1px solid #eee; border-radius:4px;">
+                        <div style="margin-bottom:10px; padding:8px; background:var(--sf-surface); border:1px solid var(--sf-border); border-radius:4px;">
                             <strong>Palabras Clave configuradas:</strong><br>
-                            <div style="margin-top:5px; color:#2c3e50;">${keywordsHtml}</div>
+                            <div style="margin-top:5px; color:var(--sf-text);">${keywordsHtml}</div>
                         </div>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                            <div style="padding:8px; background:#fdfefe; border:1px solid #eee;">
+                            <div style="padding:8px; background:var(--sf-bg-alt); border:1px solid var(--sf-border);">
                                 <strong>Espera Máxima:</strong><br>
                                 <span style="color:#2980b9; font-weight:bold;">${config.waitDuration} ${config.waitUnit}</span>
                             </div>
-                            <div style="padding:8px; background:#fdfefe; border:1px solid #eee;">
+                            <div style="padding:8px; background:var(--sf-bg-alt); border:1px solid var(--sf-border);">
                                 <strong>Canal:</strong><br>
                                 <span>${config.channelType || 'WhatsApp'}</span>
                             </div>

@@ -8,13 +8,13 @@ import * as logger from '../ui/logger.js';
 import { formatCodeWithIndentation, highlightCloudPageCode, buildCodeViewer } from '../ui/code-utils.js';
 import { escapeHtml, formatDate } from '../ui/format-utils.js';
 import { createTableSorter, createPaginator } from '../ui/table-utils.js';
+import { getRowsPerPage } from './settings.js';
 
 
 // --- 1. ESTADO DEL MÓDULO ---
 
 let fullCloudPageList = [];
 let currentFilteredList = [];
-const ITEMS_PER_PAGE = 10;
 
 // Controladores reutilizables de ordenación y paginación (WP-4/WP-5), instanciados en
 // init(). La ordenación inicial se mantiene: 'modifiedDate' (fecha) descendente.
@@ -85,7 +85,7 @@ export function init(dependencies) {
             prevBtn: elements.prevPageBtnCloudPages,
             nextBtn: elements.nextPageBtnCloudPages
         },
-        { itemsPerPage: ITEMS_PER_PAGE, onPageChange: renderFilteredTable }
+        { itemsPerPage: () => getRowsPerPage('cloudpages'), onPageChange: renderFilteredTable }
     );
 
     // Listener de seguridad para cuando el campo de página queda vacío.

@@ -1,0 +1,188 @@
+/* ===================================================================
+   styles/components/settings.css
+   Estilos de la vista de Ajustes (apariencia, tema…).
+   Usa exclusivamente los tokens --sf-* para funcionar en claro y oscuro.
+   =================================================================== */
+
+/* Cada fila de ajuste: descripción a la izquierda, control a la derecha,
+   ocupando todo el ancho de su tarjeta. Las filas dentro de una misma
+   tarjeta se separan con una línea. */
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--sf-border);
+}
+.settings-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+.settings-row-info {
+    flex: 1;
+    min-width: 0;
+}
+.settings-row-title {
+    font-weight: 600;
+    color: var(--sf-text);
+    margin-bottom: 2px;
+}
+.settings-row-desc {
+    font-size: 0.9em;
+    color: var(--sf-text-muted);
+}
+
+/* Selector de tema tipo segmentos (Claro / Oscuro). */
+.settings-theme-options {
+    display: inline-flex;
+    border: 1px solid var(--sf-border);
+    border-radius: var(--sf-radius);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.settings-theme-btn {
+    background: var(--sf-surface);
+    color: var(--sf-text-soft);
+    border: none;
+    padding: 8px 18px;
+    font-size: 0.9em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+}
+.settings-theme-btn + .settings-theme-btn {
+    border-left: 1px solid var(--sf-border);
+}
+.settings-theme-btn:hover {
+    background: var(--sf-hover);
+}
+.settings-theme-btn.active {
+    background: var(--sf-blue);
+    color: #fff;
+}
+
+/* Control de zoom: botones - / + con el porcentaje en medio. */
+.settings-zoom {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+.settings-zoom-btn {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--sf-border);
+    border-radius: var(--sf-radius);
+    background: var(--sf-surface);
+    color: var(--sf-text);
+    font-size: 1.2em;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+.settings-zoom-btn:hover:not(:disabled) {
+    background: var(--sf-hover);
+    border-color: var(--sf-blue);
+}
+.settings-zoom-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.settings-zoom-value {
+    min-width: 52px;
+    text-align: center;
+    font-weight: 600;
+    color: var(--sf-text);
+}
+
+/* Desplegables (filas por página, cliente por defecto): ancho contenido.
+   Gana en especificidad a la regla global ".config-section-container select"
+   (que impone width:100% y aplastaría la fila). */
+#ajustes-section .settings-select {
+    width: auto;
+    min-width: 200px;
+    flex-shrink: 0;
+}
+
+/* --- Almacenamiento: grupos de caché colapsables y sus ficheros --- */
+.settings-cache-group {
+    border-bottom: 1px solid var(--sf-border);
+}
+/* Cabecera del grupo (summary): nombre + tamaño total + botón "Borrar todo".
+   Es el disparador del colapsable; se oculta el marcador nativo del <details>. */
+.settings-cache-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    cursor: pointer;
+    list-style: none;
+}
+.settings-cache-head::-webkit-details-marker { display: none; }
+.settings-cache-chevron {
+    color: var(--sf-text-muted);
+    font-size: 0.7em;
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+.settings-cache-group[open] > .settings-cache-head .settings-cache-chevron {
+    transform: rotate(90deg);
+}
+.settings-cache-name {
+    font-weight: 700;
+    color: var(--sf-text);
+}
+.settings-cache-size {
+    font-size: 0.85em;
+    color: var(--sf-text-muted);
+}
+.settings-cache-head .settings-cache-btn {
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+/* Lista de ficheros (elementos cacheados) dentro de un grupo colapsable. */
+.settings-cache-files {
+    margin: 0 0 10px 16px;
+    border-left: 2px solid var(--sf-border);
+    padding-left: 12px;
+}
+.settings-cache-file {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 5px 0;
+}
+.settings-cache-file-name {
+    color: var(--sf-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex: 1;
+}
+.settings-cache-file .settings-cache-btn {
+    flex-shrink: 0;
+}
+.settings-cache-empty {
+    font-size: 0.85em;
+    color: var(--sf-text-muted);
+    padding: 4px 0;
+}
+/* Botones de borrado de la lista: un pelín más compactos. */
+.settings-cache-btn {
+    padding: 4px 12px;
+    font-size: 0.8em;
+}
+
+/* Total general + "Borrar todo". */
+.settings-cache-total {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 16px;
+    padding-top: 14px;
+    color: var(--sf-text);
+}

@@ -179,7 +179,7 @@ function updateToggleUI() {
     if (!btn) return;
     btn.textContent = 'Incluir WhatsApp';
     btn.style.color = '#fff';
-    btn.style.background = waEnabled ? '#27ae60' : '#95a5a6'; // verde activo / gris inactivo
+    btn.style.background = waEnabled ? 'var(--sf-green)' : 'var(--sf-text-muted)'; // verde activo / gris inactivo (tokens para no cantar en oscuro)
 }
 
 export function init(dependencies) {

@@ -349,14 +349,39 @@ async function activateClientBU(clientName, mid, buName) {
     }
 }
 
-/** Activa un cliente por su BU principal (usado por el desplegable plano y tras el login). */
-export async function loadAndSyncClientConfig(clientName) {
+/**
+ * Activa un cliente. Si se indica una BU concreta (mid) válida para ese cliente se
+ * activa esa; en caso contrario se usa la BU principal. Usado por el desplegable plano,
+ * tras el login y por el "cliente por defecto" de Ajustes (que sí indica la BU).
+ * @param {string} clientName
+ * @param {string} [mid] - MID de la BU a activar (opcional).
+ */
+export async function loadAndSyncClientConfig(clientName, mid) {
     if (!clientName) { await activateClientBU('', '', ''); return; }
     const configs = await window.electronAPI.loadGlobalConfigs();
-    const config = configs[clientName] || {};
-    const mid = String(config.businessUnit || '').trim();
-    const buName = getBusFor(config).find(b => String(b.mid) === mid)?.name || 'Principal';
-    await activateClientBU(clientName, mid, buName);
+    const config = configs[clientName];
+    // El cliente puede no existir (p. ej. un "cliente por defecto" que se borró):
+    // en ese caso se arranca sin cliente en vez de activar uno vacío.
+    if (!config) { await activateClientBU('', '', ''); return; }
+    const bus = getBusFor(config);
+    let selectedMid = String(mid || '').trim();
+    if (!selectedMid || !bus.some(b => String(b.mid) === selectedMid)) {
+        selectedMid = String(config.businessUnit || '').trim();
+    }
+    const buName = bus.find(b => String(b.mid) === selectedMid)?.name || 'Principal';
+    await activateClientBU(clientName, selectedMid, buName);
+}
+
+/**
+ * Devuelve la lista de clientes con sus BUs visibles, para selectores externos
+ * (p. ej. el "cliente por defecto" de Ajustes). No activa nada.
+ * @returns {Promise<Array<{name:string, bus:Array<{mid:string,name:string}>}>>}
+ */
+export async function getClientsWithBUs() {
+    const configs = (await window.electronAPI.loadGlobalConfigs()) || {};
+    return Object.keys(configs)
+        .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+        .map(name => ({ name, bus: getBusFor(configs[name]).filter(b => !b.hidden) }));
 }
 
 /** Descubre las BUs del tenant vía SOAP y las fusiona en la tabla (requiere sesión activa). */

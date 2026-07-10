@@ -2,25 +2,25 @@
 
     <style>
         .drillable { cursor: pointer; transition: all 0.2s ease; }
-        .drillable:hover { background-color: #f8fafc !important; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.12) !important; }
+        .drillable:hover { background-color: var(--sf-bg-alt) !important; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.12) !important; }
         .drillable-bar { cursor: pointer; transition: background 0.2s ease; }
-        .drillable-bar:hover { background-color: #f1f5f9 !important; border-radius: 4px; }
+        .drillable-bar:hover { background-color: var(--sf-bg-alt) !important; border-radius: 4px; }
 
         #audit-drill-modal {
             display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; backdrop-filter: blur(2px);
         }
         .audit-modal-content {
-            background-color: #fff; padding: 25px; border-radius: 12px; width: 85%; max-width: 1000px;
+            background-color: var(--sf-surface); padding: 25px; border-radius: 12px; width: 85%; max-width: 1000px;
             max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
         .audit-modal-header {
             display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 15px;
+            border-bottom: 2px solid var(--sf-border); padding-bottom: 12px; margin-bottom: 15px;
         }
-        .audit-modal-header h3 { margin: 0; color: #2c3e50; font-size: 1.25em; display: inline-block; margin-right: 15px; }
-        .audit-modal-close { background: none; border: none; font-size: 1.5em; cursor: pointer; color: #95a5a6; transition: color 0.2s; }
-        .audit-modal-close:hover { color: #e74c3c; }
+        .audit-modal-header h3 { margin: 0; color: var(--sf-text); font-size: 1.25em; display: inline-block; margin-right: 15px; }
+        .audit-modal-close { background: none; border: none; font-size: 1.5em; cursor: pointer; color: var(--sf-text-muted); transition: color 0.2s; }
+        .audit-modal-close:hover { color: var(--sf-red); }
         .audit-modal-body { overflow-y: auto; flex: 1; }
         /* La tabla del drill-down hereda el estilo global de tablas de la app
            (cabecera azul sticky, celdas centradas, rejilla direccional):
@@ -41,31 +41,31 @@
     </div>
 
     <h2 class="u-mb-10">Auditoría de Instancia</h2>
-    <p style="text-align:center; color:#888; font-size:0.88em; margin-bottom:24px;">
+    <p style="text-align:center; color:var(--sf-text-muted); font-size:0.88em; margin-bottom:24px;">
         Auditoría: usuarios, automatismos, journeys, cloud pages, configuración de envío, data extensions y contenidos.
     </p>
 
     <!-- PANEL DE CONFIGURACIÓN — ocupa todo el ancho disponible -->
     <div id="audit-options" class="config-block" style="width:100%; margin:0 0 30px 0;">
 
-        <h3 style="margin-top:0; color:#2c3e50;">Cómo lanzar la auditoría</h3>
-        <ol style="color:#444; font-size:0.88em; line-height:1.8; margin:0 0 6px 0; padding-left:22px;">
+        <h3 style="margin-top:0; color:var(--sf-text);">Cómo lanzar la auditoría</h3>
+        <ol style="color:var(--sf-text-soft); font-size:0.88em; line-height:1.8; margin:0 0 6px 0; padding-left:22px;">
             <li>Para que la pestaña <b>Contenidos</b> tenga datos, entra antes a la vista de <b>Contenidos</b> y pulsa <b>Refrescar</b> (la auditoría reutiliza esa caché, no descarga contenidos).</li>
             <li>Para auditar <b>Data Extensions</b> (opcional), copia el script de abajo, ejecútalo en la consola de <b>Contact Builder</b> y pega el JSON resultante en el cuadro.</li>
             <li>Pulsa <b>«Iniciar Escaneo de Instancia»</b> (arriba a la derecha) y confirma. <b>No cierres la aplicación</b> mientras dura el proceso.</li>
             <li>Al terminar, revisa las pestañas del panel y descarga el <b>Informe (PDF)</b> o los <b>Detalles</b>.</li>
         </ol>
-        <p style="color:#666; font-size:0.84em; line-height:1.6; margin:0 0 6px 0;">
+        <p style="color:var(--sf-text-soft); font-size:0.84em; line-height:1.6; margin:0 0 6px 0;">
             Los <b>Journeys</b> se descargan durante el escaneo y quedan en una caché compartida con las vistas de Journeys y Contenidos:
             si ya están descargados (misma versión), se reutilizan y solo se bajan los nuevos o modificados. En cualquier caso, siempre se
             muestran el <b>total de llamadas API</b> y el <b>tiempo</b> del escaneo. Hay un <b>límite anual de llamadas API</b>: como referencia,
             un cliente con 700 Journeys y 200 automatismos puede tardar unos 10 minutos.
         </p>
-        <p style="color:#888; font-size:0.82em; margin-bottom:18px; font-style:italic;">
+        <p style="color:var(--sf-text-muted); font-size:0.82em; margin-bottom:18px; font-style:italic;">
             Si ya existe una auditoría guardada para este cliente, se cargará automáticamente al entrar a esta vista.
         </p>
 
-        <h3 style="color:#2c3e50; margin-bottom:10px;">Qué se analiza en cada pestaña</h3>
+        <h3 style="color:var(--sf-text); margin-bottom:10px;">Qué se analiza en cada pestaña</h3>
         <table class="audit-info-table">
             <thead>
                 <tr>
@@ -114,10 +114,10 @@
         </table>
 
         <!-- OPCIÓN: Data Extensions (JSON) — fuera del grid, ocupa todo el ancho -->
-        <div style="margin-top:24px; border-top:1px solid #e2e8f0; padding-top:20px;">
-            <div style="font-weight:700; font-size:1em; color:#2c3e50; margin-bottom:6px;">Data Extensions — Análisis desde JSON</div>
-            <p style="font-size:0.83em; color:#555; margin:0 0 12px 0; line-height:1.6;">
-                Cada escaneo <b>sobreescribe la caché anterior</b> — si relanzas el escaneo sin volver a pegar el JSON, se perderán estos datos.<br>Para auditar las DEs de la instancia, accede <a id="audit-de-cb-link" href="#" class="external-link" style="color: #0070d2; text-decoration: underline; font-weight: bold;">aquí</a>  y ejecuta el script de abajo en la consola del navegador
+        <div style="margin-top:24px; border-top:1px solid var(--sf-border); padding-top:20px;">
+            <div style="font-weight:700; font-size:1em; color:var(--sf-text); margin-bottom:6px;">Data Extensions — Análisis desde JSON</div>
+            <p style="font-size:0.83em; color:var(--sf-text-soft); margin:0 0 12px 0; line-height:1.6;">
+                Cada escaneo <b>sobreescribe la caché anterior</b> — si relanzas el escaneo sin volver a pegar el JSON, se perderán estos datos.<br>Para auditar las DEs de la instancia, accede <a id="audit-de-cb-link" href="#" class="external-link" style="color: var(--sf-blue); text-decoration: underline; font-weight: bold;">aquí</a>  y ejecuta el script de abajo en la consola del navegador
                 estando logado en <b>Contact Builder</b>. El script recorre todas las carpetas (para ~6.000 DEs tarda aproximadamente 20 minutos) y te mostrará
                 un popup para copiar el JSON resultante. Las DEs compartidas (carpeta <i>Shared</i>) se excluyen automáticamente del análisis.
             </p>

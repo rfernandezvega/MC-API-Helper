@@ -14,7 +14,7 @@ function updateShowQueryToggleUI() {
     const btn = elements.showQueryTextBtn;
     if (!btn) return;
     btn.style.color = '#fff';
-    btn.style.background = showQueryText ? '#27ae60' : '#95a5a6';
+    btn.style.background = showQueryText ? 'var(--sf-green)' : 'var(--sf-text-muted)'; // tokens: verde activo / gris inactivo, legible en oscuro
 }
 
 export function init(dependencies) {
