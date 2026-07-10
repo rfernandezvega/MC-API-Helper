@@ -5,6 +5,7 @@ import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
+import { escapeHtml } from '../ui/format-utils.js';
 
 // --- 1. ESTADO DEL MÓDULO ---
 
@@ -30,7 +31,7 @@ export function init(dependencies) {
 async function searchDE() {
     ui.blockUI("Buscando Data Extension...");
     logger.startLogBuffering();
-    elements.deSearchResultsTbody.innerHTML = '<tr><td colspan="2">Buscando...</td></tr>';
+    elements.deSearchResultsTbody.innerHTML = '<tr><td colspan="3">Buscando...</td></tr>';
     try {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
@@ -55,10 +56,10 @@ async function searchDE() {
 
         const pathPromises = deList.map(async (deInfo) => {
             if (!deInfo.categoryId || parseInt(deInfo.categoryId) === 0) {
-                return { name: deInfo.deName, path: 'Data Extensions' };
+                return { name: deInfo.deName, key: deInfo.customerKey, path: 'Data Extensions' };
             }
             const folderPath = await mcApiService.getFolderPath(deInfo.categoryId, apiConfig);
-            return { name: deInfo.deName, path: folderPath || 'Data Extensions' };
+            return { name: deInfo.deName, key: deInfo.customerKey, path: folderPath || 'Data Extensions' };
         });
 
         const resultsWithPaths = await Promise.all(pathPromises);
@@ -68,7 +69,7 @@ async function searchDE() {
 
     } catch (error) {
         logger.logMessage(`Error al buscar la DE: ${error.message}`);
-        elements.deSearchResultsTbody.innerHTML = `<tr><td colspan="2" style="color: red;">Error: ${error.message}</td></tr>`;
+        elements.deSearchResultsTbody.innerHTML = `<tr><td colspan="3" class="error-text">Error: ${escapeHtml(error.message)}</td></tr>`;
         ui.showCustomAlert(`Error: ${error.message}`);
     } finally {
         ui.unblockUI();
@@ -85,7 +86,7 @@ async function searchDE() {
 function renderTable(results) {
     elements.deSearchResultsTbody.innerHTML = '';
     if (!results || results.length === 0) {
-        elements.deSearchResultsTbody.innerHTML = '<tr><td colspan="2">No se encontraron Data Extensions con ese criterio.</td></tr>';
+        elements.deSearchResultsTbody.innerHTML = '<tr><td colspan="3">No se encontraron Data Extensions con ese criterio.</td></tr>';
         return;
     }
 
@@ -94,6 +95,6 @@ function renderTable(results) {
 
     results.forEach(result => {
         const row = elements.deSearchResultsTbody.insertRow();
-        row.innerHTML = `<td>${result.name}</td><td>${result.path}</td>`;
+        row.innerHTML = `<td>${escapeHtml(result.name)}</td><td>${escapeHtml(result.key || '')}</td><td>${escapeHtml(result.path)}</td>`;
     });
 }
