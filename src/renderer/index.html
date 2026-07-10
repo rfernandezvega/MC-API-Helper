@@ -2653,41 +2653,47 @@
 
     <div class="config-block" id="settings-rows-card">
         <h3>Filas por página</h3>
-        <p class="settings-row-desc u-mb-15">Número de registros por página en cada tabla.</p>
+        <p class="settings-row-desc">Número de registros por página en cada tabla.</p>
         <div class="settings-row">
-            <div class="settings-row-info"><div class="settings-row-title">Automatismos</div></div>
-            <select class="filter-input settings-select settings-rows-select" data-view="automations"></select>
+            <div class="settings-row-info"><div class="settings-row-title">Aplicar a todas</div></div>
+            <select id="settings-rows-all" class="filter-input settings-select"></select>
         </div>
-        <div class="settings-row">
-            <div class="settings-row-info"><div class="settings-row-title">Journeys</div></div>
-            <select class="filter-input settings-select settings-rows-select" data-view="journeys"></select>
-        </div>
-        <div class="settings-row">
-            <div class="settings-row-info"><div class="settings-row-title">Cloud Pages</div></div>
-            <select class="filter-input settings-select settings-rows-select" data-view="cloudpages"></select>
-        </div>
-        <div class="settings-row">
-            <div class="settings-row-info"><div class="settings-row-title">Usuarios</div></div>
-            <select class="filter-input settings-select settings-rows-select" data-view="users"></select>
-        </div>
-        <div class="settings-row">
-            <div class="settings-row-info"><div class="settings-row-title">Contenidos</div></div>
-            <select class="filter-input settings-select settings-rows-select" data-view="content"></select>
+        <div class="settings-grid">
+            <div class="settings-field">
+                <label>Automatismos</label>
+                <select class="filter-input settings-rows-select" data-view="automations"></select>
+            </div>
+            <div class="settings-field">
+                <label>Journeys</label>
+                <select class="filter-input settings-rows-select" data-view="journeys"></select>
+            </div>
+            <div class="settings-field">
+                <label>Cloud Pages</label>
+                <select class="filter-input settings-rows-select" data-view="cloudpages"></select>
+            </div>
+            <div class="settings-field">
+                <label>Usuarios</label>
+                <select class="filter-input settings-rows-select" data-view="users"></select>
+            </div>
+            <div class="settings-field">
+                <label>Contenidos</label>
+                <select class="filter-input settings-rows-select" data-view="content"></select>
+            </div>
         </div>
     </div>
 
     <div class="config-block">
         <h3>Cliente por defecto</h3>
-        <div class="settings-row">
-            <div class="settings-row-info">
-                <div class="settings-row-title">Cliente</div>
-                <div class="settings-row-desc">Cliente y Business Unit que se seleccionarán automáticamente al abrir la aplicación.</div>
+        <p class="settings-row-desc">Cliente y Business Unit que se seleccionarán automáticamente al abrir la aplicación.</p>
+        <div class="settings-grid">
+            <div class="settings-field">
+                <label>Cliente</label>
+                <select id="settings-client-select" class="filter-input"></select>
             </div>
-            <select id="settings-client-select" class="filter-input settings-select"></select>
-        </div>
-        <div class="settings-row" id="settings-bu-row">
-            <div class="settings-row-info"><div class="settings-row-title">Business Unit</div></div>
-            <select id="settings-bu-select" class="filter-input settings-select"></select>
+            <div class="settings-field" id="settings-bu-field">
+                <label>Business Unit</label>
+                <select id="settings-bu-select" class="filter-input"></select>
+            </div>
         </div>
     </div>
 

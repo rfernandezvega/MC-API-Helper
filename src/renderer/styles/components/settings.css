@@ -4,6 +4,40 @@
    Usa exclusivamente los tokens --sf-* para funcionar en claro y oscuro.
    =================================================================== */
 
+/* Cajas más compactas: menos padding vertical y menos hueco tras el título. */
+#ajustes-section .config-block {
+    padding: 14px 20px;
+}
+#ajustes-section .config-block > h3 {
+    margin: 0 0 4px 0;
+}
+#ajustes-section .config-block > .settings-row-desc {
+    margin: 0 0 6px 0;
+}
+
+/* Rejilla de campos (Filas por página, Cliente/BU): etiqueta arriba, control debajo,
+   en varias columnas según el ancho disponible. */
+.settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px 20px;
+    margin-top: 8px;
+}
+.settings-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+.settings-field label {
+    font-weight: 600;
+    color: var(--sf-text);
+    font-size: 0.9em;
+}
+.settings-field select {
+    width: 100%;
+}
+
 /* Cada fila de ajuste: descripción a la izquierda, control a la derecha,
    ocupando todo el ancho de su tarjeta. Las filas dentro de una misma
    tarjeta se separan con una línea. */
@@ -12,7 +46,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 20px;
-    padding: 12px 0;
+    padding: 10px 0;
     border-bottom: 1px solid var(--sf-border);
 }
 .settings-row:last-child {

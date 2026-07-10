@@ -32,6 +32,7 @@ let currentZoom = ZOOM_DEFAULT;
 // Filas por página: opciones y valor por defecto de cada vista (los originales).
 const ROWS_OPTIONS = [10, 15, 25, 50, 100];
 const ROWS_DEFAULTS = { automations: 15, journeys: 15, cloudpages: 10, users: 10, content: 15 };
+const ROWS_VIEWS = Object.keys(ROWS_DEFAULTS);
 
 // Copia en memoria de settings.json, cargada al arrancar. La leen otros módulos
 // (getRowsPerPage / getDefaultClient) sin ir al disco en cada render.
@@ -137,6 +138,18 @@ function renderRowsSelects() {
         sel.innerHTML = ROWS_OPTIONS.map(n => `<option value="${n}">${n}</option>`).join('');
         sel.value = String(getRowsPerPage(view));
     });
+    updateRowsAllSelect();
+}
+
+/** Actualiza el selector "Aplicar a todas": muestra el valor común o "Personalizado". */
+function updateRowsAllSelect() {
+    const all = document.getElementById('settings-rows-all');
+    if (!all) return;
+    const values = ROWS_VIEWS.map(v => getRowsPerPage(v));
+    const common = values.every(v => v === values[0]) ? values[0] : null;
+    all.innerHTML = '<option value="">Personalizado</option>'
+        + ROWS_OPTIONS.map(n => `<option value="${n}">${n}</option>`).join('');
+    all.value = common != null ? String(common) : '';
 }
 
 /** Guarda las filas por página de una vista (dentro del objeto rowsPerPage). */
@@ -147,6 +160,18 @@ async function saveRowsPerPage(view, value) {
     settings[ROWS_KEY] = rows;
     cachedSettings = settings;
     await window.electronAPI.saveSettings(settings);
+    updateRowsAllSelect();
+}
+
+/** Aplica el mismo valor de filas por página a TODAS las vistas y lo guarda. */
+async function saveAllRowsPerPage(value) {
+    const settings = (await window.electronAPI.getSettings()) || {};
+    const rows = { ...(settings[ROWS_KEY] || {}) };
+    ROWS_VIEWS.forEach(v => { rows[v] = value; });
+    settings[ROWS_KEY] = rows;
+    cachedSettings = settings;
+    await window.electronAPI.saveSettings(settings);
+    renderRowsSelects();
 }
 
 // --- Cliente + BU por defecto ---
@@ -159,11 +184,11 @@ async function saveRowsPerPage(view, value) {
  */
 function renderBUSelect(clientName, selectedMid) {
     const buSel = document.getElementById('settings-bu-select');
-    const buRow = document.getElementById('settings-bu-row');
+    const buField = document.getElementById('settings-bu-field');
     if (!buSel) return;
     const client = clientsData.find(c => c.name === clientName);
     const bus = client ? client.bus : [];
-    if (buRow) buRow.style.display = (clientName && bus.length) ? '' : 'none';
+    if (buField) buField.style.display = (clientName && bus.length) ? '' : 'none';
     buSel.innerHTML = bus.map(b =>
         `<option value="${escapeHtml(String(b.mid))}">${escapeHtml(b.name || String(b.mid))}</option>`
     ).join('');
@@ -305,11 +330,14 @@ export async function init() {
     document.getElementById('settings-zoom-dec')?.addEventListener('click', () => changeZoom(-ZOOM_STEP));
     document.getElementById('settings-zoom-inc')?.addEventListener('click', () => changeZoom(ZOOM_STEP));
 
-    // Filas por página (un select por vista)
+    // Filas por página (un select por vista + "Aplicar a todas")
     renderRowsSelects();
     document.getElementById('settings-rows-card')?.addEventListener('change', (e) => {
         const sel = e.target.closest('.settings-rows-select');
         if (sel) saveRowsPerPage(sel.dataset.view, Number(sel.value));
+    });
+    document.getElementById('settings-rows-all')?.addEventListener('change', (e) => {
+        if (e.target.value) saveAllRowsPerPage(Number(e.target.value));
     });
 
     // Cliente + BU por defecto (dependientes: al cambiar de cliente se repuebla la BU)
