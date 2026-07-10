@@ -227,6 +227,9 @@ export function unblockUI() {
     void elements.appContainer.offsetHeight;
     elements.appContainer.style.display = '';
     setTimeout(() => document.body.focus(), 0);
+    // Señal de "fin de operación": la escucha org-manager para volcar el acumulado
+    // de llamadas API justo cuando termina un proceso (en vez de con un temporizador).
+    document.dispatchEvent(new CustomEvent('mc-operation-end'));
 }
 
 /**

@@ -58,7 +58,6 @@ export function init() {
     elements.configClientNameInput = document.getElementById('configClientName'); // nombre del cliente en el formulario (crear/editar)
     elements.savedConfigsSelect = document.getElementById('savedConfigs');
     elements.buListTbody = document.getElementById('bu-list-tbody');
-    elements.addBuRowBtn = document.getElementById('addBuRowBtn');
     elements.syncBuBtn = document.getElementById('syncBuBtn');
     elements.authUriInput = document.getElementById('authUri');
     elements.clientIdInput = document.getElementById('clientId');

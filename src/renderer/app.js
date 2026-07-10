@@ -479,6 +479,9 @@ document.addEventListener('DOMContentLoaded', function () {
 			button.classList.add('active');
 			parent.querySelector(`#${tabId}`).classList.add('active');
 
+			// Al abrir la pestaña de Business Units, refresca el acumulado de llamadas API.
+			if (tabId === 'business-units-tab') orgManager.refreshBuApiUsage();
+
 			// --- LÓGICA ESPECÍFICA PARA GESTIÓN DEs ---
 			if (button.closest('#gestion-de-unificada-section')) {
 				// Ocultamos todos primero usando las referencias de dom-elements.js

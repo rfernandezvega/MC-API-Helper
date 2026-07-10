@@ -153,13 +153,13 @@ async function logout() {
 }
 
 /** Rellena el formulario con la configuración de un cliente. */
-function setClientConfigForm(config) {
+function setClientConfigForm(config, clientName = '') {
     elements.businessUnitInput.value = config.businessUnit || '';
     elements.authUriInput.value = config.authUri || '';
     elements.clientIdInput.value = config.clientId || '';
     elements.stackKeyInput.value = config.stackKey || '';
     populateDvConfigsTable(config.dvConfigs);
-    populateBuTable(getBusFor(config));
+    populateBuTable(getBusFor(config), clientName);
     populateWaChannelsTable(config.waChannels, getBusFor(config));
     elements.tokenField.value = '';
     elements.soapUriInput.value = '';
@@ -289,6 +289,21 @@ function toggleSidebarMenu() { csOpen ? closeSidebarMenu() : openSidebarMenu(); 
  * Activa un contexto cliente+BU: limpia cachés si cambia, carga el formulario, fija la clave de
  * caché (clientNameInput) y el MID activo (activeMidInput), y valida la sesión.
  */
+/**
+ * Vuelca las llamadas API pendientes al acumulado del contexto ACTIVO (cliente + BU).
+ * Se llama al cambiar de contexto, periódicamente y al pintar la tabla de BUs, para
+ * que el total no dependa de cerrar la app. Si no hay contexto activo, se descartan
+ * (p. ej. llamadas de la comprobación de licencia previas a seleccionar cliente).
+ */
+async function flushApiUsage() {
+    const delta = mcApiService.takePendingApiCalls();
+    if (delta > 0 && activeContext.clientName && activeContext.mid) {
+        try {
+            await window.electronAPI.addApiUsage(activeContext.clientName, activeContext.mid, delta);
+        } catch (e) { /* si falla, se reintentará en el siguiente volcado */ }
+    }
+}
+
 async function activateClientBU(clientName, mid, buName) {
     logger.startLogBuffering();
     try {
@@ -307,6 +322,9 @@ async function activateClientBU(clientName, mid, buName) {
 
         logger.logMessage(`Cambiando contexto: "${activeContext.cacheKey || 'ninguno'}" → "${cacheKey || 'ninguno'}"`);
 
+        // Antes de cambiar de contexto, atribuye las llamadas pendientes al anterior.
+        await flushApiUsage();
+
         // Limpiar cachés en memoria al cambiar de contexto.
         calendar.clearData();
         automationsManager.clearCache();
@@ -322,7 +340,7 @@ async function activateClientBU(clientName, mid, buName) {
         if (clientName) {
             ui.blockUI("Cargando configuración...");
             customerFinder.updateClientConfig(config);
-            setClientConfigForm(config);
+            setClientConfigForm(config, clientName);
 
             elements.configClientNameInput.value = clientName;
             elements.clientNameInput.value = cacheKey;   // clave de caché para las vistas
@@ -512,28 +530,71 @@ async function importDvConfig() {
 
 // --- HELPERS: TABLA DE BUSINESS UNITS ---
 
-function addBuRow(name = '', mid = '', hidden = false) {
+/**
+ * Añade una fila a la tabla de BUs. La columna "Llamadas API" (entre MID y Visible)
+ * es de solo lectura y muestra el acumulado de esa BU.
+ * @param {string} name
+ * @param {string} mid
+ * @param {boolean} hidden
+ * @param {number} calls - Acumulado de llamadas API de esta BU.
+ */
+function addBuRow(name = '', mid = '', hidden = false, calls = 0) {
     const row = elements.buListTbody.insertRow();
     const sel = `<select class="bu-visible">
         <option value="show"${hidden ? '' : ' selected'}>Mostrar</option>
         <option value="hide"${hidden ? ' selected' : ''}>Ocultar</option>
     </select>`;
-    row.innerHTML = `<td contenteditable="true">${escapeHtml(name)}</td><td contenteditable="true">${escapeHtml(mid)}</td><td>${sel}</td>` +
+    // Sin MID todavía (fila nueva) no hay acumulado: se muestra un guion.
+    const callsText = mid ? Number(calls || 0).toLocaleString('es-ES') : '—';
+    row.innerHTML = `<td contenteditable="true">${escapeHtml(name)}</td><td contenteditable="true">${escapeHtml(mid)}</td>` +
+        `<td class="ta-center bu-calls">${callsText}</td><td>${sel}</td>` +
         `<td class="ta-center"><button type="button" class="bu-del-btn row-del-btn" title="Eliminar fila">Eliminar</button></td>`;
 }
 
-function populateBuTable(bus = []) {
+/**
+ * Pinta la tabla de BUs. Vuelca antes las llamadas pendientes y lee el acumulado del
+ * cliente para mostrar el total por BU.
+ * @param {Array} bus
+ * @param {string} clientName - Cliente cuyas BUs se muestran (para leer su acumulado).
+ */
+async function populateBuTable(bus = [], clientName = '') {
     elements.buListTbody.innerHTML = '';
+    await flushApiUsage();
+    let usage = {};
+    if (clientName) {
+        try { usage = (await window.electronAPI.getApiUsage(clientName)) || {}; } catch (e) { usage = {}; }
+    }
     const rows = (bus && bus.length) ? bus : [{ name: '', mid: '', hidden: false }];
-    rows.forEach(b => addBuRow(b.name || '', b.mid || '', !!b.hidden));
+    rows.forEach(b => addBuRow(b.name || '', b.mid || '', !!b.hidden, usage[String(b.mid)] || 0));
 }
 
 function getBuTableRows() {
+    // El estado "visible" se lee por la clase del select (.bu-visible), no por índice de
+    // celda, para no romperse con la columna añadida de "Llamadas API".
     return Array.from(elements.buListTbody.querySelectorAll('tr')).map(row => ({
         name: row.cells[0].textContent.trim(),
         mid: row.cells[1].textContent.trim(),
-        hidden: row.cells[2]?.querySelector('select')?.value === 'hide'
+        hidden: row.querySelector('.bu-visible')?.value === 'hide'
     })).filter(b => b.mid);
+}
+
+/**
+ * Actualiza la columna "Llamadas API" de la tabla de BUs con el acumulado más reciente.
+ * La tabla solo se pinta al activar el cliente (con 0 recién activado), así que hay que
+ * refrescar el contador al abrir la pestaña de Business Units. No re-renderiza la tabla
+ * (para no perder ediciones en curso): solo actualiza las celdas de solo lectura.
+ */
+export async function refreshBuApiUsage() {
+    await flushApiUsage();
+    const clientName = elements.configClientNameInput.value.trim();
+    if (!clientName) return;
+    let usage = {};
+    try { usage = (await window.electronAPI.getApiUsage(clientName)) || {}; } catch (e) { /* sin datos */ }
+    elements.buListTbody.querySelectorAll('tr').forEach(row => {
+        const mid = row.cells[1]?.textContent.trim();
+        const cell = row.querySelector('.bu-calls');
+        if (cell) cell.textContent = mid ? Number(usage[mid] || 0).toLocaleString('es-ES') : '—';
+    });
 }
 
 
@@ -622,6 +683,11 @@ export async function init(dependencies) {
     usersManager           = dependencies.usersManager;
     auditManager           = dependencies.auditManager;
 
+    // Vuelca el acumulado de llamadas al terminar cada operación (evento emitido por
+    // ui.unblockUI), al cambiar de contexto y al cerrar la app. Sin sondeo periódico.
+    document.addEventListener('mc-operation-end', flushApiUsage);
+    window.addEventListener('beforeunload', () => { flushApiUsage(); });
+
     // Migración de datos antiguos de localStorage a fichero.
     const oldLocalData = localStorage.getItem('mcApiConfigs');
     if (oldLocalData) {
@@ -643,8 +709,7 @@ export async function init(dependencies) {
     elements.exportDvConfigBtn.addEventListener('click', exportDvConfig);
     elements.importDvConfigBtn.addEventListener('click', importDvConfig);
 
-    // Business Units.
-    elements.addBuRowBtn?.addEventListener('click', () => addBuRow('', ''));
+    // Business Units. Las BUs se descubren con "Sincronizar BUs" (no hay alta manual).
     elements.syncBuBtn?.addEventListener('click', syncBusinessUnits);
     elements.buListTbody?.addEventListener('click', (e) => {
         if (e.target.matches('.bu-del-btn')) {

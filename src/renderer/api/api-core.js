@@ -6,8 +6,23 @@
 let silenceResponses = false;
 let apiCallSeq = 0; // correlaciona cada llamada con su respuesta en el log
 
+// Contador de llamadas hechas desde el último volcado. El llamador (org-manager)
+// lo lee periódicamente con takePendingApiCalls() y lo acumula por cliente/BU en disco.
+let pendingApiCalls = 0;
+
+/**
+ * Devuelve el número de llamadas API hechas desde la última vez que se llamó a esta
+ * función y reinicia el contador a cero (para acumular el total por cliente/BU).
+ * @returns {number}
+ */
+export function takePendingApiCalls() {
+    const n = pendingApiCalls;
+    pendingApiCalls = 0;
+    return n;
+}
+
 export let logger = {
-    logApiCall: () => {}, 
+    logApiCall: () => {},
     logApiResponse: () => {}
 };
 
@@ -34,6 +49,7 @@ export function setSilentResponses(silent) {
  */
 export async function executeSoapRequest(soapUri, soapPayload) {
     const callId = ++apiCallSeq;
+    pendingApiCalls++;
     logger.logApiCall({ endpoint: soapUri, method: 'POST', payload: soapPayload, _id: callId });
 
     const response = await fetch(soapUri, {
@@ -71,6 +87,7 @@ export async function executeSoapRequest(soapUri, soapPayload) {
  */
 export async function executeRestRequest(url, options = {}) {
     const callId = ++apiCallSeq;
+    pendingApiCalls++;
     logger.logApiCall({ endpoint: url, options, _id: callId });
     const response = await fetch(url, options);
     const responseText = await response.text();

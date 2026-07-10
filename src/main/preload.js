@@ -183,6 +183,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getCacheInfo: () => ipcRenderer.invoke('get-cache-info'),
   clearCache: (key) => ipcRenderer.invoke('clear-cache', key),
   deleteCacheFile: (catKey, fileName) => ipcRenderer.invoke('delete-cache-file', catKey, fileName),
+  addApiUsage: (clientName, mid, delta) => ipcRenderer.invoke('add-api-usage', clientName, mid, delta),
+  getApiUsage: (clientName) => ipcRenderer.invoke('get-api-usage', clientName),
   selectFolder: () => ipcRenderer.invoke('select-folder'),
   saveMultipleCsvs: (data) => ipcRenderer.invoke('save-multiple-csvs', data),
   

@@ -249,6 +249,36 @@ ipcMain.handle('get-settings', (event) => {
     return fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf-8')) : {};
 });
 
+// Acumulado de llamadas API por cliente y BU (MID). Fichero: { [cliente]: { [mid]: total } }.
+function readApiUsage() {
+    const filePath = path.join(app.getPath('userData'), 'apiUsage.json');
+    try {
+        return fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf-8')) : {};
+    } catch (e) {
+        return {};
+    }
+}
+
+// Suma un incremento de llamadas al total de una BU concreta de un cliente.
+ipcMain.handle('add-api-usage', (event, clientName, mid, delta) => {
+    const n = Number(delta) || 0;
+    if (!clientName || !mid || n <= 0) return false;
+    const usage = readApiUsage();
+    if (!usage[clientName]) usage[clientName] = {};
+    usage[clientName][mid] = (Number(usage[clientName][mid]) || 0) + n;
+    try {
+        fs.writeFileSync(path.join(app.getPath('userData'), 'apiUsage.json'), JSON.stringify(usage, null, 2));
+        return true;
+    } catch (e) {
+        return false;
+    }
+});
+
+// Devuelve el acumulado de llamadas de un cliente: { [mid]: total }.
+ipcMain.handle('get-api-usage', (event, clientName) => {
+    return readApiUsage()[clientName] || {};
+});
+
 // Cambia el zoom de la ventana en caliente (el renderer lo persiste en settings).
 ipcMain.handle('set-zoom', (event, factor) => {
     const z = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Number(factor) || 0.85));
