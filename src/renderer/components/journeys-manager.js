@@ -8,6 +8,7 @@ import * as logger from '../ui/logger.js';
 import { escapeHtml, formatDate } from '../ui/format-utils.js';
 import { createTableSorter, createPaginator } from '../ui/table-utils.js';
 import { getRowsPerPage } from './settings.js';
+import { buildJourneyUrl, linkCell } from '../ui/mc-links.js';
 
 // --- 1. ESTADO DEL MÓDULO ---
 
@@ -150,7 +151,7 @@ function renderTable(journeys) {
 
         row.innerHTML = `
             <td class="ta-center">${commsBtn}</td>
-            <td>${escapeHtml(j.name) || '---'}</td>
+            <td>${linkCell(j.name, buildJourneyUrl(j.id, j.version))}</td>
             <td>${escapeHtml(j.version) || '---'}</td>
             <td>${formatDate(j.createdDate)}</td>
             <td>${formatDate(j.modifiedDate)}</td>
@@ -928,6 +929,9 @@ async function deleteJourneys() {
  * @param {Event} e - El evento de clic.
  */
 function handleRowSelection(e) {
+    // Click en un enlace externo → abrir en el navegador, sin tocar la selección.
+    if (e.target.closest('a.external-link')) { ui.handleExternalLink(e); return; }
+
     // Click en el botón de comunicaciones → abrir drawer (no afecta a la selección)
     const commsBtn = e.target.closest('.journey-comms-btn');
     if (commsBtn) {

@@ -3,6 +3,8 @@ import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
+import { buildAutomationUrl, linkCell } from '../ui/mc-links.js';
+import { sqlBox } from '../ui/sql-highlight.js';
 
 let getAuthenticatedConfig;
 
@@ -118,7 +120,7 @@ function renderTable(queries) {
 
         // Nombres y Pasos (Mismo sistema que Origen de Datos)
         const autoNames = (query.automations && query.automations.length > 0)
-            ? query.automations.map(a => a.automationName || 'N/A').join('<br>')
+            ? query.automations.map(a => linkCell(a.automationName || 'N/A', buildAutomationUrl(a.automationId))).join('<br>')
             : '---';
 
         const autoSteps = (query.automations && query.automations.length > 0)
@@ -129,7 +131,7 @@ function renderTable(queries) {
             <td><a href="${queryLink}" class="external-link" title="Abrir en MC">${query.name}</a></td>
             <td>${autoNames}</td>
             <td>${autoSteps}</td>
-            <td style="white-space: pre-wrap; word-break: break-all; display: ${displayStyle};">${query.description || query.queryText || ''}</td>
+            <td style="display: ${displayStyle};">${sqlBox(query.description || query.queryText)}</td>
         `;
         elements.querySearchResultsTbody.appendChild(row);
     });

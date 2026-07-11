@@ -5,6 +5,7 @@ import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import { loadCustomFonts } from '../ui/fonts.js';
 import { escapeHtml } from '../ui/format-utils.js';
+import { highlightSQLHtml } from '../ui/sql-highlight.js';
 
 let getAuthenticatedConfig;
 let goBackFunction;
@@ -471,24 +472,6 @@ function drawHighlightedCode(doc, code, type, startY) {
 function formatDate(date) {
     if (!date || date.startsWith('0001')) return 'N/A';
     return new Date(date).toLocaleString();
-}
-
-function highlightSQLHtml(query) {
-    if (!query) return '';
-
-    let escaped = query.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-    // Patrones: 1. Comentarios, 2. Strings, 3. Keywords, 4. Funciones, 5. Números
-    const pattern = /(--[^\n]*|\/\*[\s\S]*?\*\/)|('[^']*')|\b(SELECT|FROM|WHERE|AND|OR|JOIN|INNER|LEFT|ON|GROUP|BY|ORDER|INSERT|UPDATE|SET|DELETE|CASE|WHEN|THEN|ELSE|END|NULL|NOT|IN|TOP|DISTINCT|AS|UNION|ALL|LIKE)\b|\b(CONVERT|DATE|DATEADD|GETUTCDATE|GETDATE|DATEDIFF|SUM|COUNT|AVG|MIN|MAX|CAST|ISNULL|COALESCE)\b|(\b\d+\b)/gi;
-
-    return escaped.replace(pattern, (match, com, str, kwd, fn, num) => {
-        if (com) return `<span class="sql-comment">${match}</span>`;
-        if (str) return `<span class="sql-string">${match}</span>`;
-        if (kwd) return `<span class="sql-keyword">${match.toUpperCase()}</span>`;
-        if (fn) return `<span class="sql-function">${match.toUpperCase()}</span>`;
-        if (num) return `<span class="sql-number">${match}</span>`;
-        return match;
-    });
 }
 
 function highlightJSHtml(code) {

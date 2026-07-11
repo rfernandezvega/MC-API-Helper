@@ -44,6 +44,31 @@
     margin-bottom: 0;
 }
 
+/* Filas seleccionables de la tabla de resultados del Buscador de Data Extensions. */
+#de-search-results-table tbody tr { cursor: pointer; }
+
+/* Caja acotada para mostrar una query en los buscadores (Origen de datos, Texto en
+   Queries). Misma apariencia que el analizador (fondo oscuro + resaltado .sql-*),
+   con altura máxima y scroll para que las queries largas no crezcan sin límite. */
+.query-box {
+    background-color: var(--sf-code-bg);
+    color: var(--sf-code-text);
+    border: 1px solid var(--sf-border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    max-height: 180px;
+    overflow: auto;
+    text-align: left;
+}
+.query-box pre {
+    margin: 0;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
 /* Tablas del detalle de contenido (Componentes / DEs referenciadas):
    cabecera clara para no competir con las barras azules de las secciones
    colapsables ni heredar los bordes azul oscuro del th global. */

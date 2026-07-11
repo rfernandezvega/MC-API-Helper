@@ -10,6 +10,7 @@ import { escapeHtml } from '../ui/format-utils.js';
 // --- 1. ESTADO DEL MÓDULO ---
 
 let getAuthenticatedConfig; // Dependencia inyectada desde app.js
+let selectedDeName = null;  // Nombre de la DE seleccionada en la tabla de resultados
 
 // --- 2. FUNCIONES PÚBLICAS ---
 
@@ -21,6 +22,29 @@ export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
 
     elements.searchDEBtn.addEventListener('click', searchDE);
+
+    // Selección de una fila de resultados (para el botón "Origen de datos").
+    elements.deSearchResultsTbody.addEventListener('click', (e) => {
+        const row = e.target.closest('tr');
+        if (!row || !row.dataset.deName) return;
+        elements.deSearchResultsTbody.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
+        row.classList.add('selected');
+        selectedDeName = row.dataset.deName;
+        elements.deToSourcesBtn.disabled = false;
+    });
+
+    // Botón "Origen de datos": salta a la pestaña de Orígenes con la DE seleccionada
+    // y lanza la búsqueda automáticamente.
+    elements.deToSourcesBtn.addEventListener('click', goToDataSources);
+}
+
+/** Cambia a la pestaña "Origen de datos", rellena el nombre y busca sus orígenes. */
+function goToDataSources() {
+    if (!selectedDeName) return;
+    const tabBtn = document.querySelector('.tab-button[data-tab="origenes-tab"]');
+    if (tabBtn) tabBtn.click();
+    elements.deNameToFindInput.value = selectedDeName;
+    elements.findDataSourcesBtn.click();
 }
 
 // --- 3. LÓGICA PRINCIPAL ---
@@ -84,6 +108,9 @@ async function searchDE() {
  * @param {Array} results - Array de objetos con { name, path }.
  */
 function renderTable(results) {
+    // Cada nueva búsqueda resetea la selección y deshabilita el botón.
+    selectedDeName = null;
+    elements.deToSourcesBtn.disabled = true;
     elements.deSearchResultsTbody.innerHTML = '';
     if (!results || results.length === 0) {
         elements.deSearchResultsTbody.innerHTML = '<tr><td colspan="3">No se encontraron Data Extensions con ese criterio.</td></tr>';
@@ -95,6 +122,7 @@ function renderTable(results) {
 
     results.forEach(result => {
         const row = elements.deSearchResultsTbody.insertRow();
+        row.dataset.deName = result.name;
         row.innerHTML = `<td>${escapeHtml(result.name)}</td><td>${escapeHtml(result.key || '')}</td><td>${escapeHtml(result.path)}</td>`;
     });
 }

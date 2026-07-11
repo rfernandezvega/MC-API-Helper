@@ -5,6 +5,8 @@ import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
+import { buildAutomationUrl, linkCell } from '../ui/mc-links.js';
+import { sqlBox } from '../ui/sql-highlight.js';
 
 // --- 1. ESTADO DEL MÓDULO ---
 
@@ -31,6 +33,8 @@ export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
 
     elements.findDataSourcesBtn.addEventListener('click', findDataSources);
+    // Los nombres de automatismo son enlaces externos: se abren en el navegador.
+    elements.dataSourcesTbody.addEventListener('click', ui.handleExternalLink);
 
     // --- Toggle para mostrar/ocultar la columna de descripción/query ---
     updateShowQueryToggleUI();
@@ -136,7 +140,7 @@ function renderTable(sources) {
         // Columna: Automatización
         const automationCell = document.createElement('td');
         automationCell.innerHTML = (source.automations && source.automations.length > 0)
-            ? source.automations.map(auto => auto.automationName || 'N/A').join('<br>')
+            ? source.automations.map(auto => linkCell(auto.automationName || 'N/A', buildAutomationUrl(auto.automationId))).join('<br>')
             : '---';
         row.appendChild(automationCell);
 
@@ -152,13 +156,11 @@ function renderTable(sources) {
         actionCell.textContent = source.action || '---';
         row.appendChild(actionCell);
 
-        // Columna: Descripción / Query (COLUMNA 6)
+        // Columna: Descripción / Query (COLUMNA 6) — en caja acotada con resaltado.
         const descriptionQueryCell = document.createElement('td');
-        descriptionQueryCell.style.whiteSpace = 'pre-wrap';
-        descriptionQueryCell.style.wordBreak = 'break-all';
-        descriptionQueryCell.textContent = source.description || '---';
-        
-        // --- APLICAR VISIBILIDAD SEGÚN CHECKBOX ---
+        descriptionQueryCell.innerHTML = sqlBox(source.description);
+
+        // --- APLICAR VISIBILIDAD SEGÚN EL TOGGLE "Mostrar Query" ---
         descriptionQueryCell.style.display = displayStyle;
         
         row.appendChild(descriptionQueryCell);

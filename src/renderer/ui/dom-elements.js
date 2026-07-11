@@ -123,6 +123,7 @@ export function init() {
     elements.deSearchValue = document.getElementById('deSearchValue');
     elements.searchDEBtn = document.getElementById('searchDEBtn');
     elements.deSearchResultsTbody = document.querySelector('#de-search-results-tbody');
+    elements.deToSourcesBtn = document.getElementById('deToSourcesBtn');
 
     // --- 8b. Pestaña: Origen de Datos ---
     elements.deNameToFindInput = document.getElementById('deNameToFind');

@@ -2,6 +2,7 @@ import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
+import { buildAutomationUrl, linkCell } from '../ui/mc-links.js';
 
 let getAuthenticatedConfig;
 let lastSelectedIndex = -1; // Para el Shift + Click
@@ -130,7 +131,7 @@ async function findUsageForAll(activities, apiConfig) {
                 row.innerHTML = `
                     <td>${activity.name}</td>
                     <td><small>${activity.customerKey}</small></td>
-                    <td style="text-align: left; padding-left: 20px;">${auto.automationName}</td>
+                    <td class="u-text-left" style="padding-left: 20px;">${linkCell(auto.automationName, buildAutomationUrl(auto.automationId))}</td>
                     <td>${auto.step}</td>
                 `;
                 elements.activityUsageTbody.appendChild(row);
