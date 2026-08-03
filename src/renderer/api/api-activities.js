@@ -48,9 +48,9 @@ export async function findAutomationForActivity(activityOrId, apiConfig) {
                         }
                     }
                 }
-                result.push({ automationName: autoData.name || 'N/A', step: stepName });
+                result.push({ automationName: autoData.name || 'N/A', step: stepName, automationId });
             } catch (error) {
-                result.push({ automationName: `Error (${automationId})`, step: '---' });
+                result.push({ automationName: `Error (${automationId})`, step: '---', automationId });
             }
         }
     } catch (e) {

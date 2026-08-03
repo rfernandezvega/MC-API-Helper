@@ -2,6 +2,9 @@ import * as mcApiService from '../api/mc-api-service.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import elements from '../ui/dom-elements.js';
+import { escapeHtml, formatDate } from '../ui/format-utils.js';
+import { createTableSorter, createPaginator } from '../ui/table-utils.js';
+import { getRowsPerPage } from './settings.js';
 
 // Scope raíz de toda la sección — todos los querySelector van contra este nodo
 const ROOT_ID = 'gestion-usuarios-section';
@@ -11,12 +14,8 @@ const $id = (id) => document.getElementById(id);
 
 let usersMasterList = [];
 let selectedUserIds = [];   // máximo 2 elementos
-let currentSortColumn = 'lastLogin';
-let currentSortDirection = 'desc';
 let statusFilter = 'all';
 let selectedRoles = new Set();
-const ITEMS_PER_PAGE = 10;
-let currentPageUsers = 1;
 
 let importedData = [];
 let _lastFilteredCount = 0;
@@ -25,6 +24,12 @@ let isExpanded = true;
 
 let getAuthenticatedConfig;
 let _bound = false;
+
+// Controladores reutilizables de ordenación y paginación (WP-4/WP-5). Se instancian
+// en _bind() cuando la vista ya es visible. La ordenación inicial se mantiene como
+// antes: por 'lastLogin' (columna de fecha) descendente.
+let sorter = null;
+let paginator = null;
 
 // ============================================================
 // INIT — solo guarda dependencias
@@ -49,8 +54,27 @@ function _bind() {
     $id('users-copy-script-btn') ?.addEventListener('click', copyScript);
     $id('users-json-input')      ?.addEventListener('input', e => processImportedData(e.target.value.trim()));
 
-    // Ordenación — scoped al thead de esta sección
-    $('table#users-table thead')?.addEventListener('click', handleSort);
+    // Ordenación — controlador reutilizable enganchado al thead de esta sección.
+    // 'lastLogin' es la única columna de fecha; el resto se ordenan como texto.
+    sorter = createTableSorter({
+        tableSelector: '#users-table',
+        initialColumn: 'lastLogin',
+        initialDirection: 'desc',
+        types: { lastLogin: 'date' },
+        onSort: renderUserTable
+    });
+    sorter.attach($('table#users-table thead'));
+
+    // Paginación — controlador reutilizable sobre los 4 controles estándar.
+    paginator = createPaginator(
+        {
+            pageInput: $id('pageInputUsers'),
+            totalLabel: $id('totalPagesUsers'),
+            prevBtn: $id('prevPageBtnUsers'),
+            nextBtn: $id('nextPageBtnUsers')
+        },
+        { itemsPerPage: () => getRowsPerPage('users'), onPageChange: renderUserTable }
+    );
 
     // Selección de filas — delegación sobre el tbody
     $id('users-tbody')?.addEventListener('click', handleRowSelection);
@@ -62,19 +86,6 @@ function _bind() {
             switchTab(btn.dataset.umTab);
         })
     );
-
-    $id('prevPageBtnUsers')?.addEventListener('click', () => {
-        if (currentPageUsers > 1) { currentPageUsers--; renderUserTable(); }
-    });
-    $id('nextPageBtnUsers')?.addEventListener('click', () => {
-        currentPageUsers++;
-        renderUserTable();
-    });
-    $id('pageInputUsers')?.addEventListener('change', e => {
-        const total = Math.ceil(_lastFilteredCount / ITEMS_PER_PAGE) || 1;
-        currentPageUsers = Math.max(1, Math.min(parseInt(e.target.value) || 1, total));
-        renderUserTable();
-    });
 
     // Cerrar dropdown al hacer clic fuera
     document.addEventListener('mousedown', e => {
@@ -180,41 +191,35 @@ function renderUserTable() {
         return nameMatch && statusMatch && roleMatch;
     });
 
-    // Si el filtro cambió (distinto total), volver a página 1
-    if (data.length !== _lastFilteredCount) currentPageUsers = 1;
+    // Si el filtro cambió (distinto total), volver a página 1. Se usa update() y no
+    // setPage() para no disparar onPageChange (evitaría un re-render recursivo).
+    if (data.length !== _lastFilteredCount) paginator?.update(data.length, 1);
     _lastFilteredCount = data.length;
 
     updateUserCount();
 
-    sortData(data);
+    // Ordena in place con la columna/dirección actuales del controlador.
+    if (sorter) sorter.sort(data);
 
-    const paginated = data.slice((currentPageUsers - 1) * ITEMS_PER_PAGE, currentPageUsers * ITEMS_PER_PAGE);
+    // paginate() recalcula el total de páginas y devuelve solo la página actual.
+    const paginated = paginator ? paginator.paginate(data) : data;
 
     const tbody = $id('users-tbody');
     if (!tbody) return;
 
+    // Datos de la API (name, id, userName, roles): se escapan antes de interpolar.
     tbody.innerHTML = paginated.map(u => `
-        <tr data-id="${u.id}" class="${selectedUserIds.includes(u.id) ? 'um-selected' : ''}">
-            <td style="text-align:left;"><b>${u.name}</b><br><small style="color:#888;">${u.id}</small></td>
-            <td style="text-align:left;">${u.userName}</td>
+        <tr data-id="${escapeHtml(u.id)}" class="${selectedUserIds.includes(u.id) ? 'um-selected' : ''}">
+            <td><b>${escapeHtml(u.name)}</b><br><small class="u-muted">${escapeHtml(u.id)}</small></td>
+            <td>${escapeHtml(u.userName)}</td>
             <td>${u.isApi ? 'Sí' : 'No'}</td>
             <td>${formatDate(u.lastLogin)}</td>
-            <td><span class="um-status-pill ${u.isActive ? 'um-status-active' : 'um-status-inactive'}">${u.isActive ? 'Activo' : 'Inactivo'}</span></td>
-            <td style="text-align:left;"><small>${u.roles.map(r => r.name).join(', ')}</small></td>
+            <td><span class="badge ${u.isActive ? 'badge-success' : 'badge-danger'}">${u.isActive ? 'Activo' : 'Inactivo'}</span></td>
+            <td><small>${escapeHtml(u.roles.map(r => r.name).join(', '))}</small></td>
         </tr>
     `).join('');
 
-    updateSortIndicators();
-    _updatePaginationUI();
-}
-
-function _updatePaginationUI() {
-    const total = Math.ceil(_lastFilteredCount / ITEMS_PER_PAGE) || 1;
-    if (currentPageUsers > total) currentPageUsers = total;
-    $id('totalPagesUsers').textContent = `/ ${total}`;
-    $id('pageInputUsers').value = currentPageUsers;
-    $id('prevPageBtnUsers').disabled = currentPageUsers === 1;
-    $id('nextPageBtnUsers').disabled = currentPageUsers >= total;
+    if (sorter) sorter.updateIndicators();
 }
 
 // Selección: SOLO manipula clases, nunca llama a renderUserTable
@@ -241,24 +246,6 @@ function handleRowSelection(e) {
     updateButtons();
 }
 
-function handleSort(e) {
-    const th = e.target.closest('.um-sortable');
-    if (!th) return;
-    const col = th.dataset.sortBy;
-    currentSortDirection = (currentSortColumn === col && currentSortDirection === 'asc') ? 'desc' : 'asc';
-    currentSortColumn = col;
-    renderUserTable();
-}
-
-function sortData(data) {
-    const dir = currentSortDirection === 'asc' ? 1 : -1;
-    data.sort((a, b) => {
-        const va = a[currentSortColumn], vb = b[currentSortColumn];
-        if (va == null) return 1; if (vb == null) return -1;
-        return String(va).localeCompare(String(vb), undefined, { sensitivity: 'base' }) * dir;
-    });
-}
-
 // ============================================================
 // FILTROS
 // ============================================================
@@ -282,7 +269,7 @@ function buildRoleFilterDropdown() {
     const hasNoRoleUsers = usersMasterList.some(u => (u.roles || []).length === 0);
     if (hasNoRoleUsers) {
         const sep = document.createElement('div');
-        sep.style.cssText = 'border-top:1px solid #e0e0e0; margin:4px 0;';
+        sep.className = 'um-dropdown-sep';
         list.appendChild(sep);
 
         const lbl = document.createElement('label');
@@ -514,22 +501,6 @@ function setExpandControlsVisible(show) {
         if (td) { td.classList.remove('um-active-filter'); td.textContent = 'Solo Diferencias'; }
         if (ep) ep.textContent = 'Colapsar Todo';
     }
-}
-
-function updateSortIndicators() {
-    $$('#users-table .um-sortable').forEach(th => {
-        th.classList.remove('um-sort-asc', 'um-sort-desc');
-        if (th.dataset.sortBy === currentSortColumn)
-            th.classList.add(currentSortDirection === 'asc' ? 'um-sort-asc' : 'um-sort-desc');
-    });
-}
-
-function formatDate(ds) {
-    if (!ds || ds.startsWith('0001')) return '---';
-    const d = new Date(ds);
-    if (isNaN(d.getTime())) return '---';
-    const p = n => n.toString().padStart(2, '0');
-    return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
 function toggleDiffFilter() {

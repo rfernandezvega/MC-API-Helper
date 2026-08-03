@@ -26,7 +26,7 @@
 
 #calendar-sidebar {
     flex: 1;
-    border-left: 1px solid #eee;
+    border-left: 1px solid var(--sf-border);
     padding-left: 20px;
     display: flex;
     flex-direction: column;
@@ -49,10 +49,10 @@
     gap: 20px;
 }
 
-.calendar-month h3 { 
-    text-align: center; 
-    color: #558ac7; 
-    margin-top: 0; 
+.calendar-month h3 {
+    text-align: center;
+    color: var(--sf-blue-dark);
+    margin-top: 0;
 }
 
 .calendar-month table { 
@@ -63,23 +63,26 @@
     cursor: pointer;
     transition: background-color 0.2s;
 }
-.calendar-month td.weekend { background-color: #f8f9fa; }
+.calendar-month td.weekend { background-color: var(--sf-bg-alt); }
 .calendar-month td.has-automation { background-color: #a2d9ff; font-weight: bold; }
-.calendar-month td.selected { background-color: #558ac7; color: white; }
-.calendar-month td:hover { background-color: #e0e7ef; }
+/* En tema oscuro el día con automatismos usa el par info oscuro/claro:
+   con el fondo claro original el número de día (texto claro) quedaba ilegible. */
+:root[data-theme="dark"] .calendar-month td.has-automation { background-color: #10344a; color: #7fc9f5; }
+.calendar-month td.selected { background-color: var(--sf-blue); color: white; }
+.calendar-month td:hover { background-color: var(--sf-hover); }
 
 #automation-list-header.clickable {
     cursor: pointer;
-    color: #005A9C;
+    color: var(--sf-blue);
     text-decoration: underline;
 }
 #automation-list-header.clickable:hover {
-    color: #003366;
+    color: var(--sf-blue-dark);
 }
 
 #automation-list .automation-item {
-    background-color: #f8f9fa;
-    border: 1px solid #e9ecef;
+    background-color: var(--sf-bg-alt);
+    border: 1px solid var(--sf-border);
     border-radius: 5px;
     padding: 10px;
     margin-bottom: 10px;
@@ -88,7 +91,7 @@
     font-weight: bold; 
     word-break: break-all; 
 }
-#automation-list .automation-details { 
-    font-size: 0.9em; 
-    color: #6c757d; 
+#automation-list .automation-details {
+    font-size: 0.9em;
+    color: var(--sf-text-muted);
 }

@@ -5,6 +5,8 @@ import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
+import { buildAutomationUrl, linkCell } from '../ui/mc-links.js';
+import { sqlBox } from '../ui/sql-highlight.js';
 
 // --- 1. ESTADO DEL MÓDULO ---
 
@@ -16,17 +18,31 @@ let getAuthenticatedConfig; // Dependencia inyectada desde app.js
  * Inicializa el módulo, configurando listeners y dependencias.
  * @param {object} dependencies - Objeto con dependencias externas.
  */
+// Estado del toggle "Mostrar Query" (botón, no checkbox).
+let showSourceQuery = true;
+
+/** Actualiza el color del botón según el estado (verde activo / gris inactivo). */
+function updateShowQueryToggleUI() {
+    const btn = elements.showSourceQueryBtn;
+    if (!btn) return;
+    btn.style.color = '#fff';
+    btn.style.background = showSourceQuery ? 'var(--sf-green)' : 'var(--sf-text-muted)'; // tokens: verde activo / gris inactivo, legible en oscuro
+}
+
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
 
     elements.findDataSourcesBtn.addEventListener('click', findDataSources);
+    // Los nombres de automatismo son enlaces externos: se abren en el navegador.
+    elements.dataSourcesTbody.addEventListener('click', ui.handleExternalLink);
 
-    // --- Listener para el checkbox de mostrar/ocultar descripción ---
-    elements.showSourceQueryCheckbox.addEventListener('change', () => {
-        const isChecked = elements.showSourceQueryCheckbox.checked;
-        const displayStyle = isChecked ? '' : 'none';
-        
-        // Buscamos la tabla y aplicamos el estilo a la columna 6 (Descripción / Query)
+    // --- Toggle para mostrar/ocultar la columna de descripción/query ---
+    updateShowQueryToggleUI();
+    elements.showSourceQueryBtn?.addEventListener('click', () => {
+        showSourceQuery = !showSourceQuery;
+        updateShowQueryToggleUI();
+        const displayStyle = showSourceQuery ? '' : 'none';
+        // Aplica el estilo a la columna 6 (Descripción / Query)
         const table = document.getElementById('data-sources-table');
         if (table) {
             table.querySelectorAll('thead th:nth-child(6), tbody td:nth-child(6)').forEach(cell => {
@@ -96,9 +112,8 @@ async function findDataSources() {
 function renderTable(sources) {
     elements.dataSourcesTbody.innerHTML = '';
     
-    // --- Obtener estado actual del checkbox para el renderizado ---
-    const isChecked = elements.showSourceQueryCheckbox.checked;
-    const displayStyle = isChecked ? '' : 'none';
+    // --- Estado actual del toggle para el renderizado ---
+    const displayStyle = showSourceQuery ? '' : 'none';
 
     // Ajustar la cabecera de la tabla (th de la columna 6)
     const tableHeader = document.querySelector('#data-sources-table thead th:nth-child(6)');
@@ -125,7 +140,7 @@ function renderTable(sources) {
         // Columna: Automatización
         const automationCell = document.createElement('td');
         automationCell.innerHTML = (source.automations && source.automations.length > 0)
-            ? source.automations.map(auto => auto.automationName || 'N/A').join('<br>')
+            ? source.automations.map(auto => linkCell(auto.automationName || 'N/A', buildAutomationUrl(auto.automationId))).join('<br>')
             : '---';
         row.appendChild(automationCell);
 
@@ -141,13 +156,11 @@ function renderTable(sources) {
         actionCell.textContent = source.action || '---';
         row.appendChild(actionCell);
 
-        // Columna: Descripción / Query (COLUMNA 6)
+        // Columna: Descripción / Query (COLUMNA 6) — en caja acotada con resaltado.
         const descriptionQueryCell = document.createElement('td');
-        descriptionQueryCell.style.whiteSpace = 'pre-wrap';
-        descriptionQueryCell.style.wordBreak = 'break-all';
-        descriptionQueryCell.textContent = source.description || '---';
-        
-        // --- APLICAR VISIBILIDAD SEGÚN CHECKBOX ---
+        descriptionQueryCell.innerHTML = sqlBox(source.description);
+
+        // --- APLICAR VISIBILIDAD SEGÚN EL TOGGLE "Mostrar Query" ---
         descriptionQueryCell.style.display = displayStyle;
         
         row.appendChild(descriptionQueryCell);

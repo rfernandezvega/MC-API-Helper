@@ -1,0 +1,86 @@
+<!-- SECCIÓN: AJUSTES DE LA APLICACIÓN -->
+<div id="ajustes-section" class="section config-section-container">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>
+    </div>
+    <h2>Ajustes</h2>
+
+    <div class="config-block">
+        <h3>Tema</h3>
+        <div class="settings-row">
+            <div class="settings-row-info">
+                <div class="settings-row-desc">Elige el aspecto claro u oscuro de la aplicación.</div>
+            </div>
+            <div class="settings-theme-options" id="settings-theme-options">
+                <button type="button" class="settings-theme-btn" data-theme-value="light">Claro</button>
+                <button type="button" class="settings-theme-btn" data-theme-value="dark">Oscuro</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="config-block">
+        <h3>Zoom de la interfaz</h3>
+        <div class="settings-row">
+            <div class="settings-row-info">
+                <div class="settings-row-desc">Ajusta el tamaño general de la aplicación. Con un zoom muy alto o muy bajo algunos elementos pueden no verse correctamente.</div>
+            </div>
+            <div class="settings-zoom">
+                <button type="button" class="settings-zoom-btn" id="settings-zoom-dec" title="Reducir">−</button>
+                <span class="settings-zoom-value" id="settings-zoom-value">85%</span>
+                <button type="button" class="settings-zoom-btn" id="settings-zoom-inc" title="Aumentar">+</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="config-block" id="settings-rows-card">
+        <h3>Filas por página</h3>
+        <p class="settings-row-desc">Número de registros por página en cada tabla.</p>
+        <div class="settings-row">
+            <div class="settings-row-info"><div class="settings-row-title">Aplicar a todas</div></div>
+            <select id="settings-rows-all" class="filter-input settings-select"></select>
+        </div>
+        <div class="settings-grid">
+            <div class="settings-field">
+                <label>Automatismos</label>
+                <select class="filter-input settings-rows-select" data-view="automations"></select>
+            </div>
+            <div class="settings-field">
+                <label>Journeys</label>
+                <select class="filter-input settings-rows-select" data-view="journeys"></select>
+            </div>
+            <div class="settings-field">
+                <label>Cloud Pages</label>
+                <select class="filter-input settings-rows-select" data-view="cloudpages"></select>
+            </div>
+            <div class="settings-field">
+                <label>Usuarios</label>
+                <select class="filter-input settings-rows-select" data-view="users"></select>
+            </div>
+            <div class="settings-field">
+                <label>Contenidos</label>
+                <select class="filter-input settings-rows-select" data-view="content"></select>
+            </div>
+        </div>
+    </div>
+
+    <div class="config-block">
+        <h3>Cliente por defecto</h3>
+        <p class="settings-row-desc">Cliente y Business Unit que se seleccionarán automáticamente al abrir la aplicación.</p>
+        <div class="settings-grid">
+            <div class="settings-field">
+                <label>Cliente</label>
+                <select id="settings-client-select" class="filter-input"></select>
+            </div>
+            <div class="settings-field" id="settings-bu-field">
+                <label>Business Unit</label>
+                <select id="settings-bu-select" class="filter-input"></select>
+            </div>
+        </div>
+    </div>
+
+    <div class="config-block">
+        <h3>Almacenamiento</h3>
+        <p class="settings-row-desc u-mb-15">Cachés guardadas en tu equipo, con los elementos cacheados de cada una. Al borrarlas se liberará espacio; los datos se volverán a descargar al refrescar cada vista.</p>
+        <div id="settings-cache-list"></div>
+    </div>
+</div>

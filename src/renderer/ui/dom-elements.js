@@ -37,7 +37,8 @@ export function init() {
     // --- 2. Navegación y Barras Laterales ---
     elements.mainMenu = document.getElementById('main-menu');
     elements.allSections = document.querySelectorAll('#main-content > .section');
-    elements.sidebarClientSelect = document.getElementById('sidebarClientSelect');
+    elements.clientSelectorBtn = document.getElementById('clientSelectorBtn');
+    elements.clientSelectorLabel = document.getElementById('clientSelectorLabel');
     elements.loginStatusEl = document.getElementById('login-status');
     elements.tabButtons = document.querySelectorAll('.tab-button');
     elements.tabContents = document.querySelectorAll('.tab-content');
@@ -50,16 +51,19 @@ export function init() {
     elements.logDrawerBackdrop = document.getElementById('log-drawer-backdrop');
     elements.logHeaderTitle = document.getElementById('log-header-title');
     elements.logMessagesEl = document.getElementById('log-messages');
-    elements.logRequestEl = document.getElementById('log-request');
-    elements.logResponseEl = document.getElementById('log-response');
+    elements.logTranscriptEl = document.getElementById('log-transcript');
 
     // --- 4. Sección: Configuración de APIs ---
-    elements.clientNameInput = document.getElementById('clientName');
+    elements.clientNameInput = document.getElementById('clientName');            // clave de caché del contexto activo (cliente+BU), oculto
+    elements.configClientNameInput = document.getElementById('configClientName'); // nombre del cliente en el formulario (crear/editar)
     elements.savedConfigsSelect = document.getElementById('savedConfigs');
+    elements.buListTbody = document.getElementById('bu-list-tbody');
+    elements.syncBuBtn = document.getElementById('syncBuBtn');
     elements.authUriInput = document.getElementById('authUri');
     elements.clientIdInput = document.getElementById('clientId');
     elements.clientSecretInput = document.getElementById('clientSecret');
-    elements.businessUnitInput = document.getElementById('businessUnit');
+    elements.businessUnitInput = document.getElementById('businessUnit');  // MID principal (formulario/guardado)
+    elements.activeMidInput = document.getElementById('activeMid');         // MID de la BU activa (account_id)
     elements.tokenField = document.getElementById('token');
     elements.soapUriInput = document.getElementById('soapUri');
     elements.restUriInput = document.getElementById('restUri');
@@ -71,6 +75,10 @@ export function init() {
     elements.addSendConfigRowBtn = document.getElementById('addSendConfigRowBtn');
     elements.importDvConfigBtn = document.getElementById('importDvConfigBtn');
     elements.exportDvConfigBtn = document.getElementById('exportDvConfigBtn');
+    // Canales WhatsApp (por BU) en la vista de Configuración de Cuentas
+    elements.addWaChannelBtn = document.getElementById('addWaChannelBtn');
+    elements.waChannelsTbody = document.getElementById('wa-channels-tbody');
+    elements.waConsoleLink = document.getElementById('wa-console-link');
 
     // --- 5.0 Sección: Data Extensions ---
     elements.gestionDeUnificadaSection = document.getElementById('gestion-de-unificada-section');
@@ -115,6 +123,7 @@ export function init() {
     elements.deSearchValue = document.getElementById('deSearchValue');
     elements.searchDEBtn = document.getElementById('searchDEBtn');
     elements.deSearchResultsTbody = document.querySelector('#de-search-results-tbody');
+    elements.deToSourcesBtn = document.getElementById('deToSourcesBtn');
 
     // --- 8b. Pestaña: Origen de Datos ---
     elements.deNameToFindInput = document.getElementById('deNameToFind');
@@ -125,7 +134,7 @@ export function init() {
     elements.deSelectionTable = document.getElementById('de-selection-table');
     elements.selectAllDEsCheckbox = document.getElementById('selectAllDEsCheckbox');
     elements.searchSelectedDEsBtn = document.getElementById('searchSelectedDEsBtn');
-    elements.showSourceQueryCheckbox = document.getElementById('showSourceQueryCheckbox');
+    elements.showSourceQueryBtn = document.getElementById('showSourceQueryBtn');
 
     // --- 8c. Pestaña: Clientes ---
     elements.customerSearchValue = document.getElementById('customerSearchValue');
@@ -139,12 +148,24 @@ export function init() {
     elements.customerDesResultsBlock = document.getElementById('customer-des-results-block');
     elements.desResultsContainer = document.getElementById('des-results-container');
 
+    // --- 8c-bis. Audiencia WhatsApp (dentro de la pestaña Clientes) ---
+    elements.waToggleBtn = document.getElementById('waToggleBtn');
+    elements.waResultsBlock = document.getElementById('wa-results-block');
+    elements.waResultsTbody = document.getElementById('wa-results-tbody');
+    elements.waRegisterBlock = document.getElementById('wa-register-block');
+    elements.waNewSubKey = document.getElementById('waNewSubKey');
+    elements.waNewMobile = document.getElementById('waNewMobile');
+    elements.waNewLocale = document.getElementById('waNewLocale');
+    elements.waNewLocaleList = document.getElementById('wa-locale-list');
+    elements.waNewChannel = document.getElementById('waNewChannel');
+    elements.waRegisterBtn = document.getElementById('waRegisterBtn');
+
     // --- 8d. Pestaña: Texto en Queries ---
     elements.querySearchText = document.getElementById('querySearchText');
     elements.searchQueriesByTextBtn = document.getElementById('searchQueriesByTextBtn');
     elements.querySearchResultsTable = document.getElementById('query-search-results-table');
     elements.querySearchResultsTbody = document.querySelector('#query-search-results-tbody');
-    elements.showQueryTextCheckbox = document.getElementById('showQueryTextCheckbox');
+    elements.showQueryTextBtn = document.getElementById('showQueryTextBtn');
 
     // --- 8e. Pestaña: Texto en Scripts ---
     elements.scriptSearchText = document.getElementById('scriptSearchText');
@@ -187,13 +208,16 @@ export function init() {
     elements.validateEmailBtn = document.getElementById('validateEmailBtn');
     elements.emailValidationResults = document.getElementById('email-validation-results');
 
-    // --- 10. Sección: Calendario ---
+    // --- 10. Calendario (drawer dentro de Automatismos) ---
+    elements.calendarBtn = document.getElementById('calendarBtn');
+    elements.calendarDrawer = document.getElementById('calendar-drawer');
+    elements.calendarBackdrop = document.getElementById('calendar-backdrop');
+    elements.calendarCloseBtn = document.getElementById('calendar-close-btn');
+    elements.calendarDrawerCount = document.getElementById('calendarDrawerCount');
     elements.calendarGrid = document.getElementById('calendar-grid');
     elements.calendarYearSelect = document.getElementById('calendarYearSelect');
     elements.automationList = document.getElementById('automation-list');
     elements.automationListHeader = document.getElementById('automation-list-header');
-    elements.refreshAutomationsBtn = document.getElementById('refreshAutomationsBtn');
-    elements.refreshJourneyAutomationsBtn = document.getElementById('refreshJourneyAutomationsBtn');
 
     // --- 11. Sección: Gestión de Automatismos ---
     elements.automationsTbody = document.getElementById('automations-tbody');

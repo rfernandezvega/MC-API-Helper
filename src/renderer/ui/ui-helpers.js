@@ -62,16 +62,23 @@ export function showCustomConfirm(message) {
         manageModalZIndex(elements.customConfirmModal);
         elements.customConfirmModal.style.display = 'flex';
 
+        // AbortController: los tres listeners comparten el mismo signal, de modo que al
+        // resolver por cualquier vía se limpian TODOS a la vez. Con { once: true } el
+        // listener del botón no pulsado quedaba vivo y se acumulaba en aperturas sucesivas.
+        const controller = new AbortController();
+        const { signal } = controller;
+
         const closeAndResolve = (value) => {
+            controller.abort();
             elements.customConfirmModal.style.display = 'none';
             resolve(value);
         };
 
-        elements.customConfirmOkBtn.addEventListener('click', () => closeAndResolve(true), { once: true });
-        elements.customConfirmCancelBtn.addEventListener('click', () => closeAndResolve(false), { once: true });
+        elements.customConfirmOkBtn.addEventListener('click', () => closeAndResolve(true), { signal });
+        elements.customConfirmCancelBtn.addEventListener('click', () => closeAndResolve(false), { signal });
         elements.customConfirmModal.addEventListener('click', (e) => {
             if (e.target === elements.customConfirmModal) closeAndResolve(false);
-        }, { once: true });
+        }, { signal });
     });
 }
 
@@ -123,15 +130,22 @@ export function showCustomConfirmComplex(message, okText, cancelText) {
         manageModalZIndex(elements.customConfirmModal);
         elements.customConfirmModal.style.display = 'flex';
 
+        // Mismo patrón AbortController que showCustomConfirm: estos botones son los MISMOS
+        // elementos que usa esa función, así que si aquí quedaran handlers vivos (onclick
+        // persistente) se dispararían también en confirmaciones posteriores.
+        const controller = new AbortController();
+        const { signal } = controller;
+
         const cleanup = (value) => {
+            controller.abort();
             elements.customConfirmModal.style.display = 'none';
             elements.customConfirmOkBtn.textContent = originalOk;
             elements.customConfirmCancelBtn.textContent = originalCancel;
             resolve(value);
         };
 
-        elements.customConfirmOkBtn.onclick = () => cleanup(true);
-        elements.customConfirmCancelBtn.onclick = () => cleanup(false);
+        elements.customConfirmOkBtn.addEventListener('click', () => cleanup(true), { signal });
+        elements.customConfirmCancelBtn.addEventListener('click', () => cleanup(false), { signal });
     });
 }
 
@@ -145,7 +159,7 @@ export function blockUI(message = 'Cargando...', subMessage = '') {
         if (subMessage) {
             const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             elements.loaderText.style.textAlign = 'center';
-            elements.loaderText.innerHTML = `${esc(message)}<div style="margin-top:8px; text-align:center;"><span style="display:inline-block; font-size:0.8em; font-weight:600; color:#fff; background:#558ac7; padding:3px 10px; border-radius:12px;">${esc(subMessage)}</span></div>`;
+            elements.loaderText.innerHTML = `${esc(message)}<div style="margin-top:8px; text-align:center;"><span style="display:inline-block; font-size:0.8em; font-weight:600; color:#fff; background:var(--sf-blue); padding:3px 10px; border-radius:12px;">${esc(subMessage)}</span></div>`;
         } else {
             elements.loaderText.style.textAlign = '';
             elements.loaderText.textContent = message;
@@ -171,6 +185,41 @@ export function formatEta(seconds) {
     return remM ? `~${h} h ${remM} min` : `~${h} h`;
 }
 
+/**
+ * Crea un callback de progreso (done, total) que actualiza el loader (blockUI) con
+ * "mensaje done/total" y un submensaje de tiempo estimado restante calculado a partir
+ * del ritmo real transcurrido desde la creación del callback. Centraliza el cálculo de
+ * ETA que cada módulo duplicaba a mano en sus descargas paginadas.
+ * @param {string} baseMessage - Mensaje base del loader (ej: 'Descargando contenidos').
+ * @returns {function(number, number)} Callback (done, total) para pasar como onProgress.
+ */
+export function makeEtaProgress(baseMessage) {
+    // El "reloj" arranca al crear el callback: así el ritmo refleja el proceso completo.
+    const start = Date.now();
+
+    return (done, total) => {
+        let message = baseMessage;
+        let sub = '';
+        const hasTotal = Number.isFinite(total) && total > 0;
+
+        if (hasTotal) {
+            message = `${baseMessage} ${done}/${total}`;
+            const elapsed = (Date.now() - start) / 1000;
+            // Solo estimamos con al menos un elemento hecho y tiempo transcurrido:
+            // evita divisiones por cero y ETAs absurdas al arrancar.
+            if (Number.isFinite(done) && done > 0 && done < total && elapsed > 0) {
+                const eta = formatEta((total - done) / (done / elapsed));
+                if (eta) sub = `Tiempo estimado restante: ${eta}`;
+            }
+        } else if (Number.isFinite(done) && done > 0) {
+            // Sin total conocido (total 0/undefined) mostramos solo el contador.
+            message = `${baseMessage} ${done}`;
+        }
+
+        blockUI(message, sub);
+    };
+}
+
 /** Oculta el overlay de carga. */
 export function unblockUI() {
     elements.loaderOverlay.style.display = 'none';
@@ -178,6 +227,9 @@ export function unblockUI() {
     void elements.appContainer.offsetHeight;
     elements.appContainer.style.display = '';
     setTimeout(() => document.body.focus(), 0);
+    // Señal de "fin de operación": la escucha org-manager para volcar el acumulado
+    // de llamadas API justo cuando termina un proceso (en vez de con un temporizador).
+    document.dispatchEvent(new CustomEvent('mc-operation-end'));
 }
 
 /**

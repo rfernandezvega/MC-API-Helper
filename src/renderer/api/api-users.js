@@ -148,3 +148,48 @@ export async function fetchRolesPermissions(roleIds, apiConfig) {
     }
     return allPermissions;
 }
+
+/**
+ * Recupera las Business Units (cuentas) del tenant vía SOAP. Debe ejecutarse con un token de la
+ * BU Enterprise/principal para que devuelva todas las BUs hijas.
+ * @param {object} apiConfig - Configuración autenticada (token de la BU principal).
+ * @returns {Promise<Array<{name:string, mid:string, parentId:string, accountType:string}>>}
+ */
+export async function fetchBusinessUnits(apiConfig) {
+    const soapPayload = `<?xml version="1.0" encoding="UTF-8"?>
+    <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+        <s:Header>
+            <a:Action s:mustUnderstand="1">Retrieve</a:Action>
+            <a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To>
+            <fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth>
+        </s:Header>
+        <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+            <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+                <RetrieveRequest>
+                    <ObjectType>BusinessUnit</ObjectType>
+                    <Properties>Name</Properties>
+                    <Properties>ID</Properties>
+                    <QueryAllAccounts>true</QueryAllAccounts>
+                </RetrieveRequest>
+            </RetrieveRequestMsg>
+        </s:Body>
+    </s:Envelope>`;
+
+    const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
+    const doc = new DOMParser().parseFromString(responseText, "application/xml");
+    const directChild = (node, tag) =>
+        Array.from(node.children).find(n => n.tagName === tag)?.textContent || null;
+
+    const bus = [];
+    doc.querySelectorAll("Results").forEach(node => {
+        const mid = directChild(node, 'ID');
+        if (!mid) return;
+        bus.push({
+            mid: String(mid),
+            name: directChild(node, 'Name') || `BU ${mid}`,
+            parentId: directChild(node, 'ParentID') || '',
+            accountType: directChild(node, 'AccountType') || ''
+        });
+    });
+    return bus;
+}

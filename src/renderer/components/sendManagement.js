@@ -2,6 +2,8 @@ import * as mcApiService from '../api/mc-api-service.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import elements from '../ui/dom-elements.js';
+import { escapeHtml, formatDate } from '../ui/format-utils.js';
+import { createTableSorter, createPaginator, renderStatusBadge } from '../ui/table-utils.js';
 
 let getAuthenticatedConfig;
 let scMasterList = [];
@@ -13,15 +15,52 @@ let spFilteredList = [];
 let dpFilteredList = [];
 
 const ITEMS_PER_PAGE = 10;
-let currentPageSC = 1;
-let currentPageSP = 1;
-let currentPageDP = 1;
 let dpStack = 's50';
-let currentSortColumn = 'name';
-let currentSortDirection = 'asc';
+
+// Un sorter y un paginador por tabla (cada uno con su propio estado). Se crean en init().
+let sorterSC, sorterSP, sorterDP;
+let paginatorSC, paginatorSP, paginatorDP;
 
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
+
+    // Cada tabla tiene su propio controlador de ordenación (columna Modificado tratada como fecha)
+    // y su propio paginador sobre los 4 controles con sufijo (SC/SP/DP).
+    sorterSC = createTableSorter({
+        tableSelector: '#table-send-classifications',
+        initialColumn: 'name',
+        types: { modifiedDate: 'date' },
+        onSort: renderTableSC
+    });
+    sorterSP = createTableSorter({
+        tableSelector: '#table-sender-profiles',
+        initialColumn: 'name',
+        types: { modifiedDate: 'date' },
+        onSort: renderTableSP
+    });
+    sorterDP = createTableSorter({
+        tableSelector: '#table-delivery-profiles',
+        initialColumn: 'name',
+        onSort: renderTableDP
+    });
+
+    paginatorSC = createPaginator(
+        { pageInput: document.getElementById('pageInputSC'), totalLabel: document.getElementById('totalPagesSC'), prevBtn: document.getElementById('prevPageBtnSC'), nextBtn: document.getElementById('nextPageBtnSC') },
+        { itemsPerPage: ITEMS_PER_PAGE, onPageChange: renderTableSC }
+    );
+    paginatorSP = createPaginator(
+        { pageInput: document.getElementById('pageInputSP'), totalLabel: document.getElementById('totalPagesSP'), prevBtn: document.getElementById('prevPageBtnSP'), nextBtn: document.getElementById('nextPageBtnSP') },
+        { itemsPerPage: ITEMS_PER_PAGE, onPageChange: renderTableSP }
+    );
+    paginatorDP = createPaginator(
+        { pageInput: document.getElementById('pageInputDP'), totalLabel: document.getElementById('totalPagesDP'), prevBtn: document.getElementById('prevPageBtnDP'), nextBtn: document.getElementById('nextPageBtnDP') },
+        { itemsPerPage: ITEMS_PER_PAGE, onPageChange: renderTableDP }
+    );
+
+    sorterSC.attach();
+    sorterSP.attach();
+    sorterDP.attach();
+
     setupEventListeners();
 }
 
@@ -30,26 +69,10 @@ function setupEventListeners() {
     elements.downloadSendManagementCsvBtn.addEventListener('click', downloadCSV);
 
     ['scNameFilter', 'scProfileFilter', 'scTypeFilter'].forEach(id => {
-        document.getElementById(id).addEventListener('input', () => { currentPageSC = 1; applyFiltersSC(); });
+        document.getElementById(id).addEventListener('input', () => { paginatorSC.setPage(1); applyFiltersSC(); });
     });
     ['spNameFilter', 'spFromNameFilter', 'spFromEmailFilter'].forEach(id => {
-        document.getElementById(id).addEventListener('input', () => { currentPageSP = 1; applyFiltersSP(); });
-    });
-
-    document.getElementById('prevPageBtnSC').addEventListener('click', () => { if (currentPageSC > 1) { currentPageSC--; renderTableSC(); }});
-    document.getElementById('nextPageBtnSC').addEventListener('click', () => { if (currentPageSC < Math.ceil(scFilteredList.length / ITEMS_PER_PAGE)) { currentPageSC++; renderTableSC(); }});
-    document.getElementById('prevPageBtnSP').addEventListener('click', () => { if (currentPageSP > 1) { currentPageSP--; renderTableSP(); }});
-    document.getElementById('nextPageBtnSP').addEventListener('click', () => { if (currentPageSP < Math.ceil(spFilteredList.length / ITEMS_PER_PAGE)) { currentPageSP++; renderTableSP(); }});
-
-    elements.sendManagementSection.addEventListener('click', (e) => {
-        const header = e.target.closest('.sortable-header');
-        if (!header) return;
-        currentSortDirection = (currentSortColumn === header.dataset.sortBy && currentSortDirection === 'asc') ? 'desc' : 'asc';
-        currentSortColumn = header.dataset.sortBy;
-        const activeTab = document.querySelector('#sendManagement-section .tab-button.active').dataset.tab;
-        if (activeTab === 'tab-send-classifications') renderTableSC();
-        else if (activeTab === 'tab-sender-profiles') renderTableSP();
-        else renderTableDP();
+        document.getElementById(id).addEventListener('input', () => { paginatorSP.setPage(1); applyFiltersSP(); });
     });
 
     document.querySelectorAll('#sendManagement-section .tab-button').forEach(btn => {
@@ -60,10 +83,8 @@ function setupEventListeners() {
     document.getElementById('dp-copy-script-btn').addEventListener('click', copyDPScript);
     document.getElementById('dp-json-input').addEventListener('input', e => processDPJson(e.target.value.trim()));
     ['dpNameFilter', 'dpIpFilter'].forEach(id => {
-        document.getElementById(id).addEventListener('input', () => { currentPageDP = 1; applyFiltersDP(); });
+        document.getElementById(id).addEventListener('input', () => { paginatorDP.setPage(1); applyFiltersDP(); });
     });
-    document.getElementById('prevPageBtnDP').addEventListener('click', () => { if (currentPageDP > 1) { currentPageDP--; renderTableDP(); } });
-    document.getElementById('nextPageBtnDP').addEventListener('click', () => { if (currentPageDP < Math.ceil(dpFilteredList.length / ITEMS_PER_PAGE)) { currentPageDP++; renderTableDP(); } });
 
     elements.sendManagementSection.addEventListener('click', ui.handleExternalLink);
 }
@@ -117,23 +138,27 @@ function applyFiltersSC() {
 }
 
 function renderTableSC() {
-    sortData(scFilteredList);
-    const paginated = scFilteredList.slice((currentPageSC - 1) * ITEMS_PER_PAGE, currentPageSC * ITEMS_PER_PAGE);
+    sorterSC.sort(scFilteredList);
+    const paginated = paginatorSC.paginate(scFilteredList);
     const baseUrl = `https://members.${dpStack}.exacttarget.com/Content/Administration/SendManagement/SendClassification.aspx?g=`;
 
     elements.sendClassificationsTbody.innerHTML = paginated.map(item => {
         const spMatch = spMasterList.find(sp => sp.customerKey === item.senderProfile);
         const spName = spMatch ? spMatch.name : item.senderProfile;
 
+        // El tipo se pinta con los badges globales: Comercial (éxito) / Transaccional (info).
+        const typeBadge = item.type === 'Marketing'
+            ? `<span class="badge badge-success">Comercial</span>`
+            : `<span class="badge badge-info">Transaccional</span>`;
+
         return `<tr>
-            <td style="text-align:left;"><a href="${baseUrl}${item.id}" class="external-link"><b>${item.name}</b></a><br><small style="color:#888;">${item.customerKey}</small></td>
-            <td><span class="um-status-pill ${item.type === 'Marketing' ? 'um-status-active' : 'um-status-inactive'}" style="background-color: ${item.type === 'Marketing' ? '#28a745' : '#558ac7'};">${item.type === 'Marketing' ? 'Comercial' : 'Transaccional'}</span></td>
-            <td style="text-align:left;"><b>${spName}</b><br><small style="color:#888;">${item.senderProfile}</small></td>
-            <td>${item.deliveryProfile}</td>
+            <td><a href="${baseUrl}${item.id}" class="external-link"><b>${escapeHtml(item.name)}</b></a><br><small class="u-muted">${escapeHtml(item.customerKey)}</small></td>
+            <td>${typeBadge}</td>
+            <td><b>${escapeHtml(spName)}</b><br><small class="u-muted">${escapeHtml(item.senderProfile)}</small></td>
+            <td>${escapeHtml(item.deliveryProfile)}</td>
             <td>${formatDate(item.modifiedDate)}</td>
         </tr>`;
     }).join('');
-    updatePaginationUI('SC', scFilteredList.length, currentPageSC);
     updateGlobalCount();
 }
 
@@ -152,38 +177,29 @@ function applyFiltersSP() {
 }
 
 function renderTableSP() {
-    sortData(spFilteredList);
-    const paginated = spFilteredList.slice((currentPageSP - 1) * ITEMS_PER_PAGE, currentPageSP * ITEMS_PER_PAGE);
+    sorterSP.sort(spFilteredList);
+    const paginated = paginatorSP.paginate(spFilteredList);
     const baseUrl = `https://members.${dpStack}.exacttarget.com/Content/Administration/SendManagement/SenderProfile.aspx?profileid=`;
 
     elements.senderProfilesTbody.innerHTML = paginated.map(item => {
         const tsMatch = tsMasterList.find(ts => ts.id === item.autoReplyTriggeredId);
-        let autoReplyHtml = '❌';
+        let autoReplyHtml = '&#10060;';
         if (item.autoReply) {
-            const tsName = tsMatch ? tsMatch.name : 'ID: ' + item.autoReplyTriggeredId;
-            const tsKey = tsMatch ? `<br><small style="color:#888;">${tsMatch.customerKey}</small>` : '';
-            autoReplyHtml = `✅ <b>${tsName}</b>${tsKey}`;
+            const tsName = tsMatch ? escapeHtml(tsMatch.name) : 'ID: ' + escapeHtml(item.autoReplyTriggeredId);
+            const tsKey = tsMatch ? `<br><small class="u-muted">${escapeHtml(tsMatch.customerKey)}</small>` : '';
+            autoReplyHtml = `&#9989; <b>${tsName}</b>${tsKey}`;
         }
 
         return `<tr>
-            <td style="text-align:left;"><a href="${baseUrl}${item.id}" class="external-link"><b>${item.name}</b></a><br><small style="color:#888;">${item.customerKey}</small></td>
-            <td style="text-align:left; word-break:break-word; min-width:100px;">${item.fromName}</td>
-            <td style="text-align:left; word-break:break-word; min-width:120px;">${item.fromAddress}</td>
-            <td style="text-align:left; font-size: 0.9em;">${autoReplyHtml}</td>
-            <td style="text-align:left;"><small><b>Name:</b> ${item.autoForwardName}</small><br><small><b>Email:</b> ${item.autoForwardEmail}</small></td>
+            <td><a href="${baseUrl}${item.id}" class="external-link"><b>${escapeHtml(item.name)}</b></a><br><small class="u-muted">${escapeHtml(item.customerKey)}</small></td>
+            <td class="sm-cell-wrap">${escapeHtml(item.fromName)}</td>
+            <td class="sm-cell-wrap">${escapeHtml(item.fromAddress)}</td>
+            <td class="sm-cell-sm">${autoReplyHtml}</td>
+            <td><small><b>Name:</b> ${escapeHtml(item.autoForwardName)}</small><br><small><b>Email:</b> ${escapeHtml(item.autoForwardEmail)}</small></td>
             <td>${formatDate(item.modifiedDate)}</td>
         </tr>`;
     }).join('');
-    updatePaginationUI('SP', spFilteredList.length, currentPageSP);
     updateGlobalCount();
-}
-
-function updatePaginationUI(suffix, totalFiltered, current) {
-    const totalPages = Math.ceil(totalFiltered / ITEMS_PER_PAGE) || 1;
-    document.getElementById(`totalPages${suffix}`).textContent = `/ ${totalPages}`;
-    document.getElementById(`pageInput${suffix}`).value = current;
-    document.getElementById(`prevPageBtn${suffix}`).disabled = current === 1;
-    document.getElementById(`nextPageBtn${suffix}`).disabled = current >= totalPages;
 }
 
 function updateGlobalCount() {
@@ -197,25 +213,10 @@ function updateGlobalCount() {
                    : activeTab === 'tab-sender-profiles'      ? spMasterList.length
                    : dpMasterList.length;
     countSpan.textContent = `(${filtered} de ${master})`;
-    updateSortIndicators();
-}
-
-function sortData(list) {
-    const dir = currentSortDirection === 'asc' ? 1 : -1;
-    list.sort((a, b) => {
-        let valA = (a[currentSortColumn] || '').toString().toLowerCase();
-        let valB = (b[currentSortColumn] || '').toString().toLowerCase();
-        return valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' }) * dir;
-    });
-}
-
-function updateSortIndicators() {
-    document.querySelectorAll('#sendManagement-section .sortable-header').forEach(header => {
-        header.classList.remove('sort-asc', 'sort-desc');
-        if (header.dataset.sortBy === currentSortColumn) {
-            header.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
-        }
-    });
+    // Cada tabla mantiene sus propios indicadores de ordenación.
+    sorterSC.updateIndicators();
+    sorterSP.updateIndicators();
+    sorterDP.updateIndicators();
 }
 
 function downloadCSV() {
@@ -345,7 +346,7 @@ function processDPJson(val) {
         }));
         document.getElementById('dp-import-zone').classList.add('hidden');
         document.getElementById('dp-table-zone').classList.remove('hidden');
-        currentPageDP = 1;
+        paginatorDP.setPage(1);
         applyFiltersDP();
     } catch (e) {
         ui.showCustomAlert('Error al parsear el JSON. Revisa el formato.');
@@ -363,30 +364,23 @@ function applyFiltersDP() {
 }
 
 function renderTableDP() {
-    sortData(dpFilteredList);
-    const paginated = dpFilteredList.slice((currentPageDP - 1) * ITEMS_PER_PAGE, currentPageDP * ITEMS_PER_PAGE);
+    sorterDP.sort(dpFilteredList);
+    const paginated = paginatorDP.paginate(dpFilteredList);
     const baseUrl = `https://members.${dpStack}.exacttarget.com/Content/Administration/SendManagement/DeliveryProfile.aspx?g=`;
 
     document.getElementById('delivery-profiles-tbody').innerHTML = paginated.map(p => `
         <tr>
-            <td style="text-align:left;">
-                <a href="${baseUrl}${p.id}" class="external-link"><b>${p.name}</b></a>
-                <br><small style="color:#888;">${p.externalKey}</small>
+            <td>
+                <a href="${baseUrl}${p.id}" class="external-link"><b>${escapeHtml(p.name)}</b></a>
+                <br><small class="u-muted">${escapeHtml(p.externalKey)}</small>
             </td>
-            <td style="text-align:left;"><small>${p.description}</small></td>
-            <td>${p.ipMode}</td>
-            <td><code style="font-size:0.85em;">${p.ipAddress}</code></td>
-            <td>${p.header}</td>
-            <td>${p.footer}</td>
+            <td><small>${escapeHtml(p.description)}</small></td>
+            <td>${escapeHtml(p.ipMode)}</td>
+            <td><code class="sm-code">${escapeHtml(p.ipAddress)}</code></td>
+            <td>${escapeHtml(p.header)}</td>
+            <td>${escapeHtml(p.footer)}</td>
         </tr>
     `).join('');
 
-    updatePaginationUI('DP', dpFilteredList.length, currentPageDP);
     updateGlobalCount();
-}
-
-function formatDate(ds) {
-    if (!ds) return "---";
-    const d = new Date(ds);
-    return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}, ${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
 }

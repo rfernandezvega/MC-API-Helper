@@ -34,7 +34,7 @@
     height: calc(100vh - 40px);
     min-height: 350px;
     max-height: calc(100vh - 80px);
-    background-color: #fff;
+    background-color: var(--sf-surface);
     border-radius: 10px;
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.18);
     display: flex;
@@ -42,11 +42,12 @@
     padding: 16px 24px 20px;
     transform: translateY(calc(100% + 40px));
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    will-change: transform;
     overflow: hidden;
 }
+/* Abierto: transform none para salir de la capa compuesta y que el texto
+   recupere el antialiasing normal (evita el texto "difuminado" en Windows). */
 .cp-detail-drawer.open {
-    transform: translateY(0);
+    transform: none;
 }
 
 
@@ -60,9 +61,10 @@
     align-items: center;
     justify-content: center;
     gap: 5px;
-    background-color: #d6e4f0;
-    color: #5a7da8;
-    border: none;
+    background-color: var(--sf-surface);
+    color: var(--sf-blue);
+    border: 1px solid var(--sf-border);
+    border-bottom: none;
     border-radius: 8px 8px 0 0;
     padding: 3px 20px;
     font-size: 0.75em;
@@ -71,8 +73,8 @@
     transition: background-color 0.2s, color 0.2s;
 }
 .cp-detail-close-tab:hover {
-    background-color: #c2d6ea;
-    color: #3d6fa0;
+    background-color: var(--sf-bg);
+    color: var(--sf-blue-dark);
 }
 
 
@@ -82,14 +84,14 @@
     justify-content: space-between;
     align-items: center;
     padding-bottom: 10px;
-    border-bottom: 2px solid #f0f6fc;
+    border-bottom: 2px solid var(--sf-bg);
     flex-shrink: 0;
 }
 .cp-detail-header h2 {
     margin: 0;
     padding: 0;
     font-size: 1.1em;
-    color: #333;
+    color: var(--sf-text);
     border-bottom: none;
     text-align: left;
 }
@@ -119,7 +121,7 @@
 .cp-dep-block h4 {
     margin: 0;
     color: #fff;
-    background: #5a6d7e;
+    background: var(--sf-blue);
     font-size: 0.8em;
     font-weight: 600;
     text-transform: uppercase;
@@ -130,18 +132,18 @@
 }
 .cp-dep-block .dep-items {
     flex-grow: 1;
-    background-color: #f4f6f8;
+    background-color: var(--sf-bg-alt);
     padding: 6px 0;
     border-radius: 0 0 4px 4px;
     overflow-y: auto;
     font-size: 0.85em;
     min-height: 0;
-    border: 1px solid #e9ecef;
+    border: 1px solid var(--sf-border);
     border-top: none;
 }
 .cp-dep-block .dep-items .dep-item {
     padding: 2px 10px;
-    color: #333;
+    color: var(--sf-text);
     line-height: 1.5;
 }
 
@@ -161,7 +163,7 @@
 
 /* Sin dependencias */
 .cp-detail-no-deps {
-    color: #999;
+    color: var(--sf-text-muted);
     font-style: italic;
     font-size: 0.9em;
     padding: 8px 0;
@@ -183,7 +185,7 @@
 .cp-detail-code-block .code-header {
     margin: 0;
     color: #fff;
-    background: #546e7a;
+    background: var(--sf-blue);
     font-size: 0.8em;
     font-weight: 600;
     text-transform: uppercase;
@@ -192,10 +194,13 @@
     border-radius: 4px 4px 0 0;
     flex-shrink: 0;
 }
+/* El bloque de código es SIEMPRE oscuro (estilo IDE) en ambos temas, igual que
+   los bloques SQL/JS de los analizadores: garantiza legibilidad en claro y
+   oscuro y evita el problema de sintaxis clara sobre fondo blanco. */
 .cp-detail-code-block pre {
     flex-grow: 1;
-    background-color: #f6f8fa;
-    color: #24292e;
+    background-color: var(--sf-code-bg);
+    color: var(--sf-code-text);
     padding: 12px 16px;
     margin: 0;
     border-radius: 0 0 4px 4px;
@@ -206,38 +211,40 @@
     white-space: pre;
     text-align: left;
     min-height: 0;
-    border: 1px solid #e1e4e8;
+    border: 1px solid var(--sf-border);
     border-top: none;
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
 }
 
 
 /* ====================================================================
-   SYNTAX HIGHLIGHTING — tema claro (GitHub-style)
+   SYNTAX HIGHLIGHTING — paleta oscura tipo One Dark (sobre fondo oscuro),
+   coherente con las clases .sql-*/.js-* del resto de la app. Es la única
+   paleta: el bloque de código es oscuro en ambos temas.
    ==================================================================== */
 
 /* HTML */
-.cp-hl-tag      { color: #22863a; }               /* <div>, </script>, etc. */
-.cp-hl-attr     { color: #6f42c1; }               /* class=, id=, runat= */
-.cp-hl-attr-val { color: #032f62; }               /* "server", "value" */
+.cp-hl-tag      { color: #e5c07b; }               /* etiquetas */
+.cp-hl-attr     { color: #d19a66; }               /* atributos */
+.cp-hl-attr-val { color: #98c379; }               /* valores (string) */
 
 /* AMPscript */
-.cp-hl-amp-delim { color: #d73a49; font-weight: bold; }  /* %%[ %%] */
-.cp-hl-amp-kw    { color: #d73a49; font-weight: bold; }  /* SET, VAR, IF, THEN, ELSE, ENDIF, FOR, DO, NEXT */
-.cp-hl-amp-fn    { color: #6f42c1; }                     /* Lookup, LookupRows, etc. */
-.cp-hl-amp-var   { color: #e36209; }                     /* @variable */
+.cp-hl-amp-delim { color: #c678dd; font-weight: bold; }  /* %%[ %%] */
+.cp-hl-amp-kw    { color: #c678dd; font-weight: bold; }  /* SET, VAR, IF, THEN, ELSE, ENDIF, FOR, DO, NEXT */
+.cp-hl-amp-fn    { color: #61afef; }                     /* Lookup, LookupRows, etc. */
+.cp-hl-amp-var   { color: #e5c07b; }                     /* @variable */
 
 /* SSJS / JavaScript */
-.cp-hl-js-kw     { color: #d73a49; font-weight: bold; }  /* var, let, const, function, return, if, else, for, try, catch */
-.cp-hl-js-builtin { color: #6f42c1; }                    /* Platform, Write, Variable, HTTP */
-.cp-hl-js-string  { color: #032f62; }                    /* "string", 'string' */
-.cp-hl-js-comment { color: #6a737d; font-style: italic; }/* // comment, /* comment */
-.cp-hl-js-number  { color: #005cc5; }                    /* 123 */
+.cp-hl-js-kw     { color: #c678dd; font-weight: bold; }  /* var, let, const, function, return, if, else, for, try, catch */
+.cp-hl-js-builtin { color: #61afef; }                    /* Platform, Write, Variable, HTTP */
+.cp-hl-js-string  { color: #98c379; }                    /* "string", 'string' */
+.cp-hl-js-comment { color: #7f8c98; font-style: italic; }/* // comment */
+.cp-hl-js-number  { color: #d19a66; }                    /* 123 */
 
 /* Genéricos */
-.cp-hl-string  { color: #032f62; }
-.cp-hl-comment { color: #6a737d; font-style: italic; }
-.cp-hl-number  { color: #005cc5; }
+.cp-hl-string  { color: #98c379; }
+.cp-hl-comment { color: #7f8c98; font-style: italic; }
+.cp-hl-number  { color: #d19a66; }
 
 
 /* ====================================================================
@@ -262,7 +269,8 @@
     height: 22px;
     border-radius: 4px;
     background-color: #e8f0fe;
-    border: 1px solid #b9d4e7;
+    border: 1px solid var(--sf-border);
+    /* En oscuro se resuelve más abajo con un tinte azul oscuro. */
     cursor: pointer;
     transition: background-color 0.2s, border-color 0.2s;
     vertical-align: middle;
@@ -271,17 +279,36 @@
 }
 .cp-inspect-btn:hover {
     background-color: #d0e2f7;
-    border-color: #69a3db;
+    border-color: var(--sf-blue);
 }
 .cp-inspect-btn svg {
     width: 14px;
     height: 14px;
-    stroke: #558ac7;
+    stroke: var(--sf-blue-dark);
     fill: none;
     stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
 .cp-inspect-btn:hover svg {
-    stroke: #3a7fc2;
+    stroke: var(--sf-blue);
 }
+
+/* ====================================================================
+   WP-5/WP-7: clases nuevas para sustituir estilos inline extraídos
+   del JS de la vista de Cloud Pages.
+   ==================================================================== */
+
+/* Lista de funciones que referencian una DE/objeto Salesforce en el panel de
+   dependencias (antes style="color:#999;" inline en buildDependenciesGrid). */
+.dep-item-fns { color: var(--sf-text-muted); }
+
+/* Columna del botón de inspección de la tabla (antes style="width:42px;" en el th). */
+#cloudpages-table th.cp-inspect-col { width: 42px; }
+
+/* Área de pegado del JSON de Page IDs del modal (antes style inline). */
+.cp-ids-paste-area { width: 100%; height: 150px; margin-top: 10px; }
+
+/* Botón de inspección: tinte azul oscuro en modo oscuro (pastel). */
+:root[data-theme="dark"] .cp-inspect-btn { background-color: #17324a; }
+:root[data-theme="dark"] .cp-inspect-btn:hover { background-color: #1d466b; }

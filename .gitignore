@@ -15,3 +15,7 @@ npm-debug.log*
 dev-app-update.yml
 
 google-credentials.json
+
+# Instrucciones locales para Claude (no versionar)
+CLAUDE.md
+PLAN-REFACTOR-UI.md

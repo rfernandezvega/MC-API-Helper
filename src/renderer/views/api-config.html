@@ -4,18 +4,22 @@
         <button class="back-button">← Atrás</button>
         <div class="header-actions">
             <button id="saveConfigBtn" class="action-button">Guardar</button>
-            <button id="loginBtn" class="action-button">Login</button>
+            <button id="loginBtn" class="action-button activate-btn">Login</button>
             <button id="logoutBtn" class="action-button delete-btn">Logout / Borrar</button>
         </div>            
     </div>
-    <h2>Configuración de APIs</h2>
-    <!-- Gestión de Clientes (Crear, Seleccionar) - Se mantiene fuera de las pestañas -->
+    <h2>Configuración de Cuentas</h2>
+    <!-- Gestión de Cuentas (Crear, Seleccionar) - Se mantiene fuera de las pestañas -->
     <div class="client-management">
-        <input type="text" id="clientName" placeholder="Nombre del Cliente">
+        <input type="text" id="configClientName" placeholder="Nombre de la Cuenta">
         <select id="savedConfigs">
             <option value="">Seleccionar configuración...</option>
         </select>
     </div>
+    <!-- Contexto activo (Cuenta + BU). Lo leen las vistas como clave de caché; no editable por el usuario. -->
+    <input type="hidden" id="clientName">
+    <!-- MID de la BU activa (account_id). Lo leen las vistas que necesitan el MID en uso. -->
+    <input type="hidden" id="activeMid">
 
     <!-- ========================================================== -->
     <!-- ESTRUCTURA DE PESTAÑAS  -->
@@ -23,6 +27,8 @@
     <div class="tabs-container">
         <div class="tab-buttons">
             <button class="tab-button active" data-tab="api-settings-tab">Configuración de API</button>
+            <button class="tab-button" data-tab="business-units-tab">Business Units</button>
+            <button class="tab-button" data-tab="wa-channels-tab">Canales WhatsApp</button>
             <button class="tab-button" data-tab="de-search-tab">DEs Búsqueda de Clientes</button>
         </div>
 
@@ -31,7 +37,7 @@
             <!-- Datos de la Aplicación API (Bloque movido aquí) -->
             <div class="config-block">
                 <h3>Datos Aplicación</h3>
-                <div class="form-group"><label for="businessUnit">Business Unit (MID)</label><input type="text" id="businessUnit"></div>
+                <div class="form-group"><label for="businessUnit">Business Unit principal (MID)</label><input type="text" id="businessUnit" placeholder="MID de la BU principal (Enterprise)"></div>
                 <div class="form-group"><label for="authUri">Auth URI</label><input type="text" id="authUri" placeholder="Ej: https://...mc.auth.marketingcloudapis.com/v2/token"></div>
                 <div class="form-group"><label for="clientId">Client ID</label><input type="text" id="clientId"></div>
                 <div class="form-group"><label for="clientSecret">Client Secret</label><input type="password" id="clientSecret" placeholder="Necesario para el primer login"></div>
@@ -42,7 +48,76 @@
             </div>
         </div>
 
-        <!-- PESTAÑA 2: DEs Búsqueda de Clientes -->
+        <!-- PESTAÑA 2: Business Units de la Cuenta -->
+        <div id="business-units-tab" class="tab-content">
+            <!-- Business Units de la Cuenta: se reutilizan las MISMAS credenciales para todas.
+                 Se pueden añadir a mano o autodescubrir con "Sincronizar BUs" (requiere sesión activa). -->
+            <div class="config-block flex-layout-block">
+                <div class="config-block-header">
+                    <h3>Business Units del cliente</h3>
+                    <div class="header-actions">
+                        <button id="syncBuBtn" class="action-button activate-btn">Sincronizar BUs</button>
+                    </div>
+                </div>
+                <p class="info-text u-text-left u-m-0 u-mb-15">
+                    Todas las BUs comparten las credenciales de la pestaña "Configuración de API". La BU principal se añade automáticamente con el MID indicado.
+                    "Sincronizar BUs" descubre las BUs del tenant (necesita haber hecho login primero). Estas BUs son las que aparecen
+                    en el desplegable de Cuentas de la barra lateral.
+                </p>
+                <div class="table-container">
+                    <div class="table-scroll-wrapper">
+                        <table id="bu-list-table" class="editable-row-table">
+                            <thead>
+                                <tr>
+                                    <th>Nombre BU</th>
+                                    <th>MID</th>
+                                    <th>Llamadas API</th>
+                                    <th>Visible</th>
+                                    <th style="width:90px;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bu-list-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA: Canales WhatsApp (por BU) -->
+        <div id="wa-channels-tab" class="tab-content">
+            <div class="config-block flex-layout-block">
+                <div class="config-block-header">
+                    <h3>Canales de WhatsApp por BU</h3>
+                    <div class="header-actions">
+                        <button id="addWaChannelBtn" class="action-button" type="button">Añadir canal</button>
+                    </div>
+                </div>
+                <p class="info-text u-text-left u-m-0 u-mb-15">
+                    Cada canal se asocia a una <b>Business Unit</b> y se usa en el alta de contactos de la
+                    <b>Audiencia WhatsApp</b> (Buscadores → Clientes). Para conocer los <i>channelId</i>, accede a la app de WhatsApp
+                    (<a id="wa-console-link" href="#" class="external-link" style="color:var(--sf-blue); text-decoration:underline; font-weight:bold;">abrir</a>)
+                    con la BU correspondiente, consulta los canales y añádelos aquí (Business Unit, Channel ID y un nombre descriptivo).
+                </p>
+
+                <div class="table-container">
+                    <div class="table-scroll-wrapper">
+                        <table id="wa-channels-table" class="editable-row-table">
+                            <thead>
+                                <tr>
+                                    <th>Business Unit</th>
+                                    <th>Teléfono (Channel ID)</th>
+                                    <th>Nombre del canal</th>
+                                    <th style="width:70px;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="wa-channels-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 3: DEs Búsqueda de Clientes -->
         <div id="de-search-tab" class="tab-content">
             <!-- Configuración de Data Views para el buscador de envíos (Bloque movido aquí) -->
             <div class="config-block flex-layout-block">
@@ -50,11 +125,11 @@
                     <h3>Búsqueda Dinámica en Data Extensions</h3>
                     <div class="header-actions">
                         <button id="addSendConfigRowBtn" class="action-button">Añadir Fila</button>
-                        <button id="importDvConfigBtn" class="action-button">Importar</button>
-                        <button id="exportDvConfigBtn" class="action-button activate-btn">Exportar</button>
+                        <button id="importDvConfigBtn" class="action-button activate-btn">Importar</button>
+                        <button id="exportDvConfigBtn" class="action-button download-btn">Exportar</button>
                     </div>
                 </div>
-                <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+                <p class="info-text u-text-left u-m-0 u-mb-15">
                     Configura las tablas donde se buscará al cliente al pulsar el botón "DEs". Los cambios se guardan junto con el resto de la configuración.
                 </p>
                 <div class="table-container">
@@ -65,6 +140,7 @@
                                     <th>Nombre</th>
                                     <th>External Key</th>
                                     <th>Campo de Búsqueda</th>
+                                    <th style="width:90px;">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="sends-config-tbody">

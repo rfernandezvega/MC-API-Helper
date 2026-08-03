@@ -50,13 +50,16 @@
 <aside id="macros-sidebar">
 	<div class="sidebar-content-wrapper">
 		<div class="sidebar-header">
-			<!-- Selector de Cliente y Estado de Sesión -->
+			<!-- Selector de Cuentas y Estado de Sesión -->
 			<div class="sidebar-client-selector">
-				<h2>Cliente</h2>
-				<select id="sidebarClientSelect">
-					<option value="">Ninguno seleccionado</option>
-				</select>
-				<p id="login-status" class="login-status inactive">🔴 Sesión no iniciada</p>
+				<h2>Cuenta</h2>
+				<div id="clientSelector" class="client-selector">
+						<button type="button" id="clientSelectorBtn" class="client-selector-btn">
+							<span id="clientSelectorLabel">Ninguno seleccionado</span>
+							<span class="client-selector-caret">▾</span>
+						</button>
+					</div>
+				<p id="login-status" class="login-status inactive">Sesión no iniciada</p>
 			</div>
 
 			<h2 id="sidebar-views-title">Vistas</h2>
@@ -66,8 +69,9 @@
 			<div class="collapsible-group">
 				<h3 class="collapsible-header">General</h3>
 				<ul class="collapsible-content">
+					<li><a class="macro-item" data-macro="ajustes">Ajustes</a></li>
 					<li><a class="macro-item" data-macro="docu">Documentación</a></li>
-					<li><a class="macro-item" data-macro="configuracionAPIs">Configuración de APIs</a></li>
+					<li><a class="macro-item" data-macro="configuracionAPIs">Configuración de Cuentas</a></li>
 				</ul>
 			</div>
 			<div class="collapsible-group">
@@ -75,7 +79,6 @@
 				<ul class="collapsible-content">
 					<li><a class="macro-item" data-macro="buscadores">Buscadores</a></li>
                     <li><a class="macro-item" data-macro="gestionDEs">Data Extensions</a></li>
-					<li><a class="macro-item" data-macro="calendario">Calendario</a></li>         
 					<li><a class="macro-item" data-macro="gestionAutomatismos">Automatismos</a></li> 
 					<li><a class="macro-item" data-macro="clonadorQueries">Clonar Queries</a></li>
 					<li><a class="macro-item" data-macro="gestionJourneys">Journeys</a></li>   
@@ -133,12 +136,8 @@
       <pre><code id="log-messages">Esperando acciones...</code></pre>
     </div>
     <div id="log-request-block" class="log-block">
-      <h4>Llamadas API</h4>
-      <pre><code id="log-request"></code></pre>
-    </div>
-    <div id="log-response-block" class="log-block">
-      <h4>Respuestas API</h4>
-      <pre><code id="log-response"></code></pre>
+      <h4>Llamadas API (petición ▸ respuesta)</h4>
+      <div id="log-transcript" class="log-transcript"></div>
     </div>
   </div>
 </aside>
@@ -164,7 +163,7 @@
         <textarea id="paste-data-area" rows="10" placeholder="Ciudad	Text	50&#10;Email	EmailAddress	254"></textarea>
         <div class="modal-actions">
             <button id="process-paste-btn" class="action-button">Añadir Campos</button>
-            <button id="cancel-paste-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="cancel-paste-btn" class="action-button cancel-btn">Cancelar</button>
         </div>
     </div>
 </div>
@@ -184,7 +183,7 @@
     <div class="modal-content">
         <h3>Aviso</h3>
         <p id="custom-alert-message" style="line-height: 1.6;"></p>
-        <div class="modal-actions" style="margin-top: 20px;">
+        <div class="modal-actions">
             <button id="custom-alert-close-btn" class="action-button">Aceptar</button>
         </div>
     </div>
@@ -193,8 +192,8 @@
     <div class="modal-content">
         <h3>Confirmación Requerida</h3>
         <p id="custom-confirm-message" style="line-height: 1.6;"></p>
-        <div class="modal-actions" style="margin-top: 20px;">
-            <button id="custom-confirm-cancel-btn" class="action-button delete-btn">Cancelar</button>
+        <div class="modal-actions">
+            <button id="custom-confirm-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="custom-confirm-ok-btn" class="action-button activate-btn">Confirmar</button>
         </div>
     </div>
@@ -225,8 +224,8 @@
                 </table>
             </div>
         </div>
-        <div class="modal-actions" style="margin-top: 20px;">
-            <button id="folder-selector-cancel-btn" class="action-button delete-btn">Cancelar</button>
+        <div class="modal-actions">
+            <button id="folder-selector-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="folder-selector-ok-btn" class="action-button activate-btn" disabled>Seleccionar</button>
         </div>
     </div>
@@ -274,8 +273,8 @@
         </div>
         
         <!-- Botones de acción del modal -->
-        <div class="modal-actions" style="margin-top: 20px;">
-            <button id="automation-de-selector-cancel-btn" class="action-button delete-btn">Cancelar</button>
+        <div class="modal-actions">
+            <button id="automation-de-selector-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="automation-de-selector-continue-btn" class="action-button" disabled>Continuar →</button>
             <button id="automation-de-selector-clone-btn" class="action-button activate-btn hidden" disabled>Clonar</button>
         </div>
@@ -357,8 +356,8 @@
         </div>
 
         <!-- Los botones de acción van fuera del contenedor de estilos -->
-        <div class="modal-actions" style="margin-top: 20px;">
-            <button id="journey-cloner-cancel-btn" class="action-button delete-btn">Cancelar</button>
+        <div class="modal-actions">
+            <button id="journey-cloner-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="journey-cloner-continue-btn" class="action-button" disabled>Continuar →</button>
             <button id="journey-cloner-clone-btn" class="action-button activate-btn hidden" disabled>Clonar</button>
         </div>
@@ -372,13 +371,13 @@
 
         <!-- Bloque central de acciones -->
         <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 40px;">
-            <button id="journey-stop-current-btn" class="action-button" style="background-color: #558ac7; min-width: 160px;">Solo última versión</button>
-            <button id="journey-stop-all-btn" class="action-button activate-btn" style="min-width: 160px;">Todas las versiones</button>
+            <button id="journey-stop-current-btn" class="action-button delete-btn" style="min-width: 160px;">Solo última versión</button>
+            <button id="journey-stop-all-btn" class="action-button delete-btn" style="min-width: 160px;">Todas las versiones</button>
         </div>
 
         <!-- Bloque inferior derecho para Cancelar -->
         <div style="display: flex; justify-content: flex-end;">
-            <button id="journey-stop-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="journey-stop-cancel-btn" class="action-button cancel-btn">Cancelar</button>
         </div>
     </div>
 </div>
@@ -389,29 +388,29 @@
         <p id="journey-comm-message" style="margin-bottom: 25px; color: #666;"></p>
 
         <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 40px;">
-            <button id="journey-comm-selected-btn" class="action-button" style="background-color: #558ac7; min-width: 160px;">Solo seleccionados</button>
-            <button id="journey-comm-all-btn" class="action-button activate-btn" style="min-width: 160px;">Todos los cargados</button>
+            <button id="journey-comm-selected-btn" class="action-button download-btn" style="min-width: 160px;">Solo seleccionados</button>
+            <button id="journey-comm-all-btn" class="action-button download-btn" style="min-width: 160px;">Todos los cargados</button>
         </div>
 
         <div style="display: flex; justify-content: flex-end;">
-            <button id="journey-comm-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="journey-comm-cancel-btn" class="action-button cancel-btn">Cancelar</button>
         </div>
     </div>
 </div>
-
-<div id="app-version"></div> 
-<script type="module" src="app.js"></script>
-</body>
-</html>
 
 <!-- MODAL ESPECÍFICA PARA CONTENIDOS -->
 <div id="checkbox-select-modal" class="modal-overlay">
     <div class="modal-content">
         <h3 id="checkbox-select-title">Seleccionar opciones</h3>
         <div id="checkbox-select-options" style="padding: 10px 0;"></div>
-        <div class="modal-actions" style="margin-top: 20px;">
-            <button id="checkbox-select-cancel-btn" class="action-button delete-btn">Cancelar</button>
+        <div class="modal-actions">
+            <button id="checkbox-select-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="checkbox-select-ok-btn" class="action-button activate-btn">Aceptar</button>
         </div>
     </div>
 </div>
+
+<div id="app-version"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

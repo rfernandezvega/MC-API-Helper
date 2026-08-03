@@ -4,6 +4,8 @@ import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import { loadCustomFonts } from '../ui/fonts.js';
+import { escapeHtml } from '../ui/format-utils.js';
+import { highlightSQLHtml } from '../ui/sql-highlight.js';
 
 let getAuthenticatedConfig;
 let goBackFunction;
@@ -51,13 +53,13 @@ export async function view(automationDetails) {
 
 function renderHeaderInfo(auto) {
     const headerHtml = `
-        <div class="config-block" style="background-color: #f8f9fa; border-left: 5px solid #558ac7; margin-bottom: 20px;">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                <div><strong>Estado:</strong> ${auto.status}</div>
+        <div class="config-block ja-header-block">
+            <div class="ja-header-grid">
+                <div><strong>Estado:</strong> ${escapeHtml(auto.status)}</div>
                 <div><strong>Última Ejecución:</strong> ${formatDate(auto.lastRunTime)}</div>
                 <div><strong>Próxima Ejecución:</strong> ${formatDate(auto.scheduledTime)}</div>
             </div>
-            <div style="margin-top: 10px; word-break: break-word;"><strong>Descripción:</strong> ${auto.description || 'Sin descripción'}</div>
+            <div class="ja-header-desc"><strong>Descripción:</strong> ${escapeHtml(auto.description) || 'Sin descripción'}</div>
         </div>
     `;
     elements.automationAnalyzerStepsContainer.insertAdjacentHTML('afterbegin', headerHtml);
@@ -203,38 +205,38 @@ async function renderAnalysis(automation) {
             // --- 1. Lógica de Impacto (Izquierda) ---
             let impactBoxHtml = '';
             if (act.otherUsages && act.otherUsages.length > 0) {
-                const list = act.otherUsages.map(u => `<li>${u.automationName} (Paso: ${u.step})</li>`).join('');
+                const list = act.otherUsages.map(u => `<li>${escapeHtml(u.automationName)} (Paso: ${escapeHtml(u.step)})</li>`).join('');
                 impactBoxHtml = `
                     <div class="sql-wrapper" style="margin-top:10px;">
-                        <div class="sql-toggle-btn" style="background:#fff5f5 !important; color:#b03a2e !important; border:1px solid #fadbd8 !important; font-size:0.85em;">
+                        <div class="sql-toggle-btn ja-toggle-danger">
                             ⚠ Utilizado en ${act.otherUsages.length} automatismos <span>▼</span>
                         </div>
-                        <div class="sql-content impact-shared" style="display:none; border-color:#fadbd8 !important; padding: 10px; background:#f8f9fa !important;"> 
-                            <ul style="margin:0; padding-left:20px; font-size:0.85em; color:#333333 !important;">${list}</ul>
+                        <div class="sql-content impact-shared ja-content-light" style="display:none; padding: 10px;">
+                            <ul class="ja-impact-list">${list}</ul>
                         </div>
                     </div>`;
             } else {
-                impactBoxHtml = `<div class="impact-box impact-exclusive" style="margin-top:10px; background:#f0fff4 !important; color:#1e8449 !important; border:1px solid #d4efdf !important; padding: 8px 12px; border-radius: 4px; font-size: 0.85em;">✓ Actividad Exclusiva</div>`;
+                impactBoxHtml = `<div class="impact-box impact-exclusive ja-impact-exclusive" style="margin-top:10px;">✓ Actividad Exclusiva</div>`;
             }
 
             // --- 2. Lógica de Detalles (Derecha) ---
             let detailsHtml = '';
             if (act.specificData) {
-                detailsHtml = `<div style="padding: 10px; background: #f0f7ff; border-radius: 4px; border-left: 4px solid #558ac7; font-size: 0.85em; line-height: 1.5;">`;
-                
+                detailsHtml = `<div class="ja-details-panel">`;
+
                 // Orden solicitado: Nombre -> Key -> Ruta
                 const renderDeBlock = (name, key, path) => `
-                <div style="margin-bottom:12px; padding-bottom:8px; border-bottom: 1px solid #d1e3f5;">
-                    <div style="font-weight:bold; color:#2c3e50; font-size:1.1em;">Data Extension: ${name}</div>
-                    <div style="color:#666; font-size:0.85em; margin-bottom:4px;">(Key: ${key})</div>
-                    <div style="color: #444; font-size: 0.9em; display: flex; align-items: center; gap: 5px; margin-top:5px;">
-                        <span style="opacity:0.7;">📁</span> ${path}
+                <div class="ja-de-block">
+                    <div class="ja-de-name">Data Extension: ${escapeHtml(name)}</div>
+                    <div class="ja-de-key">(Key: ${escapeHtml(key)})</div>
+                    <div class="ja-de-path">
+                        <span style="opacity:0.7;">📁</span> ${escapeHtml(path)}
                     </div>
                 </div>`;
 
                 if (act.objectTypeId === 300) { // Query
                     detailsHtml += renderDeBlock(act.specificData.targetDE.name, act.specificData.targetDE.key, act.specificData.targetDE.fullPath);
-                    detailsHtml += `<div><strong>Tipo Acción:</strong> <span style="text-transform: capitalize; color:#2980b9; font-weight:bold;">${act.specificData.updateType}</span></div>`;
+                    detailsHtml += `<div><strong>Tipo Acción:</strong> <span class="ja-val-action">${escapeHtml(act.specificData.updateType)}</span></div>`;
                     
                     if (act.queryText) {
                         detailsHtml += `
@@ -249,16 +251,16 @@ async function renderAnalysis(automation) {
                 else if (act.objectTypeId === 73) { // Extract
                     if (act.specificData.deName) {
                         detailsHtml += renderDeBlock(act.specificData.deName, act.specificData.deKey, act.specificData.fullPath);
-                        detailsHtml += `<div><strong>Delimitador:</strong> <span style="color:#e67e22; font-weight:bold;">${act.specificData.delimiter}</span></div>`;
+                        detailsHtml += `<div><strong>Delimitador:</strong> <span style="color:#e67e22; font-weight:bold;">${escapeHtml(act.specificData.delimiter)}</span></div>`;
                     }
-                    detailsHtml += `<div><strong>Patrón Archivo:</strong> <span style="color:#27ae60;">${act.specificData.fileSpec}</span></div>`;
-                } 
+                    detailsHtml += `<div><strong>Patrón Archivo:</strong> <span class="ja-val-green">${escapeHtml(act.specificData.fileSpec)}</span></div>`;
+                }
                 else if (act.objectTypeId === 53) { // Transfer
-                    detailsHtml += `<div><strong>Archivo:</strong> <span style="color:#27ae60;">${act.specificData.fileSpec}</span></div>
-                                    <div><strong>Destino:</strong> <span style="color:#8e44ad; font-weight:bold;">${act.specificData.destination}</span></div>`;
+                    detailsHtml += `<div><strong>Archivo:</strong> <span class="ja-val-green">${escapeHtml(act.specificData.fileSpec)}</span></div>
+                                    <div><strong>Destino:</strong> <span style="color:#8e44ad; font-weight:bold;">${escapeHtml(act.specificData.destination)}</span></div>`;
                 }
                 else if (act.objectTypeId === 42) { // Email
-                    detailsHtml += `<div><strong>Asunto:</strong> <span style="color:#27ae60; font-weight:bold;">${act.specificData.subject}</span></div>`;
+                    detailsHtml += `<div><strong>Asunto:</strong> <span class="ja-val-green" style="font-weight:bold;">${escapeHtml(act.specificData.subject)}</span></div>`;
                 }
                 else if (act.objectTypeId === 423) { // SSJS Script                   
                     const hasContent = act.scriptCode && act.scriptCode.trim().length > 0;
@@ -271,23 +273,23 @@ async function renderAnalysis(automation) {
                                 </div>
                             </div>`;
                     } else {
-                        detailsHtml += `<div style="color:#999; margin-top:5px; font-style:italic;">(Script vacío o sin código disponible)</div>`;
+                        detailsHtml += `<div style="color:var(--sf-text-muted); margin-top:5px; font-style:italic;">(Script vacío o sin código disponible)</div>`;
                     }
                 }
                 else if (act.objectTypeId === 43) { // Import
                     const targetDE = act.targetDataExtensions?.[0] || { name: 'N/A', key: 'N/A' };
                     const tech = act.specificData || {};
                     const delimLabel = tech.delimiter === ',' ? 'Coma (,)' : (tech.delimiter === '|' ? 'Pipe (|)' : (tech.delimiter || 'N/A'));
-                    
+
                     detailsHtml += renderDeBlock(targetDE.name, targetDE.key, targetDE.fullPath);
                     detailsHtml += `
                         <div style="margin-bottom: 8px;">
-                            <div style="margin-top:4px;"><strong>Tipo Acción:</strong> <span style="text-transform: capitalize; color:#2980b9; font-weight:bold;">${tech.updateType || 'N/A'}</span></div>
+                            <div style="margin-top:4px;"><strong>Tipo Acción:</strong> <span class="ja-val-action">${escapeHtml(tech.updateType) || 'N/A'}</span></div>
                         </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.9em; border-top: 1px solid #d1d9e0; margin-top:5px; padding-top:8px;">
-                            <div style="grid-column: span 2;"><strong>Archivo:</strong> <span style="color:#27ae60; font-weight:bold; word-break: break-all;">${tech.fileSpec || 'N/A'}</span></div>
-                            <div><strong>Tipo:</strong> ${tech.fileType || 'N/A'}</div>
-                            <div><strong>Separador:</strong> ${delimLabel}</div>
+                        <div class="ja-import-grid">
+                            <div style="grid-column: span 2;"><strong>Archivo:</strong> <span class="ja-val-green u-break-all" style="font-weight:bold;">${escapeHtml(tech.fileSpec) || 'N/A'}</span></div>
+                            <div><strong>Tipo:</strong> ${escapeHtml(tech.fileType) || 'N/A'}</div>
+                            <div><strong>Separador:</strong> ${escapeHtml(delimLabel)}</div>
                             <div><strong>Cabecera:</strong> ${tech.headerLines === '1' ? 'Sí' : 'No'}</div>
                             <div><strong>Ignorar Errores:</strong> ${tech.allowErrors ? 'Sí' : 'No'}</div>
                         </div>`;
@@ -296,25 +298,25 @@ async function renderAnalysis(automation) {
                 // --- 3. BLOQUE REVERSE IMPACT (Derecha) - ROJO Y FONDO GRIS CLARO ---
                 if (act.specificData.dataSources && act.specificData.dataSources.length > 0) {
                     const dsItems = act.specificData.dataSources.map(ds => {
-                        const autos = ds.automations.map(a => `<li>${a.automationName} (Paso: ${a.step})</li>`).join('');
+                        const autos = ds.automations.map(a => `<li>${escapeHtml(a.automationName)} (Paso: ${escapeHtml(a.step)})</li>`).join('');
                         return `
-                            <li style="margin-bottom:10px; padding-bottom:8px; border-bottom:1px dashed #ddd;">
-                                <div style="font-weight:bold; color:#b03a2e;">${ds.name} <small style="color:#666; font-weight:normal;">[${ds.type}]</small></div>
-                                <ul style="margin:4px 0 0 0; padding-left:15px; font-size:0.9em; color:#333333 !important;">${autos}</ul>
+                            <li class="ja-ds-item">
+                                <div class="ja-ds-name">${escapeHtml(ds.name)} <small style="color:var(--sf-text-muted); font-weight:normal;">[${escapeHtml(ds.type)}]</small></div>
+                                <ul class="ja-ds-autos">${autos}</ul>
                             </li>`;
                     }).join('');
 
                     detailsHtml += `
                         <div class="sql-wrapper" style="margin-top:15px;">
-                            <div class="sql-toggle-btn" style="background:#fff5f5 !important; color:#b03a2e !important; border:1px solid #fadbd8 !important; font-size:0.85em;">
+                            <div class="sql-toggle-btn ja-toggle-danger">
                                 ⚠ Hay (${act.specificData.dataSources.length}) actividades que impactan en la DE<span>▼</span>
                             </div>
-                            <div class="sql-content" style="display:none; border-color:#fadbd8 !important; background:#f8f9fa !important;">
-                                <ul style="margin:0; padding:10px; list-style:none; color:#333333 !important;">${dsItems}</ul>
+                            <div class="sql-content ja-content-light" style="display:none;">
+                                <ul class="ja-ds-list">${dsItems}</ul>
                             </div>
                         </div>`;
                 } else if (act.objectTypeId === 300 || act.objectTypeId === 43) {
-                    detailsHtml += `<div class="impact-box impact-exclusive" style="margin-top:12px; background:#f0fff4 !important; color:#1e8449 !important; border:1px solid #d4efdf !important; font-size:0.85em; padding: 8px 12px; border-radius: 4px;">✓ Exclusiva</div>`;
+                    detailsHtml += `<div class="impact-box impact-exclusive ja-impact-exclusive" style="margin-top:12px;">✓ Exclusiva</div>`;
                 }
 
                 detailsHtml += `</div>`;
@@ -323,13 +325,13 @@ async function renderAnalysis(automation) {
             // --- Estructura de la Fila ---
             rowsHtml += `
                 <tr>
-                    <td style="width:40%; text-align:left; vertical-align: top;">
-                        <small style="color: #558ac7; font-weight: bold; text-transform: uppercase;">${typeLabel}</small>
-                        <strong style="display:block; font-size: 1.1em; margin: 4px 0;">${act.name}</strong>
-                        <small style="color: #666; display:block; margin-bottom:10px;">${act.description || 'Sin descripción'}</small>
+                    <td class="ja-cell-activity">
+                        <small class="ja-type-label">${escapeHtml(typeLabel)}</small>
+                        <strong class="ja-act-name">${escapeHtml(act.name)}</strong>
+                        <small class="ja-act-desc">${escapeHtml(act.description) || 'Sin descripción'}</small>
                         ${impactBoxHtml}
                     </td>
-                    <td style="width:60%; text-align:left; vertical-align: top;">
+                    <td class="ja-cell-details">
                         ${detailsHtml}
                     </td>
                 </tr>`;
@@ -470,24 +472,6 @@ function drawHighlightedCode(doc, code, type, startY) {
 function formatDate(date) {
     if (!date || date.startsWith('0001')) return 'N/A';
     return new Date(date).toLocaleString();
-}
-
-function highlightSQLHtml(query) {
-    if (!query) return '';
-
-    let escaped = query.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-    // Patrones: 1. Comentarios, 2. Strings, 3. Keywords, 4. Funciones, 5. Números
-    const pattern = /(--[^\n]*|\/\*[\s\S]*?\*\/)|('[^']*')|\b(SELECT|FROM|WHERE|AND|OR|JOIN|INNER|LEFT|ON|GROUP|BY|ORDER|INSERT|UPDATE|SET|DELETE|CASE|WHEN|THEN|ELSE|END|NULL|NOT|IN|TOP|DISTINCT|AS|UNION|ALL|LIKE)\b|\b(CONVERT|DATE|DATEADD|GETUTCDATE|GETDATE|DATEDIFF|SUM|COUNT|AVG|MIN|MAX|CAST|ISNULL|COALESCE)\b|(\b\d+\b)/gi;
-
-    return escaped.replace(pattern, (match, com, str, kwd, fn, num) => {
-        if (com) return `<span class="sql-comment">${match}</span>`;
-        if (str) return `<span class="sql-string">${match}</span>`;
-        if (kwd) return `<span class="sql-keyword">${match.toUpperCase()}</span>`;
-        if (fn) return `<span class="sql-function">${match.toUpperCase()}</span>`;
-        if (num) return `<span class="sql-number">${match}</span>`;
-        return match;
-    });
 }
 
 function highlightJSHtml(code) {

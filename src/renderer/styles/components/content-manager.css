@@ -42,7 +42,7 @@
 }
 .cp-analyze-btn:hover {
     background-color: #dce8f7;
-    border-color: #69a3db;
+    border-color: var(--sf-blue);
 }
 
 .cp-resolve-btn {
@@ -210,3 +210,173 @@
     background-color: #c8e6c9;
     border-color: #66bb6a;
 }
+
+/* ===================================================================
+   Clases compartidas con sendManagement (WP-6d/WP-7): estado vacío con
+   instrucciones y panel de código oscuro. Viven aquí porque common.css
+   no se toca en este paquete y este CSS ya está importado por style.css.
+   =================================================================== */
+
+/* Bloque de "estado vacío" con instrucciones paso a paso */
+.empty-instructions {
+    background: var(--sf-bg-alt);
+    border: 2px dashed var(--sf-blue);
+    border-radius: 10px;
+    padding: 30px;
+    margin: 10px 0;
+}
+.empty-instructions-inner {
+    text-align: left;
+    max-width: 900px;
+    margin: 0 auto;
+}
+.empty-instructions h3 {
+    color: var(--sf-blue);
+}
+.empty-instructions-link {
+    color: var(--sf-blue);
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Panel de código oscuro con cabecera de acciones */
+.code-panel {
+    background-color: var(--sf-code-bg);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 15px;
+    border: 1px solid #181a1f;
+}
+.code-panel-header {
+    display: flex;
+    justify-content: flex-end;
+    padding: 5px 10px;
+    background-color: #21252b;
+    border-bottom: 1px solid #181a1f;
+}
+.code-panel-btn {
+    background-color: #3b4048;
+    border: none;
+    color: #fff;
+}
+.code-panel-pre {
+    color: var(--sf-code-text);
+    padding: 15px;
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: 'Consolas', monospace;
+    font-size: 12px;
+    margin: 0;
+    white-space: pre;
+    line-height: 1.4;
+}
+
+/* Textarea para pegar JSON/código generado fuera de la app */
+.code-paste-area {
+    width: 100%;
+    height: 100px;
+    margin-top: 5px;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid var(--sf-border);
+    font-family: monospace;
+    font-size: 11px;
+    resize: none;
+    box-sizing: border-box;
+}
+
+/* Celdas de sendManagement con texto largo (from name / from email) */
+.sm-cell-wrap {
+    word-break: break-word;
+    min-width: 100px;
+}
+/* Celda con texto reducido (columna Auto-Reply) */
+.sm-cell-sm {
+    font-size: 0.9em;
+}
+/* Código pequeño (IPs de Delivery Profiles) */
+.sm-code {
+    font-size: 0.85em;
+}
+
+/* Botón-filtro conmutable (tarjeta seleccionable de tipo): compartido entre
+   el Gestor de Contenidos ("Plantilla inexistente") y Gestión de Journeys
+   ("Comunicaciones"). El JS alterna la clase .active. */
+.type-card {
+    cursor: pointer;
+    text-align: center;
+    min-width: 140px;
+    transition: all 0.2s;
+    background-color: var(--sf-bg-alt);
+    color: var(--sf-text);
+    border: 1px solid var(--sf-border);
+}
+.type-card:hover {
+    border-color: var(--sf-blue);
+}
+.type-card.active {
+    background-color: var(--sf-blue-dark);
+    border-color: var(--sf-blue-dark);
+    color: #fff;
+}
+
+/* --- Filtros y cabecera de pestañas del Gestor de Contenidos (antes inline) --- */
+.cm-filter-search { width: 280px; }
+.cm-filter-auto { width: auto; }
+.cm-filter-template { min-width: 160px; }
+.cm-tab-buttons {
+    display: flex;
+    width: 100%;
+    border-bottom: 2px solid var(--sf-border);
+}
+/* Contador de la pestaña (número pequeño sobre el nombre) */
+.cm-tab-count {
+    font-size: 0.75em;
+    color: var(--sf-text-muted);
+    font-weight: normal;
+}
+/* Columna de información (total + fechas de caché) a la derecha de las pestañas */
+.cm-info-box {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    padding-bottom: 6px;
+    text-align: right;
+    white-space: nowrap;
+}
+.cm-info-hint {
+    font-size: 0.85em;
+    color: var(--sf-text-muted);
+}
+.cm-info-date {
+    font-size: 0.75em;
+    color: var(--sf-text-muted);
+}
+
+/* Texto de error en celdas/párrafos de resultados. Compartido con el Buscador
+   de Clientes (customer-finder), cuyo CSS propio no se toca en este paquete. */
+.cf-error {
+    color: var(--sf-red);
+}
+
+/* ===================================================================
+   MODO OSCURO: botones de acción de la tabla (pasteles). Se conserva el
+   valor claro por defecto y aquí se sustituye por tintes oscuros que
+   preservan el código de color (azul/verde/naranja/morado). Los iconos
+   SVG saturados siguen leyéndose sobre estos fondos.
+   =================================================================== */
+:root[data-theme="dark"] .cp-analyze-btn { background-color: #17324a; border-color: #2a5a86; }
+:root[data-theme="dark"] .cp-analyze-btn:hover { background-color: #1d466b; }
+
+:root[data-theme="dark"] .cp-resolve-btn,
+:root[data-theme="dark"] .cp-preview-btn { background-color: #163a20; border-color: #2c6b3a; }
+:root[data-theme="dark"] .cp-resolve-btn:hover,
+:root[data-theme="dark"] .cp-preview-btn:hover { background-color: #1e502c; }
+
+:root[data-theme="dark"] .cp-refs-btn { background-color: #3d2f10; border-color: #6b5320; }
+:root[data-theme="dark"] .cp-refs-btn:hover { background-color: #523f11; }
+
+:root[data-theme="dark"] .cp-journeys-btn { background-color: #2a1f3d; border-color: #4a3568; }
+:root[data-theme="dark"] .cp-journeys-btn:hover { background-color: #382a52; }

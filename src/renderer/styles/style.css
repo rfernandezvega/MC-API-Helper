@@ -20,6 +20,11 @@
 @import url("components/erd-generator.css");
 @import url("components/cloud-page-detail.css");
 @import url("components/content-manager.css");
+@import url("components/journey-errors.css");
+@import url("components/journey-analyzer.css");
+@import url("components/audit-manager.css");
+@import url("components/finders.css");
+@import url("components/settings.css");
 
 /* 
    NOTA: No es necesario crear un CSS para cada vista si no tiene

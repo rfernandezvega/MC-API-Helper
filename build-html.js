@@ -12,10 +12,13 @@ const injectionMarker = '<!-- VIEWS WILL BE INJECTED HERE -->';
 
 console.log('Iniciando la construcción del fichero HTML principal...');
 
-// 1. Este script creará el index.html final.
+// 1. La plantilla base es obligatoria. Si no existe, abortamos con un error claro
+//    en lugar de renombrar el index.html generado (comportamiento que podría
+//    destruir la plantilla si esta se borra por accidente).
 if (!fs.existsSync(shellPath)) {
-    fs.renameSync(finalIndexPath, shellPath);
-    console.log('Se ha renombrado "index.html" a "index.html.template" para usarlo como plantilla.');
+    console.error('ERROR: No se encuentra la plantilla "src/renderer/index.html.template".');
+    console.error('Este fichero es obligatorio para construir el index.html final. Recupéralo (por ejemplo desde el control de versiones) y vuelve a ejecutar el script.');
+    process.exit(1);
 }
 
 // 2. Lee la plantilla base (el shell).

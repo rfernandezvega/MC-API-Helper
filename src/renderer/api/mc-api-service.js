@@ -24,3 +24,4 @@ export * from './api-send-management.js';
 export * from './api-subscribers.js';
 export * from './api-users.js';
 export * from './api-validators.js';
+export * from './api-whatsapp.js';

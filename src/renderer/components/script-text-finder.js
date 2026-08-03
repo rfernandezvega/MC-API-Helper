@@ -3,6 +3,7 @@ import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
+import { buildAutomationUrl, linkCell } from '../ui/mc-links.js';
 
 let getAuthenticatedConfig;
 
@@ -65,7 +66,7 @@ function renderTable(results) {
 
         // 2. Formatear los nombres de automatizaciones y pasos (lo que ya tenías)
         const autoNames = (item.automations && item.automations.length > 0)
-            ? item.automations.map(a => a.automationName).join('<br>')
+            ? item.automations.map(a => linkCell(a.automationName || 'N/A', buildAutomationUrl(a.automationId))).join('<br>')
             : '---';
 
         const autoSteps = (item.automations && item.automations.length > 0)

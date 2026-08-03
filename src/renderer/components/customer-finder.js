@@ -5,6 +5,9 @@ import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
+import * as whatsappFinder from './whatsapp-finder.js';
+import { escapeHtml } from '../ui/format-utils.js';
+import { createTableSorter, createPaginator } from '../ui/table-utils.js';
 
 // --- 1. ESTADO DEL MÓDULO ---
 
@@ -14,11 +17,14 @@ let currentClientConfig;    // Configuración del cliente activo (para las DEs d
 let selectedCustomerRow = null;
 let selectedSubscriberData = null;
 
-const DE_ITEMS_PER_PAGE = 5; 
-// Mapa para guardar el estado de paginación y ordenación de cada tabla de DE
-let dePaginationStates = new Map(); 
-// Objeto para guardar el estado de la tabla principal de clientes
-let customerResultsState = { allRows: [], sortColumn: null, sortDirection: 'asc' };
+const DE_ITEMS_PER_PAGE = 5;
+// Mapa deKey → { allRows, sorter, paginator } de cada tabla de DE dinámica
+let dePaginationStates = new Map();
+// Datos de la tabla principal de clientes (su ordenación la gestiona customerSorter)
+let customerResultsState = { allRows: [] };
+// Controlador de ordenación de la tabla principal (se crea en init; como su thead se
+// regenera en cada búsqueda, se re-engancha con attach(thead) tras cada render)
+let customerSorter;
 
 // --- 2. FUNCIONES PÚBLICAS ---
 
@@ -39,29 +45,12 @@ export function init(dependencies) {
     elements.selectAllDEsCheckbox.addEventListener('change', handleSelectAllDEs);
     elements.searchSelectedDEsBtn.addEventListener('click', startSelectedDESearch);
 
-    // Delegación de eventos para la ordenación y paginación
-    document.getElementById('clientes-tab').addEventListener('click', e => {
-        // Manejar clics en cabeceras ordenables
-        const header = e.target.closest('.sortable-header');
-        if (header) {
-            handleSortClick(e);
-            return;
-        }
-
-        // Manejar clics en botones de paginación
-        const paginationButton = e.target.closest('.pagination-arrow');
-        if (paginationButton) {
-            handlePaginationClick(e);
-            return;
-        }
-    });
-
-    // Delegación de eventos para el input de página
-    document.getElementById('clientes-tab').addEventListener('change', e => {
-        const pageInput = e.target.closest('.page-input');
-        if (pageInput) {
-            handlePageInputChange(e);
-        }
+    // Sorter de la tabla principal de clientes. La ordenación y paginación de las
+    // tablas de DEs dinámicas se crean por bloque en startSelectedDESearch.
+    customerSorter = createTableSorter({
+        tableSelector: '#customer-search-table',
+        types: { createdDate: 'date', unsubscribedDate: 'date' },
+        onSort: renderCustomerSearchResults
     });
 }
 
@@ -93,6 +82,7 @@ async function searchCustomer() {
     elements.getCustomerJourneysBtn.disabled = true;
     elements.customerJourneysResultsBlock.classList.add('hidden');
     elements.customerDesResultsBlock.classList.add('hidden');
+    whatsappFinder.resetWhatsapp();
     elements.customerSearchTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
 
     try {
@@ -123,9 +113,15 @@ async function searchCustomer() {
 
         logger.logMessage(`Búsqueda completada. Se encontraron ${finalResults.length} resultado(s).`);
 
+        // Búsqueda adicional en la Audiencia WhatsApp si el toggle está activo.
+        if (whatsappFinder.isEnabled()) {
+            logger.logMessage('Incluyendo búsqueda en la Audiencia WhatsApp...');
+            await whatsappFinder.searchWhatsapp(value, apiConfig);
+        }
+
     } catch (error) {
         logger.logMessage(`Error al buscar clientes: ${error.message}`);
-        elements.customerSearchTbody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${error.message}</td></tr>`;
+        elements.customerSearchTbody.innerHTML = `<tr><td colspan="6" class="cf-error">Error: ${escapeHtml(error.message)}</td></tr>`;
         ui.showCustomAlert(`Error: ${error.message}`);
     } finally {
         ui.unblockUI();
@@ -168,7 +164,7 @@ async function getCustomerJourneys() {
 
     } catch (error) {
         logger.logMessage(`Error al buscar journeys del cliente: ${error.message}`);
-        elements.customerJourneysTbody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${error.message}</td></tr>`;
+        elements.customerJourneysTbody.innerHTML = `<tr><td colspan="6" class="cf-error">Error: ${escapeHtml(error.message)}</td></tr>`;
         ui.showCustomAlert(`Error: ${error.message}`);
     } finally {
         ui.unblockUI();
@@ -189,7 +185,7 @@ function displayDESelection() {
         configs.forEach(config => {
             const row = document.createElement('tr');
             // Usamos deKey como valor para el checkbox
-            row.innerHTML = `<td><input type="checkbox" class="de-select-checkbox" value="${config.deKey}"></td><td>${config.title}</td>`;
+            row.innerHTML = `<td><input type="checkbox" class="de-select-checkbox" value="${escapeHtml(config.deKey)}"></td><td>${escapeHtml(config.title)}</td>`;
             tbody.appendChild(row);
         });
     }
@@ -223,26 +219,48 @@ async function startSelectedDESearch() {
     for (const config of configs) {
         const resultBlock = createResultBlock(config.title, config.deKey);
         elements.desResultsContainer.appendChild(resultBlock);
-        
+
         try {
             ui.blockUI(`Buscando en "${config.title}"...`);
             logger.logMessage(`-> Consultando DE: ${config.deKey} en el campo "${config.field}"...`);
             const items = await mcApiService.searchDataExtensionRows(config.deKey, config.field, selectedSubscriberData.subscriberKey, apiConfig);
 
             if (items.length > 0) {
-                dePaginationStates.set(config.deKey, {
-                    allRows: items.map(item => item.values), // Guardamos solo los valores
-                    currentPage: 1,
-                    sortColumn: null,
-                    sortDirection: 'asc'
+                const allRows = items.map(item => item.values); // Guardamos solo los valores
+                const deKey = config.deKey;
+
+                // Los campos de la DE son dinámicos: tratamos como fecha los que
+                // contengan 'date' en el nombre (mismo criterio que antes).
+                const types = {};
+                Object.keys(allRows[0] || {}).forEach(k => {
+                    if (k.toLowerCase().includes('date')) types[k] = 'date';
                 });
-                renderDEPage(config.deKey, 1);
+
+                // Un sorter y un paginador propios por tabla de DE. El thead se
+                // regenera en cada render, por lo que se re-engancha con attach().
+                const sorter = createTableSorter({
+                    tableSelector: `[data-de-key="${deKey}"] table`,
+                    types,
+                    onSort: () => renderDEPage(deKey)
+                });
+                const paginator = createPaginator(
+                    {
+                        pageInput: resultBlock.querySelector('.page-input'),
+                        totalLabel: resultBlock.querySelector('.total-pages-span'),
+                        prevBtn: resultBlock.querySelector('[data-action="prev"]'),
+                        nextBtn: resultBlock.querySelector('[data-action="next"]')
+                    },
+                    { itemsPerPage: DE_ITEMS_PER_PAGE, onPageChange: () => renderDEPage(deKey) }
+                );
+
+                dePaginationStates.set(deKey, { allRows, sorter, paginator });
+                renderDEPage(deKey);
             } else {
                 resultBlock.querySelector('.table-container').innerHTML = '<p>No se encontraron registros en esta Data Extension.</p>';
             }
         } catch (error) {
             logger.logMessage(`-> Error consultando ${config.deKey}: ${error.message}`);
-            resultBlock.querySelector('.table-container').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            resultBlock.querySelector('.table-container').innerHTML = `<p class="cf-error">Error: ${escapeHtml(error.message)}</p>`;
         }
     }
 
@@ -350,7 +368,7 @@ async function ejectCustomer() {
 
 function renderCustomerSearchResults() {
     elements.customerSearchTbody.innerHTML = '';
-    
+
     const headers = [
         { label: 'Subscriber Key', key: 'subscriberKey' },
         { label: 'Email', key: 'emailAddress' },
@@ -360,11 +378,14 @@ function renderCustomerSearchResults() {
         { label: 'Es Suscriptor', key: 'isSubscriber' }
     ];
 
+    // El thead se regenera en cada búsqueda: los th llevan data-sort-by (lo que
+    // espera el sorter) y se re-engancha el listener con attach(thead).
     const thead = elements.customerSearchTbody.parentElement.querySelector('thead');
-    thead.innerHTML = `<tr>${headers.map(h => `<th class="sortable-header" data-column="${h.key}">${h.label}</th>`).join('')}</tr>`;
+    thead.innerHTML = `<tr>${headers.map(h => `<th class="sortable-header" data-sort-by="${h.key}">${h.label}</th>`).join('')}</tr>`;
+    customerSorter.attach(thead);
 
-    const sortedRows = sortData(customerResultsState.allRows, customerResultsState.sortColumn, customerResultsState.sortDirection);
-    
+    const sortedRows = customerSorter.sort([...customerResultsState.allRows]);
+
     if (!sortedRows || sortedRows.length === 0) {
         elements.customerSearchTbody.innerHTML = '<tr><td colspan="6">No se encontraron clientes con ese criterio.</td></tr>';
         return;
@@ -375,17 +396,17 @@ function renderCustomerSearchResults() {
         row.dataset.subscriberKey = sub.subscriberKey;
         row.dataset.isSubscriber = sub.isSubscriber;
         row.innerHTML = `
-            <td>${sub.subscriberKey}</td><td>${sub.emailAddress}</td><td>${sub.status}</td>
-            <td>${sub.createdDate}</td><td>${sub.unsubscribedDate}</td>
+            <td>${escapeHtml(sub.subscriberKey)}</td><td>${escapeHtml(sub.emailAddress)}</td><td>${escapeHtml(sub.status)}</td>
+            <td>${escapeHtml(sub.createdDate)}</td><td>${escapeHtml(sub.unsubscribedDate)}</td>
             <td>${sub.isSubscriber ? 'Sí' : 'No'}</td>`;
         elements.customerSearchTbody.appendChild(row);
-        
+
         if (sortedRows.length === 1 && index === 0) {
             row.click();
         }
     });
-    
-    updateSortIndicators(elements.customerSearchTbody.parentElement, customerResultsState);
+
+    customerSorter.updateIndicators();
 }
 
 function renderCustomerJourneysTable(journeys) {
@@ -402,10 +423,10 @@ function renderCustomerJourneysTable(journeys) {
         const row = document.createElement('tr');
 
         row.dataset.definitionKey = journey.key;
-        
+
         row.innerHTML = `
-            <td>${journey.name || '---'}</td><td>${journey.id || '---'}</td>
-            <td>${journey.key || '---'}</td><td>${journey.version || '---'}</td>
+            <td>${escapeHtml(journey.name) || '---'}</td><td>${escapeHtml(journey.id) || '---'}</td>
+            <td>${escapeHtml(journey.key) || '---'}</td><td>${escapeHtml(journey.version) || '---'}</td>
             <td>${new Date(journey.createdDate).toLocaleString()}</td>
             <td>${new Date(journey.modifiedDate).toLocaleString()}</td>`;
         elements.customerJourneysTbody.appendChild(row);
@@ -417,7 +438,7 @@ function createResultBlock(title, deKey) {
     resultBlock.className = 'sends-dataview-block'; // Puedes renombrar esta clase si quieres
     resultBlock.dataset.deKey = deKey; // Importante para identificar el bloque
     resultBlock.innerHTML = `
-        <h4>${title} <small>(${deKey})</small></h4>
+        <h4>${escapeHtml(title)} <small>(${escapeHtml(deKey)})</small></h4>
         <div class="table-container">
             <table><thead></thead><tbody></tbody></table>
         </div>
@@ -430,31 +451,32 @@ function createResultBlock(title, deKey) {
     return resultBlock;
 }
 
-function renderDEPage(deKey, pageNum) {
+function renderDEPage(deKey) {
     const state = dePaginationStates.get(deKey);
     if (!state) return;
 
     const block = elements.desResultsContainer.querySelector(`[data-de-key="${deKey}"]`);
     if (!block) return;
 
-    const sortedRows = sortData(state.allRows, state.sortColumn, state.sortDirection);
-    const totalPages = Math.ceil(sortedRows.length / DE_ITEMS_PER_PAGE);
-    pageNum = Math.max(1, Math.min(pageNum, totalPages));
-    state.currentPage = pageNum;
-
-    const startIndex = (pageNum - 1) * DE_ITEMS_PER_PAGE;
-    const paginatedRows = sortedRows.slice(startIndex, startIndex + DE_ITEMS_PER_PAGE);
+    const sortedRows = state.sorter.sort([...state.allRows]);
+    const paginatedRows = state.paginator.paginate(sortedRows);
 
     const table = block.querySelector('table');
     const thead = table.querySelector('thead');
     const tbody = table.querySelector('tbody');
-    
+
+    // La cabecera se regenera con los campos de la DE: data-sort-by es lo que
+    // espera el sorter, y attach() re-engancha el listener al thead nuevo.
     const headers = Object.keys(state.allRows[0] || {});
-    thead.innerHTML = `<tr>${headers.map(h => `<th class="sortable-header" data-column="${h}">${h}</th>`).join('')}</tr>`;
-    tbody.innerHTML = paginatedRows.map(item => `<tr>${headers.map(h => `<td>${item[h] || '---'}</td>`).join('')}</tr>`).join('');
-    
-    updateSortIndicators(table, state);
-    updateDEPaginationUI(block, pageNum, totalPages);
+    thead.innerHTML = `<tr>${headers.map(h => `<th class="sortable-header" data-sort-by="${escapeHtml(h)}">${escapeHtml(h)}</th>`).join('')}</tr>`;
+    state.sorter.attach(thead);
+    tbody.innerHTML = paginatedRows.map(item => `<tr>${headers.map(h => `<td>${escapeHtml(item[h]) || '---'}</td>`).join('')}</tr>`).join('');
+
+    state.sorter.updateIndicators();
+
+    // Igual que antes: los controles de paginación solo se muestran si hay más de una página
+    const totalPages = Math.ceil(sortedRows.length / DE_ITEMS_PER_PAGE) || 1;
+    block.querySelector('.pagination-controls').classList.toggle('hidden', totalPages <= 1);
 }
 
 /**
@@ -463,107 +485,6 @@ function renderDEPage(deKey, pageNum) {
 function updateEjectButtonState() {
     const selectedCount = document.querySelectorAll('#customer-journeys-table tbody tr.selected').length;
     elements.ejectCustomerFromJourneysBtn.disabled = selectedCount === 0;
-}
-
-/**
- * Ordena un array de objetos por una clave específica.
- */
-function sortData(data, column, direction) {
-    if (!column) return [...data];
-    const sortedData = [...data];
-    const dir = direction === 'asc' ? 1 : -1;
-    sortedData.sort((a, b) => {
-        let valA = a[column];
-        let valB = b[column];
-        if (valA == null) return 1;
-        if (valB == null) return -1;
-        // Asumimos que los nombres de campo que contienen 'date' son fechas
-        if (typeof column === 'string' && column.toLowerCase().includes('date')) {
-            return (new Date(valA) - new Date(valB)) * dir;
-        }
-        if (valA < valB) return -1 * dir;
-        if (valA > valB) return 1 * dir;
-        return 0;
-    });
-    return sortedData;
-}
-
-/**
- * Actualiza los indicadores visuales (flechas) en las cabeceras de una tabla.
- */
-function updateSortIndicators(tableElement, state) {
-    tableElement.querySelectorAll('.sortable-header').forEach(th => {
-        th.classList.remove('sort-asc', 'sort-desc');
-        if (th.dataset.column === state.sortColumn) {
-            th.classList.add(state.sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
-        }
-    });
-}
-
-/**
- * Actualiza la UI de los controles de paginación para una tabla de DE.
- */
-function updateDEPaginationUI(block, pageNum, totalPages) {
-    const paginationControls = block.querySelector('.pagination-controls');
-    if (totalPages > 1) {
-        paginationControls.classList.remove('hidden');
-        const pageInput = paginationControls.querySelector('.page-input');
-        pageInput.value = pageNum;
-        pageInput.max = totalPages;
-        paginationControls.querySelector('.total-pages-span').textContent = `/ ${totalPages}`;
-        paginationControls.querySelector('[data-action="prev"]').disabled = (pageNum === 1);
-        paginationControls.querySelector('[data-action="next"]').disabled = (pageNum === totalPages);
-    } else {
-        paginationControls.classList.add('hidden');
-    }
-}
-
-function handleSortClick(e) {
-    const header = e.target.closest('.sortable-header');
-    const columnKey = header.dataset.column;
-    const table = header.closest('table');
-
-    if (table.id === 'customer-search-table') {
-        if (customerResultsState.sortColumn === columnKey) {
-            customerResultsState.sortDirection = customerResultsState.sortDirection === 'asc' ? 'desc' : 'asc';
-        } else {
-            customerResultsState.sortColumn = columnKey;
-            customerResultsState.sortDirection = 'asc';
-        }
-        renderCustomerSearchResults();
-    } else {
-        const block = table.closest('[data-de-key]');
-        if (!block) return;
-        const deKey = block.dataset.deKey;
-        const state = dePaginationStates.get(deKey);
-        if (!state) return;
-        if (state.sortColumn === columnKey) {
-            state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
-        } else {
-            state.sortColumn = columnKey;
-            state.sortDirection = 'asc';
-        }
-        renderDEPage(deKey, state.currentPage);
-    }
-}
-
-function handlePaginationClick(e) {
-    const button = e.target.closest('.pagination-arrow');
-    const block = button.closest('[data-de-key]');
-    const deKey = block.dataset.deKey;
-    const state = dePaginationStates.get(deKey);
-    let newPage = state.currentPage;
-    if (button.dataset.action === 'prev') newPage--;
-    if (button.dataset.action === 'next') newPage++;
-    renderDEPage(deKey, newPage);
-}
-
-function handlePageInputChange(e) {
-    const input = e.target.closest('.page-input');
-    const block = input.closest('[data-de-key]');
-    const deKey = block.dataset.deKey;
-    const newPage = parseInt(input.value, 10);
-    renderDEPage(deKey, newPage);
 }
 
 function handleSelectAllDEs(e) {

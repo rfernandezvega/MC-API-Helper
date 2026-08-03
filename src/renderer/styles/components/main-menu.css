@@ -13,29 +13,21 @@
 }
 
 .menu-group {
-    width: 90%;
-    background-color: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 12px;
+    width: 100%;
+    background-color: var(--sf-bg-alt);
+    border: 1px solid var(--sf-border);
+    border-radius: var(--sf-radius-lg);
     padding: 20px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.05);
 }
 
 .menu-group h3 {
-    color: #558ac7;
+    color: var(--sf-blue-dark);
     margin-top: 0;
     margin-bottom: 20px;
     text-align: center;
-    border-bottom: 2px solid #e0e7ef;
+    border-bottom: 2px solid var(--sf-border);
     padding-bottom: 10px;
-}
-
-.welcome-gif {
-  display: block;
-  margin: 0 auto 20px auto; /* Centra la imagen dentro del panel */
-  max-width: 100%;
-  width: 350px;
-  border-radius: 8px;
 }
 
 .menu-buttons-container {
@@ -45,24 +37,35 @@
     gap: 15px;
 }
 
-/* --- Bloque de Changelog --- */
+/* --- Bloque de Changelog ---
+   Ocupa el alto restante de la pantalla; el título queda fijo y el
+   scroll lo hace solo la lista de versiones. */
 .changelog-group {
     margin-top: 20px;
-    max-height: calc(100vh - 320px);
-    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
+.changelog-group h3 { flex-shrink: 0; }
 
 .changelog-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    overflow-y: auto;
+    min-height: 0;
 }
 
-/* Cada versión es un <details> colapsable */
+/* Cada versión es un <details> colapsable. flex-shrink evita que las
+   entradas se aplasten para caber: deben conservar su altura y que el
+   scroll lo haga la lista. */
 .changelog-entry {
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
+    border: 1px solid var(--sf-border);
+    border-radius: var(--sf-radius-lg);
     overflow: hidden;
+    flex-shrink: 0;
 }
 
 .changelog-version {
@@ -71,28 +74,35 @@
     gap: 12px;
     padding: 10px 14px;
     cursor: pointer;
-    background-color: #f8f9fa;
+    background-color: var(--sf-bg-alt);
     font-weight: 600;
     font-size: 0.9em;
-    color: #333;
+    color: var(--sf-text);
     list-style: none;
     transition: background-color 0.2s;
 }
 .changelog-version::-webkit-details-marker { display: none; }
-.changelog-version:hover { background-color: #edf2f7; }
+.changelog-version:hover { background-color: var(--sf-bg); }
 
+/* Badge de versión (mismo aspecto que .badge-info global) */
 .changelog-badge {
-    background-color: #69a3db;
-    color: #fff;
-    padding: 2px 10px;
-    border-radius: 4px;
-    font-size: 0.85em;
-    font-weight: 700;
+    background-color: #e1f5fe;
+    color: #0277bd;
+    padding: 2px 9px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: bold;
+    display: inline-block;
     letter-spacing: 0.3px;
+}
+/* Badge informativo (pastel): apagado en tema oscuro para que no cante. */
+:root[data-theme="dark"] .changelog-badge {
+    background-color: #10344a;
+    color: #7fc9f5;
 }
 
 .changelog-date {
-    color: #999;
+    color: var(--sf-text-muted);
     font-weight: 400;
     font-size: 0.85em;
     margin-left: auto;
@@ -103,13 +113,13 @@
     margin: 0;
     padding: 10px 14px 12px 18px;
     list-style: none;
-    background-color: #fff;
-    border-top: 1px solid #e9ecef;
+    background-color: var(--sf-surface);
+    border-top: 1px solid var(--sf-border);
 }
 .changelog-items li {
     padding: 4px 0;
     font-size: 0.88em;
-    color: #444;
+    color: var(--sf-text-soft);
     line-height: 1.5;
 }
 
@@ -126,3 +136,7 @@
 .changelog-tag.new      { background-color: #d4edda; color: #155724; }
 .changelog-tag.improved { background-color: #cce5ff; color: #004085; }
 .changelog-tag.fix      { background-color: #fff3cd; color: #856404; }
+/* Etiquetas pastel: pares oscuro/claro en tema oscuro (success / info / warning). */
+:root[data-theme="dark"] .changelog-tag.new      { background-color: #143a1c; color: #82d989; }
+:root[data-theme="dark"] .changelog-tag.improved { background-color: #10344a; color: #7fc9f5; }
+:root[data-theme="dark"] .changelog-tag.fix      { background-color: #3d2f10; color: #f0c066; }

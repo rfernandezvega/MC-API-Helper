@@ -4,40 +4,40 @@
         <button class="back-button">← Atrás</button>
         <div class="header-actions">
             <button id="refreshContentBtn" class="action-button">Refrescar</button>
-            <button id="exportContentCsvBtn" class="action-button">Exportar</button>
+            <button id="exportContentCsvBtn" class="action-button download-btn">Exportar</button>
             <button id="deleteContentBtn" class="action-button delete-btn" disabled>Borrar</button>
         </div>
     </div>
     
-    <div class="header-filters" style="gap: 8px;">
-        <input type="text" id="contentManagerFilter" class="filter-input" placeholder="Buscar en todos los contenidos..." style="width: 280px;">
-        <select id="contentUsageFilter" class="filter-input" style="width: auto;" title="Filtrar por uso">
+    <div class="header-filters u-gap-8">
+        <input type="text" id="contentManagerFilter" class="filter-input cm-filter-search" placeholder="Buscar en todos los contenidos...">
+        <select id="contentUsageFilter" class="filter-input cm-filter-auto" title="Filtrar por uso">
             <option value="all">Todos</option>
             <option value="used">En uso</option>
             <option value="unused">Sin uso</option>
         </select>
-        <select id="contentJourneyFilter" class="filter-input" style="width: auto;" title="Filtrar por uso en Journeys (emails, push, SMS y WhatsApp)">
+        <select id="contentJourneyFilter" class="filter-input cm-filter-auto" title="Filtrar por uso en Journeys (emails, push, SMS y WhatsApp)">
             <option value="all">Journeys (todos)</option>
             <option value="in">En Journeys</option>
             <option value="out">Fuera de Journeys</option>
         </select>
-        <button type="button" id="contentMissingTemplateFilter" class="filter-input" style="cursor: pointer; text-align: center; min-width: 160px; transition: all 0.2s; background-color: #f9f9f9;" title="Mostrar solo emails cuya plantilla ya no existe">
+        <button type="button" id="contentMissingTemplateFilter" class="filter-input type-card cm-filter-template" title="Mostrar solo emails cuya plantilla ya no existe">
             Plantilla inexistente
         </button>
-        <select id="contentDateField" class="filter-input" style="width: auto;" title="Filtrar por fecha">
+        <select id="contentDateField" class="filter-input cm-filter-auto" title="Filtrar por fecha">
             <option value="">Fecha (todos)</option>
             <option value="modifiedDate">Modificado</option>
             <option value="createdDate">Creado</option>
         </select>
-        <input type="date" id="contentDateFrom" class="filter-input" style="width: auto;" title="Desde">
-        <input type="date" id="contentDateTo" class="filter-input" style="width: auto;" title="Hasta">
+        <input type="date" id="contentDateFrom" class="filter-input cm-filter-auto" title="Desde">
+        <input type="date" id="contentDateTo" class="filter-input cm-filter-auto" title="Hasta">
     </div>
 
     <!-- Contenedor de Pestañas que se llenará dinámicamente -->
     <div class="tabs-container">
-        <div id="content-manager-tab-buttons" class="tab-buttons" style="display:flex; width:100%; border-bottom:2px solid #e2e8f0;">
-            <!-- tabs dinámicos van aquí -->
-            <span id="content-total-count" style="font-size:0.85em; color:#999; margin-left:auto; padding:0 4px 4px 0; white-space:nowrap;"></span>
+        <div id="content-manager-tab-buttons" class="tab-buttons cm-tab-buttons">
+            <!-- tabs dinámicos van aquí (el JS reconstruye este contenedor al iniciar) -->
+            <span id="content-total-count" class="cm-info-hint"></span>
         </div>
         <div id="content-manager-tab-content"></div>
     </div>
@@ -54,7 +54,7 @@
     </button>
     <div class="cp-detail-header">
         <h2 id="content-detail-title">Detalle de Contenido</h2>
-        <button id="content-detail-download-btn" class="action-button" title="Descargar contenido">Descargar</button>
+        <button id="content-detail-download-btn" class="action-button download-btn" title="Descargar contenido">Descargar</button>
     </div>
     <div id="content-detail-code" class="cp-detail-code-block"></div>
 </aside>

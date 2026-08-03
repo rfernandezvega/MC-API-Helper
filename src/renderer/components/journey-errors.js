@@ -228,7 +228,7 @@ function renderTable() {
     const pageErrors = filteredErrors.slice(start, end);
 
     if (pageErrors.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #999;">No hay errores para mostrar</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: var(--sf-text-muted);">No hay errores para mostrar</td></tr>';
         return;
     }
 
@@ -273,7 +273,7 @@ function renderTable() {
         } else {
             messagesCell.textContent = 'Sin mensaje';
             messagesCell.style.fontStyle = 'italic';
-            messagesCell.style.color = '#999';
+            messagesCell.style.color = 'var(--sf-text-muted)';
         }
         row.appendChild(messagesCell);
 

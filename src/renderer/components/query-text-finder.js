@@ -3,21 +3,35 @@ import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
+import { buildAutomationUrl, linkCell } from '../ui/mc-links.js';
+import { sqlBox } from '../ui/sql-highlight.js';
 
 let getAuthenticatedConfig;
+
+// Estado del toggle "Mostrar Query" (botón, no checkbox).
+let showQueryText = true;
+
+/** Actualiza el color del botón según el estado (verde activo / gris inactivo). */
+function updateShowQueryToggleUI() {
+    const btn = elements.showQueryTextBtn;
+    if (!btn) return;
+    btn.style.color = '#fff';
+    btn.style.background = showQueryText ? 'var(--sf-green)' : 'var(--sf-text-muted)'; // tokens: verde activo / gris inactivo, legible en oscuro
+}
 
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
     elements.searchQueriesByTextBtn.addEventListener('click', searchQueriesByText);
-    
+
     // Delegación de eventos para abrir enlaces externos
     elements.querySearchResultsTbody.addEventListener('click', ui.handleExternalLink);
 
-    elements.showQueryTextCheckbox.addEventListener('change', () => {
-        const isChecked = elements.showQueryTextCheckbox.checked;
-        const displayStyle = isChecked ? '' : 'none';
-        const table = elements.querySearchResultsTable;
-        table.querySelectorAll('thead th:nth-child(4), tbody td:nth-child(4)').forEach(cell => {
+    updateShowQueryToggleUI();
+    elements.showQueryTextBtn?.addEventListener('click', () => {
+        showQueryText = !showQueryText;
+        updateShowQueryToggleUI();
+        const displayStyle = showQueryText ? '' : 'none';
+        elements.querySearchResultsTable.querySelectorAll('thead th:nth-child(4), tbody td:nth-child(4)').forEach(cell => {
             cell.style.display = displayStyle;
         });
     });
@@ -88,7 +102,7 @@ async function searchQueriesByText() {
 
 function renderTable(queries) {
     elements.querySearchResultsTbody.innerHTML = '';
-    const showQuery = elements.showQueryTextCheckbox.checked;
+    const showQuery = showQueryText;
     const displayStyle = showQuery ? '' : 'none';
     
     // Sincronizar cabecera
@@ -99,14 +113,14 @@ function renderTable(queries) {
         const row = document.createElement('tr');
         
         // Link dinámico
-        const mid = elements.businessUnitInput.value;
+        const mid = elements.activeMidInput.value;
         const stack = elements.stackKeyInput.value.toLowerCase().replace('s', '').replace('tack', '');
         const objId = query.objectID || query.ObjectID || '';
         const queryLink = `https://mc.s${stack}.exacttarget.com/cloud/#app/Automation%20Studio/AutomationStudioFuel3/%23ActivityDetails/300/${objId}`;
 
         // Nombres y Pasos (Mismo sistema que Origen de Datos)
         const autoNames = (query.automations && query.automations.length > 0)
-            ? query.automations.map(a => a.automationName || 'N/A').join('<br>')
+            ? query.automations.map(a => linkCell(a.automationName || 'N/A', buildAutomationUrl(a.automationId))).join('<br>')
             : '---';
 
         const autoSteps = (query.automations && query.automations.length > 0)
@@ -117,7 +131,7 @@ function renderTable(queries) {
             <td><a href="${queryLink}" class="external-link" title="Abrir en MC">${query.name}</a></td>
             <td>${autoNames}</td>
             <td>${autoSteps}</td>
-            <td style="white-space: pre-wrap; word-break: break-all; display: ${displayStyle};">${query.description || query.queryText || ''}</td>
+            <td style="display: ${displayStyle};">${sqlBox(query.description || query.queryText)}</td>
         `;
         elements.querySearchResultsTbody.appendChild(row);
     });

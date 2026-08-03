@@ -7,7 +7,7 @@
     position: relative;
     margin-bottom: 20px;
     /* La línea cubre todo el ancho */
-    border-bottom: 2px solid #e0e7ef;
+    border-bottom: 2px solid var(--sf-border);
 }
 
 .um-tab-buttons {
@@ -22,13 +22,13 @@
     border: none;
     border-bottom: 3px solid transparent;
     font-size: 1em;
-    color: #558ac7;
+    color: var(--sf-text-soft);
     transition: all 0.2s;
     margin-bottom: -2px; /* Solapa con el border del contenedor */
 }
-.um-tab-button:hover:not([disabled]) { background-color: #f8f9fa; }
-.um-tab-button.um-tab-active { border-bottom-color: #69a3db; font-weight: bold; }
-.um-tab-button[disabled] { color: #ccc; cursor: not-allowed; }
+.um-tab-button:hover:not([disabled]) { background-color: var(--sf-bg-alt); }
+.um-tab-button.um-tab-active { border-bottom-color: var(--sf-blue); color: var(--sf-blue); font-weight: bold; }
+.um-tab-button[disabled] { color: var(--sf-border); cursor: not-allowed; }
 
 /* Contenido de pestañas */
 .um-tab-content { display: none; }
@@ -56,19 +56,19 @@
 }
 
 .um-mini-btn {
-    background: #fff;
-    border: 1px solid #69a3db;
-    color: #69a3db;
+    background: var(--sf-surface);
+    border: 1px solid var(--sf-blue);
+    color: var(--sf-blue);
     padding: 5px 12px;
-    border-radius: 4px;
+    border-radius: var(--sf-radius);
     cursor: pointer;
     font-size: 12px;
     font-weight: bold;
     min-width: 120px;
     transition: all 0.15s;
 }
-.um-mini-btn:hover { background: #f0f6fc; }
-.um-mini-btn.um-active-filter { background: #69a3db; color: #fff; }
+.um-mini-btn:hover { background: var(--sf-bg); }
+.um-mini-btn.um-active-filter { background: var(--sf-blue); color: #fff; }
 
 /* --- Barra de filtros --- */
 .um-filter-bar {
@@ -84,31 +84,31 @@
 
 .um-filter-label {
     font-size: 11px;
-    color: #888;
+    color: var(--sf-text-muted);
     font-weight: bold;
     text-transform: uppercase;
 }
 
 .um-filter-select {
     height: 34px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
+    border: 1px solid var(--sf-border);
+    border-radius: var(--sf-radius);
     padding: 0 10px;
     font-size: 0.9em;
-    color: #333;
-    background: #fff;
+    color: var(--sf-text);
+    background: var(--sf-surface);
     cursor: pointer;
     min-width: 130px;
 }
 
 .um-dropdown-trigger {
     height: 34px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
+    border: 1px solid var(--sf-border);
+    border-radius: var(--sf-radius);
     padding: 0 10px;
     font-size: 0.9em;
-    color: #333;
-    background: #fff;
+    color: var(--sf-text);
+    background: var(--sf-surface);
     cursor: pointer;
     width: 260px;
     display: flex;
@@ -118,10 +118,10 @@
 }
 
 .um-dropdown-menu {
-    background: #fff;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    background: var(--sf-surface);
+    border: 1px solid var(--sf-border);
+    border-radius: var(--sf-radius);
+    box-shadow: var(--sf-shadow-menu);
     z-index: 9999;
     max-height: 220px;
     overflow-y: auto;
@@ -135,11 +135,11 @@
     padding: 5px 12px;
     cursor: pointer;
     font-size: 0.88em;
-    color: #333;
+    color: var(--sf-text);
 }
-.um-dropdown-item:hover { background: #f0f6fc; }
+.um-dropdown-item:hover { background: var(--sf-bg); }
 
-/* --- Tabla de usuarios --- */
+/* --- Tabla de usuarios (estilo Lightning: th claro, texto suave) --- */
 .um-table-wrapper {
     flex-grow: 1;
     overflow-y: auto;
@@ -147,37 +147,34 @@
     width: 100%;
 }
 
+/* Bordes y colores de cabecera: los hereda del estilo global de tablas
+   (separate + bordes direccionales, necesario para el sticky). */
 .um-table {
-    border-collapse: collapse;
     width: 100%;
 }
 
 .um-table thead th {
-    background-color: #69a3db;
-    color: white;
     padding: 10px;
-    text-align: left;
+    text-align: center;
     position: sticky;
     top: 0;
     z-index: 10;
-    border: 1px solid #b9d4e7;
 }
 
 .um-table tbody td {
     padding: 10px;
-    border: 1px solid #b9d4e7;
     vertical-align: top;
-    text-align: left;
+    text-align: center;
 }
 
-.um-table tbody tr:hover { background-color: #f8fbff; cursor: pointer; }
-.um-table tbody tr.um-selected { background-color: #cce5ff !important; font-weight: bold; }
+.um-table tbody tr:hover { background-color: var(--sf-bg-alt); cursor: pointer; }
+.um-table tbody tr.um-selected {
+    background-color: var(--sf-selected) !important;
+    font-weight: bold;
+}
 
-.um-sortable { cursor: pointer; user-select: none; }
-.um-sortable:hover { background-color: #558ac7; }
-.um-sortable:after        { content: ' ↕'; font-size: 0.8em; opacity: 0.5; }
-.um-sortable.um-sort-asc:after  { content: ' ↑'; opacity: 1; }
-.um-sortable.um-sort-desc:after { content: ' ↓'; opacity: 1; }
+/* Las reglas .um-sortable / .um-sort-asc / .um-sort-desc se han eliminado:
+   la ordenación se unifica con la clase global .sortable-header (WP-5). */
 
 /* Pills de estado — nombres definitivos: um-status-active / um-status-inactive */
 .um-status-pill {
@@ -188,23 +185,23 @@
     display: inline-block;
     white-space: nowrap;
 }
-.um-status-pill.um-status-active   { background-color: #28a745; color: #fff; }
-.um-status-pill.um-status-inactive { background-color: #dc3545; color: #fff; }
+.um-status-pill.um-status-active   { background-color: var(--sf-green); color: #fff; }
+.um-status-pill.um-status-inactive { background-color: var(--sf-red); color: #fff; }
 
 /* ============================================================
    ÁREA DE CAPTURA
    ============================================================ */
 .um-import-area {
-    background: #f8f9fa;
-    border: 2px dashed #69a3db;
+    background: var(--sf-bg-alt);
+    border: 2px dashed var(--sf-blue);
     border-radius: 10px;
     padding: 30px;
     margin: 10px 0;
 }
 
 .um-code-block {
-    background: #272822;
-    color: #f8f8f2;
+    background: var(--sf-code-bg);
+    color: var(--sf-code-text);
     padding: 15px;
     border-radius: 5px;
     font-family: monospace;
@@ -213,7 +210,7 @@
     max-height: 200px;
     overflow-y: auto;
     margin: 15px 0;
-    border-left: 5px solid #69a3db;
+    border-left: 5px solid var(--sf-blue);
     white-space: pre-wrap;
     word-break: break-all;
 }
@@ -224,7 +221,7 @@
     margin-top: 15px;
     padding: 10px;
     border-radius: 5px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--sf-border);
     font-family: monospace;
     font-size: 11px;
     resize: none;
@@ -242,28 +239,28 @@
 }
 
 .um-perm-column {
-    border: 1px solid #e0e7ef;
-    border-radius: 8px;
+    border: 1px solid var(--sf-border);
+    border-radius: var(--sf-radius-lg);
     padding: 0 15px 15px 15px;
-    background: #fafafa;
+    background: var(--sf-bg-alt);
 }
 
 .um-perm-col-title {
     position: sticky;
     top: 0;
-    background-color: #fafafa;
+    background-color: var(--sf-bg-alt);
     padding: 15px 0;
     margin: 0 0 10px 0;
     z-index: 5;
-    color: #69a3db;
-    border-bottom: 2px solid #69a3db;
+    color: var(--sf-blue);
+    border-bottom: 2px solid var(--sf-blue);
 }
 
 .um-perm-cat { margin-top: 8px; }
 
 .um-cat-title {
     font-weight: bold;
-    background: #69a3db;
+    background: var(--sf-blue);
     color: white;
     padding: 8px 12px;
     border-radius: 3px;
@@ -274,7 +271,7 @@
     user-select: none;
     font-size: 0.85em;
 }
-.um-cat-title:hover { background: #558ac7; }
+.um-cat-title:hover { background: var(--sf-blue-dark); }
 .um-t-icon { font-size: 0.85em; }
 
 .um-perm-list { display: block; padding: 5px 0; }
@@ -284,22 +281,61 @@
     grid-template-columns: 2fr 1fr 1fr 1fr;
     gap: 5px;
     padding: 6px 10px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--sf-border);
     font-size: 11px;
     align-items: center;
 }
 .um-perm-row:last-child { border-bottom: none; }
-.um-perm-row:hover { background: #f1f1f1; }
+.um-perm-row:hover { background: var(--sf-hover); }
 
 .um-p-name { font-size: 11px; }
 .um-p-val  { text-align: center; }
-.um-p-label { font-size: 9px; color: #888; display: block; margin-bottom: 2px; text-transform: uppercase; }
+.um-p-label { font-size: 9px; color: var(--sf-text-muted); display: block; margin-bottom: 2px; text-transform: uppercase; }
 
-.um-allowed { color: #28a745; font-weight: bold; }
-.um-denied  { color: #dc3545; font-weight: bold; }
-.um-neutral { color: #999; }
+.um-allowed { color: var(--sf-green); font-weight: bold; }
+.um-denied  { color: var(--sf-red); font-weight: bold; }
+.um-neutral { color: var(--sf-text-muted); }
 
 .um-diff { background-color: #fff3cd !important; border-left: 3px solid #f0ad4e; }
+/* Resaltado de diferencia (pastel warning): tinte oscuro en modo oscuro para
+   mantener contraste sin perder el código de color amarillo. */
+:root[data-theme="dark"] .um-diff { background-color: #3d2f10 !important; border-left-color: #f0c066; }
 
 .um-only-diffs .um-perm-row:not(.um-diff)     { display: none; }
 .um-only-diffs .um-perm-cat:not(.um-has-diff) { display: none; }
+
+/* ============================================================
+   WP-5/WP-7: clases nuevas para sustituir estilos inline extraídos
+   del JS y del HTML de la vista de usuarios.
+   ============================================================ */
+
+/* Separador entre roles y la opción "Sin rol asignado" del dropdown de roles
+   (antes era un style inline en buildRoleFilterDropdown). */
+.um-dropdown-sep { border-top: 1px solid var(--sf-border); margin: 4px 0; }
+
+/* Bloque de instrucciones de captura (pestaña Detalle): sustituye el
+   style="text-align:left; max-width:900px; margin:0 auto;" inline. */
+.um-import-instructions { text-align: left; max-width: 900px; margin: 0 auto; }
+
+/* Filtro de nombre: ancho fijo y alto alineado con el resto de controles
+   (antes style="width:220px; height:34px;"). */
+.um-name-filter { width: 220px; height: 34px; }
+
+/* Flecha del trigger del dropdown de roles (antes style inline). */
+.um-dropdown-arrow { font-size: 10px; color: var(--sf-text-muted); }
+
+/* Grupo de filtro que ancla el dropdown de roles (antes style="position:relative;"). */
+.um-relative { position: relative; }
+
+/* Títulos de paso de las instrucciones de captura (antes style="color:#69a3db;"). */
+.um-step-title { color: var(--sf-blue); }
+
+/* Enlace a la administración de usuarios de SFMC (antes style inline). */
+.um-sfmc-link { color: var(--sf-blue); font-weight: bold; cursor: pointer; }
+
+/* Separación del botón de copiar respecto al bloque de código (antes style inline). */
+.um-copy-script-btn { margin-top: 8px; }
+
+/* Respiro inferior de los controles expandir/diferencias que antes venía del
+   style inline del HTML (el resto de propiedades ya está en la regla de arriba). */
+#users-expand-controls { padding-bottom: 4px; }

@@ -29,6 +29,7 @@ import * as dataSourceFinder from './components/data-source-finder.js';  // Lóg
 import * as queryTextFinder from './components/query-text-finder.js';      // Lógica del buscador de texto en queries.
 import * as contentFinder from './components/content-finder.js';  			// Lógica del buscador de contenidos
 import * as customerFinder from './components/customer-finder.js';         // Lógica del buscador de clientes/suscriptores.
+import * as whatsappFinder from './components/whatsapp-finder.js';         // Audiencia WhatsApp (búsqueda + alta) dentro de Clientes.
 import * as emailValidator from './components/email-validator.js';       // Lógica del validador de emails.
 import * as calendar from './components/calendar.js';                  // Lógica del calendario de automatismos.
 import * as automationCloner from './components/automation-cloner.js'; // Lógica del clonador de automatismos.
@@ -43,15 +44,16 @@ import * as erdGenerator from './components/erd-generator.js';
 import * as sendManagement from './components/sendManagement.js';
 import * as auditManager from './components/audit-manager.js';
 import * as journeyErrors from './components/journey-errors.js';
+import * as settings from './components/settings.js';                   // Ajustes de la app (tema claro/oscuro).
 
 
 
 // --- 2. PUNTO DE ENTRADA PRINCIPAL ---
 // Espera a que todo el HTML esté cargado antes de ejecutar cualquier código.
 document.addEventListener('DOMContentLoaded', function () {
-	// Inicializa el objeto 'elements' para que contenga todas las referencias al DOM.
-	initDomElements();
-	
+	// La inicialización de 'elements' (initDomElements) se hace dentro de initializeApp,
+	// justo antes de setupEventListeners, para evitar inicializarla dos veces.
+
 	// ==========================================================
 	// --- VARIABLES DE ESTADO GLOBALES ---
 	// Almacenan el estado de la sesión y la navegación actual.
@@ -80,16 +82,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		// Mapeo inverso para encontrar el 'data-macro' que corresponde a la sección activa.
 		const sectionToMacroMap = {
+			'ajustes-section': 'ajustes',
 			'documentacion-section': 'docu',
-			'configuracion-apis-section': 'configuracionAPIs',			
+			'configuracion-apis-section': 'configuracionAPIs',
 			'buscadores-section': 'buscadores',
 			'clonador-queries-section': 'clonadorQueries',
-			'calendario-section': 'calendario',
 			'gestion-automatismos-section': 'gestionAutomatismos',
 			'gestion-journeys-section': 'gestionJourneys',
 			'gestion-cloudpages-section': 'gestionCloudPages',
 			'gestion-contenidos-section': 'gestionContenidos',
-			'carpetas-section':'gestionCarpetas',
+			'gestion-usuarios-section': 'usuarios',
+			'erd-generator-section': 'erdGenerator',
+			'sendManagement-section': 'sendManagement',
+			'carpetas-section': 'carpetas',
 			'email-validator-section':'validadorEmail',
 			'gestion-de-unificada-section': 'gestionDEs',
 			'auditoria-section': 'auditoria'
@@ -151,7 +156,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	function updateLoginStatus(isLoggedIn, clientName = '', userInfo = null) {
 		if (isLoggedIn) {
-			let statusHTML = `🟢 `;
+			let statusHTML = ``;
 			if (userInfo && userInfo.email) {
 				statusHTML += `<small style="font-weight: normal;">${userInfo.preferred_username}</small>`;
 			}else{
@@ -159,7 +164,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			}
 			elements.loginStatusEl.innerHTML = statusHTML;
 		} else {
-			elements.loginStatusEl.innerHTML = '🔴 Sesión no iniciada';
+			elements.loginStatusEl.innerHTML = 'Sesión no iniciada';
 		}
         elements.loginStatusEl.className = `login-status ${isLoggedIn ? 'active' : 'inactive'}`;
 	}
@@ -176,11 +181,15 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * @throws {Error} Si no hay cliente seleccionado o si la sesión no es válida.
 	 */
 	async function getAuthenticatedConfig() {
-		const clientName = elements.clientNameInput.value.trim();
+		// El contexto activo (cliente + BU) lo gestiona org-manager. El nombre del cliente
+		// identifica las credenciales; el MID indica la Business Unit (account_id) del token.
+		const ctx = orgManager.getActiveContext();
+		const clientName = ctx.clientName;
+		const mid = ctx.mid;
 		if (!clientName) throw new Error("No hay ningún cliente seleccionado.");
 
-		// Llama al proceso principal para obtener el token de forma segura.
-		const apiConfig = await window.electronAPI.getApiConfig(clientName);
+		// Llama al proceso principal para obtener el token de forma segura (token por BU).
+		const apiConfig = await window.electronAPI.getApiConfig(clientName, mid);
 
 		// Si no hay token, la sesión no es válida.
 		if (!apiConfig || !apiConfig.accessToken) {
@@ -200,8 +209,8 @@ document.addEventListener('DOMContentLoaded', function () {
 		queryTextFinder.updateOrgInfo(apiConfig.orgInfo);
 		updateLoginStatus(true, clientName, currentUserInfo);
 
-		// Añade el MID (Business Unit) al objeto de configuración antes de devolverlo.
-		apiConfig.businessUnit = elements.businessUnitInput.value.trim();
+		// Añade el MID (Business Unit activa) al objeto de configuración antes de devolverlo.
+		apiConfig.businessUnit = elements.activeMidInput.value.trim();
 		return apiConfig;
 	}
 	
@@ -210,9 +219,8 @@ document.addEventListener('DOMContentLoaded', function () {
 	 * único string y lo descarga como un fichero .txt.
 	 */
 	function generateAndDownloadLog() {
-		const messagesContent = elements.logMessagesEl.textContent;
-		const requestContent = elements.logRequestEl.textContent;
-		const responseContent = elements.logResponseEl.textContent;
+		const messagesContent = logger.getMessagesText ? logger.getMessagesText() : elements.logMessagesEl.textContent;
+		const transcriptContent = logger.getTranscriptText ? logger.getTranscriptText() : (elements.logTranscriptEl?.textContent || '');
 
 		const separator = "\n\n========================================\n\n";
 
@@ -220,11 +228,8 @@ document.addEventListener('DOMContentLoaded', function () {
 			"--- MENSAJES ---",
 			messagesContent,
 			separator,
-			"--- LLAMADAS API ---",
-			requestContent,
-			separator,
-			"--- RESPUESTAS API ---",
-			responseContent
+			"--- LLAMADAS API (petición ▸ respuesta) ---",
+			transcriptContent
 		].join('\n\n');
 
 		// Crear un nombre de fichero con la fecha y hora actual
@@ -350,8 +355,8 @@ document.addEventListener('DOMContentLoaded', function () {
 			ui.unblockUI();
 			if (result.success) {
 				ui.showCustomAlert("Login completado con éxito.");
-				// Carga la configuración del cliente recién logueado.
-				orgManager.loadAndSyncClientConfig(elements.clientNameInput.value);
+				// Carga la configuración del cliente recién logueado (activa su BU principal).
+				orgManager.loadAndSyncClientConfig(elements.configClientNameInput.value);
 			} else {
 				ui.showCustomAlert(`Error en el login: ${result.error}`);
 				updateLoginStatus(false);
@@ -376,28 +381,29 @@ document.addEventListener('DOMContentLoaded', function () {
 				e.preventDefault();
 				const macro = e.target.getAttribute('data-macro');
 				// Mapeo de vistas simples que solo necesitan mostrarse.
-				const sectionMap = { 
-                    'docu': 'documentacion-section', 'configuracionAPIs': 'configuracion-apis-section', 
-                    'configuracionDE': 'configuracion-de-section', 'gestionCampos': 'configuracion-campos-section', 
-					'validadorEmail': 'email-validator-section', 'buscadores': 'buscadores-section', 
+				const sectionMap = {
+                    'docu': 'documentacion-section', 'configuracionAPIs': 'configuracion-apis-section',
+                    'configuracionDE': 'configuracion-de-section', 'gestionCampos': 'configuracion-campos-section',
+					'validadorEmail': 'email-validator-section', 'buscadores': 'buscadores-section',
 					'clonadorQueries': 'clonador-queries-section'
                 };
 				const macroToActionMap = { //Un mapa para vistas simples
 					'carpetas': 'carpetas-section'
 				};
-				
+
 				if (sectionMap[macro]) {
 					showSection(sectionMap[macro]);
-				} 
+				}
+				// Ajustes: refresca clientes y tamaños de caché cada vez que se abre.
+				else if (macro === 'ajustes') {
+					showSection('ajustes-section');
+					settings.view();
+				}
 				// Vistas complejas que necesitan cargar datos antes de mostrarse.
 				else if (macro === 'campos') {
                     showSection('campos-section');
                     fieldsTable.prepareView();
                 }
-				else if (macro === 'calendario'){
-                    showSection('calendario-section');
-                    await calendar.view();
-                }  
 				else if (macro === 'gestionAutomatismos') {
 					showSection('gestion-automatismos-section');
 					await automationsManager.view(); 
@@ -473,6 +479,9 @@ document.addEventListener('DOMContentLoaded', function () {
 			button.classList.add('active');
 			parent.querySelector(`#${tabId}`).classList.add('active');
 
+			// Al abrir la pestaña de Business Units, refresca el acumulado de llamadas API.
+			if (tabId === 'business-units-tab') orgManager.refreshBuApiUsage();
+
 			// --- LÓGICA ESPECÍFICA PARA GESTIÓN DEs ---
 			if (button.closest('#gestion-de-unificada-section')) {
 				// Ocultamos todos primero usando las referencias de dom-elements.js
@@ -499,16 +508,6 @@ document.addEventListener('DOMContentLoaded', function () {
 			settings.collapsibleStates[header.textContent.trim()] = isExpanded;
 			await window.electronAPI.saveSettings(settings);
 		}));
-	}
-
-	/**
-	 * Función "puente" que permite a otros módulos (como el calendario)
-	 * navegar a la vista de automatismos y pasarle una lista de nombres para filtrar.
-	 * @param {Array<string>} automationNames - Nombres de los automatismos a mostrar.
-	 */
-	async function showFilteredAutomations(automationNames) {
-		showSection('gestion-automatismos-section');
-		await automationsManager.view(automationNames);
 	}
 
 	/**
@@ -557,6 +556,8 @@ document.addEventListener('DOMContentLoaded', function () {
 	 */
 	async function initializeApp() {
 		initDomElements();
+		// Aplica cuanto antes el tema guardado (claro/oscuro) para evitar parpadeo.
+		await settings.applyStoredTheme();
 		setupEventListeners();
 
 		elements.licenseModal.style.display = 'flex';
@@ -621,10 +622,11 @@ document.addEventListener('DOMContentLoaded', function () {
 		queryTextFinder.init({ getAuthenticatedConfig });
 		scriptTextFinder.init({ getAuthenticatedConfig });
 		customerFinder.init({ getAuthenticatedConfig });
+		whatsappFinder.init({ getAuthenticatedConfig });
 		contentFinder.init({ getAuthenticatedConfig });
 		emailValidator.init({ getAuthenticatedConfig });
 		actividadesFinder.init({ getAuthenticatedConfig });
-		calendar.init({ getAuthenticatedConfig, showAutomationsView: showFilteredAutomations });
+		calendar.init();
 		automationCloner.init({ getAuthenticatedConfig, goBack });
 		automationAnalyzer.init({ getAuthenticatedConfig, goBack });
 		journeyAnalyzer.init({
@@ -641,9 +643,10 @@ document.addEventListener('DOMContentLoaded', function () {
 		erdGenerator.init({ getAuthenticatedConfig });
 		sendManagement.init({ getAuthenticatedConfig });
 		auditManager.init({ getAuthenticatedConfig });
+		settings.init();
 
-		// ESPERAMOS A QUE CARGUE EL CLIENTE POR DEFECTO (VACÍO AL INICIO)
-		await orgManager.loadAndSyncClientConfig('');
+		// Carga el cliente + BU por defecto configurados en Ajustes (o ninguno si no hay).
+		await orgManager.loadAndSyncClientConfig(settings.getDefaultClient(), settings.getDefaultBU());
 
 		initializeCollapsibleMenus();
 

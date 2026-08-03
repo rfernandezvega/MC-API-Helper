@@ -50,13 +50,16 @@
 <aside id="macros-sidebar">
 	<div class="sidebar-content-wrapper">
 		<div class="sidebar-header">
-			<!-- Selector de Cliente y Estado de Sesión -->
+			<!-- Selector de Cuentas y Estado de Sesión -->
 			<div class="sidebar-client-selector">
-				<h2>Cliente</h2>
-				<select id="sidebarClientSelect">
-					<option value="">Ninguno seleccionado</option>
-				</select>
-				<p id="login-status" class="login-status inactive">🔴 Sesión no iniciada</p>
+				<h2>Cuenta</h2>
+				<div id="clientSelector" class="client-selector">
+						<button type="button" id="clientSelectorBtn" class="client-selector-btn">
+							<span id="clientSelectorLabel">Ninguno seleccionado</span>
+							<span class="client-selector-caret">▾</span>
+						</button>
+					</div>
+				<p id="login-status" class="login-status inactive">Sesión no iniciada</p>
 			</div>
 
 			<h2 id="sidebar-views-title">Vistas</h2>
@@ -66,8 +69,9 @@
 			<div class="collapsible-group">
 				<h3 class="collapsible-header">General</h3>
 				<ul class="collapsible-content">
+					<li><a class="macro-item" data-macro="ajustes">Ajustes</a></li>
 					<li><a class="macro-item" data-macro="docu">Documentación</a></li>
-					<li><a class="macro-item" data-macro="configuracionAPIs">Configuración de APIs</a></li>
+					<li><a class="macro-item" data-macro="configuracionAPIs">Configuración de Cuentas</a></li>
 				</ul>
 			</div>
 			<div class="collapsible-group">
@@ -75,7 +79,6 @@
 				<ul class="collapsible-content">
 					<li><a class="macro-item" data-macro="buscadores">Buscadores</a></li>
                     <li><a class="macro-item" data-macro="gestionDEs">Data Extensions</a></li>
-					<li><a class="macro-item" data-macro="calendario">Calendario</a></li>         
 					<li><a class="macro-item" data-macro="gestionAutomatismos">Automatismos</a></li> 
 					<li><a class="macro-item" data-macro="clonadorQueries">Clonar Queries</a></li>
 					<li><a class="macro-item" data-macro="gestionJourneys">Journeys</a></li>   
@@ -108,18 +111,22 @@
         <button class="back-button">← Atrás</button>
         <div class="header-actions">
             <button id="saveConfigBtn" class="action-button">Guardar</button>
-            <button id="loginBtn" class="action-button">Login</button>
+            <button id="loginBtn" class="action-button activate-btn">Login</button>
             <button id="logoutBtn" class="action-button delete-btn">Logout / Borrar</button>
         </div>            
     </div>
-    <h2>Configuración de APIs</h2>
-    <!-- Gestión de Clientes (Crear, Seleccionar) - Se mantiene fuera de las pestañas -->
+    <h2>Configuración de Cuentas</h2>
+    <!-- Gestión de Cuentas (Crear, Seleccionar) - Se mantiene fuera de las pestañas -->
     <div class="client-management">
-        <input type="text" id="clientName" placeholder="Nombre del Cliente">
+        <input type="text" id="configClientName" placeholder="Nombre de la Cuenta">
         <select id="savedConfigs">
             <option value="">Seleccionar configuración...</option>
         </select>
     </div>
+    <!-- Contexto activo (Cuenta + BU). Lo leen las vistas como clave de caché; no editable por el usuario. -->
+    <input type="hidden" id="clientName">
+    <!-- MID de la BU activa (account_id). Lo leen las vistas que necesitan el MID en uso. -->
+    <input type="hidden" id="activeMid">
 
     <!-- ========================================================== -->
     <!-- ESTRUCTURA DE PESTAÑAS  -->
@@ -127,6 +134,8 @@
     <div class="tabs-container">
         <div class="tab-buttons">
             <button class="tab-button active" data-tab="api-settings-tab">Configuración de API</button>
+            <button class="tab-button" data-tab="business-units-tab">Business Units</button>
+            <button class="tab-button" data-tab="wa-channels-tab">Canales WhatsApp</button>
             <button class="tab-button" data-tab="de-search-tab">DEs Búsqueda de Clientes</button>
         </div>
 
@@ -135,7 +144,7 @@
             <!-- Datos de la Aplicación API (Bloque movido aquí) -->
             <div class="config-block">
                 <h3>Datos Aplicación</h3>
-                <div class="form-group"><label for="businessUnit">Business Unit (MID)</label><input type="text" id="businessUnit"></div>
+                <div class="form-group"><label for="businessUnit">Business Unit principal (MID)</label><input type="text" id="businessUnit" placeholder="MID de la BU principal (Enterprise)"></div>
                 <div class="form-group"><label for="authUri">Auth URI</label><input type="text" id="authUri" placeholder="Ej: https://...mc.auth.marketingcloudapis.com/v2/token"></div>
                 <div class="form-group"><label for="clientId">Client ID</label><input type="text" id="clientId"></div>
                 <div class="form-group"><label for="clientSecret">Client Secret</label><input type="password" id="clientSecret" placeholder="Necesario para el primer login"></div>
@@ -146,7 +155,76 @@
             </div>
         </div>
 
-        <!-- PESTAÑA 2: DEs Búsqueda de Clientes -->
+        <!-- PESTAÑA 2: Business Units de la Cuenta -->
+        <div id="business-units-tab" class="tab-content">
+            <!-- Business Units de la Cuenta: se reutilizan las MISMAS credenciales para todas.
+                 Se pueden añadir a mano o autodescubrir con "Sincronizar BUs" (requiere sesión activa). -->
+            <div class="config-block flex-layout-block">
+                <div class="config-block-header">
+                    <h3>Business Units del cliente</h3>
+                    <div class="header-actions">
+                        <button id="syncBuBtn" class="action-button activate-btn">Sincronizar BUs</button>
+                    </div>
+                </div>
+                <p class="info-text u-text-left u-m-0 u-mb-15">
+                    Todas las BUs comparten las credenciales de la pestaña "Configuración de API". La BU principal se añade automáticamente con el MID indicado.
+                    "Sincronizar BUs" descubre las BUs del tenant (necesita haber hecho login primero). Estas BUs son las que aparecen
+                    en el desplegable de Cuentas de la barra lateral.
+                </p>
+                <div class="table-container">
+                    <div class="table-scroll-wrapper">
+                        <table id="bu-list-table" class="editable-row-table">
+                            <thead>
+                                <tr>
+                                    <th>Nombre BU</th>
+                                    <th>MID</th>
+                                    <th>Llamadas API</th>
+                                    <th>Visible</th>
+                                    <th style="width:90px;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bu-list-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA: Canales WhatsApp (por BU) -->
+        <div id="wa-channels-tab" class="tab-content">
+            <div class="config-block flex-layout-block">
+                <div class="config-block-header">
+                    <h3>Canales de WhatsApp por BU</h3>
+                    <div class="header-actions">
+                        <button id="addWaChannelBtn" class="action-button" type="button">Añadir canal</button>
+                    </div>
+                </div>
+                <p class="info-text u-text-left u-m-0 u-mb-15">
+                    Cada canal se asocia a una <b>Business Unit</b> y se usa en el alta de contactos de la
+                    <b>Audiencia WhatsApp</b> (Buscadores → Clientes). Para conocer los <i>channelId</i>, accede a la app de WhatsApp
+                    (<a id="wa-console-link" href="#" class="external-link" style="color:var(--sf-blue); text-decoration:underline; font-weight:bold;">abrir</a>)
+                    con la BU correspondiente, consulta los canales y añádelos aquí (Business Unit, Channel ID y un nombre descriptivo).
+                </p>
+
+                <div class="table-container">
+                    <div class="table-scroll-wrapper">
+                        <table id="wa-channels-table" class="editable-row-table">
+                            <thead>
+                                <tr>
+                                    <th>Business Unit</th>
+                                    <th>Teléfono (Channel ID)</th>
+                                    <th>Nombre del canal</th>
+                                    <th style="width:70px;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="wa-channels-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 3: DEs Búsqueda de Clientes -->
         <div id="de-search-tab" class="tab-content">
             <!-- Configuración de Data Views para el buscador de envíos (Bloque movido aquí) -->
             <div class="config-block flex-layout-block">
@@ -154,11 +232,11 @@
                     <h3>Búsqueda Dinámica en Data Extensions</h3>
                     <div class="header-actions">
                         <button id="addSendConfigRowBtn" class="action-button">Añadir Fila</button>
-                        <button id="importDvConfigBtn" class="action-button">Importar</button>
-                        <button id="exportDvConfigBtn" class="action-button activate-btn">Exportar</button>
+                        <button id="importDvConfigBtn" class="action-button activate-btn">Importar</button>
+                        <button id="exportDvConfigBtn" class="action-button download-btn">Exportar</button>
                     </div>
                 </div>
-                <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+                <p class="info-text u-text-left u-m-0 u-mb-15">
                     Configura las tablas donde se buscará al cliente al pulsar el botón "DEs". Los cambios se guardan junto con el resto de la configuración.
                 </p>
                 <div class="table-container">
@@ -169,6 +247,7 @@
                                     <th>Nombre</th>
                                     <th>External Key</th>
                                     <th>Campo de Búsqueda</th>
+                                    <th style="width:90px;">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="sends-config-tbody">
@@ -186,157 +265,156 @@
 
     <style>
         .drillable { cursor: pointer; transition: all 0.2s ease; }
-        .drillable:hover { background-color: #f8fafc !important; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.12) !important; }
+        .drillable:hover { background-color: var(--sf-bg-alt) !important; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.12) !important; }
         .drillable-bar { cursor: pointer; transition: background 0.2s ease; }
-        .drillable-bar:hover { background-color: #f1f5f9 !important; border-radius: 4px; }
+        .drillable-bar:hover { background-color: var(--sf-bg-alt) !important; border-radius: 4px; }
 
         #audit-drill-modal {
             display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; backdrop-filter: blur(2px);
         }
         .audit-modal-content {
-            background-color: #fff; padding: 25px; border-radius: 12px; width: 85%; max-width: 1000px;
+            background-color: var(--sf-surface); padding: 25px; border-radius: 12px; width: 85%; max-width: 1000px;
             max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
         .audit-modal-header {
             display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 15px;
+            border-bottom: 2px solid var(--sf-border); padding-bottom: 12px; margin-bottom: 15px;
         }
-        .audit-modal-header h3 { margin: 0; color: #2c3e50; font-size: 1.25em; display: inline-block; margin-right: 15px; }
-        .audit-modal-close { background: none; border: none; font-size: 1.5em; cursor: pointer; color: #95a5a6; transition: color 0.2s; }
-        .audit-modal-close:hover { color: #e74c3c; }
+        .audit-modal-header h3 { margin: 0; color: var(--sf-text); font-size: 1.25em; display: inline-block; margin-right: 15px; }
+        .audit-modal-close { background: none; border: none; font-size: 1.5em; cursor: pointer; color: var(--sf-text-muted); transition: color 0.2s; }
+        .audit-modal-close:hover { color: var(--sf-red); }
         .audit-modal-body { overflow-y: auto; flex: 1; }
-        .audit-drill-table { width: 100%; border-collapse: collapse; font-size: 0.88em; text-align: left; }
-        .audit-drill-table th { background-color: #f8fafc; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; color: #475569; position: sticky; top: 0; z-index: 2; }
-        .audit-drill-table td { padding: 9px 12px; border-bottom: 1px solid #e2e8f0; color: #334155; word-break: break-word; }
-        .audit-drill-table tr:hover td { background-color: #f1f5f9; }
+        /* La tabla del drill-down hereda el estilo global de tablas de la app
+           (cabecera azul sticky, celdas centradas, rejilla direccional):
+           aquí solo se ajusta el tamaño y el corte de palabras largas. */
+        .audit-drill-table { width: 100%; font-size: 0.88em; }
+        .audit-drill-table td { word-break: break-word; }
     </style>
 
     <!-- CABECERA -->
     <div class="section-header">
         <button class="back-button">← Atrás</button>
         <div class="header-actions" style="display:flex; gap:10px; align-items:center;">
-            <button id="backToAuditBtn"          class="action-button activate-btn" style="display:none; background-color:#8e44ad;">Volver a la Auditoría</button>
-            <button id="downloadAuditPdfBtn"     class="action-button activate-btn" style="display:none; background-color:#2980b9;">Descargar Informe</button>
-            <button id="downloadAuditDetailsBtn" class="action-button activate-btn" style="display:none; background-color:#27ae60;">Descargar Detalles</button>
+            <button id="backToAuditBtn"          class="action-button" style="display:none;">Volver a la Auditoría</button>
+            <button id="downloadAuditPdfBtn"     class="action-button download-btn" style="display:none;">Descargar Informe</button>
+            <button id="downloadAuditDetailsBtn" class="action-button download-btn" style="display:none;">Descargar Detalles</button>
             <button id="runAuditBtn" class="action-button activate-btn">Iniciar Escaneo de Instancia</button>
         </div>
     </div>
 
-    <h2 style="color:#69a3db; text-align:center; margin-bottom:6px;">Auditoría de Instancia</h2>
-    <p style="text-align:center; color:#888; font-size:0.88em; margin-bottom:24px;">
+    <h2 class="u-mb-10">Auditoría de Instancia</h2>
+    <p style="text-align:center; color:var(--sf-text-muted); font-size:0.88em; margin-bottom:24px;">
         Auditoría: usuarios, automatismos, journeys, cloud pages, configuración de envío, data extensions y contenidos.
     </p>
 
     <!-- PANEL DE CONFIGURACIÓN — ocupa todo el ancho disponible -->
-    <div id="audit-options" class="config-block" style="width:100%; margin:0 0 30px 0; border-top:4px solid #69a3db;">
+    <div id="audit-options" class="config-block" style="width:100%; margin:0 0 30px 0;">
 
-        <h3 style="margin-top:0; color:#2c3e50;">Cómo lanzar la auditoría</h3>
-        <ol style="color:#444; font-size:0.88em; line-height:1.8; margin:0 0 6px 0; padding-left:22px;">
+        <h3 style="margin-top:0; color:var(--sf-text);">Cómo lanzar la auditoría</h3>
+        <ol style="color:var(--sf-text-soft); font-size:0.88em; line-height:1.8; margin:0 0 6px 0; padding-left:22px;">
             <li>Para que la pestaña <b>Contenidos</b> tenga datos, entra antes a la vista de <b>Contenidos</b> y pulsa <b>Refrescar</b> (la auditoría reutiliza esa caché, no descarga contenidos).</li>
             <li>Para auditar <b>Data Extensions</b> (opcional), copia el script de abajo, ejecútalo en la consola de <b>Contact Builder</b> y pega el JSON resultante en el cuadro.</li>
             <li>Pulsa <b>«Iniciar Escaneo de Instancia»</b> (arriba a la derecha) y confirma. <b>No cierres la aplicación</b> mientras dura el proceso.</li>
             <li>Al terminar, revisa las pestañas del panel y descarga el <b>Informe (PDF)</b> o los <b>Detalles</b>.</li>
         </ol>
-        <p style="color:#666; font-size:0.84em; line-height:1.6; margin:0 0 6px 0;">
+        <p style="color:var(--sf-text-soft); font-size:0.84em; line-height:1.6; margin:0 0 6px 0;">
             Los <b>Journeys</b> se descargan durante el escaneo y quedan en una caché compartida con las vistas de Journeys y Contenidos:
             si ya están descargados (misma versión), se reutilizan y solo se bajan los nuevos o modificados. En cualquier caso, siempre se
             muestran el <b>total de llamadas API</b> y el <b>tiempo</b> del escaneo. Hay un <b>límite anual de llamadas API</b>: como referencia,
             un cliente con 700 Journeys y 200 automatismos puede tardar unos 10 minutos.
         </p>
-        <p style="color:#888; font-size:0.82em; margin-bottom:18px; font-style:italic;">
+        <p style="color:var(--sf-text-muted); font-size:0.82em; margin-bottom:18px; font-style:italic;">
             Si ya existe una auditoría guardada para este cliente, se cargará automáticamente al entrar a esta vista.
         </p>
 
-        <h3 style="color:#2c3e50; margin-bottom:10px;">Qué se analiza en cada pestaña</h3>
-        <table style="width:100%; border-collapse:collapse; font-size:0.84em; margin-bottom:4px;">
+        <h3 style="color:var(--sf-text); margin-bottom:10px;">Qué se analiza en cada pestaña</h3>
+        <table class="audit-info-table">
             <thead>
-                <tr style="text-align:left;">
-                    <th style="padding:9px 12px; background:#69a3db; color:#fff; border-bottom:2px solid #e2e8f0; width:15%;">Pestaña</th>
-                    <th style="padding:9px 12px; background:#69a3db; color:#fff; border-bottom:2px solid #e2e8f0; width:52%;">Descripción</th>
-                    <th style="padding:9px 12px; background:#69a3db; color:#fff; border-bottom:2px solid #e2e8f0; width:33%;">Origen del dato</th>
+                <tr>
+                    <th style="width:15%;">Pestaña</th>
+                    <th style="width:52%;">Descripción</th>
+                    <th style="width:33%;">Origen del dato</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; font-weight:600; color:#2c3e50;">Usuarios</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Roles, estados (activo/bloqueado), tipo de usuario y último acceso.</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Se descarga durante el escaneo (no depende de otra vista).</td>
+                    <td class="audit-info-name">Usuarios</td>
+                    <td>Roles, estados (activo/bloqueado), tipo de usuario y último acceso.</td>
+                    <td>Se descarga durante el escaneo (no depende de otra vista).</td>
                 </tr>
-                <tr style="background:#fbfcfe;">
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; font-weight:600; color:#2c3e50;">Automatismos</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Tipos de actividad, estados, programación, email de alerta por error, descripciones en SQL/SSJS y actividades compartidas.</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Se descarga durante el escaneo (no depende de otra vista).</td>
-                </tr>
-                <tr>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; font-weight:600; color:#2c3e50;">Journeys</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Estado, subtipo, Goals/salidas, actividad reciente, mix multicanal (Email/SMS/Push/WhatsApp) y nodos Salesforce.</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Caché compartida con la vista de <b>Journeys</b> (y de Contenidos). Se descarga aquí si falta.</td>
-                </tr>
-                <tr style="background:#fbfcfe;">
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; font-weight:600; color:#2c3e50;">Cloud Pages</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Cantidad, tipo y estado de publicación de las páginas.</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Se descarga durante el escaneo (no depende de otra vista).</td>
+                <tr class="audit-info-alt">
+                    <td class="audit-info-name">Automatismos</td>
+                    <td>Tipos de actividad, estados, programación, email de alerta por error, descripciones en SQL/SSJS y actividades compartidas.</td>
+                    <td>Se descarga durante el escaneo (no depende de otra vista).</td>
                 </tr>
                 <tr>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; font-weight:600; color:#2c3e50;">Send Management</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Send Classifications, Sender/Delivery Profiles y configuración de envío.</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Se descarga durante el escaneo (no depende de otra vista).</td>
+                    <td class="audit-info-name">Journeys</td>
+                    <td>Estado, subtipo, Goals/salidas, actividad reciente, mix multicanal (Email/SMS/Push/WhatsApp) y nodos Salesforce.</td>
+                    <td>Caché compartida con la vista de <b>Journeys</b> (y de Contenidos). Se descarga aquí si falta.</td>
                 </tr>
-                <tr style="background:#fbfcfe;">
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; font-weight:600; color:#2c3e50;">Data Extensions</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">Volumetría, campos, retención y uso de las DEs.</td>
-                    <td style="padding:9px 12px; border-bottom:1px solid #eef2f6; color:#555;">JSON pegado del script de abajo (Contact Builder). No consume llamadas de la app.</td>
+                <tr class="audit-info-alt">
+                    <td class="audit-info-name">Cloud Pages</td>
+                    <td>Cantidad, tipo y estado de publicación de las páginas.</td>
+                    <td>Se descarga durante el escaneo (no depende de otra vista).</td>
                 </tr>
                 <tr>
-                    <td style="padding:9px 12px; font-weight:600; color:#2c3e50;">Contenidos</td>
-                    <td style="padding:9px 12px; color:#555;">Contenidos por tipo, plantillas inexistentes, bloques/plantillas sin uso y comunicaciones dentro/fuera de journeys.</td>
-                    <td style="padding:9px 12px; color:#555;">Caché de la vista de <b>Contenidos</b> (refréscala antes) + caché de <b>Journeys</b>. No consume llamadas aquí.</td>
+                    <td class="audit-info-name">Send Management</td>
+                    <td>Send Classifications, Sender/Delivery Profiles y configuración de envío.</td>
+                    <td>Se descarga durante el escaneo (no depende de otra vista).</td>
+                </tr>
+                <tr class="audit-info-alt">
+                    <td class="audit-info-name">Data Extensions</td>
+                    <td>Volumetría, campos, retención y uso de las DEs.</td>
+                    <td>JSON pegado del script de abajo (Contact Builder). No consume llamadas de la app.</td>
+                </tr>
+                <tr>
+                    <td class="audit-info-name">Contenidos</td>
+                    <td>Contenidos por tipo, plantillas inexistentes, bloques/plantillas sin uso y comunicaciones dentro/fuera de journeys.</td>
+                    <td>Caché de la vista de <b>Contenidos</b> (refréscala antes) + caché de <b>Journeys</b>. No consume llamadas aquí.</td>
                 </tr>
             </tbody>
         </table>
 
         <!-- OPCIÓN: Data Extensions (JSON) — fuera del grid, ocupa todo el ancho -->
-        <div style="margin-top:24px; border-top:1px solid #e2e8f0; padding-top:20px;">
-            <div style="font-weight:700; font-size:1em; color:#2c3e50; margin-bottom:6px;">Data Extensions — Análisis desde JSON</div>
-            <p style="font-size:0.83em; color:#555; margin:0 0 12px 0; line-height:1.6;">
-                Cada escaneo <b>sobreescribe la caché anterior</b> — si relanzas el escaneo sin volver a pegar el JSON, se perderán estos datos.<br>Para auditar las DEs de la instancia, accede <a id="audit-de-cb-link" href="#" class="external-link" style="color: #0070d2; text-decoration: underline; font-weight: bold;">aquí</a>  y ejecuta el script de abajo en la consola del navegador
+        <div style="margin-top:24px; border-top:1px solid var(--sf-border); padding-top:20px;">
+            <div style="font-weight:700; font-size:1em; color:var(--sf-text); margin-bottom:6px;">Data Extensions — Análisis desde JSON</div>
+            <p style="font-size:0.83em; color:var(--sf-text-soft); margin:0 0 12px 0; line-height:1.6;">
+                Cada escaneo <b>sobreescribe la caché anterior</b> — si relanzas el escaneo sin volver a pegar el JSON, se perderán estos datos.<br>Para auditar las DEs de la instancia, accede <a id="audit-de-cb-link" href="#" class="external-link" style="color: var(--sf-blue); text-decoration: underline; font-weight: bold;">aquí</a>  y ejecuta el script de abajo en la consola del navegador
                 estando logado en <b>Contact Builder</b>. El script recorre todas las carpetas (para ~6.000 DEs tarda aproximadamente 20 minutos) y te mostrará
                 un popup para copiar el JSON resultante. Las DEs compartidas (carpeta <i>Shared</i>) se excluyen automáticamente del análisis.
             </p>
 
             <!-- Script copiable con stack dinámico -->
-            <div style="background:#1e1e2e; border-radius:8px; padding:14px 16px; margin-bottom:14px; position:relative;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <span style="font-size:0.75em; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Script — pegar en la consola del navegador (F12) estando en Contact Builder</span>
-                    <button id="audit-de-copy-script" style="background:#3b82f6; color:#fff; border:none; border-radius:5px; padding:4px 12px; font-size:0.78em; cursor:pointer; font-weight:600;">Copiar script</button>
+            <div class="audit-prompt-card">
+                <div class="audit-prompt-head">
+                    <span class="audit-prompt-label">Script — pegar en la consola del navegador (F12) estando en Contact Builder</span>
+                    <button id="audit-de-copy-script" class="audit-prompt-copy">Copiar script</button>
                 </div>
-                <pre id="audit-de-script-pre" style="margin:0; font-size:0.75em; font-family:monospace; color:#e2e8f0; white-space:pre-wrap; word-break:break-all; max-height:140px; overflow-y:auto;"></pre>
+                <pre id="audit-de-script-pre" class="audit-prompt-pre"></pre>
             </div>
 
             <!-- JSON resultante -->
-            <label style="font-size:0.82em; font-weight:600; color:#374151; display:block; margin-bottom:4px;">JSON obtenido del script:</label>
-            <textarea id="audit-de-json" placeholder="Pega aquí el JSON de Data Extensions (array de objetos)…"
-                style="width:100%; height:110px; font-size:0.78em; font-family:monospace; border:1px solid #d1d5db;
-                       border-radius:8px; padding:10px; resize:vertical; color:#374151; background:#f9fafb; box-sizing:border-box;"></textarea>
+            <label class="audit-json-label">JSON obtenido del script:</label>
+            <textarea id="audit-de-json" class="audit-json-area" placeholder="Pega aquí el JSON de Data Extensions (array de objetos)…"></textarea>
         </div>
     </div>
 
     <!-- DASHBOARD CON PESTAÑAS -->
     <div id="audit-dashboard" class="tabs-container" style="display:none; height:100%;">
 
-        <div class="tab-buttons" style="justify-content:flex-start; margin-bottom:0; border-bottom:2px solid #e0e7ef; gap:2px; flex-wrap:wrap; display:flex; align-items:center;">
-            <button class="tab-button active" data-tab="audit-tab-users"    style="padding:10px 18px; font-size:0.88em;">Usuarios</button>
-            <button class="tab-button"        data-tab="audit-tab-autos"    style="padding:10px 18px; font-size:0.88em;">Automatismos</button>
-            <button class="tab-button"        data-tab="audit-tab-journeys" style="padding:10px 18px; font-size:0.88em;">Journeys</button>
-            <button class="tab-button"        data-tab="audit-tab-cp"       style="padding:10px 18px; font-size:0.88em;">Cloud Pages</button>
-            <button class="tab-button"        data-tab="audit-tab-sm"       style="padding:10px 18px; font-size:0.88em;">Send Management</button>
-            <button class="tab-button" data-tab="audit-tab-de" style="padding:10px 18px; font-size:0.88em;">Data Extensions</button>
-            <button class="tab-button" data-tab="audit-tab-content" style="padding:10px 18px; font-size:0.88em;">Contenidos</button>
+        <div class="tab-buttons audit-dashboard-tabs" style="justify-content:flex-start; margin-bottom:0; border-bottom:2px solid #e0e7ef; gap:2px; flex-wrap:wrap; display:flex; align-items:center;">
+            <button class="tab-button active" data-tab="audit-tab-users">Usuarios</button>
+            <button class="tab-button"        data-tab="audit-tab-autos">Automatismos</button>
+            <button class="tab-button"        data-tab="audit-tab-journeys">Journeys</button>
+            <button class="tab-button"        data-tab="audit-tab-cp">Cloud Pages</button>
+            <button class="tab-button"        data-tab="audit-tab-sm">Send Management</button>
+            <button class="tab-button" data-tab="audit-tab-de">Data Extensions</button>
+            <button class="tab-button" data-tab="audit-tab-content">Contenidos</button>
             <div id="audit-stats-container" style="margin-left:auto; padding-right:8px;"></div>
         </div>
 
-        <div style="background:#f4f7fb; border-radius:0 0 10px 10px; flex:1; overflow-y:auto; min-height:0;">
+        <div class="audit-tabs-body">
             <div id="audit-tab-users"    class="tab-content active"></div>
             <div id="audit-tab-autos"    class="tab-content"></div>
             <div id="audit-tab-journeys" class="tab-content"></div>
@@ -354,7 +432,7 @@
             <div class="audit-modal-header">
                 <div>
                     <h3 id="audit-drill-title">Detalles</h3>
-                    <button id="audit-drill-download" style="background:#27ae60; color:#fff; border:none; border-radius:4px; padding:6px 12px; cursor:pointer; font-size:0.85em; font-weight:bold; transition:background 0.2s;">Descargar CSV</button>
+                    <button id="audit-drill-download" class="audit-drill-download-btn">Descargar CSV</button>
                 </div>
                 <button class="audit-modal-close" id="audit-drill-close">&times;</button>
             </div>
@@ -374,11 +452,11 @@
     <div class="section-header">
         <button id="automationAnalyzerBackBtn" class="back-button">← Volver a la lista</button>     
         <div class="header-actions">
-        <button id="downloadAutomationPdfBtn" class="action-button activate-btn">Generar PDF</button>
-        <button id="downloadAutomationWordBtn" class="action-button" style="background-color: #2b5797;">Generar Word</button>
+        <button id="downloadAutomationPdfBtn" class="action-button download-btn">Generar PDF</button>
+        <button id="downloadAutomationWordBtn" class="action-button download-btn">Generar Word</button>
     </div>       
     </div>
-    <h2>Análisis de Automatismo: <span id="analyzerAutomationNameTitle" style="color: #558ac7;"></span></h2>
+    <h2>Análisis de Automatismo: <span id="analyzerAutomationNameTitle" class="ja-title-name"></span></h2>
 
     <div class="config-section-container">
         <div class="config-block">
@@ -464,13 +542,13 @@
 <div id="automation-actions-modal" class="modal-overlay" style="display:none;">
     <div class="modal-content" style="width: 400px;">
         <h3>Acciones sobre Automatismos</h3>
-        <p id="automation-actions-message" style="font-size: 14px; margin-bottom: 25px;"></p>
-        <div style="display: flex; flex-direction: column; gap: 15px;">
+        <p id="automation-actions-message" class="u-mb-25" style="font-size: 14px;"></p>
+        <div class="u-flex-col u-gap-15">
             <button id="automation-actions-activate-btn" class="action-button activate-btn">Activar</button>
-            <button id="automation-actions-run-btn" class="action-button">Ejecutar</button>
+            <button id="automation-actions-run-btn" class="action-button warn-btn">Ejecutar</button>
             <button id="automation-actions-stop-btn" class="action-button delete-btn">Parar</button>
         </div>
-        <div class="modal-actions" style="margin-top: 25px;">
+        <div class="modal-actions u-mt-25">
             <button id="automation-actions-cancel-btn" class="action-button cancel-btn">Cancelar</button>
         </div>
     </div>
@@ -482,14 +560,15 @@
         <button class="back-button">← Atrás</button>            
         <div class="header-actions">
             <button id="refreshAutomationsTableBtn" class="action-button">Refrescar</button>
+            <button id="calendarBtn" class="action-button">Calendario</button>
             <button id="analyzeAutomationBtn" class="action-button" disabled>Analizar</button>
             <button id="getNotificationsBtn" class="action-button">Cargar Notificaciones</button>
-            <button id="downloadAutomationsCsvBtn" class="action-button">Exportar</button>
-            <button id="actionsAutomationBtn" class="action-button delete-btn" disabled>Acciones</button>
-            <button id="cloneAutomationBtn" class="action-button" disabled>Clonar</button>            
+            <button id="downloadAutomationsCsvBtn" class="action-button download-btn">Exportar</button>
+            <button id="actionsAutomationBtn" class="action-button warn-btn" disabled>Acciones</button>
+            <button id="cloneAutomationBtn" class="action-button activate-btn" disabled>Clonar</button>            
         </div>
     </div>
-    <h2>Gestión de Automatismos <span id="automationCount" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
+    <h2>Gestión de Automatismos <span id="automationCount" class="u-title-hint"></span></h2>
     <!-- Filtros para la tabla de automatismos -->
     <div class="header-filters">
         <input type="text" id="automationNameFilter" class="filter-input" placeholder="Buscar por nombre...">
@@ -532,33 +611,33 @@
         <span id="totalPagesAutomations">/ 1</span>
         <button id="nextPageBtnAutomations" class="action-button pagination-arrow">&raquo;</button>
         </div>
-</div>
 
-<!-- 7. SECCIÓN: CALENDARIO DE AUTOMATIZACIONES -->
-<div id="calendario-section" class="section">
-    <div class="section-header">
-        <button class="back-button">← Atrás</button>
+    <!-- ===================== DRAWER: CALENDARIO DE AUTOMATISMOS ===================== -->
+    <div id="calendar-backdrop" class="cp-detail-backdrop"></div>
+    <aside id="calendar-drawer" class="cp-detail-drawer">
+        <button id="calendar-close-btn" class="cp-detail-close-tab">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+            <span>Cerrar</span>
+        </button>
+        <div class="cp-detail-header">
+            <h2>Calendario de Automatismos <span id="calendarDrawerCount" class="u-title-hint" style="font-size:0.75em;"></span></h2>
             <div class="calendar-controls">
-            <label for="calendarYearSelect">Año:</label>
-            <select id="calendarYearSelect" class="filter-input"></select>
-            <button id="refreshAutomationsBtn" class="action-button">Refrescar Automatismos</button>
-            <button id="refreshJourneyAutomationsBtn" class="action-button activate-btn">Refrescar Automatismos de Journeys</button>
-        </div>
-    </div>
-    <div class="calendar-container">
-        <!-- Rejilla de meses del calendario -->
-        <div id="calendar-main" class="calendar-main-view">
-            <h2>Calendario de Automatizaciones</h2>
-            <div id="calendar-grid" class="calendar-grid"></div>
-        </div>
-        <!-- Barra lateral para mostrar detalles del día seleccionado -->
-        <aside id="calendar-sidebar" class="calendar-sidebar">
-            <h3 id="automation-list-header">Automatizaciones del Día</h3>
-            <div id="automation-list">
-                <p>Selecciona un día para ver los detalles.</p>
+                <label for="calendarYearSelect">Año:</label>
+                <select id="calendarYearSelect" class="filter-input"></select>
             </div>
-        </aside>
-    </div>
+        </div>
+        <div class="calendar-container" style="margin-top:12px;">
+            <div id="calendar-main" class="calendar-main-view">
+                <div id="calendar-grid" class="calendar-grid"></div>
+            </div>
+            <aside id="calendar-sidebar" class="calendar-sidebar">
+                <h3 id="automation-list-header">Automatismos del Día</h3>
+                <div id="automation-list"><p>Selecciona un día para ver los detalles.</p></div>
+            </aside>
+        </div>
+    </aside>
 </div>
 
  <!-- 13. SECCIÓN: GESTIÓN DE CLOUD PAGES -->
@@ -567,11 +646,11 @@
         <button class="back-button">← Atrás</button>  
         <div class="header-actions">
             <button id="refreshCloudPagesTableBtn" class="action-button">Refrescar</button>
-            <button id="downloadCloudPagesCsvBtn" class="action-button">Exportar</button>
+            <button id="downloadCloudPagesCsvBtn" class="action-button download-btn">Exportar</button>
             <button id="getCloudPageIdsBtn" class="action-button">Recuperar IDs</button>
         </div>          
     </div>
-    <h2>Gestión de Cloud Pages <span id="cloudpage-count" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
+    <h2>Gestión de Cloud Pages <span id="cloudpage-count" class="u-title-hint"></span></h2>
     <!-- Filtros para la tabla -->
     <div class="header-filters">
         <input type="text" id="cloudPageNameFilter" class="filter-input" placeholder="Buscar por nombre...">
@@ -603,7 +682,7 @@
       <table id="cloudpages-table">
         <thead>
         <tr>
-            <th style="width:42px;"></th>
+            <th class="cp-inspect-col"></th>
             <th class="sortable-header" data-sort-by="name">Nombre</th>
             <th class="sortable-header" data-sort-by="assetType.displayName">Tipo</th>
             <th class="sortable-header" data-sort-by="modifiedDate">Fecha Modificación</th>
@@ -611,7 +690,7 @@
             <th class="sortable-header" data-sort-by="publishDate">Fecha Publicación</th>
             <th class="sortable-header" data-sort-by="location">Ubicación</th>
             <th class="sortable-header" data-sort-by="url">URL</th>
-            <th class="sortable-header" data-sort-by="pageId">Page ID</th>
+            <th class="sortable-header" data-sort-by="pageId">ID</th>
         </tr>
         </thead>
         <tbody id="cloudpages-tbody"></tbody>
@@ -634,7 +713,7 @@
         </p>
         <p>
           <!--<b>Landing Pages:</b><br>-->
-          <a href="#" id="cloudpage-internal-api-link" class="external-link" style="word-break: break-all;">Generando enlace...</a>
+          <a href="#" id="cloudpage-internal-api-link" class="external-link u-break-all">Generando enlace...</a>
         </p>
         <!--<p>
           <b>Code Resources:</b><br>
@@ -643,7 +722,7 @@
         <p>
             2. Copia TODO el contenido JSON que se abre y pégalo en el cuadro de abajo. Pega uno y dale a Importar.
         </p>
-        <textarea id="cloudpage-ids-paste-area" placeholder="Pega aquí el contenido del JSON..." style="width: 100%; height: 150px; margin-top: 10px;"></textarea>
+        <textarea id="cloudpage-ids-paste-area" class="cp-ids-paste-area" placeholder="Pega aquí el contenido del JSON..."></textarea>
         <div class="modal-actions">
             <button id="cloudpage-ids-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="cloudpage-ids-import-btn" class="action-button activate-btn">Importar</button>
@@ -662,7 +741,7 @@
     </button>
     <div class="cp-detail-header">
         <h2 id="cp-detail-title">Detalle de Cloud Page</h2>
-        <button id="cp-detail-download-btn" class="action-button" title="Descargar código fuente">Descargar código</button>
+        <button id="cp-detail-download-btn" class="action-button download-btn" title="Descargar código fuente">Descargar código</button>
     </div>
     <!-- Dependencias en columnas -->
     <div id="cp-detail-deps" class="cp-detail-deps-row"></div>
@@ -676,40 +755,40 @@
         <button class="back-button">← Atrás</button>
         <div class="header-actions">
             <button id="refreshContentBtn" class="action-button">Refrescar</button>
-            <button id="exportContentCsvBtn" class="action-button">Exportar</button>
+            <button id="exportContentCsvBtn" class="action-button download-btn">Exportar</button>
             <button id="deleteContentBtn" class="action-button delete-btn" disabled>Borrar</button>
         </div>
     </div>
     
-    <div class="header-filters" style="gap: 8px;">
-        <input type="text" id="contentManagerFilter" class="filter-input" placeholder="Buscar en todos los contenidos..." style="width: 280px;">
-        <select id="contentUsageFilter" class="filter-input" style="width: auto;" title="Filtrar por uso">
+    <div class="header-filters u-gap-8">
+        <input type="text" id="contentManagerFilter" class="filter-input cm-filter-search" placeholder="Buscar en todos los contenidos...">
+        <select id="contentUsageFilter" class="filter-input cm-filter-auto" title="Filtrar por uso">
             <option value="all">Todos</option>
             <option value="used">En uso</option>
             <option value="unused">Sin uso</option>
         </select>
-        <select id="contentJourneyFilter" class="filter-input" style="width: auto;" title="Filtrar por uso en Journeys (emails, push, SMS y WhatsApp)">
+        <select id="contentJourneyFilter" class="filter-input cm-filter-auto" title="Filtrar por uso en Journeys (emails, push, SMS y WhatsApp)">
             <option value="all">Journeys (todos)</option>
             <option value="in">En Journeys</option>
             <option value="out">Fuera de Journeys</option>
         </select>
-        <button type="button" id="contentMissingTemplateFilter" class="filter-input" style="cursor: pointer; text-align: center; min-width: 160px; transition: all 0.2s; background-color: #f9f9f9;" title="Mostrar solo emails cuya plantilla ya no existe">
+        <button type="button" id="contentMissingTemplateFilter" class="filter-input type-card cm-filter-template" title="Mostrar solo emails cuya plantilla ya no existe">
             Plantilla inexistente
         </button>
-        <select id="contentDateField" class="filter-input" style="width: auto;" title="Filtrar por fecha">
+        <select id="contentDateField" class="filter-input cm-filter-auto" title="Filtrar por fecha">
             <option value="">Fecha (todos)</option>
             <option value="modifiedDate">Modificado</option>
             <option value="createdDate">Creado</option>
         </select>
-        <input type="date" id="contentDateFrom" class="filter-input" style="width: auto;" title="Desde">
-        <input type="date" id="contentDateTo" class="filter-input" style="width: auto;" title="Hasta">
+        <input type="date" id="contentDateFrom" class="filter-input cm-filter-auto" title="Desde">
+        <input type="date" id="contentDateTo" class="filter-input cm-filter-auto" title="Hasta">
     </div>
 
     <!-- Contenedor de Pestañas que se llenará dinámicamente -->
     <div class="tabs-container">
-        <div id="content-manager-tab-buttons" class="tab-buttons" style="display:flex; width:100%; border-bottom:2px solid #e2e8f0;">
-            <!-- tabs dinámicos van aquí -->
-            <span id="content-total-count" style="font-size:0.85em; color:#999; margin-left:auto; padding:0 4px 4px 0; white-space:nowrap;"></span>
+        <div id="content-manager-tab-buttons" class="tab-buttons cm-tab-buttons">
+            <!-- tabs dinámicos van aquí (el JS reconstruye este contenedor al iniciar) -->
+            <span id="content-total-count" class="cm-info-hint"></span>
         </div>
         <div id="content-manager-tab-content"></div>
     </div>
@@ -726,7 +805,7 @@
     </button>
     <div class="cp-detail-header">
         <h2 id="content-detail-title">Detalle de Contenido</h2>
-        <button id="content-detail-download-btn" class="action-button" title="Descargar contenido">Descargar</button>
+        <button id="content-detail-download-btn" class="action-button download-btn" title="Descargar contenido">Descargar</button>
     </div>
     <div id="content-detail-code" class="cp-detail-code-block"></div>
 </aside>
@@ -752,7 +831,6 @@
 				<button class="tab-button" data-tab="doc-buscadores">Buscadores</button>
 				<button class="tab-button" data-tab="doc-contenidos">Contenidos</button>
 				<button class="tab-button" data-tab="doc-cloudpages">Cloud Pages</button>
-				<button class="tab-button" data-tab="doc-calendario">Calendario</button>
 
 				<div class="docu-vnav-title">Gestión</div>
 				<button class="tab-button" data-tab="doc-journeys">Journeys</button>
@@ -795,6 +873,7 @@
 									<li><b>Saved Content:</b> Read</li>
 									<li><b>File Locations:</b> Read</li>
 									<li><b>Users:</b> Read</li>
+									<li><b>Accounts:</b> Read</li>
 								</ul>
 							</li>
 							<li>En la pestaña <b>ACCESS</b> del paquete, da permiso a los usuarios que vayan a usar la app.</li>
@@ -979,27 +1058,6 @@
 				</div>
 
 				<!-- ===== CALENDARIO ===== -->
-				<div id="doc-calendario" class="tab-content">
-					<div class="docu-view">
-						<h3>Calendario</h3>
-						<p>Muestra en un calendario los automatismos programados por su próxima fecha de ejecución. Los días con algo programado se marcan en azul.</p>
-
-						<h4>Controles</h4>
-						<ul>
-							<li><b>Año</b> — Desplegable para cambiar el año mostrado.</li>
-							<li><b>Refrescar Automatismos</b> — Recarga todos los automatismos programados.</li>
-							<li><b>Refrescar Automatismos de Journeys</b> — Carga/actualiza solo los automatismos que lanzan algún Journey.</li>
-						</ul>
-
-						<h4>Uso</h4>
-						<ul>
-							<li>Al hacer clic en un día, el panel derecho muestra qué automatismos hay y a qué hora están programados.</li>
-							<li>Desde <b>Automatizaciones del Día</b> se salta a la vista de <b>Automatismos</b> ya filtrada por esos automatismos.</li>
-						</ul>
-						<div class="docu-note">Al volver a entrar se muestra lo último guardado; pulsa Refrescar para tener los datos al día.</div>
-					</div>
-				</div>
-
 				<!-- ===== JOURNEYS ===== -->
 				<div id="doc-journeys" class="tab-content">
 					<div class="docu-view">
@@ -1048,6 +1106,7 @@
 						<h4>Botones de cabecera</h4>
 						<ul>
 							<li><b>Refrescar</b> — Recarga los datos por API.</li>
+							<li><b>Calendario</b> — Abre un panel lateral con un calendario que sitúa los automatismos <b>actualmente filtrados</b> en la vista por su próxima fecha de ejecución. Los días con algo programado se marcan en azul; al pulsar un día, el panel derecho muestra qué automatismos hay y a qué hora. Se puede cambiar el <b>Año</b>.</li>
 							<li><b>Analizar</b> (1 seleccionado) — Abre el análisis detallado del automatismo.</li>
 							<li><b>Cargar Notificaciones</b> — Obtiene los emails de alerta configurados y muestra las columnas de notificación.</li>
 							<li><b>Exportar</b> — Descarga un CSV con los datos visibles (respeta filtros).</li>
@@ -1259,7 +1318,7 @@
             <label for="emailToValidate">Email a validar:</label>
             <input type="text" id="emailToValidate" placeholder="Introduce la dirección de email">
         </div>
-        <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+        <div class="header-actions u-mt-20" style="justify-content: center;">
             <button id="validateEmailBtn" class="action-button">Validar Email</button>
         </div>
     </div>
@@ -1276,51 +1335,46 @@
         <button class="back-button">← Atrás</button>
         <div class="header-actions">
             <button id="erd-reset-btn" class="action-button hidden">Nuevo Diagrama</button>
-            <button id="erd-download-csv-btn" class="action-button activate-btn hidden">Descargar CSV</button>
-            <button id="erd-download-img-btn" class="action-button hidden">Descargar Imagen</button>
+            <button id="erd-download-csv-btn" class="action-button download-btn hidden">Descargar CSV</button>
+            <button id="erd-download-img-btn" class="action-button download-btn hidden">Descargar Imagen</button>
+            <button id="erd-refresh-groups-btn" class="action-button">Refrescar</button>
+            <button id="erd-generate-btn" class="action-button activate-btn" disabled>Generar ERD</button>
         </div>
     </div>
 
-    <h2 style="color: #69a3db; text-align: center; margin-bottom: 20px;">Generador de Diagramas Entidad-Relación (ERD)</h2>
+    <h2 class="erd-title">Generador de Diagramas Entidad-Relación (ERD)</h2>
 
     <div class="tabs-container erd-full-width">
         <!-- SELECCIÓN DE GRUPO -->
         <div id="erd-selection-zone" class="config-block erd-full-width">
-            <h3 style="color:#558ac7; margin-bottom: 12px;">Selecciona un Grupo de Atributos</h3>
-            <p style="font-size: 0.9rem; color:#6c757d; margin-bottom: 12px;">
+            <h3 class="erd-subtitle">Selecciona un Grupo de Atributos</h3>
+            <p class="erd-help-text">
                 Elige el grupo de atributos del modelo de datos de contactos y pulsa "Generar ERD" para ver su diagrama
                 con todas las entidades (Data Extensions y Attribute Sets) que contiene.
             </p>
 
-            <div style="display:flex; gap:10px; align-items:center; margin-bottom:12px;">
-                <input type="text" id="erd-group-search" class="filter-input" placeholder="Buscar grupo..." style="flex:1;">
-                <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; color:#555; white-space:nowrap; cursor:pointer;">
+            <div class="erd-search-row">
+                <input type="text" id="erd-group-search" class="filter-input erd-group-search" placeholder="Buscar grupo...">
+                <label class="erd-hide-system-label">
                     <input type="checkbox" id="erd-hide-system"> Ocultar grupos de sistema
                 </label>
-                <button id="erd-refresh-groups-btn" class="action-button">Refrescar</button>
+                <label class="erd-hide-system-label">
+                    <input type="checkbox" id="erd-chk-hide-contacts"> Ocultar tabla <strong>Contacts</strong>
+                </label>
             </div>
 
-            <div id="erd-group-list" class="erd-group-list" style="max-height: 48vh; overflow-y: auto;"></div>
-
-            <div class="form-group checkbox-group" style="margin-top: 12px; justify-content: flex-start;">
-                <input type="checkbox" id="erd-chk-hide-contacts">
-                <label for="erd-chk-hide-contacts" style="font-size: 0.9rem;">Ocultar tabla <strong>Contacts</strong> (se identificará con 🔑)</label>
-            </div>
-
-            <div style="text-align: center; margin-top: 15px;">
-                <button id="erd-generate-btn" class="action-button activate-btn" style="padding: 10px 40px;" disabled>Generar ERD</button>
-            </div>
+            <div id="erd-group-list" class="erd-group-list erd-group-list-scroll"></div>
         </div>
 
         <!-- Lienzo del Diagrama -->
-        <div id="erd-canvas-zone" class="config-block hidden erd-full-width" style="flex: 1; padding: 0; position: relative; overflow: hidden; display: flex; flex-direction: column; min-height: 500px; border: 1px solid #e2e8f0;">
-            <div style="background:rgba(105,163,219,.1); border-bottom:1px solid #e2e8f0; padding:.5rem 1.2rem; font-size:.72rem; color:#558ac7; flex-shrink:0;">
+        <div id="erd-canvas-zone" class="config-block hidden erd-full-width erd-canvas-zone">
+            <div class="erd-canvas-hint">
                 💡 Clic en un campo para ver su relación · ESC para deseleccionar · Arrastra las tablas para reorganizar
             </div>
 
             <div class="erd-wrap" id="erd-wrap">
-                <div id="erd-canvas" style="position: relative;">
-                    <svg id="erd-svg-lines" style="position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible;"></svg>
+                <div id="erd-canvas" class="erd-canvas">
+                    <svg id="erd-svg-lines" class="erd-svg-lines"></svg>
                 </div>
             </div>
 
@@ -1334,9 +1388,9 @@
             <!-- Leyenda -->
             <div class="erd-legend">
                 <div class="leg-ttl">Leyenda</div>
-                <div class="leg-row"><div class="leg-dot" style="background:#e67e22"></div> PK</div>
-                <div class="leg-row"><div class="leg-dot" style="background:#28a745"></div> FK</div>
-                <div class="leg-row"><div class="leg-dot" style="background:#9b59b6"></div> REF</div>
+                <div class="leg-row"><div class="leg-dot leg-dot-pk"></div> PK</div>
+                <div class="leg-row"><div class="leg-dot leg-dot-fk"></div> FK</div>
+                <div class="leg-row"><div class="leg-dot leg-dot-ref"></div> REF</div>
             </div>
         </div>
     </div>
@@ -1361,27 +1415,30 @@
     <!-- ============== Pestaña: Búsqueda de Data Extension ============== -->
     <div id="busqueda-de-tab" class="tab-content active config-section-container">
         <div class="config-block">
-            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
-                <div class="form-group" style="margin:0; min-width:120px;">
+            <div class="finder-filter-row">
+                <div class="form-group u-m-0" style="min-width:120px;">
                     <label for="deSearchProperty">Buscar por:</label>
                     <select id="deSearchProperty" class="filter-input">
                         <option value="Name">Nombre</option>
                         <option value="CustomerKey">External Key</option>
                     </select>
                 </div>
-                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+                <div class="form-group finder-field">
                     <label for="deSearchValue">Valor:</label>
                     <input type="text" id="deSearchValue" placeholder="Ingresa el valor de búsqueda" maxlength="128">
                 </div>
-                <button id="searchDEBtn" class="action-button" style="height:36px;">Buscar</button>
+                <button id="searchDEBtn" class="action-button finder-btn">Buscar</button>
             </div>
         </div>
-        <div class="config-block" style="flex-grow:1;">
-            <h3>Resultados</h3>
+        <div class="config-block u-grow">
+            <div class="u-flex-between u-mb-10">
+                <h3 class="u-m-0">Resultados</h3>
+                <button id="deToSourcesBtn" class="action-button" disabled title="Buscar los orígenes de datos de la DE seleccionada">Origen de datos</button>
+            </div>
             <div class="table-container">
                 <table id="de-search-results-table">
-                    <thead><tr><th>Nombre Data Extension</th><th>Ruta de Carpeta</th></tr></thead>
-                    <tbody id="de-search-results-tbody"></tbody>
+                    <thead><tr><th>Nombre Data Extension</th><th>External Key</th><th>Ruta de Carpeta</th></tr></thead>
+                    <tbody id="de-search-results-tbody"><tr><td colspan="3">Inicia una búsqueda...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -1390,24 +1447,21 @@
     <!-- ============== Pestaña: Buscador de Orígenes de Datos ============== -->
     <div id="origenes-tab" class="tab-content config-section-container">
         <div class="config-block">
-            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
-                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+            <div class="finder-filter-row">
+                <div class="form-group finder-field">
                     <label for="deNameToFind">Nombre exacto de la Data Extension:</label>
                     <input type="text" id="deNameToFind" placeholder="Introduce el nombre exacto de la DE">
                 </div>
-                <div class="form-group" style="margin:0; display:flex; align-items:center; gap:6px;">
-                    <input type="checkbox" id="showSourceQueryCheckbox" checked>
-                    <label for="showSourceQueryCheckbox" style="white-space:nowrap;">Mostrar Query</label>
-                </div>
-                <button id="findDataSourcesBtn" class="action-button" style="height:36px;">Buscar Orígenes</button>
+                <button id="showSourceQueryBtn" class="action-button finder-btn" type="button" title="Mostrar u ocultar la columna de query">Mostrar Query</button>
+                <button id="findDataSourcesBtn" class="action-button finder-btn">Buscar Orígenes</button>
             </div>
         </div>
-        <div class="config-block" style="flex-grow:1;">
+        <div class="config-block u-grow">
             <h3>Actividades Encontradas</h3>
             <div class="table-container">
                 <table id="data-sources-table">
                     <thead><tr><th>Actividad</th><th>Tipo</th><th>Automatización</th><th>Paso</th><th>Acción</th><th>Descripción / Query</th></tr></thead>
-                    <tbody id="data-sources-tbody"></tbody>
+                    <tbody id="data-sources-tbody"><tr><td colspan="6">Inicia una búsqueda...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -1416,18 +1470,19 @@
     <!-- ============== Pestaña: Buscador de Clientes ============== -->
     <div id="clientes-tab" class="tab-content config-section-container">
         <div class="config-block">
-            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
-                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
-                    <label for="customerSearchValue">Subscriber Key o Email:</label>
+            <div class="finder-filter-row">
+                <div class="form-group finder-field">
+                    <label for="customerSearchValue">Subscriber Key, Email o Teléfono:</label>
                     <input type="text" id="customerSearchValue" placeholder="Ingresa el valor a buscar">
                 </div>
-                <button id="searchCustomerBtn" class="action-button" style="height:36px;">Buscar Cliente</button>
+                <button id="waToggleBtn" class="action-button finder-btn" type="button" title="Incluir búsqueda en la audiencia de WhatsApp">Incluir WhatsApp</button>
+                <button id="searchCustomerBtn" class="action-button finder-btn">Buscar Cliente</button>
             </div>
         </div>
-        <div class="config-block" style="flex-grow:1;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h3 style="margin:0;">Resultados</h3>
-                <div style="display:flex; gap:8px;">
+        <div class="config-block u-grow">
+            <div class="u-flex-between u-mb-10">
+                <h3 class="u-m-0">Resultados</h3>
+                <div class="u-flex u-gap-8">
                     <button id="selectTablesBtn" class="action-button" disabled>Seleccionar Tablas</button>
                     <button id="getCustomerJourneysBtn" class="action-button" disabled>Journeys</button>
                 </div>
@@ -1435,7 +1490,7 @@
             <div class="table-container">
                 <table id="customer-search-table">
                     <thead><tr><th>Subscriber Key</th><th>Email</th><th>Estado</th><th>Fecha Creación</th><th>Fecha Baja</th><th>Es Suscriptor</th></tr></thead>
-                    <tbody id="customer-search-tbody"></tbody>
+                    <tbody id="customer-search-tbody"><tr><td colspan="6">Inicia una búsqueda...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -1444,18 +1499,18 @@
             <h3>Seleccionar Tablas para la Búsqueda</h3>
             <div class="table-container">
                 <table id="de-selection-table">
-                    <thead><tr><th style="width:50px; text-align:center;"><input type="checkbox" id="selectAllDEsCheckbox"></th><th>Nombre de Tabla</th></tr></thead>
+                    <thead><tr><th class="ta-center" style="width:50px;"><input type="checkbox" id="selectAllDEsCheckbox"></th><th>Nombre de Tabla</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
-            <div class="header-actions" style="justify-content:flex-end; margin-top:10px;">
+            <div class="header-actions u-flex-right u-mt-10">
                 <button id="searchSelectedDEsBtn" class="action-button">Buscar en Tablas Seleccionadas</button>
             </div>
         </div>
 
         <div id="customer-journeys-results-block" class="config-block hidden">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h3 style="margin:0;">Journeys del Cliente Seleccionado</h3>
+            <div class="u-flex-between u-mb-10">
+                <h3 class="u-m-0">Journeys del Cliente Seleccionado</h3>
                 <button id="ejectCustomerFromJourneysBtn" class="action-button delete-btn" disabled>Expulsar</button>
             </div>
             <div class="table-container">
@@ -1470,29 +1525,56 @@
             <h3>Resultados de Búsqueda en Data Extensions</h3>
             <div id="des-results-container"></div>
         </div>
+
+        <!-- Resultados de Audiencia WhatsApp (cuando se incluye WhatsApp en la búsqueda) -->
+        <div id="wa-results-block" class="config-block hidden">
+            <h3 class="u-mt-0 u-mb-10">Audiencia WhatsApp</h3>
+            <div class="table-container">
+                <table id="wa-results-table">
+                    <thead><tr><th>Contact Key</th><th>Teléfono</th><th>Locale</th><th>Canales</th></tr></thead>
+                    <tbody id="wa-results-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Alta WhatsApp (si no se encuentra en la audiencia) -->
+        <div id="wa-register-block" class="config-block hidden">
+            <h3 class="u-mt-0 u-mb-10">No encontrado en WhatsApp — Alta de contacto</h3>
+            <div class="wa-register-grid">
+                <div class="form-group u-m-0"><label for="waNewSubKey">Contact Key</label><input type="text" id="waNewSubKey"></div>
+                <div class="form-group u-m-0"><label for="waNewMobile">Teléfono</label><input type="text" id="waNewMobile"></div>
+                <div class="form-group u-m-0"><label for="waNewLocale">Locale (país)</label>
+                    <input type="text" id="waNewLocale" list="wa-locale-list" placeholder="Escribe país o código (p. ej. ES)" autocomplete="off">
+                    <datalist id="wa-locale-list"></datalist>
+                </div>
+                <div class="form-group u-m-0"><label for="waNewChannel">Channel ID</label>
+                    <select id="waNewChannel"></select>
+                </div>
+            </div>
+            <div class="u-flex-right u-mt-10">
+                <button id="waRegisterBtn" class="action-button activate-btn" type="button">Dar de alta</button>
+            </div>
+        </div>
     </div>
 
     <!-- ============== Pestaña: Buscador de Texto en Queries ============== -->
     <div id="queries-tab" class="tab-content config-section-container">
         <div class="config-block">
-            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
-                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+            <div class="finder-filter-row">
+                <div class="form-group finder-field">
                     <label for="querySearchText">Texto a buscar en la Query:</label>
                     <input type="text" id="querySearchText" placeholder="Ej: _Subscribers o Nombre_DE">
                 </div>
-                <div class="form-group" style="margin:0; display:flex; align-items:center; gap:6px;">
-                    <input type="checkbox" id="showQueryTextCheckbox" checked>
-                    <label for="showQueryTextCheckbox" style="white-space:nowrap;">Mostrar Query</label>
-                </div>
-                <button id="searchQueriesByTextBtn" class="action-button" style="height:36px;">Buscar en Queries</button>
+                <button id="showQueryTextBtn" class="action-button finder-btn" type="button" title="Mostrar u ocultar la columna de query">Mostrar Query</button>
+                <button id="searchQueriesByTextBtn" class="action-button finder-btn">Buscar en Queries</button>
             </div>
         </div>
-        <div class="config-block" style="flex-grow:1;">
+        <div class="config-block u-grow">
             <h3>Queries Encontradas</h3>
             <div class="table-container">
                 <table id="query-search-results-table">
                     <thead><tr><th>Nombre de la Query</th><th>Automatización</th><th>Paso</th><th>Query Text</th></tr></thead>
-                    <tbody id="query-search-results-tbody"></tbody>
+                    <tbody id="query-search-results-tbody"><tr><td colspan="4">Inicia una búsqueda...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -1501,15 +1583,15 @@
     <!-- ============== Pestaña: Buscador de Texto en Scripts ============== -->
     <div id="script-texto-tab" class="tab-content config-section-container">
         <div class="config-block">
-            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
-                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+            <div class="finder-filter-row">
+                <div class="form-group finder-field">
                     <label for="scriptSearchText">Texto a buscar en el Script (SSJS):</label>
                     <input type="text" id="scriptSearchText" placeholder="Ej: Platform.Function o Nombre_DE">
                 </div>
-                <button id="searchScriptsByTextBtn" class="action-button" style="height:36px;">Buscar en Scripts</button>
+                <button id="searchScriptsByTextBtn" class="action-button finder-btn">Buscar en Scripts</button>
             </div>
         </div>
-        <div class="config-block" style="flex-grow:1;">
+        <div class="config-block u-grow">
             <h3>Scripts Encontrados</h3>
             <div class="table-container">
                 <table id="script-search-results-table">
@@ -1523,17 +1605,17 @@
     <!-- ============== Pestaña: Contenidos ============== -->
     <div id="contenido-tab" class="tab-content config-section-container">
         <div class="config-block">
-            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
-                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+            <div class="finder-filter-row">
+                <div class="form-group finder-field">
                     <label for="contentSearchValue">Buscar por Nombre o ID:</label>
                     <input type="text" id="contentSearchValue" placeholder="Ingresa el nombre (parcial) o el ID (exacto)">
                 </div>
-                <button id="searchContentBtn" class="action-button" style="height:36px;">Buscar Contenido</button>
+                <button id="searchContentBtn" class="action-button finder-btn">Buscar Contenido</button>
             </div>
         </div>
-        <div class="config-block" style="flex-grow:1;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h3 style="margin:0;">Resultados</h3>
+        <div class="config-block u-grow">
+            <div class="u-flex-between u-mb-10">
+                <h3 class="u-m-0">Resultados</h3>
                 <button id="contentDetailBtn" class="action-button" disabled>Ver detalle</button>
             </div>
             <div class="table-container">
@@ -1544,11 +1626,11 @@
             </div>
 
             <!-- Detalle (oculto por defecto) -->
-            <div id="content-detail-block" style="display:none; margin-top:20px; border-top:2px solid #558ac7; padding-top:15px;">
-                <h3 id="content-detail-title" style="color:#558ac7; margin-bottom:15px;"></h3>
-                <div id="content-tree-wrapper" style="margin-bottom:10px;"></div>
-                <div id="content-components-wrapper" style="margin-bottom:10px;"></div>
-                <div id="content-des-wrapper" style="margin-bottom:10px;"></div>
+            <div id="content-detail-block" class="finder-content-detail" style="display:none;">
+                <h3 id="content-detail-title" class="finder-content-detail-title u-mb-15"></h3>
+                <div id="content-tree-wrapper" class="u-mb-10"></div>
+                <div id="content-components-wrapper" class="u-mb-10"></div>
+                <div id="content-des-wrapper" class="u-mb-10"></div>
             </div>
         </div>
     </div>
@@ -1563,7 +1645,7 @@
         </button>
         <div class="cp-detail-header">
             <h2 id="finder-code-title">Código Fuente</h2>
-            <button id="finder-code-download-btn" class="action-button" title="Descargar código fuente">Descargar</button>
+            <button id="finder-code-download-btn" class="action-button download-btn" title="Descargar código fuente">Descargar</button>
         </div>
         <div id="finder-code-content" class="cp-detail-code-block"></div>
     </aside>
@@ -1571,8 +1653,8 @@
     <!-- ============== Pestaña: Actividades ============== -->
     <div id="actividades-tab" class="tab-content config-section-container">
         <div class="config-block">
-            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
-                <div class="form-group" style="margin:0; min-width:160px;">
+            <div class="finder-filter-row">
+                <div class="form-group u-m-0" style="min-width:160px;">
                     <label for="activityTypeSelect">Tipo de Actividad:</label>
                     <select id="activityTypeSelect" class="filter-input">
                         <option value="QueryDefinition">SQL Query</option>
@@ -1584,17 +1666,17 @@
                         <option value="Script">Script (SSJS)</option>
                     </select>
                 </div>
-                <div class="form-group" style="margin:0; flex:1; min-width:200px;">
+                <div class="form-group finder-field">
                     <label for="activitySearchValue">Nombre(s) o Key(s):</label>
                     <input type="text" id="activitySearchValue" placeholder="Ej: Query1; Query2; Key_3">
                 </div>
-                <button id="searchActivityBtn" class="action-button" style="height:36px;">Buscar Actividades</button>
+                <button id="searchActivityBtn" class="action-button finder-btn">Buscar Actividades</button>
             </div>
         </div>
 
         <div id="activity-info-block" class="config-block hidden">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h3 style="margin:0;">Actividades Encontradas</h3>
+            <div class="u-flex-between u-mb-10">
+                <h3 class="u-m-0">Actividades Encontradas</h3>
                 <button id="deleteActivityBtn" class="action-button delete-btn">Borrar Seleccionadas</button>
             </div>
             <div class="table-container">
@@ -1648,7 +1730,7 @@
             <label for="parentFolderNameInput">Nombre de la carpeta raíz (o parte del nombre)</label>
             <input type="text" id="parentFolderNameInput" placeholder="Busca la carpeta donde crear la nueva estructura" disabled>
         </div>
-        <div class="header-actions" style="justify-content: center; margin-top: 10px;">
+        <div class="header-actions u-mt-10" style="justify-content: center;">
             <button id="searchParentFolderBtn" class="action-button" disabled>Buscar Carpeta Raíz</button>
         </div>
     </div>
@@ -1667,7 +1749,7 @@
     <!-- PASO 2: Estructura a crear -->
     <div id="folder-structure-block" class="config-block hidden">
         <h3>Paso 2: Pega o escribe la estructura a crear</h3>
-        <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+        <p class="info-text u-text-left u-m-0 u-mb-15">
             Usa la sangría (dos espacios o un tabulador) para indicar las subcarpetas.
         </p>
         <textarea id="folderStructureInput" rows="8" placeholder="Carpeta_A&#10;  Carpeta_AA&#10;  Carpeta_AB&#10;Carpeta_B&#10;  Carpeta_BA&#10;    Carpeta_BAA&#10;    Carpeta_BAB&#10;  Carpeta_BB&#10;"></textarea>
@@ -1686,21 +1768,21 @@
 
         <!-- Grupo 2: Acciones de Configuración de Campos -->
         <div id="header-actions-config-campos" class="header-actions de-tab-actions hidden">
-            <button id="importFieldsBtn" class="action-button">Importar</button>                
+            <button id="importFieldsBtn" class="action-button activate-btn">Importar</button>
             <button id="createFieldsBtn" class="action-button activate-btn">Crear/Actualizar Campos</button>
-            <button id="createDummyFieldsBtn" class="action-button">Campos de Ejemplo</button>                
+            <button id="createDummyFieldsBtn" class="action-button secondary-btn">Campos de Ejemplo</button>
             <button id="clearFieldsBtn" class="action-button delete-btn">Limpiar Tabla</button>
         </div>
 
         <!-- Grupo 3: Acciones de Gestión/Borrado -->
         <div id="header-actions-gestion-campos" class="header-actions de-tab-actions hidden">
             <button id="getFields" class="action-button">Recuperar Campos</button>
-            <button id="documentDEsBtn" class="action-button" disabled>Documentar DEs</button>
+            <button id="documentDEsBtn" class="action-button download-btn" disabled>Documentar DEs</button>
             <button id="deleteField" class="action-button delete-btn">Borrar Campo</button>
         </div>
     </div>
 
-    <h2 style="text-align: center; color: #558ac7; margin-bottom: 10px;">Gestión de Data Extensions</h2>
+    <h2 class="u-text-center u-mb-10">Gestión de Data Extensions</h2>
 
     <div class="tabs-container">
         <div class="tab-buttons de-main-tabs">
@@ -1739,7 +1821,7 @@
 
         <!-- 2. CONFIGURACIÓN DE CAMPOS -->
         <div id="tab-config" class="tab-content">
-            <div class="table-container" style="display: flex; gap: 20px; align-items: flex-start;">
+            <div class="table-container u-flex u-gap-20" style="align-items: flex-start;">
                 <div class="table-scroll-wrapper">
                     <table id="myTable" class="editable-row-table">
                         <thead>
@@ -1748,7 +1830,7 @@
                         <tbody></tbody>
                     </table>
                 </div>
-                <div class="control-buttons" style="display: flex; flex-direction: column; gap: 10px;">
+                <div class="control-buttons u-flex-col u-gap-10">
                     <button id="addFieldBtn" class="action-button">Añadir Fila</button>
                     <button id="moveUp" class="action-button secondary-btn" title="Mover arriba">▲</button>
                     <button id="moveDown" class="action-button secondary-btn" title="Mover abajo">▼</button>
@@ -1760,7 +1842,7 @@
         <div id="tab-gestion" class="tab-content config-section-container">
             <div class="config-block">
                 <h3>Campos de una Data Extension Específica</h3>
-                <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+                <p class="info-text u-text-left u-m-0 u-mb-15">
                     Introduce la External Key de la DE sobre la que quieres operar y pulsa en <em>Recuperar Campos</em>. Su estructura se cargará en la sección "Campos" y en la lista desplegable de abajo.
                 </p>
                 <div class="form-group">
@@ -1775,7 +1857,7 @@
             
             <div class="config-block">
                 <h3>Documentación de Carpetas</h3>
-                <p class="info-text" style="text-align: left; margin: 0 0 15px;">
+                <p class="info-text u-text-left u-m-0 u-mb-15">
                     Selecciona una carpeta para generar y descargar un CSV con la estructura de todas las Data Extensions que contiene.
                 </p>
                 <div class="form-group">
@@ -1795,36 +1877,34 @@
     <div class="section-header">
         <button id="journeyAnalyzerBackBtn" class="back-button">← Volver a la lista</button>            
         <div class="header-actions">
-            <button id="expandAllAnalyzerBtn" class="action-button">Expandir Todo</button>
-            <button id="collapseAllAnalyzerBtn" class="action-button">Colapsar Todo</button>
-            <button id="downloadJourneyPdfBtn" class="action-button activate-btn">Generar PDF</button>
-            <button id="downloadJourneyWordBtn" class="action-button" style="background-color: #2b5797;">Generar Word</button>
+            <button id="expandAllAnalyzerBtn" class="action-button secondary-btn">Expandir Todo</button>
+            <button id="collapseAllAnalyzerBtn" class="action-button secondary-btn">Colapsar Todo</button>
+            <button id="downloadJourneyPdfBtn" class="action-button download-btn">Generar PDF</button>
+            <button id="downloadJourneyWordBtn" class="action-button download-btn">Generar Word</button>
         </div>
     </div>
-    <h2>Análisis de Journey: <span id="analyzerJourneyNameTitle" style="color: #558ac7;"></span></h2>
+    <h2>Análisis de Journey: <span id="analyzerJourneyNameTitle" class="ja-title-name"></span></h2>
 
     <div class="config-section-container">
         <!-- 1. Identificación y Entrada -->
-        <div id="journeyAnalyzerHeaderWrapper" style="margin-bottom: 20px;"></div>
+        <div id="journeyAnalyzerHeaderWrapper" class="u-mb-20"></div>
 
         <!-- 2. Goals y Exits -->
-        <div id="journeyAnalyzerGlobalWrapper" style="margin-bottom: 20px;"></div>
+        <div id="journeyAnalyzerGlobalWrapper" class="u-mb-20"></div>
 
         <!-- 3. Flujo Lógico -->
-        <div id="journeyAnalyzerFlowWrapper" style="margin-bottom: 20px;"></div>
-        <div style="margin: 40px 0 15px 0; padding-bottom: 8px; border-bottom: 2px solid #558ac7; display: flex; align-items: center; justify-content: space-between;">
-            <div style="display: flex; align-items: center; gap: 10px;">
+        <div id="journeyAnalyzerFlowWrapper" class="u-mb-20"></div>
+        <div class="ja-section-title-row">
+            <div class="u-flex-center u-gap-10">
                 <span style="font-size: 1.2rem;">⚙️</span>
-                <h3 style="margin: 0; color: #558ac7; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">
-                    Actividades del Journey
-                </h3>
+                <h3>Actividades del Journey</h3>
             </div>
-            
+
             <!-- Multipicklist de Filtrado -->
             <div class="um-filter-group" style="position:relative; margin-bottom: 0;">
-                <div id="analyzerActivityTypeFilterTrigger" class="um-dropdown-trigger" style="min-width: 200px; background: white;">
+                <div id="analyzerActivityTypeFilterTrigger" class="um-dropdown-trigger" style="min-width: 200px; background: var(--sf-surface);">
                     <span id="analyzerActivityTypeFilterLabel">Todos los tipos</span>
-                    <span style="font-size:10px; color:#888;">▼</span>
+                    <span style="font-size:10px; color:var(--sf-text-muted);">▼</span>
                 </div>
                 <div id="analyzerActivityTypeFilterMenu" class="um-dropdown-menu" style="display:none; position:fixed; z-index: 1000;">
                     <div id="analyzerActivityTypeCheckboxList"></div>
@@ -1842,25 +1922,25 @@
         <button id="journeyErrorsBackBtn" class="back-button">← Volver</button>
         <div class="header-actions">
             <button id="refreshJourneyErrorsBtn" class="action-button">Refrescar</button>
-            <button id="downloadJourneyErrorsCsvBtn" class="action-button">Descargar CSV</button>
+            <button id="downloadJourneyErrorsCsvBtn" class="action-button download-btn">Descargar CSV</button>
         </div>
     </div>
     
-    <h2>Errores de Journeys <span id="journeyErrorsCountSpan" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
-    
+    <h2>Errores de Journeys <span id="journeyErrorsCountSpan" class="je-count"></span></h2>
+
     <div class="header-filters">
-        <input type="date" id="journeyErrorsStartDate" class="filter-input" style="width: 140px;">
-        <input type="date" id="journeyErrorsEndDate" class="filter-input" style="width: 140px;">
-        <select id="journeyErrorsJourneyFilter" class="filter-input" style="min-width: 200px;">
+        <input type="date" id="journeyErrorsStartDate" class="filter-input je-filter-date">
+        <input type="date" id="journeyErrorsEndDate" class="filter-input je-filter-date">
+        <select id="journeyErrorsJourneyFilter" class="filter-input je-filter-wide">
             <option value="">Todos los journeys</option>
         </select>
-        <select id="journeyErrorsStatusFilter" class="filter-input" style="min-width: 150px;">
+        <select id="journeyErrorsStatusFilter" class="filter-input je-filter-medium">
             <option value="">Todos los estados</option>
             <option value="ERROR">Error</option>
             <option value="WARNING">Warning</option>
         </select>
-        <input type="text" id="journeyErrorsActivityFilter" class="filter-input" placeholder="Filtrar por actividad..." style="min-width: 200px;">
-        <select id="journeyErrorsTypeFilter" class="filter-input" style="min-width: 150px;">
+        <input type="text" id="journeyErrorsActivityFilter" class="filter-input je-filter-wide" placeholder="Filtrar por actividad...">
+        <select id="journeyErrorsTypeFilter" class="filter-input je-filter-medium">
             <option value="">Todos los tipos</option>
             <option value="EMAILV2">Email</option>
             <option value="SALESCLOUDACTIVITY">Salesforce</option>
@@ -1899,75 +1979,75 @@
 
 <!-- MODAL: ACCIONES SOBRE JOURNEYS -->
 <div id="journey-actions-modal" class="modal-overlay">
-    <div class="modal-content" style="width: 400px;">
+    <div class="modal-content jm-modal-sm">
         <h3>Acciones sobre Journeys</h3>
-        <p id="journey-actions-message" style="font-size: 14px; margin-bottom: 25px;">
+        <p id="journey-actions-message" class="jm-modal-text">
             ¿Qué acción deseas realizar sobre los journeys seleccionados?
         </p>
-        <div style="display: flex; flex-direction: column; gap: 15px;">
-            <button id="journey-actions-pause-btn" class="action-button">Pausar Journeys</button>
-            <button id="journey-actions-resume-btn" class="action-button">Reanudar Journeys</button>
-            <button id="journey-actions-stop-btn" class="action-button">Parar Journeys</button>
+        <div class="u-flex-col u-gap-15">
+            <button id="journey-actions-pause-btn" class="action-button warn-btn">Pausar Journeys</button>
+            <button id="journey-actions-resume-btn" class="action-button activate-btn">Reanudar Journeys</button>
+            <button id="journey-actions-stop-btn" class="action-button delete-btn">Parar Journeys</button>
             <button id="journey-actions-delete-btn" class="action-button delete-btn">Borrar Journeys</button>
         </div>
-        <div class="modal-actions" style="margin-top: 25px;">
+        <div class="modal-actions u-mt-25">
             <button id="journey-actions-cancel-btn" class="action-button cancel-btn">Cancelar</button>
         </div>
     </div>
 </div>
 
 <!-- MODAL: CONFIGURACIÓN DE PAUSA -->
-<!-- MODAL: CONFIGURACIÓN DE PAUSA -->
 <div id="journey-pause-modal" class="modal-overlay">
-    <div class="modal-content" style="width: 520px;">
+    <div class="modal-content jm-modal-md">
         <h3>Pausar Journeys</h3>
-        <p style="font-size: 14px; margin-bottom: 25px;">
+        <p class="jm-modal-text">
             Vas a pausar <strong id="journey-pause-count-text">0</strong> journey(s). Configura las opciones de pausa:
         </p>
-        
-        <div style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 30px;">
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <label style="min-width: 160px; font-weight: 600;" title="El número de días para pausar el journey. El valor mínimo es 1 y el máximo es 14.">
-                    ℹ️ Paused Days 
+
+        <div class="jm-modal-body">
+            <div class="jm-modal-row">
+                <label class="jm-modal-label" title="El número de días para pausar el journey. El valor mínimo es 1 y el máximo es 14.">
+                    ℹ️ Paused Days
                 </label>
-                <input type="number" id="journey-pause-days" class="filter-input" min="1" max="14" value="14" style="width: 80px;">
+                <input type="number" id="journey-pause-days" class="filter-input jm-input-xs" min="1" max="14" value="14">
             </div>
 
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <label style="min-width: 160px; font-weight: 600;" title="La acción a tomar cuando transcurran los días indicados en Paused Days.">
-                    ℹ️ Guardrail Action 
+            <div class="jm-modal-row">
+                <label class="jm-modal-label" title="La acción a tomar cuando transcurran los días indicados en Paused Days.">
+                    ℹ️ Guardrail Action
                 </label>
-                <select id="journey-pause-guardrail" class="filter-input" style="width: 200px;">
+                <select id="journey-pause-guardrail" class="filter-input jm-input-sm">
                     <option value="Resume">Resume (Reanudar)</option>
                     <option value="Stop">Stop (Parar)</option>
                     <option value="None">None (Nada)</option>
                 </select>
             </div>
 
-            <div style="border-top: 1px solid #eee; padding-top: 15px; display: flex; flex-direction: column; gap: 12px;">
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;" title="Si es 'true', la fecha de finalización de una actividad 'Wait By Duration' se extiende por los días pausados.">
-                    <span style="font-weight: 600;">ℹ️ Extend Wait End Dates</span>
-                    <input type="checkbox" id="journey-pause-extend" checked style="width: 18px; height: 18px;">
+            <div class="jm-modal-check-group">
+                <label class="jm-modal-check" title="Si es 'true', la fecha de finalización de una actividad 'Wait By Duration' se extiende por los días pausados.">
+                    <span>ℹ️ Extend Wait End Dates</span>
+                    <input type="checkbox" id="journey-pause-extend" checked>
                 </label>
 
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;" title="Especifica si se deben evaluar y procesar los eventos de las actividades 'Wait Until Event' durante la pausa.">
-                    <span style="font-weight: 600;">ℹ️ Process Wait Until Events</span>
-                    <input type="checkbox" id="journey-pause-process" checked style="width: 18px; height: 18px;">
+                <label class="jm-modal-check" title="Especifica si se deben evaluar y procesar los eventos de las actividades 'Wait Until Event' durante la pausa.">
+                    <span>ℹ️ Process Wait Until Events</span>
+                    <input type="checkbox" id="journey-pause-process" checked>
                 </label>
 
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;" title="Si es 'true', los nuevos contactos se encolan mientras dure la pausa y entran al reanudarse el journey.">
-                    <span style="font-weight: 600;">ℹ️ Retain Contact Injection</span>
-                    <input type="checkbox" id="journey-pause-retain" checked style="width: 18px; height: 18px;">                    
+                <label class="jm-modal-check" title="Si es 'true', los nuevos contactos se encolan mientras dure la pausa y entran al reanudarse el journey.">
+                    <span>ℹ️ Retain Contact Injection</span>
+                    <input type="checkbox" id="journey-pause-retain" checked>
                 </label>
             </div>
         </div>
 
         <div class="modal-actions">
             <button id="journey-pause-cancel-btn" class="action-button cancel-btn">Cancelar</button>
-            <button id="journey-pause-confirm-btn" class="action-button activate-btn">Pausar Journeys</button>
+            <button id="journey-pause-confirm-btn" class="action-button warn-btn">Pausar Journeys</button>
         </div>
     </div>
 </div>
+
 
 <!-- 11. SECCIÓN: GESTIÓN DE JOURNEYS -->
 <div id="gestion-journeys-section" class="section">
@@ -1975,16 +2055,16 @@
         <button class="back-button">← Atrás</button>  
         <div class="header-actions">
             <button id="refreshJourneysTableBtn" class="action-button">Refrescar</button>
-            <button id="downloadJourneysCsvBtn" class="action-button">Exportar</button>
+            <button id="downloadJourneysCsvBtn" class="action-button download-btn">Exportar</button>
             <button id="analyzeJourneyBtn" class="action-button" disabled>Analizar</button>
             <button id="scanDeUsageBtn" class="action-button">Data Extensions</button>
-            <button id="getCommunicationsBtn" class="action-button activate-btn" disabled>Descargar detalle</button>
-            <button id="copyJourneyBtn" class="action-button" disabled>Copiar</button>
-            <button id="actionsJourneyBtn" class="action-button delete-btn" disabled>Acciones</button>
+            <button id="getCommunicationsBtn" class="action-button download-btn" disabled>Descargar detalle</button>
+            <button id="copyJourneyBtn" class="action-button activate-btn" disabled>Copiar</button>
+            <button id="actionsJourneyBtn" class="action-button warn-btn" disabled>Acciones</button>
             <button id="getJourneyErrorsBtn" class="action-button" disabled>Ver Errores</button>
         </div>          
     </div>
-    <h2>Gestión de Journeys <span id="journeyCount" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span><span id="journeys-cache-date" style="color: #bbb; font-weight: normal; font-size: 0.75em; margin-left: 10px;"></span></h2>
+    <h2>Gestión de Journeys <span id="journeyCount" class="u-title-hint"></span><span id="journeys-cache-date" class="jm-cache-date"></span></h2>
     <!-- Filtros para la tabla de journeys -->
     <div class="header-filters">
         <input type="text" id="journeyNameFilter" class="filter-input" placeholder="Buscar por nombre...">
@@ -2002,7 +2082,7 @@
         </select>
         <input type="text" id="journeyDEFilter" class="filter-input" placeholder="Buscar por Data Extension...">
         <input type="text" id="journeyFieldsFilter" class="filter-input" placeholder="Campos en entrada ( , ; | )...">
-        <button type="button" id="journeyCommsFilter" class="filter-input" style="cursor: pointer; text-align: center; min-width: 140px; transition: all 0.2s; padding: 8px 12px; background-color: #f9f9f9;">
+        <button type="button" id="journeyCommsFilter" class="filter-input type-card">
             Comunicaciones
         </button>
         <select id="journeyDateField" class="filter-input">
@@ -2018,17 +2098,17 @@
         <table id="journeys-table">
         <thead>
             <tr>
-            <th style="width:40px;"></th>
-            <th class="sortable-header" data-sort-by="name" style="width:19%;">Nombre Journey</th>
-            <th class="sortable-header" data-sort-by="version" style="width:6%;">Versión</th>
-            <th class="sortable-header" data-sort-by="createdDate" style="width:11%;">Fecha creación</th>
-            <th class="sortable-header" data-sort-by="modifiedDate" style="width:11%;">Fecha modificación</th>
-            <th class="sortable-header" data-sort-by="activityDate" style="width:11%;">Fecha actividad</th>
-            <th class="sortable-header" data-sort-by="eventType" style="width:11%;">Tipo</th>
-            <th class="sortable-header" data-sort-by="definitionType" style="width:8%;">Subtipo</th>
-            <th class="sortable-header" data-sort-by="status" style="width:7%;">Estado</th>
-            <th class="sortable-header" data-sort-by="dataExtensionName" style="width:16%;">Data Extension</th>
-            <th class="sortable-header col-des" data-sort-by="usedDEs" style="width:16%;">DEs en Actividades</th>
+            <th></th>
+            <th class="sortable-header" data-sort-by="name">Nombre Journey</th>
+            <th class="sortable-header" data-sort-by="version">Versión</th>
+            <th class="sortable-header" data-sort-by="createdDate">Fecha creación</th>
+            <th class="sortable-header" data-sort-by="modifiedDate">Fecha modificación</th>
+            <th class="sortable-header" data-sort-by="activity.lastContactProcessed">Fecha actividad</th>
+            <th class="sortable-header" data-sort-by="eventType">Tipo</th>
+            <th class="sortable-header" data-sort-by="definitionType">Subtipo</th>
+            <th class="sortable-header" data-sort-by="status">Estado</th>
+            <th class="sortable-header" data-sort-by="dataExtensionName">Data Extension</th>
+            <th class="sortable-header col-des" data-sort-by="usedDEs">DEs en Actividades</th>
             </tr>
         </thead>
         <tbody id="journeys-tbody"></tbody>
@@ -2074,8 +2154,44 @@
     <div class="menu-group changelog-group">
         <h3>Novedades</h3>
         <div class="changelog-list">
-            <!-- ======================== v2.5.5 ======================== -->
+            <!-- ======================== v2.6.2 ======================== -->
             <details class="changelog-entry" open>
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.6.2</span>
+                    <span class="changelog-date">20 Julio 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Nueva vista de Ajustes de la aplicación. Las preferencias se guardan entre sesiones.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Tema: donde puedes elegir tema claro u oscuro. </li>
+                    <li><span class="changelog-tag new">Nuevo</span> Zoom de la interfaz. Ya no es un valor por defecto y se puede ajustar para que se vea mejor según el tamaño de pantalla.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Filas por página configurables en cada tabla (Automatismos, Journeys, Cloud Pages, Usuarios y Contenidos) y cliente + Business Unit por defecto al arrancar.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Cliente + Business Unit por defecto al arrancar.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Gestión de almacenamiento: tamaño de cada caché (Contenidos, Journeys, Auditoría y Cloud Pages) con sus elementos, y borrado individual o completo.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> En Configuración de campos de Data Extensions, los PK y Requerido son ahora botones (más cómodos de pulsar) y marcar PK activa Requerido automáticamente.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Contador acumulado de llamadas API por Business Unit: en Configuración de Cuentas &gt; Business Units, nueva columna "Llamadas API" con el total histórico hecho contra cada BU.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.6.1 ======================== -->
+            <details class="changelog-entry">
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.6.1</span>
+                    <span class="changelog-date">7 Julio 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Rediseño visual completo de la aplicación: nueva paleta de colores, botones, tablas, modales, menú lateral y badges de estado unificados en todas las vistas.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Refactorización completa de clases CSS sin estilos inline y refactorización de auditoría con orquestador y varios archivos con lógica.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Ya no es necesario dar de alta cada BU de cada cliente. Solo hace falta logearse en la BU principal y en Confogiración de APIs > Business Units darle a Sincronizar.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> La selección de clientes ahora solo muestra 1 cliente y desde este se puede seleccionar la Business Unit. Es necesario dar el permiso Accounts: Read y volver a logearse.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> El panel de logs y el fichero descargado ahora muestra las llamadas y respuestas agrupadas y colapsadas.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> El Buscador de Clientes ahora permite buscar en los canales de Whatsapp y dar de alta un registro directamente en un canal, por ejemplo para pruebas.</li>   
+                    <li><span class="changelog-tag new">Nuevo</span> La Auditoría ahora tiene en cuenta la cache de contenidos para sacar métricas.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> El Calendario ya no es una vista aparte: ahora es un botón dentro de Automatismos que abre un panel con el calendario de los automatismos que tengas filtrados en la vista.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.5.5 ======================== -->
+            <details class="changelog-entry">
                 <summary class="changelog-version">
                     <span class="changelog-badge">v2.5.5</span>
                     <span class="changelog-date">1 Julio 2026</span>
@@ -2284,7 +2400,7 @@
                 <label for="deTargetFolderName">Nombre de carpeta donde guardar DEs clonadas</label>
                 <input type="text" id="deTargetFolderName" placeholder="Introduce un nombre o parte de él">
             </div>
-            <div class="header-actions" style="justify-content: center; margin-top: 20px;">
+            <div class="header-actions u-mt-20" style="justify-content: center;">
                 <button id="queryClonerSearchFoldersBtn" class="action-button" disabled>Buscar Carpetas</button>
             </div>
         </div>
@@ -2334,18 +2450,18 @@
     <!-- ========================================================== -->
     <div id="queries-cloner-step2" class="cloner-step-container" style="display: none;">
             <div class="section-header">
-            <button id="queryClonerBackBtn" class="action-button">← Atrás</button>
+            <button id="queryClonerBackBtn" class="action-button cancel-btn">← Atrás</button>
         </div>
         <h2>Clonador de Queries - Paso 2: Selección</h2>
         
-        <div class="config-block" style="flex-grow: 1; display: flex; flex-direction: column;">
+        <div class="config-block u-grow u-flex-col">
             <div class="config-block-header">
                 <h3>Selecciona las Queries a clonar</h3>
                 <div class="header-actions">
                     <button id="queryClonerCloneBtn" class="action-button activate-btn" disabled>Clonar Seleccionadas</button>
                 </div>
             </div>
-            <div class="table-container" style="flex-grow: 1;">
+            <div class="table-container u-grow">
                 <table id="query-selection-table">
                     <thead>
                         <tr>
@@ -2368,11 +2484,11 @@
         <button class="back-button">← Atrás</button>
         <div class="header-actions">
             <button id="refreshSendManagementBtn" class="action-button">Refrescar</button>
-            <button id="downloadSendManagementCsvBtn" class="action-button activate-btn">Exportar</button>
+            <button id="downloadSendManagementCsvBtn" class="action-button download-btn">Exportar</button>
         </div>
     </div>
 
-    <h2>Gestión de Envíos <span id="send-management-count" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
+    <h2>Gestión de Envíos <span id="send-management-count" class="u-title-hint"></span></h2>
 
     <div class="tabs-container">
         <div class="tab-buttons">
@@ -2452,22 +2568,22 @@
 
             <!-- Zona de captura (visible cuando no hay datos) -->
             <div id="dp-import-zone">
-                <div class="config-block" style="background:#f8f9fa; border:2px dashed #69a3db; border-radius:10px; padding:30px; margin:10px 0;">
-                    <div style="text-align:left; max-width:900px; margin:0 auto;">
-                        <h3 style="color:#69a3db;">1. Abrir SFMC</h3>
-                        <a id="dp-sfmc-link" href="#" style="color:#69a3db; font-weight:bold; cursor:pointer;">IR A DELIVERY PROFILES</a>
+                <div class="config-block empty-instructions">
+                    <div class="empty-instructions-inner">
+                        <h3>1. Abrir SFMC</h3>
+                        <a id="dp-sfmc-link" href="#" class="empty-instructions-link">IR A DELIVERY PROFILES</a>
 
-                        <h3 style="color:#69a3db;">2. Ejecutar Script</h3>
+                        <h3>2. Ejecutar Script</h3>
                         <p>Copia este código y pégalo en la consola (F12) de SFMC:</p>
-                        <div style="background-color:#282c34; border-radius:6px; overflow:hidden; margin-top:15px; border:1px solid #181a1f;">
-                            <div style="display:flex; justify-content:flex-end; padding:5px 10px; background-color:#21252b; border-bottom:1px solid #181a1f;">
-                                <button id="dp-copy-script-btn" class="action-button small-text-btn" style="background-color:#3b4048; border:none; color:#fff;">Copiar Código</button>
+                        <div class="code-panel">
+                            <div class="code-panel-header">
+                                <button id="dp-copy-script-btn" class="action-button small-text-btn code-panel-btn">Copiar Código</button>
                             </div>
-                            <pre id="dp-script-to-copy" style="color:#abb2bf; padding:15px; max-height:200px; overflow-y:auto; font-family:'Consolas',monospace; font-size:12px; margin:0; white-space:pre; line-height:1.4;"></pre>
+                            <pre id="dp-script-to-copy" class="code-panel-pre"></pre>
                         </div>
 
-                        <h3 style="color:#69a3db;">3. Pegar Resultado</h3>
-                        <textarea id="dp-json-input" style="width:100%; height:100px; margin-top:5px; padding:10px; border-radius:5px; border:1px solid #ccc; font-family:monospace; font-size:11px; resize:none; box-sizing:border-box;" placeholder="Pega aquí el JSON generado por el script..."></textarea>
+                        <h3>3. Pegar Resultado</h3>
+                        <textarea id="dp-json-input" class="code-paste-area" placeholder="Pega aquí el JSON generado por el script..."></textarea>
                     </div>
                 </div>
             </div>
@@ -2504,16 +2620,104 @@
     </div>
 </div>
 
+<!-- SECCIÓN: AJUSTES DE LA APLICACIÓN -->
+<div id="ajustes-section" class="section config-section-container">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>
+    </div>
+    <h2>Ajustes</h2>
+
+    <div class="config-block">
+        <h3>Tema</h3>
+        <div class="settings-row">
+            <div class="settings-row-info">
+                <div class="settings-row-desc">Elige el aspecto claro u oscuro de la aplicación.</div>
+            </div>
+            <div class="settings-theme-options" id="settings-theme-options">
+                <button type="button" class="settings-theme-btn" data-theme-value="light">Claro</button>
+                <button type="button" class="settings-theme-btn" data-theme-value="dark">Oscuro</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="config-block">
+        <h3>Zoom de la interfaz</h3>
+        <div class="settings-row">
+            <div class="settings-row-info">
+                <div class="settings-row-desc">Ajusta el tamaño general de la aplicación. Con un zoom muy alto o muy bajo algunos elementos pueden no verse correctamente.</div>
+            </div>
+            <div class="settings-zoom">
+                <button type="button" class="settings-zoom-btn" id="settings-zoom-dec" title="Reducir">−</button>
+                <span class="settings-zoom-value" id="settings-zoom-value">85%</span>
+                <button type="button" class="settings-zoom-btn" id="settings-zoom-inc" title="Aumentar">+</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="config-block" id="settings-rows-card">
+        <h3>Filas por página</h3>
+        <p class="settings-row-desc">Número de registros por página en cada tabla.</p>
+        <div class="settings-row">
+            <div class="settings-row-info"><div class="settings-row-title">Aplicar a todas</div></div>
+            <select id="settings-rows-all" class="filter-input settings-select"></select>
+        </div>
+        <div class="settings-grid">
+            <div class="settings-field">
+                <label>Automatismos</label>
+                <select class="filter-input settings-rows-select" data-view="automations"></select>
+            </div>
+            <div class="settings-field">
+                <label>Journeys</label>
+                <select class="filter-input settings-rows-select" data-view="journeys"></select>
+            </div>
+            <div class="settings-field">
+                <label>Cloud Pages</label>
+                <select class="filter-input settings-rows-select" data-view="cloudpages"></select>
+            </div>
+            <div class="settings-field">
+                <label>Usuarios</label>
+                <select class="filter-input settings-rows-select" data-view="users"></select>
+            </div>
+            <div class="settings-field">
+                <label>Contenidos</label>
+                <select class="filter-input settings-rows-select" data-view="content"></select>
+            </div>
+        </div>
+    </div>
+
+    <div class="config-block">
+        <h3>Cliente por defecto</h3>
+        <p class="settings-row-desc">Cliente y Business Unit que se seleccionarán automáticamente al abrir la aplicación.</p>
+        <div class="settings-grid">
+            <div class="settings-field">
+                <label>Cliente</label>
+                <select id="settings-client-select" class="filter-input"></select>
+            </div>
+            <div class="settings-field" id="settings-bu-field">
+                <label>Business Unit</label>
+                <select id="settings-bu-select" class="filter-input"></select>
+            </div>
+        </div>
+    </div>
+
+    <div class="config-block">
+        <h3>Almacenamiento</h3>
+        <p class="settings-row-desc u-mb-15">Cachés guardadas en tu equipo, con los elementos cacheados de cada una. Al borrarlas se liberará espacio; los datos se volverán a descargar al refrescar cada vista.</p>
+        <div id="settings-cache-list"></div>
+    </div>
+</div>
+
+
 <div id="gestion-usuarios-section" class="section">
     <div class="section-header">
         <button class="back-button">← Atrás</button>
         <div class="header-actions">
-            <button id="downloadUsersCsvBtn" class="action-button activate-btn">Descargar Usuarios</button>
+            <button id="downloadUsersCsvBtn" class="action-button download-btn">Descargar Usuarios</button>
             <button id="prepareCapturBtn" class="action-button" disabled>Preparar Captura</button>
         </div>
     </div>
 
-    <h2>Gestión de Usuarios y Permisos <span id="userCount" style="color: #558ac7; font-weight: normal; font-size: 0.9em;"></span></h2>
+    <h2>Gestión de Usuarios y Permisos <span id="userCount" class="u-title-hint"></span></h2>
     
 
     <!-- Cabecera de pestañas — usa um-tab-button para no interferir con el listener global de app.js -->
@@ -2522,7 +2726,7 @@
             <button class="um-tab-button um-tab-active" data-um-tab="tab-user-list">Lista de Usuarios</button>
             <button class="um-tab-button" id="tab-perms-detail-btn" data-um-tab="tab-user-detail" disabled>Detalle / Comparativa</button>
         </div>
-        <div id="users-expand-controls" style="display:none; gap:8px; padding-bottom:4px; align-items:center;">
+        <div id="users-expand-controls">
             <button id="btn-toggle-diffs" class="um-mini-btn">Solo Diferencias</button>
             <button id="btn-expand-perms" class="um-mini-btn">Colapsar Todo</button>
         </div>    
@@ -2533,7 +2737,7 @@
         <div class="um-filter-bar">
             <div class="um-filter-group">
                 <label class="um-filter-label">Nombre</label>
-                <input type="text" id="userSearchInput" class="filter-input" placeholder="Filtrar por nombre..." style="width:220px; height:34px;">
+                <input type="text" id="userSearchInput" class="filter-input um-name-filter" placeholder="Filtrar por nombre...">
             </div>
             <div class="um-filter-group">
                 <label class="um-filter-label">Estado</label>
@@ -2543,11 +2747,11 @@
                     <option value="inactive">Inactivos</option>
                 </select>
             </div>
-            <div class="um-filter-group" style="position:relative;">
+            <div class="um-filter-group um-relative">
                 <label class="um-filter-label">Roles</label>
                 <div id="users-role-dropdown-trigger" class="um-dropdown-trigger">
                     <span id="users-role-dropdown-label">Todos los roles</span>
-                    <span style="font-size:10px; color:#888;">▼</span>
+                    <span class="um-dropdown-arrow">▼</span>
                 </div>
                 <div id="users-role-dropdown-menu" class="um-dropdown-menu" style="display:none; position:fixed;">
                     <div id="users-role-checkbox-list"></div>
@@ -2559,11 +2763,11 @@
             <table id="users-table" class="um-table">
                 <thead>
                     <tr>
-                        <th class="um-sortable" data-sort-by="name">Nombre (ID)</th>
-                        <th class="um-sortable" data-sort-by="userName">UserName</th>
-                        <th class="um-sortable" data-sort-by="isApi">API User</th>
-                        <th class="um-sortable" data-sort-by="lastLogin">Último Login</th>
-                        <th class="um-sortable" data-sort-by="isActive">Estado</th>
+                        <th class="sortable-header" data-sort-by="name">Nombre (ID)</th>
+                        <th class="sortable-header" data-sort-by="userName">UserName</th>
+                        <th class="sortable-header" data-sort-by="isApi">API User</th>
+                        <th class="sortable-header" data-sort-by="lastLogin">Último Login</th>
+                        <th class="sortable-header" data-sort-by="isActive">Estado</th>
                         <th>Roles</th>
                     </tr>
                 </thead>
@@ -2581,16 +2785,16 @@
     <!-- PESTAÑA 2: DETALLE / COMPARATIVA -->
     <div id="tab-user-detail" class="um-tab-content">
         <div id="users-import-ui" class="um-import-area">
-            <div style="text-align:left; max-width:900px; margin:0 auto;">
-                <h3 style="color:#69a3db;">1. Abrir SFMC</h3>
-                <a id="users-sfmc-link" href="#" style="color:#69a3db; font-weight:bold; cursor:pointer;">IR A ADMINISTRACIÓN DE USUARIOS</a>
+            <div class="um-import-instructions">
+                <h3 class="um-step-title">1. Abrir SFMC</h3>
+                <a id="users-sfmc-link" href="#" class="um-sfmc-link">IR A ADMINISTRACIÓN DE USUARIOS</a>
 
-                <h3 style="color:#69a3db;">2. Ejecutar Script</h3>
+                <h3 class="um-step-title">2. Ejecutar Script</h3>
                 <p>Copia este código y pégalo en la consola (F12) de SFMC:</p>
                 <div id="users-script-to-copy" class="um-code-block"></div>
-                <button id="users-copy-script-btn" class="action-button" style="margin-top:8px;">COPIAR CÓDIGO</button>
+                <button id="users-copy-script-btn" class="action-button um-copy-script-btn">COPIAR CÓDIGO</button>
 
-                <h3 style="color:#69a3db;">3. Pegar Resultado</h3>
+                <h3 class="um-step-title">3. Pegar Resultado</h3>
                 <textarea id="users-json-input" class="um-data-input" placeholder="Pega aquí el resultado del script..."></textarea>
             </div>
         </div>
@@ -2629,12 +2833,8 @@
       <pre><code id="log-messages">Esperando acciones...</code></pre>
     </div>
     <div id="log-request-block" class="log-block">
-      <h4>Llamadas API</h4>
-      <pre><code id="log-request"></code></pre>
-    </div>
-    <div id="log-response-block" class="log-block">
-      <h4>Respuestas API</h4>
-      <pre><code id="log-response"></code></pre>
+      <h4>Llamadas API (petición ▸ respuesta)</h4>
+      <div id="log-transcript" class="log-transcript"></div>
     </div>
   </div>
 </aside>
@@ -2660,7 +2860,7 @@
         <textarea id="paste-data-area" rows="10" placeholder="Ciudad	Text	50&#10;Email	EmailAddress	254"></textarea>
         <div class="modal-actions">
             <button id="process-paste-btn" class="action-button">Añadir Campos</button>
-            <button id="cancel-paste-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="cancel-paste-btn" class="action-button cancel-btn">Cancelar</button>
         </div>
     </div>
 </div>
@@ -2680,7 +2880,7 @@
     <div class="modal-content">
         <h3>Aviso</h3>
         <p id="custom-alert-message" style="line-height: 1.6;"></p>
-        <div class="modal-actions" style="margin-top: 20px;">
+        <div class="modal-actions">
             <button id="custom-alert-close-btn" class="action-button">Aceptar</button>
         </div>
     </div>
@@ -2689,8 +2889,8 @@
     <div class="modal-content">
         <h3>Confirmación Requerida</h3>
         <p id="custom-confirm-message" style="line-height: 1.6;"></p>
-        <div class="modal-actions" style="margin-top: 20px;">
-            <button id="custom-confirm-cancel-btn" class="action-button delete-btn">Cancelar</button>
+        <div class="modal-actions">
+            <button id="custom-confirm-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="custom-confirm-ok-btn" class="action-button activate-btn">Confirmar</button>
         </div>
     </div>
@@ -2721,8 +2921,8 @@
                 </table>
             </div>
         </div>
-        <div class="modal-actions" style="margin-top: 20px;">
-            <button id="folder-selector-cancel-btn" class="action-button delete-btn">Cancelar</button>
+        <div class="modal-actions">
+            <button id="folder-selector-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="folder-selector-ok-btn" class="action-button activate-btn" disabled>Seleccionar</button>
         </div>
     </div>
@@ -2770,8 +2970,8 @@
         </div>
         
         <!-- Botones de acción del modal -->
-        <div class="modal-actions" style="margin-top: 20px;">
-            <button id="automation-de-selector-cancel-btn" class="action-button delete-btn">Cancelar</button>
+        <div class="modal-actions">
+            <button id="automation-de-selector-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="automation-de-selector-continue-btn" class="action-button" disabled>Continuar →</button>
             <button id="automation-de-selector-clone-btn" class="action-button activate-btn hidden" disabled>Clonar</button>
         </div>
@@ -2853,8 +3053,8 @@
         </div>
 
         <!-- Los botones de acción van fuera del contenedor de estilos -->
-        <div class="modal-actions" style="margin-top: 20px;">
-            <button id="journey-cloner-cancel-btn" class="action-button delete-btn">Cancelar</button>
+        <div class="modal-actions">
+            <button id="journey-cloner-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="journey-cloner-continue-btn" class="action-button" disabled>Continuar →</button>
             <button id="journey-cloner-clone-btn" class="action-button activate-btn hidden" disabled>Clonar</button>
         </div>
@@ -2868,13 +3068,13 @@
 
         <!-- Bloque central de acciones -->
         <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 40px;">
-            <button id="journey-stop-current-btn" class="action-button" style="background-color: #558ac7; min-width: 160px;">Solo última versión</button>
-            <button id="journey-stop-all-btn" class="action-button activate-btn" style="min-width: 160px;">Todas las versiones</button>
+            <button id="journey-stop-current-btn" class="action-button delete-btn" style="min-width: 160px;">Solo última versión</button>
+            <button id="journey-stop-all-btn" class="action-button delete-btn" style="min-width: 160px;">Todas las versiones</button>
         </div>
 
         <!-- Bloque inferior derecho para Cancelar -->
         <div style="display: flex; justify-content: flex-end;">
-            <button id="journey-stop-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="journey-stop-cancel-btn" class="action-button cancel-btn">Cancelar</button>
         </div>
     </div>
 </div>
@@ -2885,29 +3085,29 @@
         <p id="journey-comm-message" style="margin-bottom: 25px; color: #666;"></p>
 
         <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 40px;">
-            <button id="journey-comm-selected-btn" class="action-button" style="background-color: #558ac7; min-width: 160px;">Solo seleccionados</button>
-            <button id="journey-comm-all-btn" class="action-button activate-btn" style="min-width: 160px;">Todos los cargados</button>
+            <button id="journey-comm-selected-btn" class="action-button download-btn" style="min-width: 160px;">Solo seleccionados</button>
+            <button id="journey-comm-all-btn" class="action-button download-btn" style="min-width: 160px;">Todos los cargados</button>
         </div>
 
         <div style="display: flex; justify-content: flex-end;">
-            <button id="journey-comm-cancel-btn" class="action-button delete-btn">Cancelar</button>
+            <button id="journey-comm-cancel-btn" class="action-button cancel-btn">Cancelar</button>
         </div>
     </div>
 </div>
-
-<div id="app-version"></div> 
-<script type="module" src="app.js"></script>
-</body>
-</html>
 
 <!-- MODAL ESPECÍFICA PARA CONTENIDOS -->
 <div id="checkbox-select-modal" class="modal-overlay">
     <div class="modal-content">
         <h3 id="checkbox-select-title">Seleccionar opciones</h3>
         <div id="checkbox-select-options" style="padding: 10px 0;"></div>
-        <div class="modal-actions" style="margin-top: 20px;">
-            <button id="checkbox-select-cancel-btn" class="action-button delete-btn">Cancelar</button>
+        <div class="modal-actions">
+            <button id="checkbox-select-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="checkbox-select-ok-btn" class="action-button activate-btn">Aceptar</button>
         </div>
     </div>
 </div>
+
+<div id="app-version"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
