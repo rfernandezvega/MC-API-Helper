@@ -2,7 +2,7 @@
 // Fichero: api-journeys.js
 // ===================================================================
 import { executeRestRequest, executeSoapRequest } from './api-core.js';
-import { getFolderPath } from './api-helpers.js';
+import { resolveFolderPaths, clearFolderPathCache } from './api-helpers.js';
 
 /**
  * Recupera el historial y el estado actual de un contacto dentro de todos los Journeys.
@@ -107,13 +107,14 @@ export async function fetchAllEventDefinitions(apiConfig) {
  * @returns {Promise<object>} Objeto cuyas claves son los IDs de carpeta y valores la ruta.
  */
 export async function buildJourneyFolderMap(journeys, apiConfig) {
-    const allCategoryIds = [...new Set(journeys.map(j => j.categoryId).filter(Boolean))];
-    const folderMap = {};
+    // Construir el mapa completo es una operación en sí misma: se parte de caché vacía.
+    clearFolderPathCache();
 
-    for (const id of allCategoryIds) {
-        folderMap[id] = await getFolderPath(id, apiConfig);
-    }
-    
+    const allCategoryIds = [...new Set(journeys.map(j => j.categoryId).filter(Boolean))];
+    const paths = await resolveFolderPaths(allCategoryIds, apiConfig);
+
+    const folderMap = {};
+    allCategoryIds.forEach(id => { folderMap[id] = paths.get(String(id)) || ''; });
     return folderMap;
 }
 

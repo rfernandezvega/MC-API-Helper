@@ -50,6 +50,8 @@ async function searchQueriesByText() {
         if (!apiConfig || !apiConfig.soapUri) throw new Error("Configuración de API incompleta.");
 
         mcApiService.setLogger(logger);
+        // Cada búsqueda parte de cero para no reutilizar automatismos ya descargados.
+        mcApiService.clearAutomationDetailsCache();
 
         const searchText = elements.querySearchText.value.trim();
         if (!searchText) throw new Error("El campo 'Texto a buscar' no puede estar vacío.");
@@ -68,27 +70,11 @@ async function searchQueriesByText() {
             return;
         }
 
-        // 2. ENRIQUECIMIENTO: Buscamos la ubicación usando la función tal cual está en el service
+        // searchQueriesBySimpleFilter ya devuelve cada query con sus automatismos resueltos,
+        // así que aquí no hay que volver a pedirlos: solo se pintan.
         logger.logMessage(`Encontradas ${queriesFound.length} queries. Analizando ubicación...`);
-        
-        const enrichedQueries = await Promise.all(queriesFound.map(async (query) => {
-            try {
-                // Sacamos el ID (ObjectID es el que suele usar Automation Studio)
-                const activityId = query.objectID || query.ObjectID || query.id || query.ID;
-                
-                if (activityId) {
-                    // LLAMADA CORREGIDA: Solo 2 parámetros como pide tu mc-api-service.js
-                    const autoInfo = await mcApiService.findAutomationForActivity(activityId, apiConfig);
-                    query.automations = autoInfo || [];
-                }
-            } catch (e) {
-                console.warn(`No se pudo encontrar automatismo para: ${query.name}`);
-                query.automations = [];
-            }
-            return query;
-        }));
 
-        renderTable(enrichedQueries);
+        renderTable(queriesFound);
         logger.logMessage(`Búsqueda y análisis de ubicación completado.`);
 
     } catch (error) {

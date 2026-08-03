@@ -67,22 +67,39 @@ function renderHeaderInfo(auto) {
 
 async function enrichAutomationData(details) {
     const apiConfig = await getAuthenticatedConfig();
-    mcApiService.setLogger(logger); 
+    mcApiService.setLogger(logger);
+
+    // El análisis es una operación completa: se parte de cachés vacías para pedir datos
+    // frescos. El JSON de este automatismo ya está descargado, así que se registra para
+    // que la búsqueda de usos de cada actividad no vuelva a pedirlo una vez por actividad.
+    mcApiService.clearFolderPathCache();
+    mcApiService.clearAutomationDetailsCache();
+    mcApiService.primeAutomationDetailsCache(details);
+
+    // Varias actividades suelen escribir en la misma DE; se guarda el resultado por DE
+    // para no repetir la misma búsqueda de impacto dentro de este análisis.
+    const reverseImpactCache = new Map();
 
     // Función interna para buscar quién más escribe en una DE (Reverse Impact)
     const getReverseImpactSources = async (deName, deObjectId, currentActName) => {
-        const [imports, queries] = await Promise.all([
-            mcApiService.findImportsTargetingDE(deObjectId, apiConfig),
-            mcApiService.searchQueriesBySimpleFilter({
-                property: 'DataExtensionTarget.Name',
-                simpleOperator: 'equals',
-                value: deName
-            }, apiConfig)
-        ]);
-        // Unimos y filtramos: que no sea la actividad actual y que tenga al menos una automatización vinculada
-        return [...imports, ...queries].filter(src => 
-            src.name !== currentActName && 
-            src.automations && 
+        const cacheKey = `${deObjectId}|${deName}`.toLowerCase();
+
+        if (!reverseImpactCache.has(cacheKey)) {
+            reverseImpactCache.set(cacheKey, Promise.all([
+                mcApiService.findImportsTargetingDE(deObjectId, apiConfig),
+                mcApiService.searchQueriesBySimpleFilter({
+                    property: 'DataExtensionTarget.Name',
+                    simpleOperator: 'equals',
+                    value: deName
+                }, apiConfig)
+            ]).then(([imports, queries]) => [...imports, ...queries]));
+        }
+
+        const sources = await reverseImpactCache.get(cacheKey);
+        // Se filtra por actividad porque el listado cacheado es común a todas ellas.
+        return sources.filter(src =>
+            src.name !== currentActName &&
+            src.automations &&
             src.automations.length > 0
         );
     };

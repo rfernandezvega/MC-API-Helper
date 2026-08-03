@@ -65,6 +65,8 @@ async function findDataSources() {
     try {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
+        // Cada búsqueda parte de cero para no reutilizar automatismos ya descargados.
+        mcApiService.clearAutomationDetailsCache();
 
         const deName = elements.deNameToFindInput.value.trim();
         if (!deName) {

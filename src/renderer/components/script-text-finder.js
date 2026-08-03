@@ -26,6 +26,8 @@ async function handleSearch() {
     try {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
+        // Cada búsqueda parte de cero para no reutilizar automatismos ya descargados.
+        mcApiService.clearAutomationDetailsCache();
 
         // 1. Buscamos los scripts que contienen el texto
         const scriptsFound = await mcApiService.searchScriptsByText(searchText, apiConfig);

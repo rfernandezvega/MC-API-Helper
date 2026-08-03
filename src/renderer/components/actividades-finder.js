@@ -65,19 +65,14 @@ async function searchActivityUsage() {
     try {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
+        // Cada búsqueda parte de cero para no reutilizar automatismos ya descargados.
+        mcApiService.clearAutomationDetailsCache();
 
-        let allFoundActivities = [];
+        logger.logMessage(`Buscando: ${valuesToSearch.map(v => `"${v}"`).join(', ')}`);
 
-        for (const val of valuesToSearch) {
-            logger.logMessage(`Buscando: "${val}"`);
-            const results = await mcApiService.searchActivityTargeted(selectedType, val, apiConfig);
-            
-            if (results && Array.isArray(results)) {
-                allFoundActivities.push(...results);
-            } else if (results) {
-                allFoundActivities.push(results);
-            }
-        }
+        // Todos los términos se resuelven en un solo recorrido: antes cada valor repetía
+        // la paginación completa de la colección.
+        let allFoundActivities = await mcApiService.searchActivitiesTargeted(selectedType, valuesToSearch, apiConfig);
 
         // Quitar duplicados por ObjectID
         allFoundActivities = allFoundActivities.filter((v, i, a) => a.findIndex(t => t.objectID === v.objectID) === i);
@@ -123,8 +118,16 @@ async function findUsageForAll(activities, apiConfig) {
     elements.activityUsageTbody.innerHTML = '';
     elements.activityResultsBlock.classList.remove('hidden');
 
-    for (const activity of activities) {
-        const automations = await mcApiService.findAutomationForActivity(activity, apiConfig);
+    // Los usos se buscan en paralelo; la caché de automatismos evita que varias
+    // actividades del mismo automatismo vuelvan a descargar su definición.
+    const usages = await Promise.all(
+        activities.map(async (activity) => ({
+            activity,
+            automations: await mcApiService.findAutomationForActivity(activity, apiConfig)
+        }))
+    );
+
+    for (const { activity, automations } of usages) {
         if (automations && automations.length > 0) {
             automations.forEach(auto => {
                 const row = document.createElement('tr');

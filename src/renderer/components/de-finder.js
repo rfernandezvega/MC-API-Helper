@@ -59,6 +59,8 @@ async function searchDE() {
     try {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
+        // Cada búsqueda pide las rutas de nuevo: nunca se muestra una carpeta ya movida.
+        mcApiService.clearFolderPathCache();
 
         const property = elements.deSearchProperty.value;
         const value = elements.deSearchValue.value.trim();
@@ -78,16 +80,19 @@ async function searchDE() {
 
         logger.logMessage(`Se encontraron ${deList.length} DEs. Obteniendo rutas de carpeta...`);
 
-        const pathPromises = deList.map(async (deInfo) => {
-            if (!deInfo.categoryId || parseInt(deInfo.categoryId) === 0) {
-                return { name: deInfo.deName, key: deInfo.customerKey, path: 'Data Extensions' };
-            }
-            const folderPath = await mcApiService.getFolderPath(deInfo.categoryId, apiConfig);
-            return { name: deInfo.deName, key: deInfo.customerKey, path: folderPath || 'Data Extensions' };
-        });
+        // Las rutas se piden en bloque (una llamada por nivel del árbol) en lugar de una
+        // cadena de llamadas por cada DE, que repetía las mismas carpetas una y otra vez.
+        const paths = await mcApiService.resolveFolderPaths(
+            deList.map(de => de.categoryId).filter(Boolean),
+            apiConfig
+        );
 
-        const resultsWithPaths = await Promise.all(pathPromises);
-        
+        const resultsWithPaths = deList.map(deInfo => ({
+            name: deInfo.deName,
+            key: deInfo.customerKey,
+            path: paths.get(String(deInfo.categoryId)) || 'Data Extensions'
+        }));
+
         renderTable(resultsWithPaths);
         logger.logMessage("Visualización de resultados completada.");
 
