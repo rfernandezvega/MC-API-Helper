@@ -4,8 +4,12 @@ import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import { buildAutomationUrl, linkCell } from '../ui/mc-links.js';
+import { downloadCsv, buildCsvFileName } from '../ui/csv-export.js';
 
 let getAuthenticatedConfig;
+
+// Últimos scripts pintados: son el origen de la descarga en CSV.
+let lastScripts = [];
 
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
@@ -13,6 +17,24 @@ export function init(dependencies) {
         elements.searchScriptsByTextBtn.addEventListener('click', handleSearch);
     }
     elements.scriptSearchResultsTbody.addEventListener('click', ui.handleExternalLink);
+
+    elements.downloadScriptSearchCsvBtn?.addEventListener('click', downloadResultsCsv);
+}
+
+/** Descarga en CSV los scripts encontrados con su ubicación en automatismos. */
+function downloadResultsCsv() {
+    downloadCsv({
+        headers: ['Nombre del Script', 'Automatización', 'Paso'],
+        rows: lastScripts.map(item => {
+            const automations = item.automations || [];
+            return [
+                item.name || '',
+                automations.map(a => a.automationName || 'N/A').join(' | '),
+                automations.map(a => a.step || '').join(' | ')
+            ];
+        }),
+        fileName: buildCsvFileName('buscador_texto_scripts')
+    });
 }
 
 async function handleSearch() {
@@ -22,6 +44,8 @@ async function handleSearch() {
     ui.blockUI("Buscando en Scripts y analizando automatismos...");
     logger.startLogBuffering();
     elements.scriptSearchResultsTbody.innerHTML = '<tr><td colspan="3">Analizando todos los scripts...</td></tr>';
+    lastScripts = [];
+    if (elements.downloadScriptSearchCsvBtn) elements.downloadScriptSearchCsvBtn.disabled = true;
 
     try {
         const apiConfig = await getAuthenticatedConfig();
@@ -57,6 +81,8 @@ async function handleSearch() {
 
 function renderTable(results) {
     elements.scriptSearchResultsTbody.innerHTML = '';
+    lastScripts = results || [];
+    if (elements.downloadScriptSearchCsvBtn) elements.downloadScriptSearchCsvBtn.disabled = lastScripts.length === 0;
 
     results.forEach(item => {
         const row = document.createElement('tr');

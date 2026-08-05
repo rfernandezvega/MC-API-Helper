@@ -124,6 +124,7 @@ export function init() {
     elements.searchDEBtn = document.getElementById('searchDEBtn');
     elements.deSearchResultsTbody = document.querySelector('#de-search-results-tbody');
     elements.deToSourcesBtn = document.getElementById('deToSourcesBtn');
+    elements.downloadDeSearchCsvBtn = document.getElementById('downloadDeSearchCsvBtn');
 
     // --- 8b. Pestaña: Origen de Datos ---
     elements.deNameToFindInput = document.getElementById('deNameToFind');
@@ -135,6 +136,7 @@ export function init() {
     elements.selectAllDEsCheckbox = document.getElementById('selectAllDEsCheckbox');
     elements.searchSelectedDEsBtn = document.getElementById('searchSelectedDEsBtn');
     elements.showSourceQueryBtn = document.getElementById('showSourceQueryBtn');
+    elements.downloadDataSourcesCsvBtn = document.getElementById('downloadDataSourcesCsvBtn');
 
     // --- 8c. Pestaña: Clientes ---
     elements.customerSearchValue = document.getElementById('customerSearchValue');
@@ -147,6 +149,8 @@ export function init() {
     elements.customerJourneysTbody = document.getElementById('customer-journeys-tbody');
     elements.customerDesResultsBlock = document.getElementById('customer-des-results-block');
     elements.desResultsContainer = document.getElementById('des-results-container');
+    elements.downloadCustomerSearchCsvBtn = document.getElementById('downloadCustomerSearchCsvBtn');
+    elements.downloadCustomerJourneysCsvBtn = document.getElementById('downloadCustomerJourneysCsvBtn');
 
     // --- 8c-bis. Audiencia WhatsApp (dentro de la pestaña Clientes) ---
     elements.waToggleBtn = document.getElementById('waToggleBtn');
@@ -159,6 +163,7 @@ export function init() {
     elements.waNewLocaleList = document.getElementById('wa-locale-list');
     elements.waNewChannel = document.getElementById('waNewChannel');
     elements.waRegisterBtn = document.getElementById('waRegisterBtn');
+    elements.downloadWaResultsCsvBtn = document.getElementById('downloadWaResultsCsvBtn');
 
     // --- 8d. Pestaña: Texto en Queries ---
     elements.querySearchText = document.getElementById('querySearchText');
@@ -166,18 +171,21 @@ export function init() {
     elements.querySearchResultsTable = document.getElementById('query-search-results-table');
     elements.querySearchResultsTbody = document.querySelector('#query-search-results-tbody');
     elements.showQueryTextBtn = document.getElementById('showQueryTextBtn');
+    elements.downloadQuerySearchCsvBtn = document.getElementById('downloadQuerySearchCsvBtn');
 
     // --- 8e. Pestaña: Texto en Scripts ---
     elements.scriptSearchText = document.getElementById('scriptSearchText');
     elements.searchScriptsByTextBtn = document.getElementById('searchScriptsByTextBtn');
     elements.scriptSearchResultsTbody = document.getElementById('script-search-results-tbody');
     elements.scriptSearchResultsTable = document.getElementById('script-search-results-table');
+    elements.downloadScriptSearchCsvBtn = document.getElementById('downloadScriptSearchCsvBtn');
 
     // --- 8f. Pestaña: Contenidos ---
     elements.contentSearchValue = document.getElementById('contentSearchValue');
     elements.searchContentBtn = document.getElementById('searchContentBtn');
     elements.contentSearchResultsTbody = document.getElementById('content-search-results-tbody');
     elements.contentDetailBtn = document.getElementById('contentDetailBtn');
+    elements.downloadContentSearchCsvBtn = document.getElementById('downloadContentSearchCsvBtn');
     elements.contentDetailBlock = document.getElementById('content-detail-block');
     elements.contentDetailTitle = document.getElementById('content-detail-title');
     elements.contentTreeWrapper = document.getElementById('content-tree-wrapper');
@@ -202,6 +210,8 @@ export function init() {
     elements.activityUsageTbody = document.getElementById('activity-usage-tbody');
     elements.activityListTbody = document.getElementById('activity-list-tbody');
     elements.deleteActivityBtn = document.getElementById('deleteActivityBtn');
+    elements.downloadActivityListCsvBtn = document.getElementById('downloadActivityListCsvBtn');
+    elements.downloadActivityUsageCsvBtn = document.getElementById('downloadActivityUsageCsvBtn');
 
     // --- 9. Sección: Validador de Email ---
     elements.emailToValidateInput = document.getElementById('emailToValidate');

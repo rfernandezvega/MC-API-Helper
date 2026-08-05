@@ -3,9 +3,14 @@ import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import { buildAutomationUrl, linkCell } from '../ui/mc-links.js';
+import { downloadCsv, buildCsvFileName } from '../ui/csv-export.js';
 
 let getAuthenticatedConfig;
 let lastSelectedIndex = -1; // Para el Shift + Click
+
+// Datos pintados en cada tabla: son el origen de sus descargas en CSV.
+let lastActivities = [];
+let lastUsageRows = [];
 
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
@@ -25,8 +30,30 @@ export function init(dependencies) {
     // Delegación para enlaces externos
     elements.activityUsageTbody.addEventListener('click', ui.handleExternalLink);
 
+    // Descargas de cada tabla de resultados
+    elements.downloadActivityListCsvBtn?.addEventListener('click', downloadActivityListCsv);
+    elements.downloadActivityUsageCsvBtn?.addEventListener('click', downloadActivityUsageCsv);
+
     // Inicializar estado del botón
     updateDeleteButtonVisibility();
+}
+
+/** Descarga en CSV las actividades encontradas. */
+function downloadActivityListCsv() {
+    downloadCsv({
+        headers: ['Nombre', 'External Key'],
+        rows: lastActivities.map(a => [a.name || '', a.customerKey || '']),
+        fileName: buildCsvFileName('buscador_actividades')
+    });
+}
+
+/** Descarga en CSV la ubicación de las actividades dentro de los automatismos. */
+function downloadActivityUsageCsv() {
+    downloadCsv({
+        headers: ['Actividad', 'External Key', 'Automatización', 'Paso'],
+        rows: lastUsageRows,
+        fileName: buildCsvFileName('buscador_actividades_uso')
+    });
 }
 
 /**
@@ -61,6 +88,10 @@ async function searchActivityUsage() {
     elements.activityUsageTbody.innerHTML = '';
     elements.activityInfoBlock.classList.add('hidden');
     elements.activityResultsBlock.classList.add('hidden');
+    lastActivities = [];
+    lastUsageRows = [];
+    if (elements.downloadActivityListCsvBtn) elements.downloadActivityListCsvBtn.disabled = true;
+    if (elements.downloadActivityUsageCsvBtn) elements.downloadActivityUsageCsvBtn.disabled = true;
 
     try {
         const apiConfig = await getAuthenticatedConfig();
@@ -97,7 +128,9 @@ async function searchActivityUsage() {
 
 function renderActivityList(activities, apiConfig) {
     elements.activityListTbody.innerHTML = '';
-    
+    lastActivities = activities || [];
+    if (elements.downloadActivityListCsvBtn) elements.downloadActivityListCsvBtn.disabled = lastActivities.length === 0;
+
     activities.forEach((activity, index) => {
         const row = document.createElement('tr');
         row.dataset.index = index;
@@ -127,9 +160,11 @@ async function findUsageForAll(activities, apiConfig) {
         }))
     );
 
+    lastUsageRows = [];
     for (const { activity, automations } of usages) {
         if (automations && automations.length > 0) {
             automations.forEach(auto => {
+                lastUsageRows.push([activity.name, activity.customerKey, auto.automationName, auto.step]);
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${activity.name}</td>
@@ -145,6 +180,8 @@ async function findUsageForAll(activities, apiConfig) {
     if (elements.activityUsageTbody.innerHTML === '') {
         elements.activityUsageTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;"><i>Ninguna de estas actividades se usa en automatismos.</i></td></tr>';
     }
+
+    if (elements.downloadActivityUsageCsvBtn) elements.downloadActivityUsageCsvBtn.disabled = lastUsageRows.length === 0;
 }
 
 /**

@@ -5,8 +5,12 @@ import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import { buildAutomationUrl, linkCell } from '../ui/mc-links.js';
 import { sqlBox } from '../ui/sql-highlight.js';
+import { downloadCsv, buildCsvFileName } from '../ui/csv-export.js';
 
 let getAuthenticatedConfig;
+
+// Últimas queries pintadas: son el origen de la descarga en CSV.
+let lastQueries = [];
 
 // Estado del toggle "Mostrar Query" (botón, no checkbox).
 let showQueryText = true;
@@ -35,6 +39,28 @@ export function init(dependencies) {
             cell.style.display = displayStyle;
         });
     });
+
+    elements.downloadQuerySearchCsvBtn?.addEventListener('click', downloadResultsCsv);
+}
+
+/**
+ * Descarga en CSV las queries encontradas. El texto de la query se exporta siempre
+ * (aunque su columna esté oculta) ya saneado de saltos de línea y comillas.
+ */
+function downloadResultsCsv() {
+    downloadCsv({
+        headers: ['Nombre de la Query', 'Automatización', 'Paso', 'Query Text'],
+        rows: lastQueries.map(query => {
+            const automations = query.automations || [];
+            return [
+                query.name || '',
+                automations.map(a => a.automationName || 'N/A').join(' | '),
+                automations.map(a => a.step || '').join(' | '),
+                query.description || query.queryText || ''
+            ];
+        }),
+        fileName: buildCsvFileName('buscador_texto_queries')
+    });
 }
 
 // Mantenemos la función para evitar errores de app.js
@@ -44,7 +70,9 @@ async function searchQueriesByText() {
     ui.blockUI("Buscando en Queries y analizando automatismos...");
     logger.startLogBuffering();
     elements.querySearchResultsTbody.innerHTML = '<tr><td colspan="4">Buscando...</td></tr>';
-    
+    lastQueries = [];
+    if (elements.downloadQuerySearchCsvBtn) elements.downloadQuerySearchCsvBtn.disabled = true;
+
     try {
         const apiConfig = await getAuthenticatedConfig();
         if (!apiConfig || !apiConfig.soapUri) throw new Error("Configuración de API incompleta.");
@@ -88,6 +116,8 @@ async function searchQueriesByText() {
 
 function renderTable(queries) {
     elements.querySearchResultsTbody.innerHTML = '';
+    lastQueries = queries || [];
+    if (elements.downloadQuerySearchCsvBtn) elements.downloadQuerySearchCsvBtn.disabled = lastQueries.length === 0;
     const showQuery = showQueryText;
     const displayStyle = showQuery ? '' : 'none';
     

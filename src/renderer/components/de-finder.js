@@ -6,11 +6,13 @@ import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import { escapeHtml } from '../ui/format-utils.js';
+import { downloadCsv, buildCsvFileName } from '../ui/csv-export.js';
 
 // --- 1. ESTADO DEL MÓDULO ---
 
 let getAuthenticatedConfig; // Dependencia inyectada desde app.js
 let selectedDeName = null;  // Nombre de la DE seleccionada en la tabla de resultados
+let lastResults = [];       // Últimos resultados pintados (origen de la descarga en CSV)
 
 // --- 2. FUNCIONES PÚBLICAS ---
 
@@ -36,6 +38,17 @@ export function init(dependencies) {
     // Botón "Origen de datos": salta a la pestaña de Orígenes con la DE seleccionada
     // y lanza la búsqueda automáticamente.
     elements.deToSourcesBtn.addEventListener('click', goToDataSources);
+
+    elements.downloadDeSearchCsvBtn?.addEventListener('click', downloadResultsCsv);
+}
+
+/** Descarga en CSV las Data Extensions encontradas, en el mismo orden que la tabla. */
+function downloadResultsCsv() {
+    downloadCsv({
+        headers: ['Nombre Data Extension', 'External Key', 'Ruta de Carpeta'],
+        rows: lastResults.map(r => [r.name, r.key, r.path]),
+        fileName: buildCsvFileName('buscador_data_extensions')
+    });
 }
 
 /** Cambia a la pestaña "Origen de datos", rellena el nombre y busca sus orígenes. */
@@ -117,6 +130,8 @@ function renderTable(results) {
     selectedDeName = null;
     elements.deToSourcesBtn.disabled = true;
     elements.deSearchResultsTbody.innerHTML = '';
+    lastResults = [];
+    if (elements.downloadDeSearchCsvBtn) elements.downloadDeSearchCsvBtn.disabled = true;
     if (!results || results.length === 0) {
         elements.deSearchResultsTbody.innerHTML = '<tr><td colspan="3">No se encontraron Data Extensions con ese criterio.</td></tr>';
         return;
@@ -124,6 +139,9 @@ function renderTable(results) {
 
     // Ordenamos los resultados alfabéticamente para agrupar carpetas
     results.sort((a, b) => (a.path + a.name).localeCompare(b.path + b.name));
+
+    lastResults = results;
+    if (elements.downloadDeSearchCsvBtn) elements.downloadDeSearchCsvBtn.disabled = false;
 
     results.forEach(result => {
         const row = elements.deSearchResultsTbody.insertRow();

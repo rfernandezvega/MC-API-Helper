@@ -5,6 +5,7 @@ import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import { formatCodeWithIndentation, highlightCloudPageCode } from '../ui/code-utils.js';
 import { escapeHtml } from '../ui/format-utils.js';
+import { downloadCsv, buildCsvFileName } from '../ui/csv-export.js';
 
 // --- 1. ESTADO ---
 let getAuthenticatedConfig;
@@ -25,6 +26,7 @@ export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
     elements.searchContentBtn.addEventListener('click', searchContent);
     elements.contentDetailBtn.addEventListener('click', showContentDetail);
+    elements.downloadContentSearchCsvBtn?.addEventListener('click', downloadResultsCsv);
 
     elements.contentSearchResultsTbody.addEventListener('click', (e) => {
         const row = e.target.closest('tr');
@@ -80,6 +82,8 @@ async function searchContent() {
     elements.contentDetailBlock.style.display = 'none';
     elements.contentDetailBtn.disabled = true;
     selectedAssetId = null;
+    cachedResults = [];
+    if (elements.downloadContentSearchCsvBtn) elements.downloadContentSearchCsvBtn.disabled = true;
 
     try {
         const apiConfig = await getAuthenticatedConfig();
@@ -564,8 +568,20 @@ function initCollapsibleListeners(container) {
 
 // --- 7. RENDERIZADO ---
 
+/** Descarga en CSV los contenidos encontrados, en el mismo orden que la tabla. */
+function downloadResultsCsv() {
+    downloadCsv({
+        headers: ['ID', 'Nombre del Contenido', 'Tipo', 'Ruta de Carpeta'],
+        rows: cachedResults.map(r => [r.id, r.name, r.type, r.path]),
+        fileName: buildCsvFileName('buscador_contenidos')
+    });
+}
+
 function renderTable(results) {
     elements.contentSearchResultsTbody.innerHTML = '';
+    if (elements.downloadContentSearchCsvBtn) {
+        elements.downloadContentSearchCsvBtn.disabled = !results || results.length === 0;
+    }
     if (!results || results.length === 0) {
         elements.contentSearchResultsTbody.innerHTML = '<tr><td colspan="4">No se encontraron contenidos.</td></tr>';
         return;
