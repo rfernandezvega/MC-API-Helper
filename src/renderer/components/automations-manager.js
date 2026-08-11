@@ -9,7 +9,7 @@ import * as calendar from './calendar.js';
 import { escapeHtml, formatDate } from '../ui/format-utils.js';
 import { createTableSorter, createPaginator, renderStatusBadge } from '../ui/table-utils.js';
 import { getRowsPerPage } from './settings.js';
-import { buildAutomationUrl, linkCell } from '../ui/mc-links.js';
+import { buildAutomationUrlFromEncodedId, linkCell } from '../ui/mc-links.js';
 
 // --- 1. ESTADO DEL MÓDULO ---
 let fullAutomationList = [];
@@ -113,7 +113,7 @@ function renderTable(automations) {
 
             // Datos de la API (nombre, estado, notificaciones): se escapan antes de interpolar
             row.innerHTML = `
-                <td>${linkCell(auto.name || 'Sin Nombre', buildAutomationUrl(auto.id))}</td>
+                <td>${linkCell(auto.name || 'Sin Nombre', buildAutomationUrlFromEncodedId(auto.id))}</td>
                 <td>${formatDate(auto.lastRunTime)}</td>
                 <td>${formatDate(auto.scheduledTime)}</td>
                 <td>${auto.status ? renderStatusBadge(auto.status) : '---'}</td>

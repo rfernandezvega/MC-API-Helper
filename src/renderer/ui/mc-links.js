@@ -53,17 +53,29 @@ function guidToNetBase64NoPad(guid) {
 }
 
 /**
- * Construye el enlace a la vista "Instance" de un automatismo en Automation Studio.
- * El identificador final es base64( base64Net(GUID) + ":25:0" ).
+ * Construye el enlace a la vista "Instance" de Automation Studio a partir del
+ * identificador ya codificado que devuelve la API REST de automatismos (campo "id",
+ * del estilo "SzlXejZkTF9jMGFheTRtZzN3ZzJPQToyNTow"): ese valor es literalmente el
+ * último tramo de la URL, no hay que convertir nada.
+ * @param {string} encodedId - Id codificado del automatismo.
+ * @returns {string|null} URL o null si falta el stack o el id.
+ */
+export function buildAutomationUrlFromEncodedId(encodedId) {
+    const stack = getStackNumber();
+    if (!stack || !encodedId) return null;
+    return `https://mc.s${stack}.exacttarget.com/cloud/#app/Automation%20Studio/AutomationStudioFuel3/%23Instance/${encodedId}`;
+}
+
+/**
+ * Construye el mismo enlace partiendo del GUID del automatismo (el que devuelve SOAP),
+ * codificándolo como hace Automation Studio: base64( base64Net(GUID) + ":25:0" ).
  * @param {string} automationId - GUID del automatismo (con guiones).
  * @returns {string|null} URL o null si falta el stack o el id no es un GUID válido.
  */
 export function buildAutomationUrl(automationId) {
-    const stack = getStackNumber();
     const g = guidToNetBase64NoPad(automationId);
-    if (!stack || !g) return null;
-    const param = btoa(`${g}:25:0`);
-    return `https://mc.s${stack}.exacttarget.com/cloud/#app/Automation%20Studio/AutomationStudioFuel3/%23Instance/${param}`;
+    if (!g) return null;
+    return buildAutomationUrlFromEncodedId(btoa(`${g}:25:0`));
 }
 
 /**
