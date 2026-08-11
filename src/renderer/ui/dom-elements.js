@@ -53,7 +53,7 @@ export function init() {
     elements.logMessagesEl = document.getElementById('log-messages');
     elements.logTranscriptEl = document.getElementById('log-transcript');
 
-    // --- 4. Sección: Configuración de APIs ---
+    // --- 4. Sección: Configuración de Cuentas ---
     elements.clientNameInput = document.getElementById('clientName');            // clave de caché del contexto activo (cliente+BU), oculto
     elements.configClientNameInput = document.getElementById('configClientName'); // nombre del cliente en el formulario (crear/editar)
     elements.savedConfigsSelect = document.getElementById('savedConfigs');

@@ -105,7 +105,7 @@
       El script 'build-html.js' leerá todos los ficheros de la carpeta /views
       y pegará su contenido aquí para construir el 'index.html' final.
     -->
-    <!-- 3. SECCIÓN: CONFIGURACIÓN DE APIS (MODIFICADA CON PESTAÑAS) -->
+    <!-- 3. SECCIÓN: CONFIGURACIÓN DE CUENTAS -->
 <div id="configuracion-apis-section" class="section config-section-container">
     <div class="section-header">
         <button class="back-button">← Atrás</button>
@@ -825,7 +825,7 @@
 				<div class="docu-vnav-title">Primeros pasos</div>
 				<button class="tab-button active" data-tab="doc-primeros-pasos">Primeros pasos</button>
 				<button class="tab-button" data-tab="doc-general">Generalidades de la app</button>
-				<button class="tab-button" data-tab="doc-config">Configuración de APIs</button>
+				<button class="tab-button" data-tab="doc-config">Configuración de Cuentas</button>
 
 				<div class="docu-vnav-title">Explorar y buscar</div>
 				<button class="tab-button" data-tab="doc-buscadores">Buscadores</button>
@@ -881,8 +881,8 @@
 
 						<h4>Paso 2 · Configurar el cliente en la app</h4>
 						<ul>
-							<li>Ve a <b>Configuración de APIs</b> e introduce los datos del paquete (Client Id, Client Secret, Auth URI, etc.).</li>
-							<li>Opcional: configura las <b>DEs de Búsqueda de Clientes</b> antes del login para que se guarden automáticamente (ver la vista <i>Configuración de APIs</i>).</li>
+							<li>Ve a <b>Configuración de Cuentas</b> e introduce los datos del paquete (Client Id, Client Secret, Auth URI, etc.).</li>
+							<li>Opcional: configura las <b>DEs de Búsqueda de Clientes</b> antes del login para que se guarden automáticamente (ver la vista <i>Configuración de Cuentas</i>).</li>
 						</ul>
 
 						<h4>Paso 3 · Iniciar sesión</h4>
@@ -927,10 +927,10 @@
 					</div>
 				</div>
 
-				<!-- ===== CONFIGURACIÓN DE APIs ===== -->
+				<!-- ===== CONFIGURACIÓN DE Cuentas ===== -->
 				<div id="doc-config" class="tab-content">
 					<div class="docu-view">
-						<h3>Configuración de APIs</h3>
+						<h3>Configuración de Cuentas</h3>
 						<p>Aquí se dan de alta y gestionan los clientes (credenciales del paquete API) y se inicia sesión.</p>
 
 						<h4>Qué se puede hacer</h4>
@@ -972,7 +972,7 @@
 
 						<h4>Buscador de Clientes</h4>
 						<ul>
-							<li>Vista rápida de un cliente: busca su información en las DEs configuradas en <b>Configuración de APIs → DEs de Búsqueda de Clientes</b> (selecciona la tabla y muestra sus campos filtrados por el cliente).</li>
+							<li>Vista rápida de un cliente: busca su información en las DEs configuradas en <b>Configuración de Cuentas → DEs de Búsqueda de Clientes</b> (selecciona la tabla y muestra sus campos filtrados por el cliente).</li>
 							<li>Muestra en qué <b>Journeys</b> está el contacto en ese momento y permite <b>expulsarlo</b> de uno o varios journeys a la vez (selección múltiple).</li>
 							<li>Cada tabla tiene su propia descarga en CSV: resultados del cliente, journeys, audiencia de WhatsApp y cada Data Extension consultada.</li>
 						</ul>
@@ -2180,7 +2180,7 @@
         <h3>Panel Principal</h3>
         <div class="menu-buttons-container">
             <p class="info-text">
-                Para empezar, configura un cliente en "Configuración de APIs". 
+                Para empezar, configura un cliente en "Configuración de Cuentas". 
                 Al pulsar en login (o seleccionándolo si ya estaba guardado) se iniciará el proceso de autenticación. 
                 Una vez iniciada sesión en un cliente, podrás utilizar las funcionalidades de la aplicación.
             </p>
@@ -2202,7 +2202,7 @@
                     <li><span class="changelog-tag fix">Fix</span> Al importar o recuperar campos ya no queda una fila vacía por delante en la tabla de configuración de campos.</li>
                     <li><span class="changelog-tag improved">Mejora</span> La importación de campos admite columnas de PK y Requerido (Sí/No, Yes/No, True/False, 1/0) y acepta directamente el CSV descargado, ignorando comillas y cabecera.</li>
                     <li><span class="changelog-tag improved">Mejora</span> En los Buscadores, pulsar Enter en el campo de búsqueda lanza la búsqueda sin tener que pulsar el botón.</li>
-                    <li><span class="changelog-tag fix">Fix</span> En Automatismos el nombre vuelve a ser un enlace que abre el automatismo en Automation Studio.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> En Automatismos el nombre pasa a ser un enlace que abre el automatismo en Automation Studio.</li>
                 </ul>
             </details>
 
