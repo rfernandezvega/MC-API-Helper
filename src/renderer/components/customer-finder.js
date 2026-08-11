@@ -6,8 +6,9 @@ import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import * as whatsappFinder from './whatsapp-finder.js';
-import { escapeHtml } from '../ui/format-utils.js';
+import { escapeHtml, formatDate } from '../ui/format-utils.js';
 import { createTableSorter, createPaginator } from '../ui/table-utils.js';
+import { downloadCsv, buildCsvFileName } from '../ui/csv-export.js';
 
 // --- 1. ESTADO DEL MÓDULO ---
 
@@ -25,6 +26,8 @@ let customerResultsState = { allRows: [] };
 // Controlador de ordenación de la tabla principal (se crea en init; como su thead se
 // regenera en cada búsqueda, se re-engancha con attach(thead) tras cada render)
 let customerSorter;
+// Journeys pintados del cliente seleccionado (origen de su descarga en CSV)
+let lastCustomerJourneys = [];
 
 // --- 2. FUNCIONES PÚBLICAS ---
 
@@ -44,6 +47,14 @@ export function init(dependencies) {
 
     elements.selectAllDEsCheckbox.addEventListener('change', handleSelectAllDEs);
     elements.searchSelectedDEsBtn.addEventListener('click', startSelectedDESearch);
+
+    elements.downloadCustomerSearchCsvBtn?.addEventListener('click', downloadCustomerResultsCsv);
+    elements.downloadCustomerJourneysCsvBtn?.addEventListener('click', downloadCustomerJourneysCsv);
+    // Cada bloque de DE se crea dinámicamente: su botón de descarga se atiende por delegación.
+    elements.desResultsContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('.de-download-btn');
+        if (btn) downloadDEResultsCsv(btn.dataset.deKey);
+    });
 
     // Sorter de la tabla principal de clientes. La ordenación y paginación de las
     // tablas de DEs dinámicas se crean por bloque en startSelectedDESearch.
@@ -364,7 +375,51 @@ async function ejectCustomer() {
     }
 }
 
-// --- 5. RENDERIZADO Y HELPERS ---
+// --- 5. DESCARGAS EN CSV ---
+
+/** Descarga en CSV los clientes encontrados, respetando la ordenación de la tabla. */
+function downloadCustomerResultsCsv() {
+    const sortedRows = customerSorter.sort([...customerResultsState.allRows]);
+    downloadCsv({
+        headers: ['Subscriber Key', 'Email', 'Estado', 'Fecha Creación', 'Fecha Baja', 'Es Suscriptor'],
+        rows: sortedRows.map(sub => [
+            sub.subscriberKey, sub.emailAddress, sub.status,
+            sub.createdDate, sub.unsubscribedDate, sub.isSubscriber ? 'Sí' : 'No'
+        ]),
+        fileName: buildCsvFileName('buscador_clientes')
+    });
+}
+
+/** Descarga en CSV los journeys del cliente seleccionado. */
+function downloadCustomerJourneysCsv() {
+    downloadCsv({
+        headers: ['Nombre del Journey', 'ID', 'Definition Key', 'Versión', 'Fecha Creación', 'Fecha Modificación'],
+        rows: lastCustomerJourneys.map(j => [
+            j.name, j.id, j.key, j.version,
+            formatDate(j.createdDate), formatDate(j.modifiedDate)
+        ]),
+        fileName: buildCsvFileName('buscador_clientes_journeys')
+    });
+}
+
+/**
+ * Descarga en CSV los registros encontrados en una Data Extension concreta (todas las
+ * páginas, no solo la visible) con las columnas propias de esa DE.
+ * @param {string} deKey - External Key de la DE cuyo bloque de resultados se exporta.
+ */
+function downloadDEResultsCsv(deKey) {
+    const state = dePaginationStates.get(deKey);
+    if (!state) return;
+    const sortedRows = state.sorter.sort([...state.allRows]);
+    const headers = Object.keys(state.allRows[0] || {});
+    downloadCsv({
+        headers,
+        rows: sortedRows.map(item => headers.map(h => item[h])),
+        fileName: buildCsvFileName(`buscador_clientes_${deKey}`)
+    });
+}
+
+// --- 6. RENDERIZADO Y HELPERS ---
 
 function renderCustomerSearchResults() {
     elements.customerSearchTbody.innerHTML = '';
@@ -385,6 +440,10 @@ function renderCustomerSearchResults() {
     customerSorter.attach(thead);
 
     const sortedRows = customerSorter.sort([...customerResultsState.allRows]);
+
+    if (elements.downloadCustomerSearchCsvBtn) {
+        elements.downloadCustomerSearchCsvBtn.disabled = !sortedRows || sortedRows.length === 0;
+    }
 
     if (!sortedRows || sortedRows.length === 0) {
         elements.customerSearchTbody.innerHTML = '<tr><td colspan="6">No se encontraron clientes con ese criterio.</td></tr>';
@@ -411,6 +470,10 @@ function renderCustomerSearchResults() {
 
 function renderCustomerJourneysTable(journeys) {
     elements.customerJourneysTbody.innerHTML = '';
+    lastCustomerJourneys = journeys || [];
+    if (elements.downloadCustomerJourneysCsvBtn) {
+        elements.downloadCustomerJourneysCsvBtn.disabled = lastCustomerJourneys.length === 0;
+    }
 
     // Deshabilitamos el botón cada vez que se renderiza la tabla, hasta que se seleccione algo
     updateEjectButtonState();
@@ -438,7 +501,10 @@ function createResultBlock(title, deKey) {
     resultBlock.className = 'sends-dataview-block'; // Puedes renombrar esta clase si quieres
     resultBlock.dataset.deKey = deKey; // Importante para identificar el bloque
     resultBlock.innerHTML = `
-        <h4>${escapeHtml(title)} <small>(${escapeHtml(deKey)})</small></h4>
+        <div class="u-flex-between u-mb-10">
+            <h4 class="u-m-0">${escapeHtml(title)} <small>(${escapeHtml(deKey)})</small></h4>
+            <button class="action-button download-btn de-download-btn" data-de-key="${escapeHtml(deKey)}" disabled title="Descargar los registros en CSV">Descargar</button>
+        </div>
         <div class="table-container">
             <table><thead></thead><tbody></tbody></table>
         </div>
@@ -473,6 +539,10 @@ function renderDEPage(deKey) {
     tbody.innerHTML = paginatedRows.map(item => `<tr>${headers.map(h => `<td>${escapeHtml(item[h]) || '---'}</td>`).join('')}</tr>`).join('');
 
     state.sorter.updateIndicators();
+
+    // La descarga exporta todos los registros de la DE, no solo la página visible.
+    const downloadBtn = block.querySelector('.de-download-btn');
+    if (downloadBtn) downloadBtn.disabled = sortedRows.length === 0;
 
     // Igual que antes: los controles de paginación solo se muestran si hay más de una página
     const totalPages = Math.ceil(sortedRows.length / DE_ITEMS_PER_PAGE) || 1;

@@ -34,7 +34,10 @@
         <div class="config-block u-grow">
             <div class="u-flex-between u-mb-10">
                 <h3 class="u-m-0">Resultados</h3>
-                <button id="deToSourcesBtn" class="action-button" disabled title="Buscar los orígenes de datos de la DE seleccionada">Origen de datos</button>
+                <div class="u-flex u-gap-8">
+                    <button id="downloadDeSearchCsvBtn" class="action-button download-btn" disabled title="Descargar los resultados en CSV">Descargar</button>
+                    <button id="deToSourcesBtn" class="action-button" disabled title="Buscar los orígenes de datos de la DE seleccionada">Origen de datos</button>
+                </div>
             </div>
             <div class="table-container">
                 <table id="de-search-results-table">
@@ -58,7 +61,10 @@
             </div>
         </div>
         <div class="config-block u-grow">
-            <h3>Actividades Encontradas</h3>
+            <div class="u-flex-between u-mb-10">
+                <h3 class="u-m-0">Actividades Encontradas</h3>
+                <button id="downloadDataSourcesCsvBtn" class="action-button download-btn" disabled title="Descargar los resultados en CSV">Descargar</button>
+            </div>
             <div class="table-container">
                 <table id="data-sources-table">
                     <thead><tr><th>Actividad</th><th>Tipo</th><th>Automatización</th><th>Paso</th><th>Acción</th><th>Descripción / Query</th></tr></thead>
@@ -84,6 +90,7 @@
             <div class="u-flex-between u-mb-10">
                 <h3 class="u-m-0">Resultados</h3>
                 <div class="u-flex u-gap-8">
+                    <button id="downloadCustomerSearchCsvBtn" class="action-button download-btn" disabled title="Descargar los resultados en CSV">Descargar</button>
                     <button id="selectTablesBtn" class="action-button" disabled>Seleccionar Tablas</button>
                     <button id="getCustomerJourneysBtn" class="action-button" disabled>Journeys</button>
                 </div>
@@ -112,7 +119,10 @@
         <div id="customer-journeys-results-block" class="config-block hidden">
             <div class="u-flex-between u-mb-10">
                 <h3 class="u-m-0">Journeys del Cliente Seleccionado</h3>
-                <button id="ejectCustomerFromJourneysBtn" class="action-button delete-btn" disabled>Expulsar</button>
+                <div class="u-flex u-gap-8">
+                    <button id="downloadCustomerJourneysCsvBtn" class="action-button download-btn" disabled title="Descargar los journeys en CSV">Descargar</button>
+                    <button id="ejectCustomerFromJourneysBtn" class="action-button delete-btn" disabled>Expulsar</button>
+                </div>
             </div>
             <div class="table-container">
                 <table id="customer-journeys-table">
@@ -129,7 +139,10 @@
 
         <!-- Resultados de Audiencia WhatsApp (cuando se incluye WhatsApp en la búsqueda) -->
         <div id="wa-results-block" class="config-block hidden">
-            <h3 class="u-mt-0 u-mb-10">Audiencia WhatsApp</h3>
+            <div class="u-flex-between u-mb-10">
+                <h3 class="u-m-0">Audiencia WhatsApp</h3>
+                <button id="downloadWaResultsCsvBtn" class="action-button download-btn" disabled title="Descargar los resultados en CSV">Descargar</button>
+            </div>
             <div class="table-container">
                 <table id="wa-results-table">
                     <thead><tr><th>Contact Key</th><th>Teléfono</th><th>Locale</th><th>Canales</th></tr></thead>
@@ -171,7 +184,10 @@
             </div>
         </div>
         <div class="config-block u-grow">
-            <h3>Queries Encontradas</h3>
+            <div class="u-flex-between u-mb-10">
+                <h3 class="u-m-0">Queries Encontradas</h3>
+                <button id="downloadQuerySearchCsvBtn" class="action-button download-btn" disabled title="Descargar los resultados en CSV">Descargar</button>
+            </div>
             <div class="table-container">
                 <table id="query-search-results-table">
                     <thead><tr><th>Nombre de la Query</th><th>Automatización</th><th>Paso</th><th>Query Text</th></tr></thead>
@@ -193,7 +209,10 @@
             </div>
         </div>
         <div class="config-block u-grow">
-            <h3>Scripts Encontrados</h3>
+            <div class="u-flex-between u-mb-10">
+                <h3 class="u-m-0">Scripts Encontrados</h3>
+                <button id="downloadScriptSearchCsvBtn" class="action-button download-btn" disabled title="Descargar los resultados en CSV">Descargar</button>
+            </div>
             <div class="table-container">
                 <table id="script-search-results-table">
                     <thead><tr><th>Nombre del Script</th><th>Automatización</th><th>Paso</th></tr></thead>
@@ -217,7 +236,10 @@
         <div class="config-block u-grow">
             <div class="u-flex-between u-mb-10">
                 <h3 class="u-m-0">Resultados</h3>
-                <button id="contentDetailBtn" class="action-button" disabled>Ver detalle</button>
+                <div class="u-flex u-gap-8">
+                    <button id="downloadContentSearchCsvBtn" class="action-button download-btn" disabled title="Descargar los resultados en CSV">Descargar</button>
+                    <button id="contentDetailBtn" class="action-button" disabled>Ver detalle</button>
+                </div>
             </div>
             <div class="table-container">
                 <table id="content-search-results-table">
@@ -278,7 +300,10 @@
         <div id="activity-info-block" class="config-block hidden">
             <div class="u-flex-between u-mb-10">
                 <h3 class="u-m-0">Actividades Encontradas</h3>
-                <button id="deleteActivityBtn" class="action-button delete-btn">Borrar Seleccionadas</button>
+                <div class="u-flex u-gap-8">
+                    <button id="downloadActivityListCsvBtn" class="action-button download-btn" disabled title="Descargar las actividades en CSV">Descargar</button>
+                    <button id="deleteActivityBtn" class="action-button delete-btn">Borrar Seleccionadas</button>
+                </div>
             </div>
             <div class="table-container">
                 <table id="activity-list-table" class="editable-row-table">
@@ -290,7 +315,10 @@
         </div>
 
         <div id="activity-results-block" class="config-block hidden">
-            <h3>Ubicación en Automatismos</h3>
+            <div class="u-flex-between u-mb-10">
+                <h3 class="u-m-0">Ubicación en Automatismos</h3>
+                <button id="downloadActivityUsageCsvBtn" class="action-button download-btn" disabled title="Descargar los usos en CSV">Descargar</button>
+            </div>
             <div class="table-container">
                 <table id="activity-usage-table">
                     <thead><tr><th>Actividad</th><th>External Key</th><th>Automatización</th><th>Paso</th></tr></thead>

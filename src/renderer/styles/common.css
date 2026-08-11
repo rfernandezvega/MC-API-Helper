@@ -123,6 +123,39 @@
 :root[data-theme="dark"] .audit-callout-warning { background: #3d2f10; color: #f0c066; }
 :root[data-theme="dark"] .audit-callout-danger  { background: #3d1f1c; color: #f0938c; }
 
+/* ==========================================================
+   BARRAS DE DESPLAZAMIENTO
+   Se pintan con los tokens para que sigan al tema activo: por defecto
+   Chromium las dibuja en blanco y en oscuro cantan sobre las tablas.
+   color-scheme además ajusta los controles nativos (pickers de fecha,
+   scroll interno de selects) al tema.
+   ========================================================== */
+:root { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    /* El borde transparente con background-clip deja aire alrededor del pulgar
+       sin necesidad de pintar el carril. */
+    background: var(--sf-border);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+    border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--sf-text-muted);
+    background-clip: padding-box;
+}
+::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
 
 /* ==========================================================
    1. ESTILOS GLOBALES Y LAYOUT PRINCIPAL
@@ -1297,14 +1330,6 @@ td a:hover { color: var(--sf-blue-dark); text-decoration: underline; }
     font-weight: bold;
     color: white;
     text-transform: uppercase;
-}
-
-#sendManagement-section .table-container::-webkit-scrollbar {
-    width: 8px;
-}
-#sendManagement-section .table-container::-webkit-scrollbar-thumb {
-    background: var(--sf-border);
-    border-radius: 4px;
 }
 
 /* ==========================================================

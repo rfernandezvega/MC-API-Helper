@@ -6,11 +6,13 @@ import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import { escapeHtml } from '../ui/format-utils.js';
+import { downloadCsv, buildCsvFileName } from '../ui/csv-export.js';
 
 // --- 1. ESTADO DEL MÓDULO ---
 
 let getAuthenticatedConfig; // Dependencia inyectada desde app.js
 let selectedDeName = null;  // Nombre de la DE seleccionada en la tabla de resultados
+let lastResults = [];       // Últimos resultados pintados (origen de la descarga en CSV)
 
 // --- 2. FUNCIONES PÚBLICAS ---
 
@@ -36,6 +38,17 @@ export function init(dependencies) {
     // Botón "Origen de datos": salta a la pestaña de Orígenes con la DE seleccionada
     // y lanza la búsqueda automáticamente.
     elements.deToSourcesBtn.addEventListener('click', goToDataSources);
+
+    elements.downloadDeSearchCsvBtn?.addEventListener('click', downloadResultsCsv);
+}
+
+/** Descarga en CSV las Data Extensions encontradas, en el mismo orden que la tabla. */
+function downloadResultsCsv() {
+    downloadCsv({
+        headers: ['Nombre Data Extension', 'External Key', 'Ruta de Carpeta'],
+        rows: lastResults.map(r => [r.name, r.key, r.path]),
+        fileName: buildCsvFileName('buscador_data_extensions')
+    });
 }
 
 /** Cambia a la pestaña "Origen de datos", rellena el nombre y busca sus orígenes. */
@@ -59,6 +72,8 @@ async function searchDE() {
     try {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
+        // Cada búsqueda pide las rutas de nuevo: nunca se muestra una carpeta ya movida.
+        mcApiService.clearFolderPathCache();
 
         const property = elements.deSearchProperty.value;
         const value = elements.deSearchValue.value.trim();
@@ -78,16 +93,19 @@ async function searchDE() {
 
         logger.logMessage(`Se encontraron ${deList.length} DEs. Obteniendo rutas de carpeta...`);
 
-        const pathPromises = deList.map(async (deInfo) => {
-            if (!deInfo.categoryId || parseInt(deInfo.categoryId) === 0) {
-                return { name: deInfo.deName, key: deInfo.customerKey, path: 'Data Extensions' };
-            }
-            const folderPath = await mcApiService.getFolderPath(deInfo.categoryId, apiConfig);
-            return { name: deInfo.deName, key: deInfo.customerKey, path: folderPath || 'Data Extensions' };
-        });
+        // Las rutas se piden en bloque (una llamada por nivel del árbol) en lugar de una
+        // cadena de llamadas por cada DE, que repetía las mismas carpetas una y otra vez.
+        const paths = await mcApiService.resolveFolderPaths(
+            deList.map(de => de.categoryId).filter(Boolean),
+            apiConfig
+        );
 
-        const resultsWithPaths = await Promise.all(pathPromises);
-        
+        const resultsWithPaths = deList.map(deInfo => ({
+            name: deInfo.deName,
+            key: deInfo.customerKey,
+            path: paths.get(String(deInfo.categoryId)) || 'Data Extensions'
+        }));
+
         renderTable(resultsWithPaths);
         logger.logMessage("Visualización de resultados completada.");
 
@@ -112,6 +130,8 @@ function renderTable(results) {
     selectedDeName = null;
     elements.deToSourcesBtn.disabled = true;
     elements.deSearchResultsTbody.innerHTML = '';
+    lastResults = [];
+    if (elements.downloadDeSearchCsvBtn) elements.downloadDeSearchCsvBtn.disabled = true;
     if (!results || results.length === 0) {
         elements.deSearchResultsTbody.innerHTML = '<tr><td colspan="3">No se encontraron Data Extensions con ese criterio.</td></tr>';
         return;
@@ -119,6 +139,9 @@ function renderTable(results) {
 
     // Ordenamos los resultados alfabéticamente para agrupar carpetas
     results.sort((a, b) => (a.path + a.name).localeCompare(b.path + b.name));
+
+    lastResults = results;
+    if (elements.downloadDeSearchCsvBtn) elements.downloadDeSearchCsvBtn.disabled = false;
 
     results.forEach(result => {
         const row = elements.deSearchResultsTbody.insertRow();

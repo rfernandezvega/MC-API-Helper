@@ -5,11 +5,16 @@ import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import { formatCodeWithIndentation, highlightCloudPageCode } from '../ui/code-utils.js';
 import { escapeHtml } from '../ui/format-utils.js';
+import { downloadCsv, buildCsvFileName } from '../ui/csv-export.js';
 
 // --- 1. ESTADO ---
 let getAuthenticatedConfig;
 let cachedResults = [];
 let selectedAssetId = null;
+
+// Tope de anidamiento al expandir componentes. Junto al registro de assets ya visitados
+// evita que una referencia circular (A incluye B y B incluye A) recorra sin fin.
+const MAX_COMPONENT_DEPTH = 10;
 
 let currentDetailAsset = null;
 let currentDetailComponents = [];
@@ -21,6 +26,7 @@ export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
     elements.searchContentBtn.addEventListener('click', searchContent);
     elements.contentDetailBtn.addEventListener('click', showContentDetail);
+    elements.downloadContentSearchCsvBtn?.addEventListener('click', downloadResultsCsv);
 
     elements.contentSearchResultsTbody.addEventListener('click', (e) => {
         const row = e.target.closest('tr');
@@ -76,10 +82,14 @@ async function searchContent() {
     elements.contentDetailBlock.style.display = 'none';
     elements.contentDetailBtn.disabled = true;
     selectedAssetId = null;
+    cachedResults = [];
+    if (elements.downloadContentSearchCsvBtn) elements.downloadContentSearchCsvBtn.disabled = true;
 
     try {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
+        // Cada búsqueda pide las rutas de nuevo: nunca se muestra una carpeta ya movida.
+        mcApiService.clearFolderPathCache();
         const value = elements.contentSearchValue.value.trim();
         if (!value) throw new Error("El campo de búsqueda no puede estar vacío.");
 
@@ -87,9 +97,17 @@ async function searchContent() {
         if (contentList.length === 0) { cachedResults = []; renderTable([]); return; }
 
         logger.logMessage(`Se encontraron ${contentList.length} contenidos. Obteniendo rutas...`);
-        const enriched = await Promise.all(contentList.map(async (asset) => {
-            const folderPath = await mcApiService.getFolderPath(asset.category.id, apiConfig);
-            return { id: asset.id, name: asset.name, type: asset.assetType.displayName, assetTypeId: asset.assetType.id, path: folderPath || 'Content Builder' };
+        // Rutas en bloque: una llamada por nivel del árbol en lugar de una cadena por asset.
+        const paths = await mcApiService.resolveFolderPaths(
+            contentList.map(asset => asset.category?.id).filter(Boolean),
+            apiConfig
+        );
+        const enriched = contentList.map(asset => ({
+            id: asset.id,
+            name: asset.name,
+            type: asset.assetType.displayName,
+            assetTypeId: asset.assetType.id,
+            path: paths.get(String(asset.category?.id)) || 'Content Builder'
         }));
         cachedResults = enriched;
         renderTable(enriched);
@@ -111,11 +129,15 @@ async function showContentDetail() {
 
     try {
         const apiConfig = await getAuthenticatedConfig();
+        // El detalle es una operación completa: rutas y assets se piden frescos.
+        mcApiService.clearFolderPathCache();
+        const context = { assets: new Map(), expanded: new Set() };
+
         logger.logMessage(`Obteniendo detalle completo del asset ${selected.id}...`);
-        const fullAsset = await mcApiService.fetchAssetById(selected.id, apiConfig);
+        const fullAsset = await fetchAssetOnce(selected.id, apiConfig, context);
 
         // 1. Componentes hijos (slots/blocks) + ContentBlockBy* en código
-        const components = await extractComponents(fullAsset, apiConfig, 0);
+        const components = await extractComponents(fullAsset, apiConfig, 0, null, context);
 
         // Contenido principal: intentar ensamblar (emails), luego push/sms/wa, luego content directo
         let mainContent = assembleFullContent(fullAsset, components) || null;
@@ -199,10 +221,43 @@ async function showContentDetail() {
 }
 
 /**
- * Extrae componentes hijos: recorre slots/blocks y detecta ContentBlockBy* en código.
+ * Descarga un asset reutilizando los ya obtenidos en este detalle, porque un mismo bloque
+ * suele estar referenciado desde varios slots y antes se pedía una vez por referencia.
+ * @param {string|number} assetId - ID del asset.
+ * @param {object} apiConfig - Configuración autenticada de la API.
+ * @param {object} context - Contexto del detalle en curso ({ assets, expanded }).
+ * @returns {Promise<object>} El asset completo.
  */
-async function extractComponents(asset, apiConfig, depth, parentName) {
+async function fetchAssetOnce(assetId, apiConfig, context) {
+    const key = String(assetId);
+    if (context.assets.has(key)) return context.assets.get(key);
+
+    // Se guarda la promesa, no el resultado, para que dos referencias simultáneas
+    // al mismo bloque compartan una única petición.
+    const promise = mcApiService.fetchAssetById(assetId, apiConfig);
+    context.assets.set(key, promise);
+    return promise;
+}
+
+/**
+ * Extrae componentes hijos: recorre slots/blocks y detecta ContentBlockBy* en código.
+ * @param {object} asset - Asset del que se extraen los componentes.
+ * @param {object} apiConfig - Configuración autenticada de la API.
+ * @param {number} depth - Nivel de anidamiento actual.
+ * @param {string} [parentName] - Nombre del componente que lo referencia.
+ * @param {object} context - Contexto del detalle en curso ({ assets, expanded }).
+ * @returns {Promise<Array>} Lista plana de componentes encontrados.
+ */
+async function extractComponents(asset, apiConfig, depth, parentName, context) {
     const components = [];
+
+    if (depth >= MAX_COMPONENT_DEPTH) return components;
+
+    // Un asset se expande una sola vez: si vuelve a aparecer se sigue listando como
+    // componente, pero no se recorren otra vez sus hijos.
+    const assetKey = String(asset.id ?? '');
+    if (assetKey && context.expanded.has(assetKey)) return components;
+    if (assetKey) context.expanded.add(assetKey);
 
     // A. Template (obtener detalle completo para tener content y ruta)
     const templateId = asset.views?.html?.template?.id;
@@ -210,7 +265,7 @@ async function extractComponents(asset, apiConfig, depth, parentName) {
     if (templateName && depth === 0 && templateId) {
         try {
             logger.logMessage(`→ Obteniendo template ${templateId}...`);
-            const templateAsset = await mcApiService.fetchAssetById(templateId, apiConfig);
+            const templateAsset = await fetchAssetOnce(templateId, apiConfig, context);
             const templatePath = templateAsset.category?.id
                 ? await mcApiService.getFolderPath(templateAsset.category.id, apiConfig) : '---';
             components.push({
@@ -263,7 +318,7 @@ async function extractComponents(asset, apiConfig, depth, parentName) {
                     // Reference block → fetch the referenced asset
                     try {
                         logger.logMessage(`${'  '.repeat(depth)}→ Obteniendo componente ID ${refId}...`);
-                        const childAsset = await mcApiService.fetchAssetById(refId, apiConfig);
+                        const childAsset = await fetchAssetOnce(refId, apiConfig, context);
                         const childPath = childAsset.category?.id
                             ? await mcApiService.getFolderPath(childAsset.category.id, apiConfig) : '---';
 
@@ -279,7 +334,7 @@ async function extractComponents(asset, apiConfig, depth, parentName) {
                             depth: depth
                         });
 
-                        const subComps = await extractComponents(childAsset, apiConfig, depth + 1, childAsset.name);
+                        const subComps = await extractComponents(childAsset, apiConfig, depth + 1, childAsset.name, context);
                         components.push(...subComps);
 
                     } catch (err) {
@@ -326,11 +381,11 @@ async function extractComponents(asset, apiConfig, depth, parentName) {
 
                 if (ref.type === 'Id') {
                     logger.logMessage(`${'  '.repeat(depth)}→ Resolviendo ContentBlockById(${ref.value})...`);
-                    resolvedAsset = await mcApiService.fetchAssetById(ref.value, apiConfig);
+                    resolvedAsset = await fetchAssetOnce(ref.value, apiConfig, context);
                 } else if (ref.type === 'Key' || ref.type === 'Name') {
                     logger.logMessage(`${'  '.repeat(depth)}→ Resolviendo ContentBlockBy${ref.type}("${ref.value}")...`);
                     const results = await mcApiService.searchContentAssets(ref.value, apiConfig);
-                    if (results.length > 0) resolvedAsset = await mcApiService.fetchAssetById(results[0].id, apiConfig);
+                    if (results.length > 0) resolvedAsset = await fetchAssetOnce(results[0].id, apiConfig, context);
                 }
 
                 if (resolvedAsset) {
@@ -347,7 +402,7 @@ async function extractComponents(asset, apiConfig, depth, parentName) {
                         referencedBy: `${sourceName} → ContentBlockBy${ref.type}`,
                         depth: depth + 1
                     });
-                    const subComps = await extractComponents(resolvedAsset, apiConfig, depth + 2, resolvedAsset.name);
+                    const subComps = await extractComponents(resolvedAsset, apiConfig, depth + 2, resolvedAsset.name, context);
                     components.push(...subComps);
                 } else {
                     components.push({
@@ -513,8 +568,20 @@ function initCollapsibleListeners(container) {
 
 // --- 7. RENDERIZADO ---
 
+/** Descarga en CSV los contenidos encontrados, en el mismo orden que la tabla. */
+function downloadResultsCsv() {
+    downloadCsv({
+        headers: ['ID', 'Nombre del Contenido', 'Tipo', 'Ruta de Carpeta'],
+        rows: cachedResults.map(r => [r.id, r.name, r.type, r.path]),
+        fileName: buildCsvFileName('buscador_contenidos')
+    });
+}
+
 function renderTable(results) {
     elements.contentSearchResultsTbody.innerHTML = '';
+    if (elements.downloadContentSearchCsvBtn) {
+        elements.downloadContentSearchCsvBtn.disabled = !results || results.length === 0;
+    }
     if (!results || results.length === 0) {
         elements.contentSearchResultsTbody.innerHTML = '<tr><td colspan="4">No se encontraron contenidos.</td></tr>';
         return;

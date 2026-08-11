@@ -388,18 +388,24 @@ export function showDESelectorModal(dependencies) {
             try {
                 const apiConfig = await getAuthenticatedConfig();
                 mcApiService.setLogger(logger);
+                // Cada búsqueda pide las rutas de nuevo.
+                mcApiService.clearFolderPathCache();
                 // Usamos la función de búsqueda de DEs, no de carpetas
                 const deList = await mcApiService.searchDataExtensions('Name', searchTerm, apiConfig);
-                
+
                 elements.folderSelectorTbody.innerHTML = '';
                 if (deList.length === 0) {
                     elements.folderSelectorTable.classList.add('hidden');
                     elements.folderSelectorResultsContainer.firstElementChild.textContent = 'No se encontraron Data Extensions.';
                 } else {
-                    // El `for...of` permite usar `await` dentro del bucle para obtener las rutas
+                    // Las rutas se resuelven en bloque antes de pintar, no una por fila.
+                    const paths = await mcApiService.resolveFolderPaths(
+                        deList.map(de => de.categoryId).filter(Boolean),
+                        apiConfig
+                    );
                     for (const de of deList) {
                         const row = elements.folderSelectorTbody.insertRow();
-                        const folderPath = de.categoryId ? await mcApiService.getFolderPath(de.categoryId, apiConfig) : 'Raíz';
+                        const folderPath = paths.get(String(de.categoryId)) || 'Raíz';
                         // Guardamos los datos necesarios en el dataset de la fila
                         row.dataset.deName = de.deName;
                         row.dataset.deKey = de.customerKey;
@@ -729,17 +735,21 @@ export function showJourneyClonerModal(journey, dependencies, initialData = {}) 
             blockModalContent(true, 'Buscando y obteniendo DEs...');
             try {
                 const apiConfig = await getAuthenticatedConfig();
+                // Cada búsqueda pide las rutas de nuevo.
+                mcApiService.clearFolderPathCache();
                 // 1. Buscamos las DEs como antes.
                 const deList = await mcApiService.searchDataExtensions('Name', searchTerm, apiConfig);
 
-                // 2. Enriquecemos la lista con las rutas de las carpetas.
-                const deListWithPaths = await Promise.all(deList.map(async (de) => {
-                    const folderPath = de.categoryId
-                        ? await mcApiService.getFolderPath(de.categoryId, apiConfig)
-                        : 'Raíz';
-                    return { ...de, folderPath: folderPath }; // Añadimos la nueva propiedad
+                // 2. Enriquecemos la lista con las rutas, resueltas en bloque.
+                const paths = await mcApiService.resolveFolderPaths(
+                    deList.map(de => de.categoryId).filter(Boolean),
+                    apiConfig
+                );
+                const deListWithPaths = deList.map(de => ({
+                    ...de,
+                    folderPath: paths.get(String(de.categoryId)) || 'Raíz'
                 }));
-                
+
                 // 3. Renderizamos la tabla con la lista enriquecida.
                 renderDEResults(deListWithPaths);
             } catch (error) { 

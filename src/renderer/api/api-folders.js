@@ -3,7 +3,7 @@
 // Descripción: Gestión, búsqueda y creación de carpetas en MC.
 // ===================================================================
 import { executeSoapRequest, executeRestRequest } from './api-core.js';
-import { getFolderPath } from './api-helpers.js';
+import { resolveFolderPaths, clearFolderPathCache } from './api-helpers.js';
 
 /**
  * Localiza carpetas según fragmentos de su nombre limitando la búsqueda al tipo de contenido (ej. DataExtension).
@@ -70,20 +70,23 @@ export async function findDataFolders(folderName, contentType, apiConfig) {
             </s:Body>
         </s:Envelope>`;
 
+    // Cada búsqueda de carpetas parte de cero: es una operación completa en sí misma.
+    clearFolderPathCache();
+
     const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(responseText, "application/xml");
-    
-    const folderNodes = Array.from(xmlDoc.querySelectorAll("Results"));
-    const pathPromises = folderNodes.map(async (node) => {
-        const id = node.querySelector("ID")?.textContent;
-        const name = node.querySelector("Name")?.textContent;
-        if (!id || !name) return null;
-        const fullPath = await getFolderPath(id, apiConfig);
-        return { id, name, fullPath };
-    });
-    
-    return (await Promise.all(pathPromises)).filter(Boolean);
+
+    const folders = Array.from(xmlDoc.querySelectorAll("Results")).map(node => ({
+        // Se acota con ":scope >" porque ParentFolder contiene otro nodo ID anidado.
+        id: node.querySelector(":scope > ID")?.textContent,
+        name: node.querySelector(":scope > Name")?.textContent
+    })).filter(f => f.id && f.name);
+
+    // Las rutas se resuelven en bloque: una petición por nivel del árbol, no por carpeta.
+    const paths = await resolveFolderPaths(folders.map(f => f.id), apiConfig);
+
+    return folders.map(f => ({ ...f, fullPath: paths.get(String(f.id)) || '' }));
 }
 
 /**

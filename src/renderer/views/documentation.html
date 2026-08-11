@@ -143,6 +143,7 @@
 					<div class="docu-view">
 						<h3>Buscadores</h3>
 						<p>Conjunto de buscadores para localizar dónde se usa o qué contiene cada elemento de la instancia.</p>
+						<p>Todas las tablas de resultados tienen encima un botón <b>Descargar</b> que exporta lo encontrado a CSV (se habilita al haber resultados). El fichero se genera con separador <b>;</b>, todas las celdas entrecomilladas y BOM UTF-8: los saltos de línea, tabuladores y comillas del texto de queries y scripts se sanean para que el fichero se abra bien en Excel. En las tablas paginadas se exportan todos los registros, no solo la página visible, y se respeta la ordenación aplicada.</p>
 
 						<h4>Buscador de Data Extensions</h4>
 						<ul>
@@ -153,17 +154,20 @@
 						<ul>
 							<li>Indica qué <b>query</b> o <b>import</b> inserta/actualiza datos en una DE, mostrando en qué automatismo y paso se encuentra.</li>
 							<li>El check <b>Mostrar Descripción / Query</b> oculta o muestra la columna con la query o la descripción del import.</li>
+							<li>Solo se listan las queries <b>activas</b>: las que están en estado Inactive (borradas lógicamente en Marketing Cloud) se descartan.</li>
 						</ul>
 
 						<h4>Buscador de Clientes</h4>
 						<ul>
 							<li>Vista rápida de un cliente: busca su información en las DEs configuradas en <b>Configuración de APIs → DEs de Búsqueda de Clientes</b> (selecciona la tabla y muestra sus campos filtrados por el cliente).</li>
 							<li>Muestra en qué <b>Journeys</b> está el contacto en ese momento y permite <b>expulsarlo</b> de uno o varios journeys a la vez (selección múltiple).</li>
+							<li>Cada tabla tiene su propia descarga en CSV: resultados del cliente, journeys, audiencia de WhatsApp y cada Data Extension consultada.</li>
 						</ul>
 
 						<h4>Buscador de Texto en Queries</h4>
 						<ul>
 							<li>Busca una cadena de texto en todas las queries; muestra la query (con enlace) y en qué automatismos y pasos aparece. La columna con la query se puede mostrar/ocultar.</li>
+							<li>Solo se muestran las queries <b>activas</b>: las que están en estado Inactive (borradas lógicamente en Marketing Cloud) no aparecen en los resultados.</li>
 						</ul>
 
 						<h4>Buscador de Texto en Scripts</h4>
@@ -332,7 +336,9 @@
 
 						<h4>Configuración de Campos</h4>
 						<ul>
-							<li><b>Importar</b> un listado de campos (p. ej. copiados del modelo de datos de Salesforce) indicando el separador.</li>
+							<li><b>Importar</b> un listado de campos (p. ej. copiados del modelo de datos de Salesforce) indicando el separador. Las columnas son <b>Nombre</b>, <b>Tipo</b>, <b>Longitud</b> y, opcionalmente, <b>PK</b> y <b>Requerido</b> (Sí/No, Yes/No, True/False o 1/0, con o sin mayúsculas); una PK se marca siempre como requerida. Los campos importados se añaden a los que ya haya definidos.</li>
+							<li>Se admite volver a pegar el CSV descargado con <b>Descargar</b>: se ignoran las comillas de las celdas y la fila de cabecera, y la columna <b>Default</b> se reconoce por venir en un fichero de 6 columnas.</li>
+							<li><b>Descargar</b> — Exporta a CSV la configuración de la tabla (campo, tipo, longitud, default, PK y requerido) en el mismo orden en que está definida.</li>
 							<li>Crear/actualizar campos, crear campos de ejemplo de cada tipo, limpiar la tabla, añadir/eliminar filas y <b>ordenar</b> filas con las flechas (útil para copiar una DE manteniendo los identificadores al principio; <b>no</b> se puede reordenar sobre una DE existente).</li>
 						</ul>
 

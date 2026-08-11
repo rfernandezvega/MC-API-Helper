@@ -8,9 +8,12 @@ import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
+import { downloadCsv, buildCsvFileName } from '../ui/csv-export.js';
 
 let getAuthenticatedConfig;
 let waEnabled = false;
+// Contactos pintados en la tabla de audiencia (origen de la descarga en CSV)
+let lastContacts = [];
 
 // Países (ISO-2) para el buscador de locale. Ampliable.
 const COUNTRIES = [
@@ -75,6 +78,17 @@ export function isEnabled() { return waEnabled; }
 export function resetWhatsapp() {
     elements.waResultsBlock?.classList.add('hidden');
     elements.waRegisterBlock?.classList.add('hidden');
+    lastContacts = [];
+    if (elements.downloadWaResultsCsvBtn) elements.downloadWaResultsCsvBtn.disabled = true;
+}
+
+/** Descarga en CSV los contactos de la audiencia WhatsApp encontrados. */
+function downloadResultsCsv() {
+    downloadCsv({
+        headers: ['Contact Key', 'Teléfono', 'Locale', 'Canales'],
+        rows: lastContacts.map(c => [c.key, c.mobile, c.locale, (c.channels || []).join(' | ')]),
+        fileName: buildCsvFileName('buscador_clientes_whatsapp')
+    });
 }
 
 /**
@@ -104,6 +118,8 @@ export async function searchWhatsapp(term, apiConfig) {
 }
 
 function renderResults(contacts, nameById = {}) {
+    lastContacts = contacts || [];
+    if (elements.downloadWaResultsCsvBtn) elements.downloadWaResultsCsvBtn.disabled = lastContacts.length === 0;
     elements.waResultsTbody.innerHTML = contacts.map(c => {
         const chans = c.channels.length
             ? c.channels.map(ch => {
@@ -195,6 +211,7 @@ export function init(dependencies) {
     });
 
     elements.waRegisterBtn?.addEventListener('click', register);
+    elements.downloadWaResultsCsvBtn?.addEventListener('click', downloadResultsCsv);
 
     // Clic en un Contact Key de los resultados WhatsApp → relanzar la búsqueda de cliente con él.
     elements.waResultsTbody?.addEventListener('click', (e) => {

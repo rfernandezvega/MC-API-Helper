@@ -3,9 +3,14 @@ import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import { buildAutomationUrl, linkCell } from '../ui/mc-links.js';
+import { downloadCsv, buildCsvFileName } from '../ui/csv-export.js';
 
 let getAuthenticatedConfig;
 let lastSelectedIndex = -1; // Para el Shift + Click
+
+// Datos pintados en cada tabla: son el origen de sus descargas en CSV.
+let lastActivities = [];
+let lastUsageRows = [];
 
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
@@ -25,8 +30,30 @@ export function init(dependencies) {
     // Delegación para enlaces externos
     elements.activityUsageTbody.addEventListener('click', ui.handleExternalLink);
 
+    // Descargas de cada tabla de resultados
+    elements.downloadActivityListCsvBtn?.addEventListener('click', downloadActivityListCsv);
+    elements.downloadActivityUsageCsvBtn?.addEventListener('click', downloadActivityUsageCsv);
+
     // Inicializar estado del botón
     updateDeleteButtonVisibility();
+}
+
+/** Descarga en CSV las actividades encontradas. */
+function downloadActivityListCsv() {
+    downloadCsv({
+        headers: ['Nombre', 'External Key'],
+        rows: lastActivities.map(a => [a.name || '', a.customerKey || '']),
+        fileName: buildCsvFileName('buscador_actividades')
+    });
+}
+
+/** Descarga en CSV la ubicación de las actividades dentro de los automatismos. */
+function downloadActivityUsageCsv() {
+    downloadCsv({
+        headers: ['Actividad', 'External Key', 'Automatización', 'Paso'],
+        rows: lastUsageRows,
+        fileName: buildCsvFileName('buscador_actividades_uso')
+    });
 }
 
 /**
@@ -61,23 +88,22 @@ async function searchActivityUsage() {
     elements.activityUsageTbody.innerHTML = '';
     elements.activityInfoBlock.classList.add('hidden');
     elements.activityResultsBlock.classList.add('hidden');
+    lastActivities = [];
+    lastUsageRows = [];
+    if (elements.downloadActivityListCsvBtn) elements.downloadActivityListCsvBtn.disabled = true;
+    if (elements.downloadActivityUsageCsvBtn) elements.downloadActivityUsageCsvBtn.disabled = true;
 
     try {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
+        // Cada búsqueda parte de cero para no reutilizar automatismos ya descargados.
+        mcApiService.clearAutomationDetailsCache();
 
-        let allFoundActivities = [];
+        logger.logMessage(`Buscando: ${valuesToSearch.map(v => `"${v}"`).join(', ')}`);
 
-        for (const val of valuesToSearch) {
-            logger.logMessage(`Buscando: "${val}"`);
-            const results = await mcApiService.searchActivityTargeted(selectedType, val, apiConfig);
-            
-            if (results && Array.isArray(results)) {
-                allFoundActivities.push(...results);
-            } else if (results) {
-                allFoundActivities.push(results);
-            }
-        }
+        // Todos los términos se resuelven en un solo recorrido: antes cada valor repetía
+        // la paginación completa de la colección.
+        let allFoundActivities = await mcApiService.searchActivitiesTargeted(selectedType, valuesToSearch, apiConfig);
 
         // Quitar duplicados por ObjectID
         allFoundActivities = allFoundActivities.filter((v, i, a) => a.findIndex(t => t.objectID === v.objectID) === i);
@@ -102,7 +128,9 @@ async function searchActivityUsage() {
 
 function renderActivityList(activities, apiConfig) {
     elements.activityListTbody.innerHTML = '';
-    
+    lastActivities = activities || [];
+    if (elements.downloadActivityListCsvBtn) elements.downloadActivityListCsvBtn.disabled = lastActivities.length === 0;
+
     activities.forEach((activity, index) => {
         const row = document.createElement('tr');
         row.dataset.index = index;
@@ -123,10 +151,20 @@ async function findUsageForAll(activities, apiConfig) {
     elements.activityUsageTbody.innerHTML = '';
     elements.activityResultsBlock.classList.remove('hidden');
 
-    for (const activity of activities) {
-        const automations = await mcApiService.findAutomationForActivity(activity, apiConfig);
+    // Los usos se buscan en paralelo; la caché de automatismos evita que varias
+    // actividades del mismo automatismo vuelvan a descargar su definición.
+    const usages = await Promise.all(
+        activities.map(async (activity) => ({
+            activity,
+            automations: await mcApiService.findAutomationForActivity(activity, apiConfig)
+        }))
+    );
+
+    lastUsageRows = [];
+    for (const { activity, automations } of usages) {
         if (automations && automations.length > 0) {
             automations.forEach(auto => {
+                lastUsageRows.push([activity.name, activity.customerKey, auto.automationName, auto.step]);
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${activity.name}</td>
@@ -142,6 +180,8 @@ async function findUsageForAll(activities, apiConfig) {
     if (elements.activityUsageTbody.innerHTML === '') {
         elements.activityUsageTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;"><i>Ninguna de estas actividades se usa en automatismos.</i></td></tr>';
     }
+
+    if (elements.downloadActivityUsageCsvBtn) elements.downloadActivityUsageCsvBtn.disabled = lastUsageRows.length === 0;
 }
 
 /**

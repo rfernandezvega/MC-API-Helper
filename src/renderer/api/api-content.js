@@ -2,7 +2,7 @@
 // Fichero: api-content.js
 // ===================================================================
 import { executeRestRequest, logger, setSilentResponses } from './api-core.js';
-import { getFolderPath } from './api-helpers.js';
+import { resolveFolderPaths, clearFolderPathCache } from './api-helpers.js';
 
 /** Formatea una duración en segundos a un texto de estimación (~X s / ~X min / ~X h). */
 function etaFromSeconds(seconds) {
@@ -70,14 +70,20 @@ export async function fetchAllCloudPages(apiConfig) {
  * @returns {Promise<Array>} El mismo arreglo, pero cada objeto incluye la propiedad `location`.
  */
 export async function enrichCloudPagesWithFolders(items, apiConfig) {
-    const pathPromises = items.map(async (item) => {
-        const location = item.category.id ? await getFolderPath(item.category.id, apiConfig) : 'Carpeta Raíz';
-        return {
-            ...item,
-            location: location
-        };
-    });
-    return Promise.all(pathPromises);
+    // Enriquecer la lista completa es una operación en sí misma: se parte de caché vacía.
+    clearFolderPathCache();
+
+    // Todas las carpetas se resuelven en bloque, así que el coste es la profundidad del
+    // árbol y no el número de assets (que aquí son todos los de la BU).
+    const paths = await resolveFolderPaths(
+        items.map(item => item.category?.id).filter(Boolean),
+        apiConfig
+    );
+
+    return items.map(item => ({
+        ...item,
+        location: item.category?.id ? (paths.get(String(item.category.id)) || 'Carpeta Raíz') : 'Carpeta Raíz'
+    }));
 }
 
 /**
