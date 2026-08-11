@@ -106,6 +106,7 @@ export function init() {
     elements.moveUpBtn = document.getElementById('moveUp');
     elements.moveDownBtn = document.getElementById('moveDown');
     elements.importFieldsBtn = document.getElementById('importFieldsBtn');
+    elements.downloadFieldsCsvBtn = document.getElementById('downloadFieldsCsvBtn');
 
     // --- 7. Sección: Gestión de Campos (Recuperar/Borrar) ---
     elements.recExternalKeyInput = document.getElementById('recExternalKey');

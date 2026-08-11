@@ -1148,7 +1148,9 @@
 
 						<h4>Configuración de Campos</h4>
 						<ul>
-							<li><b>Importar</b> un listado de campos (p. ej. copiados del modelo de datos de Salesforce) indicando el separador.</li>
+							<li><b>Importar</b> un listado de campos (p. ej. copiados del modelo de datos de Salesforce) indicando el separador. Las columnas son <b>Nombre</b>, <b>Tipo</b>, <b>Longitud</b> y, opcionalmente, <b>PK</b> y <b>Requerido</b> (Sí/No, Yes/No, True/False o 1/0, con o sin mayúsculas); una PK se marca siempre como requerida. Los campos importados se añaden a los que ya haya definidos.</li>
+							<li>Se admite volver a pegar el CSV descargado con <b>Descargar</b>: se ignoran las comillas de las celdas y la fila de cabecera, y la columna <b>Default</b> se reconoce por venir en un fichero de 6 columnas.</li>
+							<li><b>Descargar</b> — Exporta a CSV la configuración de la tabla (campo, tipo, longitud, default, PK y requerido) en el mismo orden en que está definida.</li>
 							<li>Crear/actualizar campos, crear campos de ejemplo de cada tipo, limpiar la tabla, añadir/eliminar filas y <b>ordenar</b> filas con las flechas (útil para copiar una DE manteniendo los identificadores al principio; <b>no</b> se puede reordenar sobre una DE existente).</li>
 						</ul>
 
@@ -1801,6 +1803,7 @@
         <!-- Grupo 2: Acciones de Configuración de Campos -->
         <div id="header-actions-config-campos" class="header-actions de-tab-actions hidden">
             <button id="importFieldsBtn" class="action-button activate-btn">Importar</button>
+            <button id="downloadFieldsCsvBtn" class="action-button download-btn">Descargar</button>
             <button id="createFieldsBtn" class="action-button activate-btn">Crear/Actualizar Campos</button>
             <button id="createDummyFieldsBtn" class="action-button secondary-btn">Campos de Ejemplo</button>
             <button id="clearFieldsBtn" class="action-button delete-btn">Limpiar Tabla</button>
@@ -2186,15 +2189,28 @@
     <div class="menu-group changelog-group">
         <h3>Novedades</h3>
         <div class="changelog-list">
-            <!-- ======================== v2.6.4 ======================== -->
+            <!-- ======================== v2.6.5 ======================== -->
             <details class="changelog-entry" open>
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.6.5</span>
+                    <span class="changelog-date">07 Agosto 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Botón Descargar en Data Extensions &gt; Configuración de Campos: exporta a CSV la configuración de la tabla de campos.</li>
+                    <li><span class="changelog-tag fix">Fix</span> Al importar o recuperar campos ya no queda una fila vacía por delante en la tabla de configuración de campos.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> La importación de campos admite columnas de PK y Requerido (Sí/No, Yes/No, True/False, 1/0) y acepta directamente el CSV descargado, ignorando comillas y cabecera.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.6.4 ======================== -->
+            <details class="changelog-entry" >
                 <summary class="changelog-version">
                     <span class="changelog-badge">v2.6.4</span>
                     <span class="changelog-date">07 Agosto 2026</span>
                 </summary>
                 <ul class="changelog-items">                    
                     <li><span class="changelog-tag new">Nuevo</span> Botón Descargar sobre cada tabla de resultados de los Buscadores: exporta la tabla a CSV saneando saltos de línea, comillas y separadores del texto de queries y scripts.</li>
-                    <li><span class="changelog-tag improved">Mejora</span> Las búsquedas de queries excluyen las que están en estado Inactive (las que se han borrado), mostrando solo las activas.</li>
+                    <li><span class="changelog-tag fix">Fix</span> Las búsquedas de queries excluyen las que están en estado Inactive (las que se han borrado), mostrando solo las activas.</li>
                     <li><span class="changelog-tag fix">Fix</span> Las barras de desplazamiento se pintan con los colores del tema; en modo oscuro ya no se ven en blanco.</li>
                 </ul>
             </details>
@@ -2903,7 +2919,7 @@
 <div id="import-modal" class="modal-overlay">
     <div class="modal-content">
         <h3>Importar Campos desde Portapapeles</h3>
-        <p>Pega aquí los datos. Las columnas deben ser: <b>Nombre</b>, <b>Tipo</b> y <b>Longitud</b> (opcional).</p>
+        <p>Pega aquí los datos. Las columnas deben ser: <b>Nombre</b>, <b>Tipo</b>, <b>Longitud</b> (opcional), <b>PK</b> y <b>Requerido</b> (opcionales: Sí/No, Yes/No, True/False o 1/0). También se admite el CSV descargado desde <em>Descargar</em>, que lleva la columna <b>Default</b> antes de PK.</p>
         <div class="delimiter-selector">
             <label for="delimiter-select">Separador:</label>
             <select id="delimiter-select">

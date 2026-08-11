@@ -336,7 +336,9 @@
 
 						<h4>Configuración de Campos</h4>
 						<ul>
-							<li><b>Importar</b> un listado de campos (p. ej. copiados del modelo de datos de Salesforce) indicando el separador.</li>
+							<li><b>Importar</b> un listado de campos (p. ej. copiados del modelo de datos de Salesforce) indicando el separador. Las columnas son <b>Nombre</b>, <b>Tipo</b>, <b>Longitud</b> y, opcionalmente, <b>PK</b> y <b>Requerido</b> (Sí/No, Yes/No, True/False o 1/0, con o sin mayúsculas); una PK se marca siempre como requerida. Los campos importados se añaden a los que ya haya definidos.</li>
+							<li>Se admite volver a pegar el CSV descargado con <b>Descargar</b>: se ignoran las comillas de las celdas y la fila de cabecera, y la columna <b>Default</b> se reconoce por venir en un fichero de 6 columnas.</li>
+							<li><b>Descargar</b> — Exporta a CSV la configuración de la tabla (campo, tipo, longitud, default, PK y requerido) en el mismo orden en que está definida.</li>
 							<li>Crear/actualizar campos, crear campos de ejemplo de cada tipo, limpiar la tabla, añadir/eliminar filas y <b>ordenar</b> filas con las flechas (útil para copiar una DE manteniendo los identificadores al principio; <b>no</b> se puede reordenar sobre una DE existente).</li>
 						</ul>
 

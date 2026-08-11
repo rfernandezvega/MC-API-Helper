@@ -149,7 +149,7 @@
 <div id="import-modal" class="modal-overlay">
     <div class="modal-content">
         <h3>Importar Campos desde Portapapeles</h3>
-        <p>Pega aquí los datos. Las columnas deben ser: <b>Nombre</b>, <b>Tipo</b> y <b>Longitud</b> (opcional).</p>
+        <p>Pega aquí los datos. Las columnas deben ser: <b>Nombre</b>, <b>Tipo</b>, <b>Longitud</b> (opcional), <b>PK</b> y <b>Requerido</b> (opcionales: Sí/No, Yes/No, True/False o 1/0). También se admite el CSV descargado desde <em>Descargar</em>, que lleva la columna <b>Default</b> antes de PK.</p>
         <div class="delimiter-selector">
             <label for="delimiter-select">Separador:</label>
             <select id="delimiter-select">
