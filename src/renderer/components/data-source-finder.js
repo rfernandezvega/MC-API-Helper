@@ -35,6 +35,7 @@ export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
 
     elements.findDataSourcesBtn.addEventListener('click', findDataSources);
+    ui.submitOnEnter(elements.deNameToFindInput, elements.findDataSourcesBtn);
     // Los nombres de automatismo son enlaces externos: se abren en el navegador.
     elements.dataSourcesTbody.addEventListener('click', ui.handleExternalLink);
 

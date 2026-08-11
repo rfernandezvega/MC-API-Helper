@@ -16,6 +16,7 @@ export function init(dependencies) {
     if (elements.searchScriptsByTextBtn) {
         elements.searchScriptsByTextBtn.addEventListener('click', handleSearch);
     }
+    ui.submitOnEnter(elements.scriptSearchText, elements.searchScriptsByTextBtn);
     elements.scriptSearchResultsTbody.addEventListener('click', ui.handleExternalLink);
 
     elements.downloadScriptSearchCsvBtn?.addEventListener('click', downloadResultsCsv);

@@ -17,6 +17,7 @@ export function init(dependencies) {
     
     // Listener para el botón de buscar
     elements.searchActivityBtn.addEventListener('click', searchActivityUsage);
+    ui.submitOnEnter(elements.activitySearchValue, elements.searchActivityBtn);
     
     // Listener para el botón de borrar
     elements.deleteActivityBtn.addEventListener('click', deleteSelectedActivities);

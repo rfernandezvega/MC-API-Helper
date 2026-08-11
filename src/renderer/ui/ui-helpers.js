@@ -886,6 +886,22 @@ export function hideModal(modalElement) {
 }
 
 /**
+ * Hace que pulsar Enter en un campo de texto equivalga a pulsar su botón de búsqueda,
+ * sin duplicar la lógica: se dispara el clic del propio botón. Si el botón está
+ * deshabilitado no hace nada, igual que si se pulsara con el ratón.
+ * @param {HTMLInputElement} input - Campo donde el usuario escribe.
+ * @param {HTMLButtonElement} button - Botón que lanza la búsqueda.
+ */
+export function submitOnEnter(input, button) {
+    if (!input || !button) return;
+    input.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        if (!button.disabled) button.click();
+    });
+}
+
+/**
  * Gestiona el clic en cualquier enlace con la clase 'external-link'.
  * Previene la navegación interna y lo abre en el navegador por defecto del sistema.
  * @param {Event} e - El evento de clic.

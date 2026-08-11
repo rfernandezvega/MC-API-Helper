@@ -24,6 +24,7 @@ export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
 
     elements.searchDEBtn.addEventListener('click', searchDE);
+    ui.submitOnEnter(elements.deSearchValue, elements.searchDEBtn);
 
     // Selección de una fila de resultados (para el botón "Origen de datos").
     elements.deSearchResultsTbody.addEventListener('click', (e) => {

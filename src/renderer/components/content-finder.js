@@ -25,6 +25,7 @@ let currentDrawerContent = null;
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
     elements.searchContentBtn.addEventListener('click', searchContent);
+    ui.submitOnEnter(elements.contentSearchValue, elements.searchContentBtn);
     elements.contentDetailBtn.addEventListener('click', showContentDetail);
     elements.downloadContentSearchCsvBtn?.addEventListener('click', downloadResultsCsv);
 

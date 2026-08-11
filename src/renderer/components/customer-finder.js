@@ -39,6 +39,7 @@ export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
 
     elements.searchCustomerBtn.addEventListener('click', searchCustomer);
+    ui.submitOnEnter(elements.customerSearchValue, elements.searchCustomerBtn);
     elements.selectTablesBtn.addEventListener('click', displayDESelection);
     elements.getCustomerJourneysBtn.addEventListener('click', getCustomerJourneys);
     elements.customerSearchTbody.addEventListener('click', handleRowSelection);

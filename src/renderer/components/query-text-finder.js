@@ -26,6 +26,7 @@ function updateShowQueryToggleUI() {
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
     elements.searchQueriesByTextBtn.addEventListener('click', searchQueriesByText);
+    ui.submitOnEnter(elements.querySearchText, elements.searchQueriesByTextBtn);
 
     // Delegación de eventos para abrir enlaces externos
     elements.querySearchResultsTbody.addEventListener('click', ui.handleExternalLink);
