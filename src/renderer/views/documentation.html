@@ -13,6 +13,7 @@
 				<div class="docu-vnav-title">Primeros pasos</div>
 				<button class="tab-button active" data-tab="doc-primeros-pasos">Primeros pasos</button>
 				<button class="tab-button" data-tab="doc-general">Generalidades de la app</button>
+				<button class="tab-button" data-tab="doc-estadisticas">Estadísticas de Uso</button>
 				<button class="tab-button" data-tab="doc-config">Configuración de Cuentas</button>
 
 				<div class="docu-vnav-title">Explorar y buscar</div>
@@ -495,6 +496,38 @@
 							<li><b>Descargar PDF</b> — Informe con gráficos y KPIs. <b>Exportar Detalles</b> — ZIP con un CSV por categoría. <b>Volver a Opciones</b> — Relanza el escaneo con otras opciones.</li>
 						</ul>
 						<div class="docu-note">Los resultados se guardan en disco para el cliente activo y se cargan la próxima vez.</div>
+					</div>
+				</div>
+
+				<!-- ===== ESTADÍSTICAS DE USO ===== -->
+				<div id="doc-estadisticas" class="tab-content">
+					<div class="docu-view">
+						<h3>Estadísticas de Uso</h3>
+						<p>Muestra cómo se está usando la aplicación: a qué clientes y Business Units se accede, cuántas llamadas se han hecho contra Marketing Cloud y qué acciones se utilizan más. Los datos se registran <b>en local</b> y no salen del equipo.</p>
+
+						<h4>Qué se muestra</h4>
+						<ul>
+							<li><b>KPIs</b>: accesos a clientes, llamadas API, vistas abiertas, acciones realizadas, acciones distintas y fecha del último uso.</li>
+							<li><b>Acciones más utilizadas</b> — Ranking de los botones pulsados, identificados como <i>Vista › Pestaña › Botón</i> (así se distingue, por ejemplo, en qué buscador se ha buscado), con su porcentaje sobre el total.</li>
+							<li><b>Vistas más abiertas</b> — Navegación por el menú lateral, contada aparte de las acciones.</li>
+							<li><b>Acciones y llamadas API por cliente</b>, para ver dónde se concentra el trabajo.</li>
+							<li><b>Detalle por cliente y Business Unit</b> — Tabla ordenable por cualquiera de sus columnas con accesos, llamadas API, vistas, acciones y último uso. Incluye las BUs configuradas que todavía no se han usado.</li>
+						</ul>
+
+						<h4>Desglose</h4>
+						<ul>
+							<li>Pulsa una barra de <b>Acciones por cliente</b> para ver el uso de ese cliente, o una <b>fila de la tabla</b> para ver el de esa Business Unit concreta.</li>
+							<li>El desglose se abre bajo las gráficas con sus propias tarjetas de acciones y vistas; se cierra con <b>Cerrar detalle</b> o volviendo a pulsar lo que está abierto.</li>
+						</ul>
+
+						<h4>Botones de cabecera</h4>
+						<ul>
+							<li><b>Refrescar</b> — Vuelve a leer los datos de disco.</li>
+							<li><b>Descargar</b> — Exporta a CSV el ranking de acciones que se está mirando (el general o el del desglose abierto).</li>
+							<li><b>Borrar Estadísticas</b> — Elimina accesos y acciones registradas. El contador de llamadas API no se ve afectado.</li>
+						</ul>
+
+						<div class="docu-note">Las Business Units marcadas como <b>ocultas</b> en Configuración de Cuentas no aparecen ni suman en las estadísticas. Se guardan contadores acumulados, no un registro de eventos: el fichero no crece con el uso. El contador de llamadas API ya venía acumulándose de versiones anteriores, así que aparece con histórico desde el primer día; los accesos y las acciones empiezan a contar desde esta versión.</div>
 					</div>
 				</div>
 

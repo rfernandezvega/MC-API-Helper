@@ -292,6 +292,13 @@
     font-size: 0.85em;
     font-style: italic;
 }
+/* Aclaración al pie de la tarjeta (p. ej. sobre qué total se calcula el %). */
+.audit-metric-note {
+    margin-top: 10px;
+    font-size: 0.76em;
+    color: var(--sf-text-muted);
+    font-style: italic;
+}
 
 /* Fila de barra de progreso dentro de una tarjeta de métricas.
    El color de la barra y del valor es por dato y se mantiene inline. */

@@ -185,6 +185,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteCacheFile: (catKey, fileName) => ipcRenderer.invoke('delete-cache-file', catKey, fileName),
   addApiUsage: (clientName, mid, delta) => ipcRenderer.invoke('add-api-usage', clientName, mid, delta),
   getApiUsage: (clientName) => ipcRenderer.invoke('get-api-usage', clientName),
+  getApiUsageAll: () => ipcRenderer.invoke('get-api-usage-all'),
+  // Estadísticas de uso locales (acciones y accesos por cliente/BU).
+  addUsageEvents: (entries) => ipcRenderer.invoke('add-usage-events', entries),
+  addUsageAccess: (clientName, mid) => ipcRenderer.invoke('add-usage-access', clientName, mid),
+  getUsageStats: () => ipcRenderer.invoke('get-usage-stats'),
+  clearUsageStats: () => ipcRenderer.invoke('clear-usage-stats'),
   selectFolder: () => ipcRenderer.invoke('select-folder'),
   saveMultipleCsvs: (data) => ipcRenderer.invoke('save-multiple-csvs', data),
   

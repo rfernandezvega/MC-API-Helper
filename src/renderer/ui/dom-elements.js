@@ -571,6 +571,12 @@ export function init() {
     elements.journeyPauseRetain = document.getElementById('journey-pause-retain');
     elements.journeyPauseConfirmBtn = document.getElementById('journey-pause-confirm-btn');
     elements.journeyPauseCancelBtn = document.getElementById('journey-pause-cancel-btn');
+
+    // --- 33. Sección: Estadísticas de Uso ---
+    elements.refreshStatsBtn = document.getElementById('refreshStatsBtn');
+    elements.downloadStatsCsvBtn = document.getElementById('downloadStatsCsvBtn');
+    elements.clearStatsBtn = document.getElementById('clearStatsBtn');
+    elements.statsContent = document.getElementById('statsContent');
 }
 
 export default elements;

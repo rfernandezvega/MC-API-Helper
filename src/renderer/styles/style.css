@@ -25,6 +25,7 @@
 @import url("components/audit-manager.css");
 @import url("components/finders.css");
 @import url("components/settings.css");
+@import url("components/estadisticas.css");
 
 /* 
    NOTA: No es necesario crear un CSS para cada vista si no tiene

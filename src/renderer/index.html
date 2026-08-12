@@ -70,6 +70,7 @@
 				<h3 class="collapsible-header">General</h3>
 				<ul class="collapsible-content">
 					<li><a class="macro-item" data-macro="ajustes">Ajustes</a></li>
+					<li><a class="macro-item" data-macro="estadisticas">Estadísticas</a></li>
 					<li><a class="macro-item" data-macro="docu">Documentación</a></li>
 					<li><a class="macro-item" data-macro="configuracionAPIs">Configuración de Cuentas</a></li>
 				</ul>
@@ -89,7 +90,7 @@
                     <li><a class="macro-item" data-macro="sendManagement">Gestión Envíos</a></li>     
 					<li><a class="macro-item" data-macro="carpetas">Crear Carpetas</a></li>   
 					<li><a class="macro-item" data-macro="validadorEmail">Validar Emails</a></li>
-                    <li><a class="macro-item" data-macro="auditoria">Auditoría</a></li>          
+                    <li><a class="macro-item" data-macro="auditoria">Auditoría</a></li>
 				</ul>
 			</div>
 		</div>
@@ -825,6 +826,7 @@
 				<div class="docu-vnav-title">Primeros pasos</div>
 				<button class="tab-button active" data-tab="doc-primeros-pasos">Primeros pasos</button>
 				<button class="tab-button" data-tab="doc-general">Generalidades de la app</button>
+				<button class="tab-button" data-tab="doc-estadisticas">Estadísticas de Uso</button>
 				<button class="tab-button" data-tab="doc-config">Configuración de Cuentas</button>
 
 				<div class="docu-vnav-title">Explorar y buscar</div>
@@ -1310,6 +1312,38 @@
 					</div>
 				</div>
 
+				<!-- ===== ESTADÍSTICAS DE USO ===== -->
+				<div id="doc-estadisticas" class="tab-content">
+					<div class="docu-view">
+						<h3>Estadísticas de Uso</h3>
+						<p>Muestra cómo se está usando la aplicación: a qué clientes y Business Units se accede, cuántas llamadas se han hecho contra Marketing Cloud y qué acciones se utilizan más. Los datos se registran <b>en local</b> y no salen del equipo.</p>
+
+						<h4>Qué se muestra</h4>
+						<ul>
+							<li><b>KPIs</b>: accesos a clientes, llamadas API, vistas abiertas, acciones realizadas, acciones distintas y fecha del último uso.</li>
+							<li><b>Acciones más utilizadas</b> — Ranking de los botones pulsados, identificados como <i>Vista › Pestaña › Botón</i> (así se distingue, por ejemplo, en qué buscador se ha buscado), con su porcentaje sobre el total.</li>
+							<li><b>Vistas más abiertas</b> — Navegación por el menú lateral, contada aparte de las acciones.</li>
+							<li><b>Acciones y llamadas API por cliente</b>, para ver dónde se concentra el trabajo.</li>
+							<li><b>Detalle por cliente y Business Unit</b> — Tabla ordenable por cualquiera de sus columnas con accesos, llamadas API, vistas, acciones y último uso. Incluye las BUs configuradas que todavía no se han usado.</li>
+						</ul>
+
+						<h4>Desglose</h4>
+						<ul>
+							<li>Pulsa una barra de <b>Acciones por cliente</b> para ver el uso de ese cliente, o una <b>fila de la tabla</b> para ver el de esa Business Unit concreta.</li>
+							<li>El desglose se abre bajo las gráficas con sus propias tarjetas de acciones y vistas; se cierra con <b>Cerrar detalle</b> o volviendo a pulsar lo que está abierto.</li>
+						</ul>
+
+						<h4>Botones de cabecera</h4>
+						<ul>
+							<li><b>Refrescar</b> — Vuelve a leer los datos de disco.</li>
+							<li><b>Descargar</b> — Exporta a CSV el ranking de acciones que se está mirando (el general o el del desglose abierto).</li>
+							<li><b>Borrar Estadísticas</b> — Elimina accesos y acciones registradas. El contador de llamadas API no se ve afectado.</li>
+						</ul>
+
+						<div class="docu-note">Las Business Units marcadas como <b>ocultas</b> en Configuración de Cuentas no aparecen ni suman en las estadísticas. Se guardan contadores acumulados, no un registro de eventos: el fichero no crece con el uso. El contador de llamadas API ya venía acumulándose de versiones anteriores, así que aparece con histórico desde el primer día; los accesos y las acciones empiezan a contar desde esta versión.</div>
+					</div>
+				</div>
+
 			</div>
 		</div>
 	</div>
@@ -1401,6 +1435,25 @@
                 <div class="leg-row"><div class="leg-dot leg-dot-ref"></div> REF</div>
             </div>
         </div>
+    </div>
+</div>
+
+
+<!-- 19. SECCIÓN: ESTADÍSTICAS DE USO -->
+<div id="estadisticas-section" class="section">
+    <div class="section-header">
+        <button class="back-button">← Atrás</button>
+        <div class="header-actions">
+            <button id="refreshStatsBtn" class="action-button">Refrescar</button>
+            <button id="downloadStatsCsvBtn" class="action-button download-btn">Descargar</button>
+            <button id="clearStatsBtn" class="action-button delete-btn">Borrar Estadísticas</button>
+        </div>
+    </div>
+
+    <h2 class="u-text-center u-mb-10">Estadísticas de Uso</h2>
+
+    <div class="config-section-container">
+        <div id="statsContent" class="config-block u-grow stats-content"></div>
     </div>
 </div>
 
@@ -2195,12 +2248,13 @@
             <details class="changelog-entry" open>
                 <summary class="changelog-version">
                     <span class="changelog-badge">v2.6.5</span>
-                    <span class="changelog-date">07 Agosto 2026</span>
+                    <span class="changelog-date">17 Agosto 2026</span>
                 </summary>
                 <ul class="changelog-items">
                     <li><span class="changelog-tag new">Nuevo</span> Botón Descargar en Data Extensions &gt; Configuración de Campos: exporta a CSV la configuración de la tabla de campos.</li>
-                    <li><span class="changelog-tag fix">Fix</span> Al importar o recuperar campos ya no queda una fila vacía por delante en la tabla de configuración de campos.</li>
-                    <li><span class="changelog-tag improved">Mejora</span> La importación de campos admite columnas de PK y Requerido (Sí/No, Yes/No, True/False, 1/0) y acepta directamente el CSV descargado, ignorando comillas y cabecera.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Vista de Estadísticas de Uso: accesos, llamadas API, vistas abiertas y ranking de las acciones más utilizadas de todos los clientes, con desglose al pulsar un cliente en la gráfica o una fila de la tabla de detalle. Los datos se guardan en local y las BUs ocultas no cuentan.</li>
+                    <li><span class="changelog-tag fix">Fix</span> En la vista de Data Extensions, al importar o recuperar campos ya no queda una fila vacía por delante en la tabla de configuración de campos.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> En la vista de Data Extensions, la importación de campos admite columnas de PK y Requerido (Sí/No, Yes/No, True/False, 1/0) y acepta directamente el CSV descargado, ignorando comillas y cabecera.</li>
                     <li><span class="changelog-tag improved">Mejora</span> En los Buscadores, pulsar Enter en el campo de búsqueda lanza la búsqueda sin tener que pulsar el botón.</li>
                     <li><span class="changelog-tag improved">Mejora</span> En Automatismos el nombre pasa a ser un enlace que abre el automatismo en Automation Studio.</li>
                 </ul>

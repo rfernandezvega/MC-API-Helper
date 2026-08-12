@@ -70,6 +70,7 @@
 				<h3 class="collapsible-header">General</h3>
 				<ul class="collapsible-content">
 					<li><a class="macro-item" data-macro="ajustes">Ajustes</a></li>
+					<li><a class="macro-item" data-macro="estadisticas">Estadísticas</a></li>
 					<li><a class="macro-item" data-macro="docu">Documentación</a></li>
 					<li><a class="macro-item" data-macro="configuracionAPIs">Configuración de Cuentas</a></li>
 				</ul>
@@ -89,7 +90,7 @@
                     <li><a class="macro-item" data-macro="sendManagement">Gestión Envíos</a></li>     
 					<li><a class="macro-item" data-macro="carpetas">Crear Carpetas</a></li>   
 					<li><a class="macro-item" data-macro="validadorEmail">Validar Emails</a></li>
-                    <li><a class="macro-item" data-macro="auditoria">Auditoría</a></li>          
+                    <li><a class="macro-item" data-macro="auditoria">Auditoría</a></li>
 				</ul>
 			</div>
 		</div>
