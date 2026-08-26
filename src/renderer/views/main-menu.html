@@ -19,20 +19,17 @@
             <details class="changelog-entry" open>
                 <summary class="changelog-version">
                     <span class="changelog-badge">v2.6.6</span>
-                    <span class="changelog-date">26 Agosto 2026</span>
+                    <span class="changelog-date">27 Agosto 2026</span>
                 </summary>
                 <ul class="changelog-items">
-                    <li><span class="changelog-tag new">Nuevo</span> En el Buscador de Contenidos se elige en una picklist si buscar por Nombre, Id o Contenido. La búsqueda por Contenido localiza el texto dentro del cuerpo de los contenidos (HTML, AMPscript, bloques...).</li>
-                    <li><span class="changelog-tag new">Nuevo</span> Botón Compartidas en el Buscador de Contenidos: al seleccionarlo la búsqueda incluye también Shared Content y una columna Compartido indica qué resultados lo son. La columna se incluye igualmente en el CSV de resultados. Se añade también una columna Código con un icono por fila que abre el código del contenido.</li>
-                    <li><span class="changelog-tag improved">Mejora</span> Al buscar por Contenido se avisa de que esa búsqueda no es del todo fiable y de que la vía completa es descargar los contenidos en la vista Contenidos y buscar allí.</li>
-                    <li><span class="changelog-tag improved">Mejora</span> La búsqueda de contenidos descarga siempre el cuerpo, de forma que la búsqueda por Contenido descarta en local los resultados que la API devuelve de más y el código de cualquier resultado se abre sin llamadas adicionales.</li>
-                    <li><span class="changelog-tag improved">Mejora</span> El visor de código fuente pasa a resaltar la sintaxis con Prism, que entiende el contexto: colorea correctamente el HTML, el CSS de los &lt;style&gt;, el SSJS de los &lt;script runat="server"&gt; y los bloques AMPscript (%%[ ]%%, %%= =%% y las cadenas de personalización), sin confundir el valor de un atributo con una cadena de código.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> En el Buscador de Contenidos se elige en una picklist si buscar por Nombre, Id o Contenido y descarga el contenido. La búsqueda por Contenido localiza el texto dentro de todo el contenido aunque no es del todo fiable.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Botón Compartidas en el Buscador de Contenidos: al seleccionarlo la búsqueda incluye también Shared Content y una columna Compartido indica qué resultados lo son.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> El visor de código fuente pasa a resaltar la sintaxis con Prism.js, que colorea correctamente el código.</li>
                     <li><span class="changelog-tag fix">Fix</span> Los bloques de código fuente (Cloud Pages, Contenidos, Buscadores y Journeys) ajustan las líneas largas al ancho de la caja en lugar de obligar a un scroll horizontal que dejaba parte del código fuera de la vista.</li>
-                    <li><span class="changelog-tag improved">Mejora</span> La caja de resultados de los Buscadores tiene ahora una altura fija con la cabecera siempre visible al hacer scroll, así el detalle que se despliega al seleccionar una fila queda a la vista sin necesidad de un scroll larguísimo.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> La tabla de resultados de los Buscadores tiene ahora una altura fija con scroll.</li>
                     <li><span class="changelog-tag improved">Mejora</span> Las rutas de carpeta se cachean mientras se trabaja con el mismo cliente/BU y se reutilizan entre búsquedas y vistas (Contenidos, Automatismos, Data Extensions, Journeys), reduciendo mucho las llamadas a la API. Se refrescan al cambiar de cliente o Business Unit.</li>
                     <li><span class="changelog-tag fix">Fix</span> En el Analizador de Journeys, los nombres de plantillas de WhatsApp y de mensajes SMS se resuelven buscando por ID exacto; antes podía desviarlos un contenido cuyo nombre contuviera ese mismo número.</li>
                     <li><span class="changelog-tag improved">Mejora</span> Se retira la vista de Estadísticas de Uso y el registro local de acciones y accesos que la alimentaba por rendimiento. El contador de llamadas API por cliente se mantiene.</li>
-                    <li><span class="changelog-tag improved">Mejora</span> En los Buscadores, la cabecera de cada tabla de resultados es coherente en todas las pestañas y muestra cuántos registros se han encontrado (Resultados: N).</li>
                 </ul>
             </details>
 
