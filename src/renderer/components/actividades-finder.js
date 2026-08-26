@@ -93,6 +93,8 @@ async function searchActivityUsage() {
     lastUsageRows = [];
     if (elements.downloadActivityListCsvBtn) elements.downloadActivityListCsvBtn.disabled = true;
     if (elements.downloadActivityUsageCsvBtn) elements.downloadActivityUsageCsvBtn.disabled = true;
+    ui.setResultsCount(elements.activitiesSearchResultsTitle, null);
+    ui.setResultsCount(elements.activityUsageResultsTitle, null);
 
     try {
         const apiConfig = await getAuthenticatedConfig();
@@ -120,6 +122,8 @@ async function searchActivityUsage() {
 
     } catch (error) {
         logger.logMessage(`Error: ${error.message}`);
+        ui.setResultsCount(elements.activitiesSearchResultsTitle, null);
+        ui.setResultsCount(elements.activityUsageResultsTitle, null);
         ui.showCustomAlert(`Error: ${error.message}`);
     } finally {
         ui.unblockUI();
@@ -131,6 +135,7 @@ function renderActivityList(activities, apiConfig) {
     elements.activityListTbody.innerHTML = '';
     lastActivities = activities || [];
     if (elements.downloadActivityListCsvBtn) elements.downloadActivityListCsvBtn.disabled = lastActivities.length === 0;
+    ui.setResultsCount(elements.activitiesSearchResultsTitle, lastActivities.length);
 
     activities.forEach((activity, index) => {
         const row = document.createElement('tr');
@@ -183,6 +188,7 @@ async function findUsageForAll(activities, apiConfig) {
     }
 
     if (elements.downloadActivityUsageCsvBtn) elements.downloadActivityUsageCsvBtn.disabled = lastUsageRows.length === 0;
+    ui.setResultsCount(elements.activityUsageResultsTitle, lastUsageRows.length);
 }
 
 /**

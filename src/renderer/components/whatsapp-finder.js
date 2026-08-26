@@ -80,6 +80,7 @@ export function resetWhatsapp() {
     elements.waRegisterBlock?.classList.add('hidden');
     lastContacts = [];
     if (elements.downloadWaResultsCsvBtn) elements.downloadWaResultsCsvBtn.disabled = true;
+    ui.setResultsCount(elements.waResultsTitle, null);
 }
 
 /** Descarga en CSV los contactos de la audiencia WhatsApp encontrados. */
@@ -113,6 +114,7 @@ export async function searchWhatsapp(term, apiConfig) {
         }
     } catch (error) {
         logger.logMessage(`Error en búsqueda WhatsApp: ${error.message}`);
+        ui.setResultsCount(elements.waResultsTitle, null);
         ui.showCustomAlert(`Error en la búsqueda de WhatsApp: ${error.message}`);
     }
 }
@@ -120,6 +122,7 @@ export async function searchWhatsapp(term, apiConfig) {
 function renderResults(contacts, nameById = {}) {
     lastContacts = contacts || [];
     if (elements.downloadWaResultsCsvBtn) elements.downloadWaResultsCsvBtn.disabled = lastContacts.length === 0;
+    ui.setResultsCount(elements.waResultsTitle, lastContacts.length);
     elements.waResultsTbody.innerHTML = contacts.map(c => {
         const chans = c.channels.length
             ? c.channels.map(ch => {

@@ -70,7 +70,6 @@
 				<h3 class="collapsible-header">General</h3>
 				<ul class="collapsible-content">
 					<li><a class="macro-item" data-macro="ajustes">Ajustes</a></li>
-					<li><a class="macro-item" data-macro="estadisticas">Estadísticas</a></li>
 					<li><a class="macro-item" data-macro="docu">Documentación</a></li>
 					<li><a class="macro-item" data-macro="configuracionAPIs">Configuración de Cuentas</a></li>
 				</ul>
@@ -826,7 +825,6 @@
 				<div class="docu-vnav-title">Primeros pasos</div>
 				<button class="tab-button active" data-tab="doc-primeros-pasos">Primeros pasos</button>
 				<button class="tab-button" data-tab="doc-general">Generalidades de la app</button>
-				<button class="tab-button" data-tab="doc-estadisticas">Estadísticas de Uso</button>
 				<button class="tab-button" data-tab="doc-config">Configuración de Cuentas</button>
 
 				<div class="docu-vnav-title">Explorar y buscar</div>
@@ -907,6 +905,7 @@
 						<h4>Selector de cliente</h4>
 						<ul>
 							<li>En la cabecera superior eliges el cliente con el que trabajar. Todas las vistas usan ese cliente y su caché local.</li>
+							<li>Las rutas de carpeta (Content Builder, Automation Studio, Data Extensions...) se cachean en memoria mientras trabajas con el mismo cliente/BU, para no repetir las mismas consultas entre búsquedas y vistas. Se refrescan automáticamente al cambiar de cliente o de Business Unit.</li>
 						</ul>
 
 						<h4>Buscador de texto en la ventana</h4>
@@ -959,6 +958,7 @@
 						<p>Conjunto de buscadores para localizar dónde se usa o qué contiene cada elemento de la instancia.</p>
 						<p>En todos ellos, pulsar <b>Enter</b> en el campo de búsqueda equivale a pulsar su botón de buscar.</p>
 						<p>Todas las tablas de resultados tienen encima un botón <b>Descargar</b> que exporta lo encontrado a CSV (se habilita al haber resultados). El fichero se genera con separador <b>;</b>, todas las celdas entrecomilladas y BOM UTF-8: los saltos de línea, tabuladores y comillas del texto de queries y scripts se sanean para que el fichero se abra bien en Excel. En las tablas paginadas se exportan todos los registros, no solo la página visible, y se respeta la ordenación aplicada.</p>
+						<p>La cabecera de cada tabla de resultados muestra cuántos registros se han encontrado (<b>Resultados: N</b>).</p>
 
 						<h4>Buscador de Data Extensions</h4>
 						<ul>
@@ -992,7 +992,11 @@
 
 						<h4>Buscador de Contenidos</h4>
 						<ul>
-							<li>Busca cualquier contenido de Content Builder por nombre o id; muestra la tipología y la ruta. Desde el detalle se puede ver y descargar el código.</li>
+							<li>Busca cualquier contenido de Content Builder eligiendo en una picklist si se busca por Nombre, Id o Contenido (localiza el texto dentro del cuerpo del contenido); muestra la tipología, si es compartido y la ruta. El conmutador "Compartidas" (desactivado por defecto) amplía la búsqueda a los contenidos de Shared Content, y la columna Compartido marca los que están compartidos con otras Business Units. Desde el detalle se puede ver y descargar el código.</li>
+							<li>La búsqueda por Contenido admite el texto tal cual se escriba, con signos y con espacios: se busca la frase completa dentro del cuerpo y los resultados son exactos.</li>
+							<li>Al elegir <b>Contenido</b> aparece un aviso junto al campo de valor: esa búsqueda se apoya en el operador <code>mustcontain</code> de la API, que puede dejarse resultados fuera, así que no es del todo fiable. Para una búsqueda completa, descarga los contenidos en la vista <b>Contenidos</b> y busca allí. Las búsquedas por Nombre e Id no tienen ese problema (usan operadores exactos).</li>
+							<li>La búsqueda descarga siempre el cuerpo de los contenidos. Así se puede descartar en local lo que la API devuelve de más y, además, ver el código de cualquier resultado sin volver a llamar a Marketing Cloud contenido por contenido, que salen muchas más llamadas.</li>
+							<li>La columna <b>Código</b>, la primera de la tabla, muestra un icono por fila que abre el mismo drawer de código del detalle.</li>
 						</ul>
 
 						<h4>Buscador de Actividades</h4>
@@ -1312,38 +1316,6 @@
 					</div>
 				</div>
 
-				<!-- ===== ESTADÍSTICAS DE USO ===== -->
-				<div id="doc-estadisticas" class="tab-content">
-					<div class="docu-view">
-						<h3>Estadísticas de Uso</h3>
-						<p>Muestra cómo se está usando la aplicación: a qué clientes y Business Units se accede, cuántas llamadas se han hecho contra Marketing Cloud y qué acciones se utilizan más. Los datos se registran <b>en local</b> y no salen del equipo.</p>
-
-						<h4>Qué se muestra</h4>
-						<ul>
-							<li><b>KPIs</b>: accesos a clientes, llamadas API, vistas abiertas, acciones realizadas, acciones distintas y fecha del último uso.</li>
-							<li><b>Acciones más utilizadas</b> — Ranking de los botones pulsados, identificados como <i>Vista › Pestaña › Botón</i> (así se distingue, por ejemplo, en qué buscador se ha buscado), con su porcentaje sobre el total.</li>
-							<li><b>Vistas más abiertas</b> — Navegación por el menú lateral, contada aparte de las acciones.</li>
-							<li><b>Acciones y llamadas API por cliente</b>, para ver dónde se concentra el trabajo.</li>
-							<li><b>Detalle por cliente y Business Unit</b> — Tabla ordenable por cualquiera de sus columnas con accesos, llamadas API, vistas, acciones y último uso. Incluye las BUs configuradas que todavía no se han usado.</li>
-						</ul>
-
-						<h4>Desglose</h4>
-						<ul>
-							<li>Pulsa una barra de <b>Acciones por cliente</b> para ver el uso de ese cliente, o una <b>fila de la tabla</b> para ver el de esa Business Unit concreta.</li>
-							<li>El desglose se abre bajo las gráficas con sus propias tarjetas de acciones y vistas; se cierra con <b>Cerrar detalle</b> o volviendo a pulsar lo que está abierto.</li>
-						</ul>
-
-						<h4>Botones de cabecera</h4>
-						<ul>
-							<li><b>Refrescar</b> — Vuelve a leer los datos de disco.</li>
-							<li><b>Descargar</b> — Exporta a CSV el ranking de acciones que se está mirando (el general o el del desglose abierto).</li>
-							<li><b>Borrar Estadísticas</b> — Elimina accesos y acciones registradas. El contador de llamadas API no se ve afectado.</li>
-						</ul>
-
-						<div class="docu-note">Las Business Units marcadas como <b>ocultas</b> en Configuración de Cuentas no aparecen ni suman en las estadísticas. Se guardan contadores acumulados, no un registro de eventos: el fichero no crece con el uso. El contador de llamadas API ya venía acumulándose de versiones anteriores, así que aparece con histórico desde el primer día; los accesos y las acciones empiezan a contar desde esta versión.</div>
-					</div>
-				</div>
-
 			</div>
 		</div>
 	</div>
@@ -1439,25 +1411,6 @@
 </div>
 
 
-<!-- 19. SECCIÓN: ESTADÍSTICAS DE USO -->
-<div id="estadisticas-section" class="section">
-    <div class="section-header">
-        <button class="back-button">← Atrás</button>
-        <div class="header-actions">
-            <button id="refreshStatsBtn" class="action-button">Refrescar</button>
-            <button id="downloadStatsCsvBtn" class="action-button download-btn">Descargar</button>
-            <button id="clearStatsBtn" class="action-button delete-btn">Borrar Estadísticas</button>
-        </div>
-    </div>
-
-    <h2 class="u-text-center u-mb-10">Estadísticas de Uso</h2>
-
-    <div class="config-section-container">
-        <div id="statsContent" class="config-block u-grow stats-content"></div>
-    </div>
-</div>
-
-
 <!-- 9. SECCIÓN: BUSCADORES -->
 <div id="buscadores-section" class="section">
     <div class="section-header"><button class="back-button">← Atrás</button></div>
@@ -1493,7 +1446,7 @@
         </div>
         <div class="config-block u-grow">
             <div class="u-flex-between u-mb-10">
-                <h3 class="u-m-0">Resultados</h3>
+                <h3 class="u-m-0" id="de-search-results-title" data-results-label="Resultados">Resultados</h3>
                 <div class="u-flex u-gap-8">
                     <button id="downloadDeSearchCsvBtn" class="action-button download-btn" disabled title="Descargar los resultados en CSV">Descargar</button>
                     <button id="deToSourcesBtn" class="action-button" disabled title="Buscar los orígenes de datos de la DE seleccionada">Origen de datos</button>
@@ -1522,7 +1475,7 @@
         </div>
         <div class="config-block u-grow">
             <div class="u-flex-between u-mb-10">
-                <h3 class="u-m-0">Actividades Encontradas</h3>
+                <h3 class="u-m-0" id="data-sources-results-title" data-results-label="Resultados">Resultados</h3>
                 <button id="downloadDataSourcesCsvBtn" class="action-button download-btn" disabled title="Descargar los resultados en CSV">Descargar</button>
             </div>
             <div class="table-container">
@@ -1548,7 +1501,7 @@
         </div>
         <div class="config-block u-grow">
             <div class="u-flex-between u-mb-10">
-                <h3 class="u-m-0">Resultados</h3>
+                <h3 class="u-m-0" id="customer-search-results-title" data-results-label="Resultados">Resultados</h3>
                 <div class="u-flex u-gap-8">
                     <button id="downloadCustomerSearchCsvBtn" class="action-button download-btn" disabled title="Descargar los resultados en CSV">Descargar</button>
                     <button id="selectTablesBtn" class="action-button" disabled>Seleccionar Tablas</button>
@@ -1578,7 +1531,7 @@
 
         <div id="customer-journeys-results-block" class="config-block hidden">
             <div class="u-flex-between u-mb-10">
-                <h3 class="u-m-0">Journeys del Cliente Seleccionado</h3>
+                <h3 class="u-m-0" id="customer-journeys-results-title" data-results-label="Journeys del Cliente Seleccionado">Journeys del Cliente Seleccionado</h3>
                 <div class="u-flex u-gap-8">
                     <button id="downloadCustomerJourneysCsvBtn" class="action-button download-btn" disabled title="Descargar los journeys en CSV">Descargar</button>
                     <button id="ejectCustomerFromJourneysBtn" class="action-button delete-btn" disabled>Expulsar</button>
@@ -1600,7 +1553,7 @@
         <!-- Resultados de Audiencia WhatsApp (cuando se incluye WhatsApp en la búsqueda) -->
         <div id="wa-results-block" class="config-block hidden">
             <div class="u-flex-between u-mb-10">
-                <h3 class="u-m-0">Audiencia WhatsApp</h3>
+                <h3 class="u-m-0" id="wa-results-title" data-results-label="Audiencia WhatsApp">Audiencia WhatsApp</h3>
                 <button id="downloadWaResultsCsvBtn" class="action-button download-btn" disabled title="Descargar los resultados en CSV">Descargar</button>
             </div>
             <div class="table-container">
@@ -1645,7 +1598,7 @@
         </div>
         <div class="config-block u-grow">
             <div class="u-flex-between u-mb-10">
-                <h3 class="u-m-0">Queries Encontradas</h3>
+                <h3 class="u-m-0" id="query-search-results-title" data-results-label="Resultados">Resultados</h3>
                 <button id="downloadQuerySearchCsvBtn" class="action-button download-btn" disabled title="Descargar los resultados en CSV">Descargar</button>
             </div>
             <div class="table-container">
@@ -1670,7 +1623,7 @@
         </div>
         <div class="config-block u-grow">
             <div class="u-flex-between u-mb-10">
-                <h3 class="u-m-0">Scripts Encontrados</h3>
+                <h3 class="u-m-0" id="script-search-results-title" data-results-label="Resultados">Resultados</h3>
                 <button id="downloadScriptSearchCsvBtn" class="action-button download-btn" disabled title="Descargar los resultados en CSV">Descargar</button>
             </div>
             <div class="table-container">
@@ -1686,16 +1639,28 @@
     <div id="contenido-tab" class="tab-content config-section-container">
         <div class="config-block">
             <div class="finder-filter-row">
-                <div class="form-group finder-field">
-                    <label for="contentSearchValue">Buscar por Nombre o ID:</label>
-                    <input type="text" id="contentSearchValue" placeholder="Ingresa el nombre (parcial) o el ID (exacto)">
+                <div class="form-group u-m-0" style="min-width:120px;">
+                    <label for="contentSearchProperty">Buscar por:</label>
+                    <select id="contentSearchProperty" class="filter-input">
+                        <option value="name">Nombre</option>
+                        <option value="id">Id</option>
+                        <option value="content">Contenido</option>
+                    </select>
                 </div>
+                <div class="form-group finder-field">
+                    <div class="finder-label-row">
+                        <label for="contentSearchValue">Valor:</label>
+                        <span id="contentSearchHint" class="finder-hint hidden">La búsqueda por contenido no es del todo fiable: la API puede dejarse resultados fuera. Para una búsqueda completa, descarga los contenidos en la vista Contenidos y busca ahí.</span>
+                    </div>
+                    <input type="text" id="contentSearchValue" placeholder="Ingresa el valor de búsqueda">
+                </div>
+                <button type="button" id="contentSharedToggle" class="action-button finder-btn toggle-btn" aria-pressed="false" title="Incluir también los contenidos de Shared Content en la búsqueda">Compartidas</button>
                 <button id="searchContentBtn" class="action-button finder-btn">Buscar Contenido</button>
             </div>
         </div>
         <div class="config-block u-grow">
             <div class="u-flex-between u-mb-10">
-                <h3 class="u-m-0">Resultados</h3>
+                <h3 class="u-m-0" id="content-search-results-title" data-results-label="Resultados">Resultados</h3>
                 <div class="u-flex u-gap-8">
                     <button id="downloadContentSearchCsvBtn" class="action-button download-btn" disabled title="Descargar los resultados en CSV">Descargar</button>
                     <button id="contentDetailBtn" class="action-button" disabled>Ver detalle</button>
@@ -1703,7 +1668,7 @@
             </div>
             <div class="table-container">
                 <table id="content-search-results-table">
-                    <thead><tr><th>ID</th><th>Nombre del Contenido</th><th>Tipo</th><th>Ruta de Carpeta</th></tr></thead>
+                    <thead><tr><th style="width:70px;">Código</th><th>ID</th><th>Nombre del Contenido</th><th>Tipo</th><th>Compartido</th><th>Ruta de Carpeta</th></tr></thead>
                     <tbody id="content-search-results-tbody"></tbody>
                 </table>
             </div>
@@ -1759,7 +1724,7 @@
 
         <div id="activity-info-block" class="config-block hidden">
             <div class="u-flex-between u-mb-10">
-                <h3 class="u-m-0">Actividades Encontradas</h3>
+                <h3 class="u-m-0" id="activities-search-results-title" data-results-label="Resultados">Resultados</h3>
                 <div class="u-flex u-gap-8">
                     <button id="downloadActivityListCsvBtn" class="action-button download-btn" disabled title="Descargar las actividades en CSV">Descargar</button>
                     <button id="deleteActivityBtn" class="action-button delete-btn">Borrar Seleccionadas</button>
@@ -1776,7 +1741,7 @@
 
         <div id="activity-results-block" class="config-block hidden">
             <div class="u-flex-between u-mb-10">
-                <h3 class="u-m-0">Ubicación en Automatismos</h3>
+                <h3 class="u-m-0" id="activities-usage-results-title" data-results-label="Ubicación en Automatismos">Ubicación en Automatismos</h3>
                 <button id="downloadActivityUsageCsvBtn" class="action-button download-btn" disabled title="Descargar los usos en CSV">Descargar</button>
             </div>
             <div class="table-container">
@@ -2244,8 +2209,27 @@
     <div class="menu-group changelog-group">
         <h3>Novedades</h3>
         <div class="changelog-list">
-            <!-- ======================== v2.6.5 ======================== -->
+            <!-- ======================== v2.6.6 ======================== -->
             <details class="changelog-entry" open>
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.6.6</span>
+                    <span class="changelog-date">26 Agosto 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> En el Buscador de Contenidos se elige en una picklist si buscar por Nombre, Id o Contenido. La búsqueda por Contenido localiza el texto dentro del cuerpo de los contenidos (HTML, AMPscript, bloques...).</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Botón Compartidas en el Buscador de Contenidos: al seleccionarlo la búsqueda incluye también Shared Content y una columna Compartido indica qué resultados lo son. La columna se incluye igualmente en el CSV de resultados. Se añade también una columna Código con un icono por fila que abre el código del contenido.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Al buscar por Contenido se avisa de que esa búsqueda no es del todo fiable y de que la vía completa es descargar los contenidos en la vista Contenidos y buscar allí.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> La búsqueda de contenidos descarga siempre el cuerpo, de forma que la búsqueda por Contenido descarta en local los resultados que la API devuelve de más y el código de cualquier resultado se abre sin llamadas adicionales.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> La caja de resultados de los Buscadores tiene ahora una altura fija con la cabecera siempre visible al hacer scroll, así el detalle que se despliega al seleccionar una fila queda a la vista sin necesidad de un scroll larguísimo.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Las rutas de carpeta se cachean mientras se trabaja con el mismo cliente/BU y se reutilizan entre búsquedas y vistas (Contenidos, Automatismos, Data Extensions, Journeys), reduciendo mucho las llamadas a la API. Se refrescan al cambiar de cliente o Business Unit.</li>
+                    <li><span class="changelog-tag fix">Fix</span> En el Analizador de Journeys, los nombres de plantillas de WhatsApp y de mensajes SMS se resuelven buscando por ID exacto; antes podía desviarlos un contenido cuyo nombre contuviera ese mismo número.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Se retira la vista de Estadísticas de Uso y el registro local de acciones y accesos que la alimentaba por rendimiento. El contador de llamadas API por cliente se mantiene.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> En los Buscadores, la cabecera de cada tabla de resultados es coherente en todas las pestañas y muestra cuántos registros se han encontrado (Resultados: N).</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.6.5 ======================== -->
+            <details class="changelog-entry" >
                 <summary class="changelog-version">
                     <span class="changelog-badge">v2.6.5</span>
                     <span class="changelog-date">17 Agosto 2026</span>

@@ -124,6 +124,7 @@ export function init() {
     elements.deSearchValue = document.getElementById('deSearchValue');
     elements.searchDEBtn = document.getElementById('searchDEBtn');
     elements.deSearchResultsTbody = document.querySelector('#de-search-results-tbody');
+    elements.deSearchResultsTitle = document.getElementById('de-search-results-title');
     elements.deToSourcesBtn = document.getElementById('deToSourcesBtn');
     elements.downloadDeSearchCsvBtn = document.getElementById('downloadDeSearchCsvBtn');
 
@@ -131,6 +132,7 @@ export function init() {
     elements.deNameToFindInput = document.getElementById('deNameToFind');
     elements.findDataSourcesBtn = document.getElementById('findDataSourcesBtn');
     elements.dataSourcesTbody = document.getElementById('data-sources-tbody');
+    elements.dataSourcesResultsTitle = document.getElementById('data-sources-results-title');
     elements.dataSourcesTable = document.getElementById('data-sources-table');
     elements.deSelectionBlock = document.getElementById('de-selection-block');
     elements.deSelectionTable = document.getElementById('de-selection-table');
@@ -143,11 +145,13 @@ export function init() {
     elements.customerSearchValue = document.getElementById('customerSearchValue');
     elements.searchCustomerBtn = document.getElementById('searchCustomerBtn');
     elements.customerSearchTbody = document.getElementById('customer-search-tbody');
+    elements.customerSearchResultsTitle = document.getElementById('customer-search-results-title');
     elements.selectTablesBtn = document.getElementById('selectTablesBtn');
     elements.getCustomerJourneysBtn = document.getElementById('getCustomerJourneysBtn');
     elements.ejectCustomerFromJourneysBtn = document.getElementById('ejectCustomerFromJourneysBtn');
     elements.customerJourneysResultsBlock = document.getElementById('customer-journeys-results-block');
     elements.customerJourneysTbody = document.getElementById('customer-journeys-tbody');
+    elements.customerJourneysResultsTitle = document.getElementById('customer-journeys-results-title');
     elements.customerDesResultsBlock = document.getElementById('customer-des-results-block');
     elements.desResultsContainer = document.getElementById('des-results-container');
     elements.downloadCustomerSearchCsvBtn = document.getElementById('downloadCustomerSearchCsvBtn');
@@ -157,6 +161,7 @@ export function init() {
     elements.waToggleBtn = document.getElementById('waToggleBtn');
     elements.waResultsBlock = document.getElementById('wa-results-block');
     elements.waResultsTbody = document.getElementById('wa-results-tbody');
+    elements.waResultsTitle = document.getElementById('wa-results-title');
     elements.waRegisterBlock = document.getElementById('wa-register-block');
     elements.waNewSubKey = document.getElementById('waNewSubKey');
     elements.waNewMobile = document.getElementById('waNewMobile');
@@ -171,6 +176,7 @@ export function init() {
     elements.searchQueriesByTextBtn = document.getElementById('searchQueriesByTextBtn');
     elements.querySearchResultsTable = document.getElementById('query-search-results-table');
     elements.querySearchResultsTbody = document.querySelector('#query-search-results-tbody');
+    elements.querySearchResultsTitle = document.getElementById('query-search-results-title');
     elements.showQueryTextBtn = document.getElementById('showQueryTextBtn');
     elements.downloadQuerySearchCsvBtn = document.getElementById('downloadQuerySearchCsvBtn');
 
@@ -178,13 +184,18 @@ export function init() {
     elements.scriptSearchText = document.getElementById('scriptSearchText');
     elements.searchScriptsByTextBtn = document.getElementById('searchScriptsByTextBtn');
     elements.scriptSearchResultsTbody = document.getElementById('script-search-results-tbody');
+    elements.scriptSearchResultsTitle = document.getElementById('script-search-results-title');
     elements.scriptSearchResultsTable = document.getElementById('script-search-results-table');
     elements.downloadScriptSearchCsvBtn = document.getElementById('downloadScriptSearchCsvBtn');
 
     // --- 8f. Pestaña: Contenidos ---
+    elements.contentSearchProperty = document.getElementById('contentSearchProperty');
     elements.contentSearchValue = document.getElementById('contentSearchValue');
+    elements.contentSearchHint = document.getElementById('contentSearchHint');
+    elements.contentSharedToggle = document.getElementById('contentSharedToggle');
     elements.searchContentBtn = document.getElementById('searchContentBtn');
     elements.contentSearchResultsTbody = document.getElementById('content-search-results-tbody');
+    elements.contentSearchResultsTitle = document.getElementById('content-search-results-title');
     elements.contentDetailBtn = document.getElementById('contentDetailBtn');
     elements.downloadContentSearchCsvBtn = document.getElementById('downloadContentSearchCsvBtn');
     elements.contentDetailBlock = document.getElementById('content-detail-block');
@@ -209,7 +220,9 @@ export function init() {
     elements.infoActivityKey = document.getElementById('info-activity-key');
     elements.activityResultsBlock = document.getElementById('activity-results-block');
     elements.activityUsageTbody = document.getElementById('activity-usage-tbody');
+    elements.activityUsageResultsTitle = document.getElementById('activities-usage-results-title');
     elements.activityListTbody = document.getElementById('activity-list-tbody');
+    elements.activitiesSearchResultsTitle = document.getElementById('activities-search-results-title');
     elements.deleteActivityBtn = document.getElementById('deleteActivityBtn');
     elements.downloadActivityListCsvBtn = document.getElementById('downloadActivityListCsvBtn');
     elements.downloadActivityUsageCsvBtn = document.getElementById('downloadActivityUsageCsvBtn');
@@ -571,12 +584,6 @@ export function init() {
     elements.journeyPauseRetain = document.getElementById('journey-pause-retain');
     elements.journeyPauseConfirmBtn = document.getElementById('journey-pause-confirm-btn');
     elements.journeyPauseCancelBtn = document.getElementById('journey-pause-cancel-btn');
-
-    // --- 33. Sección: Estadísticas de Uso ---
-    elements.refreshStatsBtn = document.getElementById('refreshStatsBtn');
-    elements.downloadStatsCsvBtn = document.getElementById('downloadStatsCsvBtn');
-    elements.clearStatsBtn = document.getElementById('clearStatsBtn');
-    elements.statsContent = document.getElementById('statsContent');
 }
 
 export default elements;

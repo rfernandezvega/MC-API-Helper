@@ -47,6 +47,7 @@ async function handleSearch() {
     elements.scriptSearchResultsTbody.innerHTML = '<tr><td colspan="3">Analizando todos los scripts...</td></tr>';
     lastScripts = [];
     if (elements.downloadScriptSearchCsvBtn) elements.downloadScriptSearchCsvBtn.disabled = true;
+    ui.setResultsCount(elements.scriptSearchResultsTitle, null);
 
     try {
         const apiConfig = await getAuthenticatedConfig();
@@ -59,6 +60,7 @@ async function handleSearch() {
 
         if (scriptsFound.length === 0) {
             elements.scriptSearchResultsTbody.innerHTML = '<tr><td colspan="3">No se encontró el texto en ningún script.</td></tr>';
+            ui.setResultsCount(elements.scriptSearchResultsTitle, 0);
             return;
         }
 
@@ -73,6 +75,7 @@ async function handleSearch() {
 
     } catch (error) {
         logger.logMessage(`Error: ${error.message}`);
+        ui.setResultsCount(elements.scriptSearchResultsTitle, null);
         ui.showCustomAlert(error.message);
     } finally {
         ui.unblockUI();
@@ -84,6 +87,7 @@ function renderTable(results) {
     elements.scriptSearchResultsTbody.innerHTML = '';
     lastScripts = results || [];
     if (elements.downloadScriptSearchCsvBtn) elements.downloadScriptSearchCsvBtn.disabled = lastScripts.length === 0;
+    ui.setResultsCount(elements.scriptSearchResultsTitle, lastScripts.length);
 
     results.forEach(item => {
         const row = document.createElement('tr');

@@ -73,6 +73,7 @@ async function searchQueriesByText() {
     elements.querySearchResultsTbody.innerHTML = '<tr><td colspan="4">Buscando...</td></tr>';
     lastQueries = [];
     if (elements.downloadQuerySearchCsvBtn) elements.downloadQuerySearchCsvBtn.disabled = true;
+    ui.setResultsCount(elements.querySearchResultsTitle, null);
 
     try {
         const apiConfig = await getAuthenticatedConfig();
@@ -96,6 +97,7 @@ async function searchQueriesByText() {
 
         if (!queriesFound || queriesFound.length === 0) {
             elements.querySearchResultsTbody.innerHTML = '<tr><td colspan="4">No se encontraron queries con ese texto.</td></tr>';
+            ui.setResultsCount(elements.querySearchResultsTitle, 0);
             return;
         }
 
@@ -109,6 +111,7 @@ async function searchQueriesByText() {
     } catch (error) {
         logger.logMessage(`Error: ${error.message}`);
         elements.querySearchResultsTbody.innerHTML = `<tr><td colspan="4" style="color: red;">Error: ${error.message}</td></tr>`;
+        ui.setResultsCount(elements.querySearchResultsTitle, null);
     } finally {
         ui.unblockUI();
         logger.endLogBuffering();
@@ -119,6 +122,7 @@ function renderTable(queries) {
     elements.querySearchResultsTbody.innerHTML = '';
     lastQueries = queries || [];
     if (elements.downloadQuerySearchCsvBtn) elements.downloadQuerySearchCsvBtn.disabled = lastQueries.length === 0;
+    ui.setResultsCount(elements.querySearchResultsTitle, lastQueries.length);
     const showQuery = showQueryText;
     const displayStyle = showQuery ? '' : 'none';
     

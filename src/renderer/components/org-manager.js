@@ -9,7 +9,6 @@ import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import * as mcApiService from '../api/mc-api-service.js';
 import { escapeHtml } from '../ui/format-utils.js';
-import * as usageTracker from '../ui/usage-tracker.js';
 
 
 // --- ESTADO DEL MÓDULO ---
@@ -340,9 +339,6 @@ async function activateClientBU(clientName, mid, buName) {
         activeContext = { clientName: clientName || '', mid: mid || '', buName: buName || '', cacheKey };
 
         updateLoginStatus(false);
-
-        // Cada activación de un contexto cuenta como un acceso en las Estadísticas de uso.
-        usageTracker.trackAccess();
 
         if (clientName) {
             ui.blockUI("Cargando configuración...");

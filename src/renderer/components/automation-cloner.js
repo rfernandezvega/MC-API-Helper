@@ -94,8 +94,6 @@ export function init(dependencies) {
 async function enrichAutomationDetails(baseDetails) {
     const apiConfig = await getAuthenticatedConfig();
     mcApiService.setLogger(logger);
-    // Preparar la clonación es una operación completa: las rutas se piden frescas.
-    mcApiService.clearFolderPathCache();
 
     baseDetails.categoryPath = baseDetails.categoryId ? await mcApiService.getFolderPath(baseDetails.categoryId, apiConfig) : 'Raíz';
     baseDetails.newCategoryId = baseDetails.categoryId;

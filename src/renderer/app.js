@@ -45,8 +45,6 @@ import * as sendManagement from './components/sendManagement.js';
 import * as auditManager from './components/audit-manager.js';
 import * as journeyErrors from './components/journey-errors.js';
 import * as settings from './components/settings.js';                   // Ajustes de la app (tema claro/oscuro).
-import * as estadisticas from './components/estadisticas.js';           // Vista de estadísticas de uso locales.
-import * as usageTracker from './ui/usage-tracker.js';                  // Registro local de acciones y accesos.
 
 
 
@@ -99,8 +97,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			'carpetas-section': 'carpetas',
 			'email-validator-section':'validadorEmail',
 			'gestion-de-unificada-section': 'gestionDEs',
-			'auditoria-section': 'auditoria',
-			'estadisticas-section': 'estadisticas'
+			'auditoria-section': 'auditoria'
 		};
 
 		const activeMacro = sectionToMacroMap[activeSectionId];
@@ -447,10 +444,6 @@ document.addEventListener('DOMContentLoaded', function () {
 					showSection('auditoria-section');
 					// La vista se muestra vacía, no lanzamos carga hasta que pulse el botón
 				}
-				else if (macro === 'estadisticas') {
-					showSection('estadisticas-section');
-					await estadisticas.view();
-				}
 			});
 		});
 
@@ -594,11 +587,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // --- INICIALIZACIÓN DE MÓDULOS ---
 		fieldsTable.init();
-
-		// El registro de uso se arranca antes que org-manager para que el primer contexto
-		// que se active al abrir la app ya cuente como acceso.
-		usageTracker.init({ getContext: () => orgManager.getActiveContext() });
-		estadisticas.init();
 
 		// ESPERAMOS A QUE EL ORG MANAGER INICIALICE Y MIGRE DATOS
 		await orgManager.init({

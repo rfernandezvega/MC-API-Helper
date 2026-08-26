@@ -4,12 +4,18 @@
 // ===================================================================
 import { executeSoapRequest } from './api-core.js';
 
-// Rutas ya resueltas de la operación en curso. Guarda promesas (no valores) para que
-// varias peticiones simultáneas de la misma carpeta compartan una única llamada SOAP:
-// sin esto, resolver N registros en paralelo lanza N cadenas idénticas porque ninguna
-// ha terminado todavía cuando arrancan las demás.
-// Se vacía al empezar cada operación, de modo que nunca se pinta una ruta que ya cambió
-// en Marketing Cloud ni se arrastran IDs de carpeta de otra Business Unit.
+// Rutas de carpeta ya resueltas para el cliente/BU con el que se está trabajando. Guarda
+// promesas (no valores) para que varias peticiones simultáneas de la misma carpeta
+// compartan una única llamada SOAP: sin esto, resolver N registros en paralelo lanza N
+// cadenas idénticas porque ninguna ha terminado todavía cuando arrancan las demás.
+// La caché vive durante toda la sesión de trabajo, no solo una operación: las mismas
+// rutas se reutilizan entre búsquedas y vistas (contenidos, automatismos, DEs...), lo
+// que evita repetir las mismas consultas SOAP una y otra vez. Se vacía al cambiar de
+// cliente/BU (lo hace org-manager.js), porque los IDs de carpeta son distintos en cada
+// Business Unit y arrastrarlos mezclaría rutas de una BU con otra.
+// Contrapartida asumida: si una carpeta se renombra o se mueve en Marketing Cloud
+// mientras la app sigue abierta con el mismo contexto, la ruta cacheada seguirá
+// mostrándose tal cual hasta que se cambie de cliente/BU.
 const folderPathCache = new Map();
 
 // Máximo de IDs por Retrieve, para no construir peticiones desmesuradas.
@@ -19,8 +25,10 @@ const FOLDER_ID_CHUNK = 200;
 const MAX_FOLDER_DEPTH = 30;
 
 /**
- * Vacía la caché de rutas de carpeta. Debe llamarse al inicio de cada operación
- * (una búsqueda, un análisis) para que los datos se pidan siempre frescos a la API.
+ * Vacía la caché de rutas de carpeta. La llama org-manager.js al activar un cliente/BU
+ * distinto, para no arrastrar IDs de carpeta de otra Business Unit. También sirve para
+ * forzar un refresco manual si se sospecha que las carpetas han cambiado en Marketing
+ * Cloud durante la sesión (renombradas o movidas) y se quiere ver la ruta actualizada.
  */
 export function clearFolderPathCache() {
     folderPathCache.clear();

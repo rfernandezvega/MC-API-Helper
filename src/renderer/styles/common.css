@@ -662,6 +662,17 @@ body {
     line-height: 1.2;
 }
 
+/* Botón de acción que actúa como conmutador de un filtro (p. ej. "Incluir WhatsApp"
+   en Clientes o "Compartidas" en Contenidos): gris apagado, verde encendido. Los
+   colores van por token para que no desentonen en modo oscuro. */
+.action-button.toggle-btn {
+    background-color: var(--sf-text-muted);
+    color: #fff;
+}
+.action-button.toggle-btn.active {
+    background-color: var(--sf-green);
+}
+
 /* --- 3.3. Formularios y Bloques de Configuración --- */
 .config-section-container .config-block {
     background-color: var(--sf-bg-alt); border: 1px solid var(--sf-border); border-radius: 8px;

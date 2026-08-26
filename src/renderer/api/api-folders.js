@@ -3,7 +3,7 @@
 // Descripción: Gestión, búsqueda y creación de carpetas en MC.
 // ===================================================================
 import { executeSoapRequest, executeRestRequest } from './api-core.js';
-import { resolveFolderPaths, clearFolderPathCache } from './api-helpers.js';
+import { resolveFolderPaths } from './api-helpers.js';
 
 /**
  * Localiza carpetas según fragmentos de su nombre limitando la búsqueda al tipo de contenido (ej. DataExtension).
@@ -69,9 +69,6 @@ export async function findDataFolders(folderName, contentType, apiConfig) {
                 </RetrieveRequestMsg>
             </s:Body>
         </s:Envelope>`;
-
-    // Cada búsqueda de carpetas parte de cero: es una operación completa en sí misma.
-    clearFolderPathCache();
 
     const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
     const parser = new DOMParser();

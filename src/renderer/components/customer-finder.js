@@ -96,6 +96,7 @@ async function searchCustomer() {
     elements.customerDesResultsBlock.classList.add('hidden');
     whatsappFinder.resetWhatsapp();
     elements.customerSearchTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
+    ui.setResultsCount(elements.customerSearchResultsTitle, null);
 
     try {
         const apiConfig = await getAuthenticatedConfig();
@@ -134,6 +135,7 @@ async function searchCustomer() {
     } catch (error) {
         logger.logMessage(`Error al buscar clientes: ${error.message}`);
         elements.customerSearchTbody.innerHTML = `<tr><td colspan="6" class="cf-error">Error: ${escapeHtml(error.message)}</td></tr>`;
+        ui.setResultsCount(elements.customerSearchResultsTitle, null);
         ui.showCustomAlert(`Error: ${error.message}`);
     } finally {
         ui.unblockUI();
@@ -151,7 +153,8 @@ async function getCustomerJourneys() {
     logger.startLogBuffering();
     elements.customerJourneysResultsBlock.classList.remove('hidden');
     elements.customerJourneysTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
-    
+    ui.setResultsCount(elements.customerJourneysResultsTitle, null);
+
     try {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
@@ -177,6 +180,7 @@ async function getCustomerJourneys() {
     } catch (error) {
         logger.logMessage(`Error al buscar journeys del cliente: ${error.message}`);
         elements.customerJourneysTbody.innerHTML = `<tr><td colspan="6" class="cf-error">Error: ${escapeHtml(error.message)}</td></tr>`;
+        ui.setResultsCount(elements.customerJourneysResultsTitle, null);
         ui.showCustomAlert(`Error: ${error.message}`);
     } finally {
         ui.unblockUI();
@@ -445,6 +449,7 @@ function renderCustomerSearchResults() {
     if (elements.downloadCustomerSearchCsvBtn) {
         elements.downloadCustomerSearchCsvBtn.disabled = !sortedRows || sortedRows.length === 0;
     }
+    ui.setResultsCount(elements.customerSearchResultsTitle, sortedRows ? sortedRows.length : 0);
 
     if (!sortedRows || sortedRows.length === 0) {
         elements.customerSearchTbody.innerHTML = '<tr><td colspan="6">No se encontraron clientes con ese criterio.</td></tr>';
@@ -475,6 +480,7 @@ function renderCustomerJourneysTable(journeys) {
     if (elements.downloadCustomerJourneysCsvBtn) {
         elements.downloadCustomerJourneysCsvBtn.disabled = lastCustomerJourneys.length === 0;
     }
+    ui.setResultsCount(elements.customerJourneysResultsTitle, lastCustomerJourneys.length);
 
     // Deshabilitamos el botón cada vez que se renderiza la tabla, hasta que se seleccione algo
     updateEjectButtonState();

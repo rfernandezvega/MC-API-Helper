@@ -163,7 +163,7 @@ export function buildGrid(cards) {
  * @param {string} title
  * @param {string} help
  * @param {Array<{label:string,value:number,total:number,color?:string,drillKey?:string}>} bars
- * @param {{wide?:boolean, note?:string}} [options] - 'note' añade una aclaración al pie de la tarjeta.
+ * @param {{wide?:boolean}} [options]
  */
 export function buildMetricCard(title, help, bars, options = {}) {
     const barsHtml = (bars || []).map(({ label, value, total, color, drillKey }) => {
@@ -184,12 +184,10 @@ export function buildMetricCard(title, help, bars, options = {}) {
     }).join('');
 
     const gridSpan = options.wide ? ' style="grid-column:1 / -1;"' : '';
-    const noteHtml = options.note ? `<div class="audit-metric-note">${escapeHtml(options.note)}</div>` : '';
     return `<div class="audit-metric-card"${gridSpan}>
         <div class="audit-metric-title">${title}</div>
         <div class="audit-metric-help">${help}</div>
         ${barsHtml || '<div class="audit-metric-empty">Sin datos disponibles.</div>'}
-        ${noteHtml}
     </div>`;
 }
 

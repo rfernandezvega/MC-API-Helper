@@ -2,7 +2,7 @@
 // Fichero: api-content.js
 // ===================================================================
 import { executeRestRequest, logger, setSilentResponses } from './api-core.js';
-import { resolveFolderPaths, clearFolderPathCache } from './api-helpers.js';
+import { resolveFolderPaths } from './api-helpers.js';
 
 /** Formatea una duración en segundos a un texto de estimación (~X s / ~X min / ~X h). */
 function etaFromSeconds(seconds) {
@@ -70,9 +70,6 @@ export async function fetchAllCloudPages(apiConfig) {
  * @returns {Promise<Array>} El mismo arreglo, pero cada objeto incluye la propiedad `location`.
  */
 export async function enrichCloudPagesWithFolders(items, apiConfig) {
-    // Enriquecer la lista completa es una operación en sí misma: se parte de caché vacía.
-    clearFolderPathCache();
-
     // Todas las carpetas se resuelven en bloque, así que el coste es la profundidad del
     // árbol y no el número de assets (que aquí son todos los de la BU).
     const paths = await resolveFolderPaths(
@@ -87,76 +84,165 @@ export async function enrichCloudPagesWithFolders(items, apiConfig) {
 }
 
 /**
- * Busca cualquier tipo de contenido en Content Builder. Intenta buscar primero por nombre (like);
- * si no encuentra, asume que es un ID e intenta buscar por ID exacto.
+ * Ejecuta una query paginada contra el endpoint de búsqueda de assets de Content Builder,
+ * acumulando todas las páginas hasta completar el total que reporta la API.
+ * @param {object} queryPayload - Cuerpo de "query" (property/simpleOperator/value) a enviar.
+ * @param {object} apiConfig - Configuración autenticada de la API.
+ * @param {Array<string>} fields - Campos a solicitar por cada asset.
+ * @param {number} pageSize - Tamaño de página (más pequeño cuando se piden campos pesados como `content`).
+ * @param {string} [scope='ours'] - Alcance de la búsqueda vía query param `scope`: 'ours' (solo la
+ *   BU activa) o 'ours,shared' (BU activa + Shared Content). El endpoint es siempre el mismo
+ *   (`.../assets/query`); no existe una ruta separada para compartidos bajo `assets/` (da 404).
+ * @returns {Promise<Array>} Todos los items encontrados, sin filtrar.
+ */
+async function executePaginatedQuery(queryPayload, apiConfig, fields, pageSize, scope = 'ours') {
+    let allItems = [];
+    let page = 1;
+    let totalCount = 0;
+
+    const queryBody = {
+        "query": queryPayload,
+        "sort": [{ "property": "id", "direction": "ASC" }],
+        "fields": fields
+    };
+
+    do {
+        const url = `${apiConfig.restUri}asset/v1/content/assets/query?scope=${scope}`;
+        const body = { ...queryBody, page: { page: page, pageSize: pageSize } };
+        const options = {
+            method: 'POST',
+            headers: { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        };
+
+        const data = await executeRestRequest(url, options);
+
+        const pageItems = data.items || [];
+        allItems = allItems.concat(pageItems);
+        totalCount = data.count;
+        page++;
+
+    } while (allItems.length < totalCount && totalCount > 0);
+
+    return allItems;
+}
+
+/**
+ * Envuelve el texto buscado en el formato `%"texto"%` que espera el operador `mustcontain`.
+ * El texto del usuario va TAL CUAL dentro de las comillas —con sus signos y sus espacios, que
+ * `mustcontain` admite— porque recortarlo cambia el resultado: buscar "activities" en vez de
+ * "#activities" devuelve cero.
+ * Las comillas y los `%` no son decorativos: sin ellos la API devuelve resultados que no
+ * contienen el texto y se deja fuera otros que sí, mientras que con este formato la respuesta
+ * es exacta y no hace falta filtrar nada después.
+ * @param {string} text - Texto de búsqueda introducido por el usuario.
+ * @returns {string} El valor a enviar en la query.
+ */
+function buildMustContainValue(text) {
+    return `%"${text}"%`;
+}
+
+/**
+ * Junta en un único texto todos los valores de cadena de un asset (nombre, content, las vistas
+ * con sus slots y bloques, data...) para poder buscar dentro de él.
+ * Se recorre el objeto en vez de serializarlo con JSON.stringify porque este escapa comillas y
+ * saltos de línea, y entonces un texto como `href="#activities"` no casaría nunca.
+ * @param {object} item - Asset devuelto por la API.
+ * @returns {string} Todo su texto concatenado y en minúsculas, listo para comparar.
+ */
+function collectSearchableText(item) {
+    const parts = [];
+    const walk = (value) => {
+        if (typeof value === 'string') parts.push(value);
+        else if (Array.isArray(value)) value.forEach(walk);
+        else if (value && typeof value === 'object') Object.values(value).forEach(walk);
+    };
+    walk(item);
+    return parts.join('\n').toLowerCase();
+}
+
+/**
+ * Indica si un asset está compartido con otras BUs: tiene destinatarios en
+ * `sharingProperties.sharedWith`. Es la única fuente para marcar `isShared` (ya no hay
+ * endpoint separado para compartidos: con `scope=ours,shared` propios y compartidos llegan
+ * mezclados en la misma respuesta, así que solo los datos del propio item lo distinguen).
+ * @param {object} item - Item devuelto por la API.
+ * @returns {boolean} true si el asset tiene BUs de destino en sharingProperties.sharedWith.
+ */
+function hasSharedWith(item) {
+    return Array.isArray(item?.sharingProperties?.sharedWith) && item.sharingProperties.sharedWith.length > 0;
+}
+
+/**
+ * Busca contenido en Content Builder según el tipo de búsqueda elegido en la picklist del Buscador.
  * @param {string} searchValue - Texto o número a buscar.
  * @param {object} apiConfig - Configuración autenticada de la API.
- * @returns {Promise<Array>} Lista de resultados coincidentes.
+ * @param {string} [searchType='name'] - 'name' (like), 'id' (exacto) o 'content' (dentro del cuerpo).
+ *   La búsqueda por 'content' se apoya en el operador `mustcontain` (ver `buildMustContainValue`),
+ *   pero como devuelve assets que no llevan el texto, después se criba en local contra el cuerpo
+ *   ya descargado, igual que hace el buscador de la vista de Contenidos.
+ * @param {boolean} [includeShared=false] - Si es true, la query se manda con `scope=ours,shared`
+ *   para traer en la misma llamada los assets de la BU activa y los de Shared Content.
+ * @returns {Promise<Array>} Lista de resultados coincidentes, cada uno con la marca `isShared`.
  */
-export async function searchContentAssets(searchValue, apiConfig) {
-    const executePaginatedQuery = async (queryPayload) => {
-        let allItems = [];
-        let page = 1;
-        let totalCount = 0;
-        const pageSize = 500;
+export async function searchContentAssets(searchValue, apiConfig, searchType = 'name', includeShared = false) {
+    const scope = includeShared ? 'ours,shared' : 'ours';
+    const sharedSuffix = includeShared ? ' (incluyendo Shared Content)' : '';
+    // El cuerpo se pide SIEMPRE: hace falta para cribar en local los falsos positivos de
+    // `mustcontain`, y en las búsquedas por nombre/id evita tener que volver a la API asset por
+    // asset para enseñar el código, que salen muchas más llamadas que traerlo de una vez.
+    // sharingProperties es barato y alimenta la marca isShared en los tres tipos de búsqueda.
+    const fields = ["id", "name", "assetType", "category", "sharingProperties", "content", "views", "data"];
+    // Equilibrio entre número de llamadas y peso de cada respuesta: con el cuerpo dentro, 500 por
+    // página tarda demasiado y 100 multiplica las llamadas.
+    const pageSize = 200;
+    const markShared = (items) => items.map(item => ({ ...item, isShared: hasSharedWith(item) }));
 
-        const queryBody = {
-            "query": queryPayload,
-            "sort": [{ "property": "id", "direction": "ASC" }],
-            "fields": ["id", "name", "assetType", "category"]
-        };
-
-        do {
-            const url = `${apiConfig.restUri}asset/v1/content/assets/query`;
-            const body = { ...queryBody, page: { page: page, pageSize: pageSize } };
-            const options = {
-                method: 'POST',
-                headers: { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" },
-                body: JSON.stringify(body)
-            };
-            
-            const data = await executeRestRequest(url, options);
-
-            const pageItems = data.items || [];
-            allItems = allItems.concat(pageItems);
-            totalCount = data.count;
-            page++;
-
-        } while (allItems.length < totalCount && totalCount > 0);
-        
-        return allItems;
-    };
-
-    logger.logMessage(`Paso 1/2: Buscando contenidos por nombre que contenga "${searchValue}"...`);
-    const nameQuery = {
-        "property": "name",
-        "simpleOperator": "like",
-        "value": searchValue
-    };
-    let results = await executePaginatedQuery(nameQuery);
-
-    if (results.length > 0) {
-        logger.logMessage(`Búsqueda por nombre exitosa. Se encontraron ${results.length} resultado(s).`);
-        return results;
-    }
-
-    logger.logMessage(`Paso 2/2: No se encontraron resultados por nombre. Buscando por ID exacto "${searchValue}"...`);
+    // El cuerpo de los contenidos desbordaría el buffer del panel de logs.
+    setSilentResponses(true);
     try {
-        const idQuery = {
-            "property": "id",
-            "simpleOperator": "equal",
-            "value": searchValue
-        };
-        results = await executePaginatedQuery(idQuery);
-        logger.logMessage(`Búsqueda por ID completada. Se encontraron ${results.length} resultado(s).`);
-        return results;
-    } catch (error) {
-        if (error.message && error.message.toLowerCase().includes("error converting value")) {
-            logger.logMessage("La búsqueda por ID falló (valor de entrada no numérico). Se considera que no hay resultados.");
-            return []; 
-        } else {
-            throw error;
+        if (searchType === 'id') {
+            logger.logMessage(`Buscando contenidos por ID exacto "${searchValue}"${sharedSuffix}...`);
+            try {
+                const idQuery = { "property": "id", "simpleOperator": "equal", "value": searchValue };
+                const results = markShared(await executePaginatedQuery(idQuery, apiConfig, fields, pageSize, scope));
+                logger.logMessage(`Búsqueda por ID completada. Total ${results.length} resultado(s)${sharedSuffix}.`);
+                return results;
+            } catch (error) {
+                if (error.message && error.message.toLowerCase().includes("error converting value")) {
+                    logger.logMessage("La búsqueda por ID falló (valor de entrada no numérico). Se considera que no hay resultados.");
+                    return [];
+                } else {
+                    throw error;
+                }
+            }
         }
+
+        if (searchType === 'content') {
+            logger.logMessage(`Buscando contenidos cuyo cuerpo contenga "${searchValue}"${sharedSuffix}...`);
+            const contentQuery = {
+                "property": "content",
+                "simpleOperator": "mustcontain",
+                "value": buildMustContainValue(searchValue)
+            };
+            const rawResults = markShared(await executePaginatedQuery(contentQuery, apiConfig, fields, pageSize, scope));
+
+            // `mustcontain` devuelve assets que no llevan el texto, así que se criba en local
+            // contra el cuerpo ya descargado (mismo criterio que el buscador de la vista de
+            // Contenidos): se descarta lo que de verdad no lo contiene.
+            const needle = searchValue.toLowerCase();
+            const results = rawResults.filter(item => collectSearchableText(item).includes(needle));
+            logger.logMessage(`La API devolvió ${rawResults.length} resultado(s)${sharedSuffix}; tras descartar los que no contienen "${searchValue}" quedan ${results.length}.`);
+            return results;
+        }
+
+        logger.logMessage(`Buscando contenidos cuyo nombre contenga "${searchValue}"${sharedSuffix}...`);
+        const nameQuery = { "property": "name", "simpleOperator": "like", "value": searchValue };
+        const results = markShared(await executePaginatedQuery(nameQuery, apiConfig, fields, pageSize, scope));
+        logger.logMessage(`Búsqueda por nombre completada. Total ${results.length} resultado(s)${sharedSuffix}.`);
+        return results;
+    } finally {
+        setSilentResponses(false);
     }
 }
 

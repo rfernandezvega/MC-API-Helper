@@ -37,6 +37,20 @@ export function isDateInRange(rawValue, fromStr, toStr) {
 
 
 /**
+ * Pinta la cabecera de una tabla de resultados con el número de registros encontrados.
+ * La etiqueta base se lee del atributo `data-results-label` del propio elemento, de modo que
+ * el texto vive en el HTML junto a la tabla y no repartido por los componentes.
+ * @param {HTMLElement} el - Cabecera (h3) de la tabla de resultados.
+ * @param {number|null} [count=null] - Registros encontrados; con null se pinta solo la etiqueta
+ *   (estado inicial o búsqueda en curso, cuando todavía no hay un total que enseñar).
+ */
+export function setResultsCount(el, count = null) {
+    if (!el) return;
+    const label = el.dataset.resultsLabel || 'Resultados';
+    el.textContent = Number.isFinite(count) ? `${label}: ${count}` : label;
+}
+
+/**
  * Muestra un modal de alerta no bloqueante.
  * @param {string} message - El mensaje a mostrar.
  */
@@ -388,8 +402,6 @@ export function showDESelectorModal(dependencies) {
             try {
                 const apiConfig = await getAuthenticatedConfig();
                 mcApiService.setLogger(logger);
-                // Cada búsqueda pide las rutas de nuevo.
-                mcApiService.clearFolderPathCache();
                 // Usamos la función de búsqueda de DEs, no de carpetas
                 const deList = await mcApiService.searchDataExtensions('Name', searchTerm, apiConfig);
 
@@ -735,8 +747,6 @@ export function showJourneyClonerModal(journey, dependencies, initialData = {}) 
             blockModalContent(true, 'Buscando y obteniendo DEs...');
             try {
                 const apiConfig = await getAuthenticatedConfig();
-                // Cada búsqueda pide las rutas de nuevo.
-                mcApiService.clearFolderPathCache();
                 // 1. Buscamos las DEs como antes.
                 const deList = await mcApiService.searchDataExtensions('Name', searchTerm, apiConfig);
 

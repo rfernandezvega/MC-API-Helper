@@ -89,6 +89,7 @@ async function findDataSources() {
     logger.startLogBuffering();
     
     elements.dataSourcesTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
+    ui.setResultsCount(elements.dataSourcesResultsTitle, null);
     try {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
@@ -125,6 +126,7 @@ async function findDataSources() {
     } catch (error) {
         logger.logMessage(`Error al buscar orígenes: ${error.message}`);
         elements.dataSourcesTbody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${error.message}</td></tr>`;
+        ui.setResultsCount(elements.dataSourcesResultsTitle, null);
         ui.showCustomAlert(`Error: ${error.message}`);
     } finally {
         ui.unblockUI();
@@ -142,6 +144,7 @@ function renderTable(sources) {
     elements.dataSourcesTbody.innerHTML = '';
     lastSources = sources || [];
     if (elements.downloadDataSourcesCsvBtn) elements.downloadDataSourcesCsvBtn.disabled = lastSources.length === 0;
+    ui.setResultsCount(elements.dataSourcesResultsTitle, lastSources.length);
 
     // --- Estado actual del toggle para el renderizado ---
     const displayStyle = showSourceQuery ? '' : 'none';

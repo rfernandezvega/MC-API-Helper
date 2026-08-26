@@ -70,11 +70,10 @@ async function searchDE() {
     ui.blockUI("Buscando Data Extension...");
     logger.startLogBuffering();
     elements.deSearchResultsTbody.innerHTML = '<tr><td colspan="3">Buscando...</td></tr>';
+    ui.setResultsCount(elements.deSearchResultsTitle, null);
     try {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
-        // Cada búsqueda pide las rutas de nuevo: nunca se muestra una carpeta ya movida.
-        mcApiService.clearFolderPathCache();
 
         const property = elements.deSearchProperty.value;
         const value = elements.deSearchValue.value.trim();
@@ -113,6 +112,7 @@ async function searchDE() {
     } catch (error) {
         logger.logMessage(`Error al buscar la DE: ${error.message}`);
         elements.deSearchResultsTbody.innerHTML = `<tr><td colspan="3" class="error-text">Error: ${escapeHtml(error.message)}</td></tr>`;
+        ui.setResultsCount(elements.deSearchResultsTitle, null);
         ui.showCustomAlert(`Error: ${error.message}`);
     } finally {
         ui.unblockUI();
@@ -135,6 +135,7 @@ function renderTable(results) {
     if (elements.downloadDeSearchCsvBtn) elements.downloadDeSearchCsvBtn.disabled = true;
     if (!results || results.length === 0) {
         elements.deSearchResultsTbody.innerHTML = '<tr><td colspan="3">No se encontraron Data Extensions con ese criterio.</td></tr>';
+        ui.setResultsCount(elements.deSearchResultsTitle, 0);
         return;
     }
 
@@ -143,6 +144,7 @@ function renderTable(results) {
 
     lastResults = results;
     if (elements.downloadDeSearchCsvBtn) elements.downloadDeSearchCsvBtn.disabled = false;
+    ui.setResultsCount(elements.deSearchResultsTitle, results.length);
 
     results.forEach(result => {
         const row = elements.deSearchResultsTbody.insertRow();

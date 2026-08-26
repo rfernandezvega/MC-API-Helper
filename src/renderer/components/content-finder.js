@@ -21,15 +21,54 @@ let currentDetailComponents = [];
 
 let currentDrawerContent = null;
 
+/**
+ * Engancha el comportamiento de alternar activo/inactivo a un botón conmutador (toggle),
+ * sincronizando aria-pressed. Extraído para no duplicarlo entre "Incluir contenido" y "Compartidas".
+ * @param {HTMLElement} btn - Botón conmutador con clase `toggle-btn`.
+ */
+function wireToggleButton(btn) {
+    btn.addEventListener('click', () => {
+        const isActive = btn.classList.toggle('active');
+        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+}
+
+/**
+ * Muestra u oculta el aviso de fiabilidad del campo de valor. Solo se enseña con la búsqueda por
+ * Contenido: es la única que depende del operador `mustcontain`, que deja resultados fuera, así
+ * que conviene avisar de que la vía completa es descargar los contenidos en la vista Contenidos.
+ */
+function updateContentSearchHint() {
+    const esPorContenido = elements.contentSearchProperty.value === 'content';
+    elements.contentSearchHint.classList.toggle('hidden', !esPorContenido);
+}
+
 // --- 2. INIT ---
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
     elements.searchContentBtn.addEventListener('click', searchContent);
     ui.submitOnEnter(elements.contentSearchValue, elements.searchContentBtn);
     elements.contentDetailBtn.addEventListener('click', showContentDetail);
+
+    // Conmutador "Compartidas": el texto del botón es fijo, así que el estado activo/inactivo
+    // no se puede deducir del contenido y hay que sincronizar aria-pressed a mano para que los
+    // lectores de pantalla lo anuncien correctamente.
+    wireToggleButton(elements.contentSharedToggle);
+
+    // El aviso de fiabilidad solo aplica a la búsqueda por Contenido, que es la única que usa el
+    // operador `mustcontain` de la API; Nombre (like) e Id (equal) sí son fiables.
+    elements.contentSearchProperty.addEventListener('change', updateContentSearchHint);
+    updateContentSearchHint();
     elements.downloadContentSearchCsvBtn?.addEventListener('click', downloadResultsCsv);
 
     elements.contentSearchResultsTbody.addEventListener('click', (e) => {
+        // El icono de código tiene prioridad y no debe disparar la selección de fila.
+        const inspectBtn = e.target.closest('.cp-inspect-btn');
+        if (inspectBtn) {
+            e.stopPropagation();
+            openContentSearchResultCode(inspectBtn.dataset.contentId);
+            return;
+        }
         const row = e.target.closest('tr');
         if (!row || !row.dataset.assetId) return;
         elements.contentSearchResultsTbody.querySelectorAll('tr').forEach(r => r.classList.remove('selected'));
@@ -79,22 +118,23 @@ export function init(dependencies) {
 async function searchContent() {
     ui.blockUI("Buscando contenidos...");
     logger.startLogBuffering();
-    elements.contentSearchResultsTbody.innerHTML = '<tr><td colspan="4">Buscando...</td></tr>';
+    elements.contentSearchResultsTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
     elements.contentDetailBlock.style.display = 'none';
     elements.contentDetailBtn.disabled = true;
     selectedAssetId = null;
     cachedResults = [];
     if (elements.downloadContentSearchCsvBtn) elements.downloadContentSearchCsvBtn.disabled = true;
+    ui.setResultsCount(elements.contentSearchResultsTitle, null);
 
     try {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
-        // Cada búsqueda pide las rutas de nuevo: nunca se muestra una carpeta ya movida.
-        mcApiService.clearFolderPathCache();
         const value = elements.contentSearchValue.value.trim();
         if (!value) throw new Error("El campo de búsqueda no puede estar vacío.");
+        const searchType = elements.contentSearchProperty.value;
+        const includeShared = elements.contentSharedToggle.classList.contains('active');
 
-        const contentList = await mcApiService.searchContentAssets(value, apiConfig);
+        const contentList = await mcApiService.searchContentAssets(value, apiConfig, searchType, includeShared);
         if (contentList.length === 0) { cachedResults = []; renderTable([]); return; }
 
         logger.logMessage(`Se encontraron ${contentList.length} contenidos. Obteniendo rutas...`);
@@ -108,13 +148,18 @@ async function searchContent() {
             name: asset.name,
             type: asset.assetType.displayName,
             assetTypeId: asset.assetType.id,
-            path: paths.get(String(asset.category?.id)) || 'Content Builder'
+            path: paths.get(String(asset.category?.id)) || 'Content Builder',
+            shared: asset.isShared === true,
+            // El cuerpo viene siempre en la búsqueda, así que el icono de código lo muestra
+            // sin gastar otra llamada a la API.
+            content: asset.views?.html?.content || asset.content || null
         }));
         cachedResults = enriched;
         renderTable(enriched);
     } catch (error) {
         logger.logMessage(`Error: ${error.message}`);
-        elements.contentSearchResultsTbody.innerHTML = `<tr><td colspan="4" style="color:red;">Error: ${error.message}</td></tr>`;
+        elements.contentSearchResultsTbody.innerHTML = `<tr><td colspan="6" style="color:red;">Error: ${error.message}</td></tr>`;
+        ui.setResultsCount(elements.contentSearchResultsTitle, null);
     } finally { ui.unblockUI(); logger.endLogBuffering(); }
 }
 
@@ -130,8 +175,6 @@ async function showContentDetail() {
 
     try {
         const apiConfig = await getAuthenticatedConfig();
-        // El detalle es una operación completa: rutas y assets se piden frescos.
-        mcApiService.clearFolderPathCache();
         const context = { assets: new Map(), expanded: new Set() };
 
         logger.logMessage(`Obteniendo detalle completo del asset ${selected.id}...`);
@@ -572,8 +615,8 @@ function initCollapsibleListeners(container) {
 /** Descarga en CSV los contenidos encontrados, en el mismo orden que la tabla. */
 function downloadResultsCsv() {
     downloadCsv({
-        headers: ['ID', 'Nombre del Contenido', 'Tipo', 'Ruta de Carpeta'],
-        rows: cachedResults.map(r => [r.id, r.name, r.type, r.path]),
+        headers: ['ID', 'Nombre del Contenido', 'Tipo', 'Compartido', 'Ruta de Carpeta'],
+        rows: cachedResults.map(r => [r.id, r.name, r.type, r.shared ? 'Sí' : 'No', r.path]),
         fileName: buildCsvFileName('buscador_contenidos')
     });
 }
@@ -584,16 +627,54 @@ function renderTable(results) {
         elements.downloadContentSearchCsvBtn.disabled = !results || results.length === 0;
     }
     if (!results || results.length === 0) {
-        elements.contentSearchResultsTbody.innerHTML = '<tr><td colspan="4">No se encontraron contenidos.</td></tr>';
+        elements.contentSearchResultsTbody.innerHTML = '<tr><td colspan="6">No se encontraron contenidos.</td></tr>';
+        ui.setResultsCount(elements.contentSearchResultsTitle, 0);
         return;
     }
+    ui.setResultsCount(elements.contentSearchResultsTitle, results.length);
     results.sort((a, b) => (a.path + a.name).localeCompare(b.path + b.name));
     results.forEach(r => {
         const row = elements.contentSearchResultsTbody.insertRow();
         row.dataset.assetId = r.id;
         row.style.cursor = 'pointer';
-        row.innerHTML = `<td>${r.id}</td><td>${r.name}</td><td>${r.type}</td><td>${r.path}</td>`;
+        // Mismo icono que la vista de Contenidos (content-manager.js) para abrir el drawer de código.
+        const codeBtn = `<span class="cp-inspect-btn" data-content-id="${r.id}" title="Ver código"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>`;
+        row.innerHTML = `<td class="ta-center">${codeBtn}</td><td>${r.id}</td><td>${r.name}</td><td>${r.type}</td><td>${r.shared ? 'Sí' : 'No'}</td><td>${r.path}</td>`;
     });
+}
+
+/**
+ * Abre el drawer de código para una fila del buscador de Contenidos. Si el resultado cacheado
+ * ya trae el cuerpo (búsqueda con "Incluir contenido" activo o por Contenido), lo reutiliza sin
+ * llamar a la API; si no, descarga solo ese asset para gastar una única llamada y que el icono
+ * funcione siempre, se haya bajado el cuerpo en bloque o no.
+ * @param {string} assetId - ID del asset cuya fila se pulsó.
+ */
+async function openContentSearchResultCode(assetId) {
+    const cached = cachedResults.find(r => String(r.id) === String(assetId));
+    if (cached?.content) {
+        openFinderCodeDrawer({ name: cached.name, content: cached.content });
+        return;
+    }
+
+    ui.blockUI("Obteniendo código del contenido...");
+    logger.startLogBuffering();
+    try {
+        const apiConfig = await getAuthenticatedConfig();
+        mcApiService.setLogger(logger);
+        const asset = await mcApiService.fetchAssetById(assetId, apiConfig);
+        const content = asset.views?.html?.content || asset.content || asset.views?.text?.content || null;
+        if (!content) {
+            logger.logMessage(`El contenido "${asset.name || assetId}" no tiene cuerpo que mostrar.`);
+            return;
+        }
+        openFinderCodeDrawer({ name: asset.name, content });
+    } catch (error) {
+        logger.logMessage(`Error obteniendo el código: ${error.message}`);
+    } finally {
+        ui.unblockUI();
+        logger.endLogBuffering();
+    }
 }
 
 /**

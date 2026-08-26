@@ -69,10 +69,9 @@ async function enrichAutomationData(details) {
     const apiConfig = await getAuthenticatedConfig();
     mcApiService.setLogger(logger);
 
-    // El análisis es una operación completa: se parte de cachés vacías para pedir datos
-    // frescos. El JSON de este automatismo ya está descargado, así que se registra para
-    // que la búsqueda de usos de cada actividad no vuelva a pedirlo una vez por actividad.
-    mcApiService.clearFolderPathCache();
+    // El JSON de este automatismo ya está descargado, así que se registra en la caché de
+    // detalles para que la búsqueda de usos de cada actividad no vuelva a pedirlo una vez
+    // por actividad (las rutas de carpeta ya están en caché desde el cambio de contexto).
     mcApiService.clearAutomationDetailsCache();
     mcApiService.primeAutomationDetailsCache(details);
 
