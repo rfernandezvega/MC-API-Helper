@@ -1,3 +1,5 @@
+import { registerAmpscript } from './prism-ampscript.js';
+
 export function formatCodeWithIndentation(code) {
     if (!code) return '';
     let normalized = code.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -35,66 +37,39 @@ function beautifyInlineCode(code) {
     return formatted.join('\n');
 }
 
+/**
+ * Resalta código de Marketing Cloud (HTML + CSS + AMPscript + SSJS) con Prism.
+ * Prism aporta las gramáticas de HTML, CSS y JavaScript, y `prism-ampscript.js` inyecta encima
+ * la parte de SFMC. A diferencia de un resaltador a base de expresiones regulares sueltas, Prism
+ * entiende el contexto: no confunde el valor de un atributo con una cadena de JavaScript ni
+ * colorea palabras clave que están dentro de un comentario.
+ * Si Prism no estuviera disponible se devuelve el código escapado, para que el visor siga
+ * mostrando el contenido en vez de romperse.
+ * @param {string} code - Código fuente a resaltar.
+ * @returns {string} HTML con el código ya marcado, listo para inyectar dentro de <pre><code>.
+ */
 export function highlightCloudPageCode(code) {
     if (!code) return '';
-    let s = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-    const ampFns = 'Lookup|LookupRows|LookupOrderedRows|LookupRowsCS|ClaimRow'
-        + '|InsertData|InsertDE|UpdateData|UpdateDE|UpsertData|UpsertDE'
-        + '|DeleteData|DeleteDE|DataExtensionRowCount'
-        + '|RequestParameter|AttributeValue|CloudPagesURL'
-        + '|Redirect|RedirectTo|Now|Format|Concat|Trim|Length'
-        + '|Substring|Replace|IndexOf|Row|Field|RowCount'
-        + '|BuildRowsetFromString|BuildRowsetFromXML'
-        + '|ContentBlockByKey|ContentBlockById|ContentBlockByName'
-        + '|CreateSalesforceObject|RetrieveSalesforceObjects'
-        + '|UpdateSingleSalesforceObject|DeleteSalesforceObject'
-        + '|RaiseError|IIF|IsNull|ProperCase|Uppercase|Lowercase'
-        + '|Base64Encode|Base64Decode|SHA256|SHA512|MD5'
-        + '|DateAdd|DateDiff|DatePart|FormatDate|SystemDateToLocalDate'
-        + '|TreatAsContent|TreatAsContentArea|RegExMatch'
-        + '|CreateObject|SetObjectProperty|AddObjectArrayItem'
-        + '|InvokeCreate|InvokeUpdate|InvokeRetrieve|InvokeDelete'
-        + '|Add|Multiply|Divide|Subtract|Mod|GUID';
+    const Prism = window.Prism;
+    if (!Prism || !Prism.languages || !Prism.languages.markup) return escapeForCode(code);
 
-    const pattern = new RegExp(
-        '(\\/\\*[\\s\\S]*?\\*\\/)'
-        + '|(\\/\\/[^\\n]*)'
-        + '|(&lt;!--[\\s\\S]*?--&gt;)'
-        + '|(%%\\[|%%\\]|%%=|=%%)'
-        + "|('[^']*?')"
-        + '|("[^"]*?")'
-        + '|(@\\w+)'
-        + '|\\b(SET|VAR|THEN|ELSEIF|ENDIF|NEXT|OUTPUT)\\b'
-        + '|\\b(' + ampFns + ')(?=\\s*\\()'
-        + '|\\b(var|let|const|function|return|if|else|for|while|do|switch|case|break|continue|try|catch|finally|throw|new|typeof|this|null|undefined|true|false|AND|OR|NOT|IF|ELSE|FOR|DO)\\b'
-        + '|\\b(Platform|Write|Variable|HTTP|DataExtension|Rows|GetValue)\\b'
-        + '|(&lt;\\/?[a-zA-Z][\\w-]*)'
-        + '|(\\/?&gt;)'
-        + '|(\\b\\d+\\.?\\d*\\b)',
-        'gi'
-    );
+    registerAmpscript(Prism);
+    try {
+        return Prism.highlight(code, Prism.languages.markup, 'markup');
+    } catch (e) {
+        // Un contenido con una estructura rara no debe dejar al usuario sin ver su código.
+        return escapeForCode(code);
+    }
+}
 
-    return s.replace(pattern, function(match,
-        comMulti, comSingle, comHtml, ampDelim, strSingle, strDouble,
-        ampVar, ampKw, ampFn, jsKw, jsBuiltin, htmlTag, htmlClose, number
-    ) {
-        if (comMulti)   return `<span class="cp-hl-comment">${match}</span>`;
-        if (comSingle)  return `<span class="cp-hl-comment">${match}</span>`;
-        if (comHtml)    return `<span class="cp-hl-comment">${match}</span>`;
-        if (ampDelim)   return `<span class="cp-hl-amp-delim">${match}</span>`;
-        if (strSingle)  return `<span class="cp-hl-string">${match}</span>`;
-        if (strDouble)  return `<span class="cp-hl-string">${match}</span>`;
-        if (ampVar)     return `<span class="cp-hl-amp-var">${match}</span>`;
-        if (ampKw)      return `<span class="cp-hl-amp-kw">${match}</span>`;
-        if (ampFn)      return `<span class="cp-hl-amp-fn">${match}</span>`;
-        if (jsKw)       return `<span class="cp-hl-js-kw">${match}</span>`;
-        if (jsBuiltin)  return `<span class="cp-hl-js-builtin">${match}</span>`;
-        if (htmlTag)    return `<span class="cp-hl-tag">${match}</span>`;
-        if (htmlClose)  return `<span class="cp-hl-tag">${match}</span>`;
-        if (number)     return `<span class="cp-hl-number">${match}</span>`;
-        return match;
-    });
+/**
+ * Escapa el código para poder pintarlo tal cual dentro del visor cuando no hay resaltado.
+ * @param {string} code - Código fuente.
+ * @returns {string} El mismo texto con los caracteres de HTML escapados.
+ */
+function escapeForCode(code) {
+    return String(code).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 

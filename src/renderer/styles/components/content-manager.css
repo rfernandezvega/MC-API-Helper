@@ -267,7 +267,10 @@
     font-family: 'Consolas', monospace;
     font-size: 12px;
     margin: 0;
-    white-space: pre;
+    /* Mismo criterio que .cp-detail-code-block: el código se ajusta al ancho en vez de
+       obligar a un scroll horizontal (ver cloud-page-detail.css). */
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
     line-height: 1.4;
 }
 

@@ -411,6 +411,11 @@
 </div>
 
 <div id="app-version"></div>
+<!-- Prism: resaltado de HTML/CSS/JS del visor de código. Se carga en local (no por CDN) para
+     que funcione sin conexión, y en modo manual porque el resaltado lo lanzamos nosotros desde
+     ui/code-utils.js, no sobre el DOM al arrancar. Debe ir antes de app.js. -->
+<script>window.Prism = window.Prism || {}; window.Prism.manual = true;</script>
+<script src="../../node_modules/prismjs/prism.js"></script>
 <script type="module" src="app.js"></script>
 </body>
 </html>

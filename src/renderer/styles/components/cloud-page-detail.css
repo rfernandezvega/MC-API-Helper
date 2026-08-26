@@ -204,11 +204,19 @@
     padding: 12px 16px;
     margin: 0;
     border-radius: 0 0 4px 4px;
-    overflow: auto;
+    /* El código se ajusta al ancho de la caja en vez de crecer a lo largo: el HTML de los
+       emails trae atributos style kilométricos y una sola línea obligaba a un scroll
+       horizontal que dejaba el resto del bloque fuera de la vista.
+       pre-wrap conserva la indentación y parte por los espacios; overflow-wrap: anywhere se
+       encarga de los tokens sin espacios (URLs largas, style="...") que si no seguirían
+       desbordando. Con eso el scroll horizontal ya no hace falta. */
+    overflow-y: auto;
+    overflow-x: hidden;
     font-size: 13px;
     line-height: 1.6;
     tab-size: 4;
-    white-space: pre;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
     text-align: left;
     min-height: 0;
     border: 1px solid var(--sf-border);
@@ -218,33 +226,57 @@
 
 
 /* ====================================================================
-   SYNTAX HIGHLIGHTING — paleta oscura tipo One Dark (sobre fondo oscuro),
-   coherente con las clases .sql-*/.js-* del resto de la app. Es la única
-   paleta: el bloque de código es oscuro en ambos temas.
+   SYNTAX HIGHLIGHTING — tokens de Prism con paleta oscura tipo One Dark,
+   coherente con las clases sql y js del resto de la app.
+   Es la unica paleta y no depende del tema: el fondo del bloque
+   (--sf-code-bg) es oscuro tanto en claro como en oscuro, asi que estos
+   colores se leen bien en los dos. Por eso NO se carga el tema propio de
+   Prism (prism.css), que es claro y pintaria fondo blanco sobre el bloque.
    ==================================================================== */
 
-/* HTML */
-.cp-hl-tag      { color: #e5c07b; }               /* etiquetas */
-.cp-hl-attr     { color: #d19a66; }               /* atributos */
-.cp-hl-attr-val { color: #98c379; }               /* valores (string) */
+/* Genericos (valen para HTML, CSS, JavaScript/SSJS y AMPscript) */
+.cp-detail-code-block .token.comment,
+.cp-detail-code-block .token.prolog,
+.cp-detail-code-block .token.doctype,
+.cp-detail-code-block .token.cdata   { color: #7f8c98; font-style: italic; }
+.cp-detail-code-block .token.punctuation { color: #abb2bf; }
+.cp-detail-code-block .token.string,
+.cp-detail-code-block .token.char,
+.cp-detail-code-block .token.regex,
+.cp-detail-code-block .token.inserted { color: #98c379; }
+.cp-detail-code-block .token.number,
+.cp-detail-code-block .token.boolean,
+.cp-detail-code-block .token.constant,
+.cp-detail-code-block .token.symbol   { color: #d19a66; }
+.cp-detail-code-block .token.keyword,
+.cp-detail-code-block .token.important,
+.cp-detail-code-block .token.atrule   { color: #c678dd; font-weight: bold; }
+.cp-detail-code-block .token.function,
+.cp-detail-code-block .token.builtin,
+.cp-detail-code-block .token.class-name { color: #61afef; }
+.cp-detail-code-block .token.operator,
+.cp-detail-code-block .token.entity,
+.cp-detail-code-block .token.url      { color: #56b6c2; }
+.cp-detail-code-block .token.variable { color: #e5c07b; }
+.cp-detail-code-block .token.deleted  { color: #e06c75; }
 
-/* AMPscript */
-.cp-hl-amp-delim { color: #c678dd; font-weight: bold; }  /* %%[ %%] */
-.cp-hl-amp-kw    { color: #c678dd; font-weight: bold; }  /* SET, VAR, IF, THEN, ELSE, ENDIF, FOR, DO, NEXT */
-.cp-hl-amp-fn    { color: #61afef; }                     /* Lookup, LookupRows, etc. */
-.cp-hl-amp-var   { color: #e5c07b; }                     /* @variable */
+/* HTML. attr-name y attr-value van DESPUES de .token.tag porque Prism los anida
+   dentro de el: con la misma especificidad, gana la regla declarada mas tarde. */
+.cp-detail-code-block .token.tag        { color: #e5c07b; }
+.cp-detail-code-block .token.attr-name  { color: #d19a66; }
+.cp-detail-code-block .token.attr-value { color: #98c379; }
+.cp-detail-code-block .token.namespace  { opacity: 0.7; }
 
-/* SSJS / JavaScript */
-.cp-hl-js-kw     { color: #c678dd; font-weight: bold; }  /* var, let, const, function, return, if, else, for, try, catch */
-.cp-hl-js-builtin { color: #61afef; }                    /* Platform, Write, Variable, HTTP */
-.cp-hl-js-string  { color: #98c379; }                    /* "string", 'string' */
-.cp-hl-js-comment { color: #7f8c98; font-style: italic; }/* // comment */
-.cp-hl-js-number  { color: #d19a66; }                    /* 123 */
+/* CSS dentro de <style> */
+.cp-detail-code-block .token.selector { color: #e06c75; }
+.cp-detail-code-block .token.property { color: #d19a66; }
 
-/* Genéricos */
-.cp-hl-string  { color: #98c379; }
-.cp-hl-comment { color: #7f8c98; font-style: italic; }
-.cp-hl-number  { color: #d19a66; }
+/* AMPscript: los delimitadores %%[ ]%% y %%= =%% se marcan aparte para que salten a la
+   vista y se distingan del codigo que envuelven. */
+.cp-detail-code-block .token.ampscript-delimiter { color: #c678dd; font-weight: bold; }
+.cp-detail-code-block .token.ampscript-block,
+.cp-detail-code-block .token.ampscript-inline    { color: var(--sf-code-text); }
+.cp-detail-code-block .token.ampscript-var       { color: #e5c07b; }
 
 
 /* ====================================================================

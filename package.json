@@ -19,7 +19,8 @@
     "googleapis": "^157.0.0",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
-    "keytar": "^7.9.0"
+    "keytar": "^7.9.0",
+    "prismjs": "^1.30.0"
   },
   "devDependencies": {
     "electron": "^38.0.0",
