@@ -3,7 +3,7 @@ import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
-import { formatCodeWithIndentation, highlightCloudPageCode } from '../ui/code-utils.js';
+import { buildCodeViewer } from '../ui/code-utils.js';
 import { escapeHtml } from '../ui/format-utils.js';
 import { downloadCsv, buildCsvFileName } from '../ui/csv-export.js';
 
@@ -791,10 +791,7 @@ function openFinderCodeDrawer(comp) {
     currentDrawerContent = comp.content;
     elements.finderCodeTitle.textContent = comp.name || 'Código Fuente';
 
-    const highlighted = highlightCloudPageCode(formatCodeWithIndentation(comp.content));
-    elements.finderCodeContent.innerHTML = `
-        <div class="code-header">Código Fuente</div>
-        <pre><code>${highlighted}</code></pre>`;
+    elements.finderCodeContent.innerHTML = buildCodeViewer(comp.content, 'Código Fuente');
 
     elements.finderCodeDrawer.classList.add('open');
     elements.finderCodeBackdrop.classList.add('active');

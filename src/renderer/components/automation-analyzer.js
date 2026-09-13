@@ -6,6 +6,7 @@ import * as logger from '../ui/logger.js';
 import { loadCustomFonts } from '../ui/fonts.js';
 import { escapeHtml } from '../ui/format-utils.js';
 import { highlightSQLHtml } from '../ui/sql-highlight.js';
+import { copyButtonHtml } from '../ui/copy-utils.js';
 
 let getAuthenticatedConfig;
 let goBackFunction;
@@ -256,8 +257,8 @@ async function renderAnalysis(automation) {
                     
                     if (act.queryText) {
                         detailsHtml += `
-                            <div class="sql-wrapper" style="margin-top:10px;">
-                                <div class="sql-toggle-btn">VER QUERY<span>▼</span></div>
+                            <div class="sql-wrapper" data-copy-scope style="margin-top:10px;">
+                                <div class="sql-toggle-btn">VER QUERY<div class="sql-toggle-actions">${copyButtonHtml('Copiar query')}<span>▼</span></div></div>
                                 <div class="sql-content" style="display:none;"> <!-- Mantiene fondo oscuro original -->
                                     <pre><code>${highlightSQLHtml(act.queryText)}</code></pre>
                                 </div>
@@ -282,8 +283,8 @@ async function renderAnalysis(automation) {
                     const hasContent = act.scriptCode && act.scriptCode.trim().length > 0;
                     if (hasContent) {
                         detailsHtml += `
-                            <div class="sql-wrapper" style="margin-top:10px;">
-                                <div class="sql-toggle-btn">VER CÓDIGO SCRIPT <span>▼</span></div>
+                            <div class="sql-wrapper" data-copy-scope style="margin-top:10px;">
+                                <div class="sql-toggle-btn">VER CÓDIGO SCRIPT<div class="sql-toggle-actions">${copyButtonHtml('Copiar script')}<span>▼</span></div></div>
                                 <div class="sql-content" style="display:none;"> <!-- Mantiene fondo oscuro original -->
                                     <pre style="margin:0; min-height: 1.5em; overflow: auto;"><code>${highlightJSHtml(act.scriptCode)}</code></pre>
                                 </div>

@@ -194,6 +194,27 @@
     border-radius: 4px 4px 0 0;
     flex-shrink: 0;
 }
+/* Contenedor del bloque copiable: no genera caja, así la cabecera y el <pre> siguen siendo
+   elementos flex del drawer y el <pre> puede crecer hasta ocupar el espacio libre. */
+.code-copy-scope {
+    display: contents;
+}
+/* Cabecera con botón de copiar a la derecha. El margen negativo del botón evita que la
+   barra gane altura respecto a las cabeceras sin botón. */
+.cp-detail-code-block .code-header.has-copy {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.cp-detail-code-block .code-header .copy-code-btn {
+    width: 22px;
+    height: 22px;
+    margin: -4px -6px -4px 8px;
+}
+/* Separación cuando el bloque va detrás de otros (asunto, componentes, DEs...). */
+.cp-detail-code-block > .code-copy-scope:not(:first-child) > .code-header {
+    margin-top: 12px;
+}
 /* El bloque de código es SIEMPRE oscuro (estilo IDE) en ambos temas, igual que
    los bloques SQL/JS de los analizadores: garantiza legibilidad en claro y
    oscuro y evita el problema de sintaxis clara sobre fondo blanco. */

@@ -13,6 +13,7 @@ import * as mcApiService from './api/mc-api-service.js';            // Centraliz
 import elements, { init as initDomElements } from './ui/dom-elements.js'; // Objeto que contiene todas las referencias a los elementos del DOM.
 import * as ui from './ui/ui-helpers.js';                           // Funciones de ayuda para la UI (modales, bloqueo de pantalla, etc.).
 import * as logger from './ui/logger.js';                           // Gestor del panel de logs.
+import * as copyUtils from './ui/copy-utils.js';                    // Botón común de copiar código/queries al portapapeles.
 
 // Módulos de Funcionalidades (Componentes)
 // Cada módulo encapsula la lógica de una sección específica de la aplicación.
@@ -559,6 +560,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		// Aplica cuanto antes el tema guardado (claro/oscuro) para evitar parpadeo.
 		await settings.applyStoredTheme();
 		setupEventListeners();
+		copyUtils.initCopyButtons();
 
 		elements.licenseModal.style.display = 'flex';
 		elements.licenseStatusMessage.textContent = 'Verificando licencia de usuario...';

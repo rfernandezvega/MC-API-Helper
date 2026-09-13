@@ -59,6 +59,26 @@
     max-height: 180px;
     overflow: auto;
     text-align: left;
+    /* Hueco a la derecha para que el botón de copiar no tape el texto. */
+    padding-right: 40px;
+}
+/* Envoltorio de la caja: ancla el botón de copiar arriba a la derecha sin que se desplace
+   al hacer scroll dentro de la query. */
+.query-box-wrap {
+    position: relative;
+}
+.query-box-wrap > .copy-code-btn {
+    position: absolute;
+    top: 6px;
+    right: 14px;
+    z-index: 1;
+    color: var(--sf-code-text);
+    background-color: var(--sf-code-bg);
+}
+/* Fondo opaco para tapar la query que pasa por debajo; el hover se aclara con un
+   degradado encima en vez de con transparencia. */
+.query-box-wrap > .copy-code-btn:hover {
+    background-image: linear-gradient(rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.12));
 }
 .query-box pre {
     margin: 0;

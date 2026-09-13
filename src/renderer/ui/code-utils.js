@@ -1,4 +1,5 @@
 import { registerAmpscript } from './prism-ampscript.js';
+import { buildCopyableCodeBlock } from './copy-utils.js';
 
 export function formatCodeWithIndentation(code) {
     if (!code) return '';
@@ -74,16 +75,15 @@ function escapeForCode(code) {
 
 
 /**
- * Genera el HTML del visor de código fuente.
- * El código se muestra alineado a la izquierda con indentación preservada.
- * @param {string} content - El código fuente de la Cloud Page.
+ * Genera el HTML del visor de código fuente: indenta, resalta y lo pinta con una cabecera
+ * que incluye el botón de copiar.
+ * @param {string} content - El código fuente (Cloud Page, contenido, componente...).
+ * @param {string} [label='Código'] - Texto de la cabecera del bloque.
  * @returns {string} HTML con el bloque de código.
  */
-export function buildCodeViewer(content) {
+export function buildCodeViewer(content, label = 'Código') {
     if (!content) return '';
     const formatted = formatCodeWithIndentation(content);
     const highlighted = highlightCloudPageCode(formatted);
-    return `
-        <div class="code-header">Código</div>
-        <pre><code>${highlighted}</code></pre>`;
+    return buildCopyableCodeBlock(label, highlighted);
 }
