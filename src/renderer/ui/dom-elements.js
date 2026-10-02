@@ -191,7 +191,6 @@ export function init() {
     // --- 8f. Pestaña: Contenidos ---
     elements.contentSearchProperty = document.getElementById('contentSearchProperty');
     elements.contentSearchValue = document.getElementById('contentSearchValue');
-    elements.contentSearchHint = document.getElementById('contentSearchHint');
     elements.contentSharedToggle = document.getElementById('contentSharedToggle');
     elements.searchContentBtn = document.getElementById('searchContentBtn');
     elements.contentSearchResultsTbody = document.getElementById('content-search-results-tbody');

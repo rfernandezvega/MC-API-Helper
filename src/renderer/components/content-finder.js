@@ -33,16 +33,6 @@ function wireToggleButton(btn) {
     });
 }
 
-/**
- * Muestra u oculta el aviso de fiabilidad del campo de valor. Solo se enseña con la búsqueda por
- * Contenido: es la única que depende del operador `mustcontain`, que deja resultados fuera, así
- * que conviene avisar de que la vía completa es descargar los contenidos en la vista Contenidos.
- */
-function updateContentSearchHint() {
-    const esPorContenido = elements.contentSearchProperty.value === 'content';
-    elements.contentSearchHint.classList.toggle('hidden', !esPorContenido);
-}
-
 // --- 2. INIT ---
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
@@ -55,10 +45,6 @@ export function init(dependencies) {
     // lectores de pantalla lo anuncien correctamente.
     wireToggleButton(elements.contentSharedToggle);
 
-    // El aviso de fiabilidad solo aplica a la búsqueda por Contenido, que es la única que usa el
-    // operador `mustcontain` de la API; Nombre (like) e Id (equal) sí son fiables.
-    elements.contentSearchProperty.addEventListener('change', updateContentSearchHint);
-    updateContentSearchHint();
     elements.downloadContentSearchCsvBtn?.addEventListener('click', downloadResultsCsv);
 
     elements.contentSearchResultsTbody.addEventListener('click', (e) => {

@@ -999,8 +999,7 @@
 						<h4>Buscador de Contenidos</h4>
 						<ul>
 							<li>Busca cualquier contenido de Content Builder eligiendo en una picklist si se busca por Nombre, Id o Contenido (localiza el texto dentro del cuerpo del contenido); muestra la tipología, si es compartido y la ruta. El conmutador "Compartidas" (desactivado por defecto) amplía la búsqueda a los contenidos de Shared Content, y la columna Compartido marca los que están compartidos con otras Business Units. Desde el detalle se puede ver y descargar el código.</li>
-							<li>La búsqueda por Contenido admite el texto tal cual se escriba, con signos y con espacios: se busca la frase completa dentro del cuerpo y los resultados son exactos.</li>
-							<li>Al elegir <b>Contenido</b> aparece un aviso junto al campo de valor: esa búsqueda se apoya en el operador <code>mustcontain</code> de la API, que puede dejarse resultados fuera, así que no es del todo fiable. Para una búsqueda completa, descarga los contenidos en la vista <b>Contenidos</b> y busca allí. Las búsquedas por Nombre e Id no tienen ese problema (usan operadores exactos).</li>
+							<li>La búsqueda por Contenido admite el texto tal cual se escriba, con signos, guiones y espacios (p. ej. <code>mc-deep-link</code>). Se manda a la API sin forzar frase exacta, para que no se deje fuera contenidos, y después se comprueba en local que de verdad lo contiene. Esa comprobación mira solo el contenido (código, vistas y los bloques incrustados en los slots), no los metadatos: un asset no aparece porque el texto esté en su nombre, su carpeta o su propietario. No distingue mayúsculas ni comillas tipográficas de rectas.</li>
 							<li>La búsqueda descarga siempre el cuerpo de los contenidos. Así se puede descartar en local lo que la API devuelve de más y, además, ver el código de cualquier resultado sin volver a llamar a Marketing Cloud contenido por contenido, que salen muchas más llamadas.</li>
 							<li>La columna <b>Código</b>, la primera de la tabla, muestra un icono por fila que abre el mismo drawer de código del detalle.</li>
 						</ul>
@@ -1654,10 +1653,7 @@
                     </select>
                 </div>
                 <div class="form-group finder-field">
-                    <div class="finder-label-row">
-                        <label for="contentSearchValue">Valor:</label>
-                        <span id="contentSearchHint" class="finder-hint hidden">La búsqueda por contenido no es del todo fiable: la API puede dejarse resultados fuera. Para una búsqueda completa, descarga los contenidos en la vista Contenidos y busca ahí.</span>
-                    </div>
+                    <label for="contentSearchValue">Valor:</label>
                     <input type="text" id="contentSearchValue" placeholder="Ingresa el valor de búsqueda">
                 </div>
                 <button type="button" id="contentSharedToggle" class="action-button finder-btn toggle-btn" aria-pressed="false" title="Incluir también los contenidos de Shared Content en la búsqueda">Compartidas</button>
@@ -2219,10 +2215,11 @@
             <details class="changelog-entry" open>
                 <summary class="changelog-version">
                     <span class="changelog-badge">v2.6.7</span>
-                    <span class="changelog-date">14 Septiembre 2026</span>
+                    <span class="changelog-date">02 Octubre 2026</span>
                 </summary>
                 <ul class="changelog-items">
                     <li><span class="changelog-tag new">Nuevo</span> Icono de copiar en la parte superior de los bloques de código y queries (Cloud Pages, Contenidos, Buscadores y Analizador de Automatismos) para llevar todo el contenido al portapapeles sin tener que seleccionarlo.</li>
+                    <li><span class="changelog-tag fix">Fix</span> El Buscador de Contenidos por Contenido ya no se deja fuera resultados con textos con guiones o signos (p. ej. mc-deep-link) ni con comillas tipográficas.</li>
                 </ul>
             </details>
 

@@ -151,21 +151,3 @@
 .finder-content-detail-title {
     color: var(--sf-blue-dark);
 }
-
-/* Fila de etiqueta del campo de valor: deja la etiqueta y su aviso en la misma línea.
-   El .form-group de la fila de filtros es flex en columna, así que sin esta fila el aviso
-   caería debajo y descuadraría la altura del campo respecto a los demás. */
-.finder-label-row {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-}
-
-/* Aviso junto a la etiqueta (p. ej. la fiabilidad de la búsqueda por contenido). Discreto,
-   para informar sin competir con la etiqueta ni con el campo. */
-.finder-hint {
-    font-size: 0.8em;
-    font-style: italic;
-    color: var(--sf-text-muted);
-    font-weight: normal;
-}

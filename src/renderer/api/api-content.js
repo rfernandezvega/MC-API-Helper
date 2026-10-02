@@ -83,28 +83,33 @@ export async function enrichCloudPagesWithFolders(items, apiConfig) {
     }));
 }
 
+/** Tope de páginas por búsqueda: evita un bucle sin fin si la API devolviera siempre páginas llenas. */
+const MAX_QUERY_PAGES = 150;
+
 /**
  * Ejecuta una query paginada contra el endpoint de búsqueda de assets de Content Builder,
- * acumulando todas las páginas hasta completar el total que reporta la API.
+ * acumulando páginas mientras lleguen llenas.
+ * No se usa el `count` de la respuesta para parar porque con `mustcontain` (y con
+ * `scope=ours,shared`) puede venir por debajo del real y cortaba la búsqueda antes de tiempo.
  * @param {object} queryPayload - Cuerpo de "query" (property/simpleOperator/value) a enviar.
  * @param {object} apiConfig - Configuración autenticada de la API.
- * @param {Array<string>} fields - Campos a solicitar por cada asset.
+ * @param {Array<string>|null} fields - Campos a solicitar por cada asset; null para recibir el asset completo.
  * @param {number} pageSize - Tamaño de página (más pequeño cuando se piden campos pesados como `content`).
  * @param {string} [scope='ours'] - Alcance de la búsqueda vía query param `scope`: 'ours' (solo la
  *   BU activa) o 'ours,shared' (BU activa + Shared Content). El endpoint es siempre el mismo
  *   (`.../assets/query`); no existe una ruta separada para compartidos bajo `assets/` (da 404).
- * @returns {Promise<Array>} Todos los items encontrados, sin filtrar.
+ * @returns {Promise<Array>} Todos los items encontrados, sin filtrar y sin duplicados por id.
  */
 async function executePaginatedQuery(queryPayload, apiConfig, fields, pageSize, scope = 'ours') {
-    let allItems = [];
+    const itemsById = new Map();
     let page = 1;
-    let totalCount = 0;
+    let pageItems = [];
 
     const queryBody = {
         "query": queryPayload,
-        "sort": [{ "property": "id", "direction": "ASC" }],
-        "fields": fields
+        "sort": [{ "property": "id", "direction": "ASC" }]
     };
+    if (fields) queryBody.fields = fields;
 
     do {
         const url = `${apiConfig.restUri}asset/v1/content/assets/query?scope=${scope}`;
@@ -117,48 +122,89 @@ async function executePaginatedQuery(queryPayload, apiConfig, fields, pageSize, 
 
         const data = await executeRestRequest(url, options);
 
-        const pageItems = data.items || [];
-        allItems = allItems.concat(pageItems);
-        totalCount = data.count;
+        pageItems = data.items || [];
+        // Con scope=ours,shared un mismo asset puede repetirse entre páginas.
+        pageItems.forEach(item => itemsById.set(String(item.id), item));
         page++;
 
-    } while (allItems.length < totalCount && totalCount > 0);
+    } while (pageItems.length === pageSize && page <= MAX_QUERY_PAGES);
 
-    return allItems;
+    return [...itemsById.values()];
 }
 
 /**
- * Envuelve el texto buscado en el formato `%"texto"%` que espera el operador `mustcontain`.
- * El texto del usuario va TAL CUAL dentro de las comillas —con sus signos y sus espacios, que
- * `mustcontain` admite— porque recortarlo cambia el resultado: buscar "activities" en vez de
- * "#activities" devuelve cero.
- * Las comillas y los `%` no son decorativos: sin ellos la API devuelve resultados que no
- * contienen el texto y se deja fuera otros que sí, mientras que con este formato la respuesta
- * es exacta y no hace falta filtrar nada después.
+ * Sustituye las comillas tipográficas (“ ” „ ‟ « » ‘ ’ ‚ ‛) por comillas rectas. Los editores de
+ * Content Builder y el texto pegado desde Word las meten a menudo, y sin igualarlas un texto
+ * escrito con comillas rectas no casaría con el contenido.
+ * @param {string} str - Texto a normalizar.
+ * @returns {string} El texto con comillas rectas.
+ */
+function normalizeQuotes(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/[“”„‟«»]/g, '"')
+        .replace(/[‘’‚‛]/g, "'");
+}
+
+/**
+ * Prepara el valor que se manda al operador `mustcontain`: el texto del usuario, recortado y con
+ * las comillas normalizadas, sin envolverlo en `%"…"%`. Ese envoltorio forzaba una frase exacta
+ * contra el índice de texto de la API, que trocea por guiones y otros signos, y se dejaba fuera
+ * contenidos que sí llevaban el texto (p. ej. `mc-deep-link`). Así la API devuelve de más y el
+ * cribado local (`assetContainsText`) descarta lo que no lo contiene.
  * @param {string} text - Texto de búsqueda introducido por el usuario.
  * @returns {string} El valor a enviar en la query.
  */
 function buildMustContainValue(text) {
-    return `%"${text}"%`;
+    return normalizeQuotes(String(text).trim());
 }
 
 /**
- * Junta en un único texto todos los valores de cadena de un asset (nombre, content, las vistas
- * con sus slots y bloques, data...) para poder buscar dentro de él.
+ * Claves de metadatos que no forman parte del contenido y se saltan al cribar, a cualquier
+ * profundidad (también en los bloques incrustados en los slots, que traen los suyos). Sin
+ * excluirlas, un asset casaba solo porque su carpeta, su nombre o su propietario contenían el
+ * texto aunque su código no lo llevara.
+ */
+const NON_CONTENT_KEYS = new Set([
+    'name', 'description', 'customerKey', 'category', 'assetType', 'owner', 'createdBy',
+    'modifiedBy', 'createdDate', 'modifiedDate', 'status', 'sharingProperties', 'fileProperties',
+    'thumbnail', 'availableViews', 'tags', 'memberId', 'enterpriseId', 'objectID', 'legacyData',
+    'modelVersion', 'locked'
+]);
+
+/**
+ * Junta en un único texto los valores de cadena del contenido de un asset (content, design,
+ * superContent, las vistas con sus slots y bloques, data, meta...) para poder buscar dentro de él,
+ * saltándose los metadatos de `NON_CONTENT_KEYS`.
  * Se recorre el objeto en vez de serializarlo con JSON.stringify porque este escapa comillas y
  * saltos de línea, y entonces un texto como `href="#activities"` no casaría nunca.
  * @param {object} item - Asset devuelto por la API.
- * @returns {string} Todo su texto concatenado y en minúsculas, listo para comparar.
+ * @returns {string} Todo su texto concatenado, con comillas normalizadas y en minúsculas.
  */
 function collectSearchableText(item) {
     const parts = [];
     const walk = (value) => {
         if (typeof value === 'string') parts.push(value);
         else if (Array.isArray(value)) value.forEach(walk);
-        else if (value && typeof value === 'object') Object.values(value).forEach(walk);
+        else if (value && typeof value === 'object') {
+            Object.entries(value).forEach(([key, child]) => {
+                if (!NON_CONTENT_KEYS.has(key)) walk(child);
+            });
+        }
     };
     walk(item);
-    return parts.join('\n').toLowerCase();
+    return normalizeQuotes(parts.join('\n')).toLowerCase();
+}
+
+/**
+ * Indica si el contenido de un asset contiene el texto buscado, sin distinguir mayúsculas ni
+ * comillas tipográficas. Solo mira contenido, no metadatos (ver `collectSearchableText`).
+ * @param {object} item - Asset completo devuelto por la API.
+ * @param {string} needle - Texto buscado, ya normalizado y en minúsculas.
+ * @returns {boolean} true si el texto aparece en el contenido del asset.
+ */
+function assetContainsText(item, needle) {
+    return collectSearchableText(item).includes(needle);
 }
 
 /**
@@ -220,18 +266,21 @@ export async function searchContentAssets(searchValue, apiConfig, searchType = '
 
         if (searchType === 'content') {
             logger.logMessage(`Buscando contenidos cuyo cuerpo contenga "${searchValue}"${sharedSuffix}...`);
+            const mustContainValue = buildMustContainValue(searchValue);
             const contentQuery = {
                 "property": "content",
                 "simpleOperator": "mustcontain",
-                "value": buildMustContainValue(searchValue)
+                "value": mustContainValue
             };
-            const rawResults = markShared(await executePaginatedQuery(contentQuery, apiConfig, fields, pageSize, scope));
+            // Sin `fields` la API devuelve el asset completo: si el texto está en un campo que no
+            // se pidiera (superContent, meta, legacyData…), el cribado local lo descartaría aunque
+            // la API lo hubiera encontrado. Al venir más pesado se baja la página a 80.
+            const rawResults = markShared(await executePaginatedQuery(contentQuery, apiConfig, null, 80, scope));
 
             // `mustcontain` devuelve assets que no llevan el texto, así que se criba en local
-            // contra el cuerpo ya descargado (mismo criterio que el buscador de la vista de
-            // Contenidos): se descarta lo que de verdad no lo contiene.
-            const needle = searchValue.toLowerCase();
-            const results = rawResults.filter(item => collectSearchableText(item).includes(needle));
+            // contra el asset ya descargado y se descarta lo que de verdad no lo contiene.
+            const needle = mustContainValue.toLowerCase();
+            const results = rawResults.filter(item => assetContainsText(item, needle));
             logger.logMessage(`La API devolvió ${rawResults.length} resultado(s)${sharedSuffix}; tras descartar los que no contienen "${searchValue}" quedan ${results.length}.`);
             return results;
         }
