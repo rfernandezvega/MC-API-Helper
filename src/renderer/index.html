@@ -969,6 +969,8 @@
 						<h4>Buscador de Data Extensions</h4>
 						<ul>
 							<li>Busca una DE por <b>Nombre</b> o <b>External Key</b>; devuelve todas las que contengan un texto similar.</li>
+							<li>El conmutador <b>Compartidas</b> (desactivado por defecto) amplía la búsqueda a las <i>Shared Data Extensions</i>, que viven en la BU Enterprise, aunque estés conectado a una BU hija. Se muestran las DEs de la BU activa y las compartidas; las privadas de otras BUs se descartan.</li>
+							<li>La columna <b>Compartida</b> indica si la DE está en una carpeta de Shared Data Extensions, y la ruta de carpeta se muestra también para las compartidas.</li>
 						</ul>
 
 						<h4>Buscador de Orígenes de datos</h4>
@@ -1446,6 +1448,7 @@
                     <label for="deSearchValue">Valor:</label>
                     <input type="text" id="deSearchValue" placeholder="Ingresa el valor de búsqueda" maxlength="128">
                 </div>
+                <button type="button" id="deSharedToggle" class="action-button finder-btn toggle-btn" aria-pressed="false" title="Incluir también las Shared Data Extensions en la búsqueda">Compartidas</button>
                 <button id="searchDEBtn" class="action-button finder-btn">Buscar</button>
             </div>
         </div>
@@ -1459,8 +1462,8 @@
             </div>
             <div class="table-container">
                 <table id="de-search-results-table">
-                    <thead><tr><th>Nombre Data Extension</th><th>External Key</th><th>Ruta de Carpeta</th></tr></thead>
-                    <tbody id="de-search-results-tbody"><tr><td colspan="3">Inicia una búsqueda...</td></tr></tbody>
+                    <thead><tr><th>Nombre Data Extension</th><th>External Key</th><th>Compartida</th><th>Ruta de Carpeta</th></tr></thead>
+                    <tbody id="de-search-results-tbody"><tr><td colspan="4">Inicia una búsqueda...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -2211,8 +2214,19 @@
     <div class="menu-group changelog-group">
         <h3>Novedades</h3>
         <div class="changelog-list">
-            <!-- ======================== v2.6.7 ======================== -->
+            <!-- ======================== v2.6.8 ======================== -->
             <details class="changelog-entry" open>
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.6.8</span>
+                    <span class="changelog-date">07 Octubre 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Buscador de Data Extensions: conmutador "Compartidas" para buscar también en Shared Data Extensions desde una BU hija, y nueva columna Compartida con su ruta de carpeta.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.6.7 ======================== -->
+            <details class="changelog-entry">
                 <summary class="changelog-version">
                     <span class="changelog-badge">v2.6.7</span>
                     <span class="changelog-date">02 Octubre 2026</span>

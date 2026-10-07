@@ -127,6 +127,7 @@ export function init() {
     elements.deSearchResultsTitle = document.getElementById('de-search-results-title');
     elements.deToSourcesBtn = document.getElementById('deToSourcesBtn');
     elements.downloadDeSearchCsvBtn = document.getElementById('downloadDeSearchCsvBtn');
+    elements.deSharedToggle = document.getElementById('deSharedToggle');
 
     // --- 8b. Pestaña: Origen de Datos ---
     elements.deNameToFindInput = document.getElementById('deNameToFind');

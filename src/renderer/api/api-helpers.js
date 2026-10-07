@@ -18,6 +18,17 @@ import { executeSoapRequest } from './api-core.js';
 // mostrándose tal cual hasta que se cambie de cliente/BU.
 const folderPathCache = new Map();
 
+// Nodos de carpeta obtenidos con QueryAllAccounts (todas las BUs visibles para la
+// credencial). Va aparte de folderPathCache porque desde una BU hija estas consultas sí
+// ven carpetas de la Enterprise (p. ej. Shared Data Extensions) que la consulta normal no
+// encuentra: compartir caché haría que un vacío cacheado por una ocultase la otra.
+// Guarda el nodo (o null si no existe) para poder calcular ruta y si es compartida.
+const allAccountsFolderNodeCache = new Map();
+
+// ContentType de las carpetas de Data Extensions compartidas. SOAP devuelve
+// 'shared_dataextension'; 'shared_data' es el valor equivalente del árbol REST.
+const SHARED_DE_CONTENT_TYPES = new Set(['shared_dataextension', 'shared_data']);
+
 // Máximo de IDs por Retrieve, para no construir peticiones desmesuradas.
 const FOLDER_ID_CHUNK = 200;
 
@@ -32,6 +43,7 @@ const MAX_FOLDER_DEPTH = 30;
  */
 export function clearFolderPathCache() {
     folderPathCache.clear();
+    allAccountsFolderNodeCache.clear();
 }
 
 /**
@@ -61,9 +73,11 @@ function isRootFolderId(folderId) {
  * usando el operador IN para no gastar una llamada por ID.
  * @param {Array<string>} folderIds - IDs de carpeta a consultar.
  * @param {object} apiConfig - Configuración autenticada de la API.
- * @returns {Promise<Map<string, {name: string, parentId: string}>>} Datos por ID de carpeta.
+ * @param {boolean} [queryAllAccounts=false] - Si es true, consulta en todas las BUs visibles
+ *   para la credencial y pide además el ContentType de cada carpeta.
+ * @returns {Promise<Map<string, {name: string, parentId: string, contentType: string}>>} Datos por ID de carpeta.
  */
-async function fetchFolderNodes(folderIds, apiConfig) {
+async function fetchFolderNodes(folderIds, apiConfig, queryAllAccounts = false) {
     const nodes = new Map();
 
     for (let i = 0; i < folderIds.length; i += FOLDER_ID_CHUNK) {
@@ -71,14 +85,14 @@ async function fetchFolderNodes(folderIds, apiConfig) {
         let fetched;
 
         try {
-            fetched = await retrieveFolderChunk(chunk, apiConfig);
+            fetched = await retrieveFolderChunk(chunk, apiConfig, queryAllAccounts);
         } catch (error) {
             if (chunk.length === 1) throw error;
             // Repliegue por si el tenant no admite el operador IN sobre DataFolder:
             // se consulta carpeta a carpeta, como se hacía antes.
             fetched = new Map();
             for (const id of chunk) {
-                const single = await retrieveFolderChunk([id], apiConfig);
+                const single = await retrieveFolderChunk([id], apiConfig, queryAllAccounts);
                 single.forEach((value, key) => fetched.set(key, value));
             }
         }
@@ -93,14 +107,20 @@ async function fetchFolderNodes(folderIds, apiConfig) {
  * Lanza el Retrieve de un grupo de carpetas y parsea la respuesta.
  * @param {Array<string>} chunk - IDs de carpeta de este grupo.
  * @param {object} apiConfig - Configuración autenticada de la API.
- * @returns {Promise<Map<string, {name: string, parentId: string}>>} Datos por ID de carpeta.
+ * @param {boolean} [queryAllAccounts=false] - Si es true, añade QueryAllAccounts y la propiedad
+ *   ContentType; si es false la petición es la estándar de la BU activa.
+ * @returns {Promise<Map<string, {name: string, parentId: string, contentType: string}>>} Datos por ID de carpeta.
  */
-async function retrieveFolderChunk(chunk, apiConfig) {
+async function retrieveFolderChunk(chunk, apiConfig, queryAllAccounts = false) {
     const filterXml = chunk.length === 1
         ? `<Filter xsi:type="SimpleFilterPart"><Property>ID</Property><SimpleOperator>equals</SimpleOperator><Value>${chunk[0]}</Value></Filter>`
         : `<Filter xsi:type="SimpleFilterPart"><Property>ID</Property><SimpleOperator>IN</SimpleOperator>${chunk.map(id => `<Value>${id}</Value>`).join('')}</Filter>`;
 
-    const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataFolder</ObjectType><Properties>ID</Properties><Properties>Name</Properties><Properties>ParentFolder.ID</Properties>${filterXml}</RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+    // QueryAllAccounts debe ir dentro de RetrieveRequest; fuera de él SOAP lo ignora.
+    const contentTypeXml = queryAllAccounts ? '<Properties>ContentType</Properties>' : '';
+    const allAccountsXml = queryAllAccounts ? '<QueryAllAccounts>true</QueryAllAccounts>' : '';
+
+    const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataFolder</ObjectType><Properties>ID</Properties><Properties>Name</Properties><Properties>ParentFolder.ID</Properties>${contentTypeXml}${filterXml}${allAccountsXml}</RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
 
     const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
     const doc = new DOMParser().parseFromString(responseText, "application/xml");
@@ -113,7 +133,8 @@ async function retrieveFolderChunk(chunk, apiConfig) {
         if (!id || !name) return;
         nodes.set(cacheKeyFor(id), {
             name,
-            parentId: node.querySelector(":scope > ParentFolder > ID")?.textContent || ''
+            parentId: node.querySelector(":scope > ParentFolder > ID")?.textContent || '',
+            contentType: node.querySelector(":scope > ContentType")?.textContent || ''
         });
     });
 
@@ -191,6 +212,72 @@ export async function resolveFolderPaths(folderIds, apiConfig) {
         paths.set(id, await composePath(id, nodes, new Set()));
     }
     return paths;
+}
+
+/**
+ * Variante de `resolveFolderPaths` que consulta con QueryAllAccounts, de forma que desde una
+ * BU hija también se resuelven carpetas de la Enterprise (Shared Data Extensions). Además de
+ * la ruta indica si la carpeta pertenece al árbol compartido. Usa su propia caché para no
+ * interferir con las rutas que resuelven el resto de vistas.
+ * @param {Array<string|number>} folderIds - IDs de carpeta a resolver.
+ * @param {object} apiConfig - Configuración autenticada de la API.
+ * @returns {Promise<Map<string, {path: string, isShared: boolean}>>} Ruta y marca de compartida por ID (en texto).
+ */
+export async function resolveFolderPathsAllAccounts(folderIds, apiConfig) {
+    const requested = [...new Set((folderIds || []).map(cacheKeyFor))];
+
+    let pending = requested.filter(id => !isRootFolderId(id) && !allAccountsFolderNodeCache.has(id));
+    let depth = 0;
+
+    // Mismo recorrido por niveles que resolveFolderPaths: carpetas pedidas, luego sus padres...
+    while (pending.length > 0 && depth < MAX_FOLDER_DEPTH) {
+        const fetched = await fetchFolderNodes(pending, apiConfig, true);
+
+        const parents = new Set();
+        for (const id of pending) {
+            const node = fetched.get(id) || null;
+            allAccountsFolderNodeCache.set(id, node);
+            if (!node) continue;
+            const parentKey = cacheKeyFor(node.parentId);
+            if (!isRootFolderId(parentKey) && !allAccountsFolderNodeCache.has(parentKey)) {
+                parents.add(parentKey);
+            }
+        }
+
+        pending = [...parents];
+        depth++;
+    }
+
+    const result = new Map();
+    for (const id of requested) {
+        result.set(id, describeAllAccountsFolder(id));
+    }
+    return result;
+}
+
+/**
+ * Compone la ruta de una carpeta con los nodos de la caché de QueryAllAccounts y determina si
+ * alguna carpeta de la cadena es de tipo compartido (basta con una, por si las subcarpetas
+ * no heredan el ContentType de la raíz).
+ * @param {string} folderId - ID de la carpeta.
+ * @returns {{path: string, isShared: boolean}} Ruta "Raíz > Subcarpeta" (vacía si no se encuentra) y marca de compartida.
+ */
+function describeAllAccountsFolder(folderId) {
+    const names = [];
+    const visited = new Set();
+    let isShared = false;
+    let key = cacheKeyFor(folderId);
+
+    while (!isRootFolderId(key) && !visited.has(key) && visited.size < MAX_FOLDER_DEPTH) {
+        visited.add(key);
+        const node = allAccountsFolderNodeCache.get(key);
+        if (!node) break;
+        names.unshift(node.name);
+        if (SHARED_DE_CONTENT_TYPES.has(node.contentType.toLowerCase())) isShared = true;
+        key = cacheKeyFor(node.parentId);
+    }
+
+    return { path: names.join(' > '), isShared };
 }
 
 /**
