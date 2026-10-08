@@ -53,7 +53,7 @@ export function init() {
     elements.logMessagesEl = document.getElementById('log-messages');
     elements.logTranscriptEl = document.getElementById('log-transcript');
 
-    // --- 4. Sección: Configuración de APIs ---
+    // --- 4. Sección: Configuración de Cuentas ---
     elements.clientNameInput = document.getElementById('clientName');            // clave de caché del contexto activo (cliente+BU), oculto
     elements.configClientNameInput = document.getElementById('configClientName'); // nombre del cliente en el formulario (crear/editar)
     elements.savedConfigsSelect = document.getElementById('savedConfigs');
@@ -106,6 +106,7 @@ export function init() {
     elements.moveUpBtn = document.getElementById('moveUp');
     elements.moveDownBtn = document.getElementById('moveDown');
     elements.importFieldsBtn = document.getElementById('importFieldsBtn');
+    elements.downloadFieldsCsvBtn = document.getElementById('downloadFieldsCsvBtn');
 
     // --- 7. Sección: Gestión de Campos (Recuperar/Borrar) ---
     elements.recExternalKeyInput = document.getElementById('recExternalKey');
@@ -123,35 +124,45 @@ export function init() {
     elements.deSearchValue = document.getElementById('deSearchValue');
     elements.searchDEBtn = document.getElementById('searchDEBtn');
     elements.deSearchResultsTbody = document.querySelector('#de-search-results-tbody');
+    elements.deSearchResultsTitle = document.getElementById('de-search-results-title');
     elements.deToSourcesBtn = document.getElementById('deToSourcesBtn');
+    elements.downloadDeSearchCsvBtn = document.getElementById('downloadDeSearchCsvBtn');
+    elements.deSharedToggle = document.getElementById('deSharedToggle');
 
     // --- 8b. Pestaña: Origen de Datos ---
     elements.deNameToFindInput = document.getElementById('deNameToFind');
     elements.findDataSourcesBtn = document.getElementById('findDataSourcesBtn');
     elements.dataSourcesTbody = document.getElementById('data-sources-tbody');
+    elements.dataSourcesResultsTitle = document.getElementById('data-sources-results-title');
     elements.dataSourcesTable = document.getElementById('data-sources-table');
     elements.deSelectionBlock = document.getElementById('de-selection-block');
     elements.deSelectionTable = document.getElementById('de-selection-table');
     elements.selectAllDEsCheckbox = document.getElementById('selectAllDEsCheckbox');
     elements.searchSelectedDEsBtn = document.getElementById('searchSelectedDEsBtn');
     elements.showSourceQueryBtn = document.getElementById('showSourceQueryBtn');
+    elements.downloadDataSourcesCsvBtn = document.getElementById('downloadDataSourcesCsvBtn');
 
     // --- 8c. Pestaña: Clientes ---
     elements.customerSearchValue = document.getElementById('customerSearchValue');
     elements.searchCustomerBtn = document.getElementById('searchCustomerBtn');
     elements.customerSearchTbody = document.getElementById('customer-search-tbody');
+    elements.customerSearchResultsTitle = document.getElementById('customer-search-results-title');
     elements.selectTablesBtn = document.getElementById('selectTablesBtn');
     elements.getCustomerJourneysBtn = document.getElementById('getCustomerJourneysBtn');
     elements.ejectCustomerFromJourneysBtn = document.getElementById('ejectCustomerFromJourneysBtn');
     elements.customerJourneysResultsBlock = document.getElementById('customer-journeys-results-block');
     elements.customerJourneysTbody = document.getElementById('customer-journeys-tbody');
+    elements.customerJourneysResultsTitle = document.getElementById('customer-journeys-results-title');
     elements.customerDesResultsBlock = document.getElementById('customer-des-results-block');
     elements.desResultsContainer = document.getElementById('des-results-container');
+    elements.downloadCustomerSearchCsvBtn = document.getElementById('downloadCustomerSearchCsvBtn');
+    elements.downloadCustomerJourneysCsvBtn = document.getElementById('downloadCustomerJourneysCsvBtn');
 
     // --- 8c-bis. Audiencia WhatsApp (dentro de la pestaña Clientes) ---
     elements.waToggleBtn = document.getElementById('waToggleBtn');
     elements.waResultsBlock = document.getElementById('wa-results-block');
     elements.waResultsTbody = document.getElementById('wa-results-tbody');
+    elements.waResultsTitle = document.getElementById('wa-results-title');
     elements.waRegisterBlock = document.getElementById('wa-register-block');
     elements.waNewSubKey = document.getElementById('waNewSubKey');
     elements.waNewMobile = document.getElementById('waNewMobile');
@@ -159,25 +170,34 @@ export function init() {
     elements.waNewLocaleList = document.getElementById('wa-locale-list');
     elements.waNewChannel = document.getElementById('waNewChannel');
     elements.waRegisterBtn = document.getElementById('waRegisterBtn');
+    elements.downloadWaResultsCsvBtn = document.getElementById('downloadWaResultsCsvBtn');
 
     // --- 8d. Pestaña: Texto en Queries ---
     elements.querySearchText = document.getElementById('querySearchText');
     elements.searchQueriesByTextBtn = document.getElementById('searchQueriesByTextBtn');
     elements.querySearchResultsTable = document.getElementById('query-search-results-table');
     elements.querySearchResultsTbody = document.querySelector('#query-search-results-tbody');
+    elements.querySearchResultsTitle = document.getElementById('query-search-results-title');
     elements.showQueryTextBtn = document.getElementById('showQueryTextBtn');
+    elements.downloadQuerySearchCsvBtn = document.getElementById('downloadQuerySearchCsvBtn');
 
     // --- 8e. Pestaña: Texto en Scripts ---
     elements.scriptSearchText = document.getElementById('scriptSearchText');
     elements.searchScriptsByTextBtn = document.getElementById('searchScriptsByTextBtn');
     elements.scriptSearchResultsTbody = document.getElementById('script-search-results-tbody');
+    elements.scriptSearchResultsTitle = document.getElementById('script-search-results-title');
     elements.scriptSearchResultsTable = document.getElementById('script-search-results-table');
+    elements.downloadScriptSearchCsvBtn = document.getElementById('downloadScriptSearchCsvBtn');
 
     // --- 8f. Pestaña: Contenidos ---
+    elements.contentSearchProperty = document.getElementById('contentSearchProperty');
     elements.contentSearchValue = document.getElementById('contentSearchValue');
+    elements.contentSharedToggle = document.getElementById('contentSharedToggle');
     elements.searchContentBtn = document.getElementById('searchContentBtn');
     elements.contentSearchResultsTbody = document.getElementById('content-search-results-tbody');
+    elements.contentSearchResultsTitle = document.getElementById('content-search-results-title');
     elements.contentDetailBtn = document.getElementById('contentDetailBtn');
+    elements.downloadContentSearchCsvBtn = document.getElementById('downloadContentSearchCsvBtn');
     elements.contentDetailBlock = document.getElementById('content-detail-block');
     elements.contentDetailTitle = document.getElementById('content-detail-title');
     elements.contentTreeWrapper = document.getElementById('content-tree-wrapper');
@@ -200,8 +220,12 @@ export function init() {
     elements.infoActivityKey = document.getElementById('info-activity-key');
     elements.activityResultsBlock = document.getElementById('activity-results-block');
     elements.activityUsageTbody = document.getElementById('activity-usage-tbody');
+    elements.activityUsageResultsTitle = document.getElementById('activities-usage-results-title');
     elements.activityListTbody = document.getElementById('activity-list-tbody');
+    elements.activitiesSearchResultsTitle = document.getElementById('activities-search-results-title');
     elements.deleteActivityBtn = document.getElementById('deleteActivityBtn');
+    elements.downloadActivityListCsvBtn = document.getElementById('downloadActivityListCsvBtn');
+    elements.downloadActivityUsageCsvBtn = document.getElementById('downloadActivityUsageCsvBtn');
 
     // --- 9. Sección: Validador de Email ---
     elements.emailToValidateInput = document.getElementById('emailToValidate');

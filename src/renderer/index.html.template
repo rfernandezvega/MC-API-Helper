@@ -89,7 +89,7 @@
                     <li><a class="macro-item" data-macro="sendManagement">Gestión Envíos</a></li>     
 					<li><a class="macro-item" data-macro="carpetas">Crear Carpetas</a></li>   
 					<li><a class="macro-item" data-macro="validadorEmail">Validar Emails</a></li>
-                    <li><a class="macro-item" data-macro="auditoria">Auditoría</a></li>          
+                    <li><a class="macro-item" data-macro="auditoria">Auditoría</a></li>
 				</ul>
 			</div>
 		</div>
@@ -149,7 +149,7 @@
 <div id="import-modal" class="modal-overlay">
     <div class="modal-content">
         <h3>Importar Campos desde Portapapeles</h3>
-        <p>Pega aquí los datos. Las columnas deben ser: <b>Nombre</b>, <b>Tipo</b> y <b>Longitud</b> (opcional).</p>
+        <p>Pega aquí los datos. Las columnas deben ser: <b>Nombre</b>, <b>Tipo</b>, <b>Longitud</b> (opcional), <b>PK</b> y <b>Requerido</b> (opcionales: Sí/No, Yes/No, True/False o 1/0). También se admite el CSV descargado desde <em>Descargar</em>, que lleva la columna <b>Default</b> antes de PK.</p>
         <div class="delimiter-selector">
             <label for="delimiter-select">Separador:</label>
             <select id="delimiter-select">
@@ -411,6 +411,11 @@
 </div>
 
 <div id="app-version"></div>
+<!-- Prism: resaltado de HTML/CSS/JS del visor de código. Se carga en local (no por CDN) para
+     que funcione sin conexión, y en modo manual porque el resaltado lo lanzamos nosotros desde
+     ui/code-utils.js, no sobre el DOM al arrancar. Debe ir antes de app.js. -->
+<script>window.Prism = window.Prism || {}; window.Prism.manual = true;</script>
+<script src="../../node_modules/prismjs/prism.js"></script>
 <script type="module" src="app.js"></script>
 </body>
 </html>

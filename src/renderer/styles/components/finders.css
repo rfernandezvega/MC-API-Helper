@@ -59,6 +59,26 @@
     max-height: 180px;
     overflow: auto;
     text-align: left;
+    /* Hueco a la derecha para que el botón de copiar no tape el texto. */
+    padding-right: 40px;
+}
+/* Envoltorio de la caja: ancla el botón de copiar arriba a la derecha sin que se desplace
+   al hacer scroll dentro de la query. */
+.query-box-wrap {
+    position: relative;
+}
+.query-box-wrap > .copy-code-btn {
+    position: absolute;
+    top: 6px;
+    right: 14px;
+    z-index: 1;
+    color: var(--sf-code-text);
+    background-color: var(--sf-code-bg);
+}
+/* Fondo opaco para tapar la query que pasa por debajo; el hover se aclara con un
+   degradado encima en vez de con transparencia. */
+.query-box-wrap > .copy-code-btn:hover {
+    background-image: linear-gradient(rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.12));
 }
 .query-box pre {
     margin: 0;
@@ -93,6 +113,20 @@
 .finder-detail-table th:first-child { border-left: 1px solid var(--sf-border); }
 .finder-detail-table td {
     padding: 8px;
+}
+
+/* Caja de resultados de las pestañas de Buscadores con altura acotada: la cabecera sticky de
+   common.css (th { position:sticky; top:0 }) solo funciona si quien hace scroll es este
+   contenedor y no la pestaña entera. Con la altura libre, seleccionar una fila desplegaba el
+   bloque de detalle (árbol, componentes, DEs...) fuera de la vista y obligaba a un scroll
+   larguísimo; acotando la caja ese detalle queda visible justo debajo, sin tocar el
+   overflow-y:auto ni el flex-grow:1 que .table-container ya trae de common.css (~línea 209),
+   que siguen aplicando dentro de este límite. Solo afecta a .table-container (tabla de
+   resultados); las tablas de detalle (.finder-detail-table) se pintan aparte, dentro de
+   #content-components-wrapper / #content-des-wrapper, y no llevan .table-container. */
+#buscadores-section .config-block > .table-container {
+    max-height: 45vh;
+    overflow-y: auto;
 }
 
 /* Rejilla de dos columnas del formulario de alta de contacto WhatsApp.

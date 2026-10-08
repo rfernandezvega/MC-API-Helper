@@ -5,8 +5,12 @@ import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import { buildAutomationUrl, linkCell } from '../ui/mc-links.js';
 import { sqlBox } from '../ui/sql-highlight.js';
+import { downloadCsv, buildCsvFileName } from '../ui/csv-export.js';
 
 let getAuthenticatedConfig;
+
+// Últimas queries pintadas: son el origen de la descarga en CSV.
+let lastQueries = [];
 
 // Estado del toggle "Mostrar Query" (botón, no checkbox).
 let showQueryText = true;
@@ -22,6 +26,7 @@ function updateShowQueryToggleUI() {
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
     elements.searchQueriesByTextBtn.addEventListener('click', searchQueriesByText);
+    ui.submitOnEnter(elements.querySearchText, elements.searchQueriesByTextBtn);
 
     // Delegación de eventos para abrir enlaces externos
     elements.querySearchResultsTbody.addEventListener('click', ui.handleExternalLink);
@@ -35,6 +40,28 @@ export function init(dependencies) {
             cell.style.display = displayStyle;
         });
     });
+
+    elements.downloadQuerySearchCsvBtn?.addEventListener('click', downloadResultsCsv);
+}
+
+/**
+ * Descarga en CSV las queries encontradas. El texto de la query se exporta siempre
+ * (aunque su columna esté oculta) ya saneado de saltos de línea y comillas.
+ */
+function downloadResultsCsv() {
+    downloadCsv({
+        headers: ['Nombre de la Query', 'Automatización', 'Paso', 'Query Text'],
+        rows: lastQueries.map(query => {
+            const automations = query.automations || [];
+            return [
+                query.name || '',
+                automations.map(a => a.automationName || 'N/A').join(' | '),
+                automations.map(a => a.step || '').join(' | '),
+                query.description || query.queryText || ''
+            ];
+        }),
+        fileName: buildCsvFileName('buscador_texto_queries')
+    });
 }
 
 // Mantenemos la función para evitar errores de app.js
@@ -44,12 +71,17 @@ async function searchQueriesByText() {
     ui.blockUI("Buscando en Queries y analizando automatismos...");
     logger.startLogBuffering();
     elements.querySearchResultsTbody.innerHTML = '<tr><td colspan="4">Buscando...</td></tr>';
-    
+    lastQueries = [];
+    if (elements.downloadQuerySearchCsvBtn) elements.downloadQuerySearchCsvBtn.disabled = true;
+    ui.setResultsCount(elements.querySearchResultsTitle, null);
+
     try {
         const apiConfig = await getAuthenticatedConfig();
         if (!apiConfig || !apiConfig.soapUri) throw new Error("Configuración de API incompleta.");
 
         mcApiService.setLogger(logger);
+        // Cada búsqueda parte de cero para no reutilizar automatismos ya descargados.
+        mcApiService.clearAutomationDetailsCache();
 
         const searchText = elements.querySearchText.value.trim();
         if (!searchText) throw new Error("El campo 'Texto a buscar' no puede estar vacío.");
@@ -65,35 +97,21 @@ async function searchQueriesByText() {
 
         if (!queriesFound || queriesFound.length === 0) {
             elements.querySearchResultsTbody.innerHTML = '<tr><td colspan="4">No se encontraron queries con ese texto.</td></tr>';
+            ui.setResultsCount(elements.querySearchResultsTitle, 0);
             return;
         }
 
-        // 2. ENRIQUECIMIENTO: Buscamos la ubicación usando la función tal cual está en el service
+        // searchQueriesBySimpleFilter ya devuelve cada query con sus automatismos resueltos,
+        // así que aquí no hay que volver a pedirlos: solo se pintan.
         logger.logMessage(`Encontradas ${queriesFound.length} queries. Analizando ubicación...`);
-        
-        const enrichedQueries = await Promise.all(queriesFound.map(async (query) => {
-            try {
-                // Sacamos el ID (ObjectID es el que suele usar Automation Studio)
-                const activityId = query.objectID || query.ObjectID || query.id || query.ID;
-                
-                if (activityId) {
-                    // LLAMADA CORREGIDA: Solo 2 parámetros como pide tu mc-api-service.js
-                    const autoInfo = await mcApiService.findAutomationForActivity(activityId, apiConfig);
-                    query.automations = autoInfo || [];
-                }
-            } catch (e) {
-                console.warn(`No se pudo encontrar automatismo para: ${query.name}`);
-                query.automations = [];
-            }
-            return query;
-        }));
 
-        renderTable(enrichedQueries);
+        renderTable(queriesFound);
         logger.logMessage(`Búsqueda y análisis de ubicación completado.`);
 
     } catch (error) {
         logger.logMessage(`Error: ${error.message}`);
         elements.querySearchResultsTbody.innerHTML = `<tr><td colspan="4" style="color: red;">Error: ${error.message}</td></tr>`;
+        ui.setResultsCount(elements.querySearchResultsTitle, null);
     } finally {
         ui.unblockUI();
         logger.endLogBuffering();
@@ -102,6 +120,9 @@ async function searchQueriesByText() {
 
 function renderTable(queries) {
     elements.querySearchResultsTbody.innerHTML = '';
+    lastQueries = queries || [];
+    if (elements.downloadQuerySearchCsvBtn) elements.downloadQuerySearchCsvBtn.disabled = lastQueries.length === 0;
+    ui.setResultsCount(elements.querySearchResultsTitle, lastQueries.length);
     const showQuery = showQueryText;
     const displayStyle = showQuery ? '' : 'none';
     

@@ -6,6 +6,7 @@ import * as logger from '../ui/logger.js';
 import { loadCustomFonts } from '../ui/fonts.js';
 import { escapeHtml } from '../ui/format-utils.js';
 import { highlightSQLHtml } from '../ui/sql-highlight.js';
+import { copyButtonHtml } from '../ui/copy-utils.js';
 
 let getAuthenticatedConfig;
 let goBackFunction;
@@ -67,22 +68,38 @@ function renderHeaderInfo(auto) {
 
 async function enrichAutomationData(details) {
     const apiConfig = await getAuthenticatedConfig();
-    mcApiService.setLogger(logger); 
+    mcApiService.setLogger(logger);
+
+    // El JSON de este automatismo ya está descargado, así que se registra en la caché de
+    // detalles para que la búsqueda de usos de cada actividad no vuelva a pedirlo una vez
+    // por actividad (las rutas de carpeta ya están en caché desde el cambio de contexto).
+    mcApiService.clearAutomationDetailsCache();
+    mcApiService.primeAutomationDetailsCache(details);
+
+    // Varias actividades suelen escribir en la misma DE; se guarda el resultado por DE
+    // para no repetir la misma búsqueda de impacto dentro de este análisis.
+    const reverseImpactCache = new Map();
 
     // Función interna para buscar quién más escribe en una DE (Reverse Impact)
     const getReverseImpactSources = async (deName, deObjectId, currentActName) => {
-        const [imports, queries] = await Promise.all([
-            mcApiService.findImportsTargetingDE(deObjectId, apiConfig),
-            mcApiService.searchQueriesBySimpleFilter({
-                property: 'DataExtensionTarget.Name',
-                simpleOperator: 'equals',
-                value: deName
-            }, apiConfig)
-        ]);
-        // Unimos y filtramos: que no sea la actividad actual y que tenga al menos una automatización vinculada
-        return [...imports, ...queries].filter(src => 
-            src.name !== currentActName && 
-            src.automations && 
+        const cacheKey = `${deObjectId}|${deName}`.toLowerCase();
+
+        if (!reverseImpactCache.has(cacheKey)) {
+            reverseImpactCache.set(cacheKey, Promise.all([
+                mcApiService.findImportsTargetingDE(deObjectId, apiConfig),
+                mcApiService.searchQueriesBySimpleFilter({
+                    property: 'DataExtensionTarget.Name',
+                    simpleOperator: 'equals',
+                    value: deName
+                }, apiConfig)
+            ]).then(([imports, queries]) => [...imports, ...queries]));
+        }
+
+        const sources = await reverseImpactCache.get(cacheKey);
+        // Se filtra por actividad porque el listado cacheado es común a todas ellas.
+        return sources.filter(src =>
+            src.name !== currentActName &&
+            src.automations &&
             src.automations.length > 0
         );
     };
@@ -240,8 +257,8 @@ async function renderAnalysis(automation) {
                     
                     if (act.queryText) {
                         detailsHtml += `
-                            <div class="sql-wrapper" style="margin-top:10px;">
-                                <div class="sql-toggle-btn">VER QUERY<span>▼</span></div>
+                            <div class="sql-wrapper" data-copy-scope style="margin-top:10px;">
+                                <div class="sql-toggle-btn">VER QUERY<div class="sql-toggle-actions">${copyButtonHtml('Copiar query')}<span>▼</span></div></div>
                                 <div class="sql-content" style="display:none;"> <!-- Mantiene fondo oscuro original -->
                                     <pre><code>${highlightSQLHtml(act.queryText)}</code></pre>
                                 </div>
@@ -266,8 +283,8 @@ async function renderAnalysis(automation) {
                     const hasContent = act.scriptCode && act.scriptCode.trim().length > 0;
                     if (hasContent) {
                         detailsHtml += `
-                            <div class="sql-wrapper" style="margin-top:10px;">
-                                <div class="sql-toggle-btn">VER CÓDIGO SCRIPT <span>▼</span></div>
+                            <div class="sql-wrapper" data-copy-scope style="margin-top:10px;">
+                                <div class="sql-toggle-btn">VER CÓDIGO SCRIPT<div class="sql-toggle-actions">${copyButtonHtml('Copiar script')}<span>▼</span></div></div>
                                 <div class="sql-content" style="display:none;"> <!-- Mantiene fondo oscuro original -->
                                     <pre style="margin:0; min-height: 1.5em; overflow: auto;"><code>${highlightJSHtml(act.scriptCode)}</code></pre>
                                 </div>

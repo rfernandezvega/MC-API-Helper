@@ -7,25 +7,28 @@ import { findAutomationForActivity } from './api-activities.js'; // Importante p
 
 /**
  * Genera un wrapper sobre la función principal de búsqueda de SQL Queries adaptando operadores básicos.
+ * Al criterio del usuario se le suma siempre Status = Active porque las queries inactivas
+ * (borradas de forma lógica en Marketing Cloud) no deben aparecer en los buscadores.
  * @param {object} filter - Filtros estructurados (property, simpleOperator, value).
  * @param {object} apiConfig - Configuración autenticada de la API.
- * @returns {Promise<Array>} Lista de Query Definitions y sus automatismos asociados.
+ * @returns {Promise<Array>} Lista de Query Definitions activas y sus automatismos asociados.
  */
 export async function searchQueriesBySimpleFilter({ property, simpleOperator, value }, apiConfig) {
     const filterValue = simpleOperator === 'like' ? `%${value}%` : value;
-    const filterXml = `<Filter xsi:type="SimpleFilterPart"><Property>${property}</Property><SimpleOperator>${simpleOperator}</SimpleOperator><Value>${filterValue}</Value></Filter>`;
+    const filterXml = `<Filter xsi:type="ComplexFilterPart"><LeftOperand xsi:type="SimpleFilterPart"><Property>${property}</Property><SimpleOperator>${simpleOperator}</SimpleOperator><Value>${filterValue}</Value></LeftOperand><LogicalOperator>AND</LogicalOperator><RightOperand xsi:type="SimpleFilterPart"><Property>Status</Property><SimpleOperator>equals</SimpleOperator><Value>Active</Value></RightOperand></Filter>`;
     return findQueriesByFilter(filterXml, apiConfig);
 }
 
 /**
  * Función interna centralizada para ejecutar cualquier Retrieval SOAP de QueryDefinition en base a un filtro inyectado.
+ * Descarta las queries que no estén activas antes de resolver sus automatismos.
  * @param {string} filterXml - Estructura XML del tag Filter de Marketing Cloud.
  * @param {object} apiConfig - Configuración autenticada de la API.
  * @returns {Promise<Array>} Arreglo de queries extraídas.
  */
 async function findQueriesByFilter(filterXml, apiConfig) {
-    const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>QueryDefinition</ObjectType><Properties>Name</Properties><Properties>QueryText</Properties><Properties>TargetUpdateType</Properties><Properties>ObjectID</Properties>${filterXml}</RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
-    
+    const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>QueryDefinition</ObjectType><Properties>Name</Properties><Properties>QueryText</Properties><Properties>TargetUpdateType</Properties><Properties>ObjectID</Properties><Properties>Status</Properties>${filterXml}</RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+
     const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
 
     const queries = Array.from(new DOMParser().parseFromString(responseText, "application/xml").querySelectorAll("Results")).map(node => ({
@@ -33,8 +36,11 @@ async function findQueriesByFilter(filterXml, apiConfig) {
         type: 'Query',
         description: node.querySelector("QueryText")?.textContent || '---',
         action: node.querySelector("TargetUpdateType")?.textContent || 'N/A',
-        objectID: node.querySelector("ObjectID")?.textContent
-    }));
+        objectID: node.querySelector("ObjectID")?.textContent,
+        status: node.querySelector("Status")?.textContent || ''
+    // Segundo filtro en cliente: si el Retrieve no trae Status se asume activa, pero
+    // cualquier Inactive explícito se descarta para no gastar llamadas de automatismos.
+    })).filter(q => q.status.toLowerCase() !== 'inactive');
 
     // Enriquecer cada query con la lista de automatizaciones donde se usa
     const queriesWithAutomations = await Promise.all(queries.map(async (q) => {

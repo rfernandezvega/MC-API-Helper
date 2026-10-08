@@ -7,10 +7,12 @@ import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import { buildAutomationUrl, linkCell } from '../ui/mc-links.js';
 import { sqlBox } from '../ui/sql-highlight.js';
+import { downloadCsv, buildCsvFileName } from '../ui/csv-export.js';
 
 // --- 1. ESTADO DEL MÓDULO ---
 
 let getAuthenticatedConfig; // Dependencia inyectada desde app.js
+let lastSources = [];       // Últimas actividades pintadas (origen de la descarga en CSV)
 
 // --- 2. FUNCIONES PÚBLICAS ---
 
@@ -33,6 +35,7 @@ export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
 
     elements.findDataSourcesBtn.addEventListener('click', findDataSources);
+    ui.submitOnEnter(elements.deNameToFindInput, elements.findDataSourcesBtn);
     // Los nombres de automatismo son enlaces externos: se abren en el navegador.
     elements.dataSourcesTbody.addEventListener('click', ui.handleExternalLink);
 
@@ -50,6 +53,30 @@ export function init(dependencies) {
             });
         }
     });
+
+    elements.downloadDataSourcesCsvBtn?.addEventListener('click', downloadResultsCsv);
+}
+
+/**
+ * Descarga en CSV las actividades encontradas. La query se exporta siempre, aunque su
+ * columna esté oculta en la tabla, porque es el dato que se suele querer revisar fuera.
+ */
+function downloadResultsCsv() {
+    downloadCsv({
+        headers: ['Actividad', 'Tipo', 'Automatización', 'Paso', 'Acción', 'Descripción / Query'],
+        rows: lastSources.map(source => {
+            const automations = source.automations || [];
+            return [
+                source.name || '',
+                source.type || '',
+                automations.map(a => a.automationName || 'N/A').join(' | '),
+                automations.map(a => a.step || '').join(' | '),
+                source.action || '',
+                source.description || ''
+            ];
+        }),
+        fileName: buildCsvFileName('buscador_origenes_datos')
+    });
 }
 
 // --- 3. LÓGICA PRINCIPAL ---
@@ -62,9 +89,12 @@ async function findDataSources() {
     logger.startLogBuffering();
     
     elements.dataSourcesTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
+    ui.setResultsCount(elements.dataSourcesResultsTitle, null);
     try {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
+        // Cada búsqueda parte de cero para no reutilizar automatismos ya descargados.
+        mcApiService.clearAutomationDetailsCache();
 
         const deName = elements.deNameToFindInput.value.trim();
         if (!deName) {
@@ -96,6 +126,7 @@ async function findDataSources() {
     } catch (error) {
         logger.logMessage(`Error al buscar orígenes: ${error.message}`);
         elements.dataSourcesTbody.innerHTML = `<tr><td colspan="6" style="color: red;">Error: ${error.message}</td></tr>`;
+        ui.setResultsCount(elements.dataSourcesResultsTitle, null);
         ui.showCustomAlert(`Error: ${error.message}`);
     } finally {
         ui.unblockUI();
@@ -111,7 +142,10 @@ async function findDataSources() {
  */
 function renderTable(sources) {
     elements.dataSourcesTbody.innerHTML = '';
-    
+    lastSources = sources || [];
+    if (elements.downloadDataSourcesCsvBtn) elements.downloadDataSourcesCsvBtn.disabled = lastSources.length === 0;
+    ui.setResultsCount(elements.dataSourcesResultsTitle, lastSources.length);
+
     // --- Estado actual del toggle para el renderizado ---
     const displayStyle = showSourceQuery ? '' : 'none';
 

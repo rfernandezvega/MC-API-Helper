@@ -363,10 +363,16 @@ export async function fetchFieldNameById(fieldObjectId, apiConfig) {
  * @param {string} property - La propiedad objetivo (Name, CustomerKey).
  * @param {string} value - El texto parcial que debe contener.
  * @param {object} apiConfig - Configuración autenticada de la API.
- * @returns {Promise<Array>} Lista de DEs encontradas con su info básica.
+ * @param {boolean} [includeShared=false] - Si es true, la consulta se lanza con QueryAllAccounts
+ *   para que desde una BU hija también aparezcan las Shared Data Extensions (que viven en la
+ *   Enterprise) y se pide Client.ID para saber a qué BU pertenece cada una. Ojo: QueryAllAccounts
+ *   trae DEs de todas las BUs visibles, así que el llamador debe filtrar.
+ * @returns {Promise<Array>} Lista de DEs encontradas con su info básica (y `clientId` si includeShared).
  */
-export async function searchDataExtensions(property, value, apiConfig) {
-  const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>Name</Properties><Properties>CategoryID</Properties><Properties>ObjectID</Properties><Properties>CustomerKey</Properties><Filter xsi:type="SimpleFilterPart"><Property>${property}</Property><SimpleOperator>like</SimpleOperator><Value>%${value}%</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
+export async function searchDataExtensions(property, value, apiConfig, includeShared = false) {
+  const clientIdXml = includeShared ? '<Properties>Client.ID</Properties>' : '';
+  const allAccountsXml = includeShared ? '<QueryAllAccounts>true</QueryAllAccounts>' : '';
+  const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>DataExtension</ObjectType><Properties>Name</Properties><Properties>CategoryID</Properties><Properties>ObjectID</Properties><Properties>CustomerKey</Properties>${clientIdXml}<Filter xsi:type="SimpleFilterPart"><Property>${property}</Property><SimpleOperator>like</SimpleOperator><Value>%${value}%</Value></Filter>${allAccountsXml}</RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
   
   const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
   
@@ -377,8 +383,9 @@ export async function searchDataExtensions(property, value, apiConfig) {
   return Array.from(resultNodes).map(node => ({
     categoryId: node.querySelector("CategoryID")?.textContent,
     deName: node.querySelector("Name")?.textContent,
-    objectID: node.querySelector("ObjectID")?.textContent, 
-    customerKey: node.querySelector("CustomerKey")?.textContent 
+    objectID: node.querySelector("ObjectID")?.textContent,
+    customerKey: node.querySelector("CustomerKey")?.textContent,
+    clientId: node.querySelector("Client > ID")?.textContent
   }));
 }
 

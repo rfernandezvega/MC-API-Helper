@@ -6,7 +6,8 @@ import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
-import { formatCodeWithIndentation, highlightCloudPageCode, buildCodeViewer } from '../ui/code-utils.js';
+import { buildCodeViewer } from '../ui/code-utils.js';
+import { buildCopyableCodeBlock } from '../ui/copy-utils.js';
 import { searchAndShowDetail } from './content-finder.js';
 import { escapeHtml, formatDate } from '../ui/format-utils.js';
 import { createTableSorter, createPaginator } from '../ui/table-utils.js';
@@ -891,7 +892,7 @@ function openContentDetail(contentId) {
         const previewHtml = msg ? buildWhatsAppBubble(item) : '';
         elements.contentDetailCode.innerHTML = metaHtml
             + (previewHtml ? `<div style="margin-top:12px;"><div class="code-header">Preview</div>${previewHtml}</div>` : '')
-            + (msg ? `<div style="margin-top:12px;"><div class="code-header">Mensaje</div><pre><code>${escapeHtml(msg)}</code></pre></div>` : '');
+            + (msg ? `<div style="margin-top:12px;">${buildCopyableCodeBlock('Mensaje', escapeHtml(msg))}</div>` : '');
 
         elements.contentDetailDrawer.classList.add('open');
         elements.contentDetailBackdrop.classList.add('active');
@@ -923,7 +924,7 @@ function openContentDetail(contentId) {
         const previewHtml = msg ? buildWhatsAppBubble(item) : '';
         elements.contentDetailCode.innerHTML = metaHtml
             + (previewHtml ? `<div class="code-header">Preview</div>${previewHtml}` : '')
-            + (msg ? `<div style="margin-top:12px;"><div class="code-header">Mensaje</div><pre><code>${escapeHtml(msg)}</code></pre></div>` : '');
+            + (msg ? `<div style="margin-top:12px;">${buildCopyableCodeBlock('Mensaje', escapeHtml(msg))}</div>` : '');
 
         elements.contentDetailDrawer.classList.add('open');
         elements.contentDetailBackdrop.classList.add('active');
@@ -958,13 +959,7 @@ function openContentDetail(contentId) {
         if (des.length) metaHtml += buildDEsTableHtml(des);
     }
 
-    const formatted = formatCodeWithIndentation(code);
-    const highlighted = highlightCloudPageCode(formatted);
-    const contentHeaderStyle = metaHtml ? ' style="margin-top:12px;"' : '';
-
-    elements.contentDetailCode.innerHTML = metaHtml + `
-        <div class="code-header"${contentHeaderStyle}>Contenido</div>
-        <pre><code>${highlighted}</code></pre>`;
+    elements.contentDetailCode.innerHTML = metaHtml + buildCodeViewer(code, 'Contenido');
 
     elements.contentDetailDrawer.classList.add('open');
     elements.contentDetailBackdrop.classList.add('active');
@@ -1239,12 +1234,7 @@ function openResolvedDetail(contentId) {
         metaHtml += `</div>`;
     }
 
-    const formatted = formatCodeWithIndentation(resolved);
-    const highlighted = highlightCloudPageCode(formatted);
-
-    elements.contentDetailCode.innerHTML = metaHtml + `
-        <div class="code-header">Código Resuelto</div>
-        <pre><code>${highlighted}</code></pre>`;
+    elements.contentDetailCode.innerHTML = metaHtml + buildCodeViewer(resolved, 'Código Resuelto');
 
     elements.contentDetailDrawer.classList.add('open');
     elements.contentDetailBackdrop.classList.add('active');

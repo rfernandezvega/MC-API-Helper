@@ -4,6 +4,8 @@
 // ---              queries con la misma apariencia que el analizador de automatismos.
 // =======================================================================================
 
+import { copyButtonHtml } from './copy-utils.js';
+
 /**
  * Resalta una query SQL devolviendo HTML con spans .sql-* (comentarios, strings,
  * keywords, funciones y números). Escapa el HTML de entrada.
@@ -30,11 +32,13 @@ export function highlightSQLHtml(query) {
 
 /**
  * Devuelve el HTML de una caja acotada (altura limitada, con scroll) que muestra una
- * query resaltada, con la misma apariencia que el analizador de automatismos.
+ * query resaltada, con la misma apariencia que el analizador de automatismos, y un botón
+ * de copiar fijo en la esquina superior. El botón va fuera de la caja con scroll para que
+ * no se desplace con el contenido.
  * @param {string} text - Texto de la query (o descripción).
  * @returns {string} HTML de la caja, o '---' si no hay texto.
  */
 export function sqlBox(text) {
     if (!text) return '---';
-    return `<div class="query-box"><pre><code>${highlightSQLHtml(text)}</code></pre></div>`;
+    return `<div class="query-box-wrap" data-copy-scope>${copyButtonHtml('Copiar query')}<div class="query-box"><pre><code>${highlightSQLHtml(text)}</code></pre></div></div>`;
 }

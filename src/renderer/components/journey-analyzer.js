@@ -777,8 +777,7 @@ async function enrichJourneyWithFieldNames(journey, apiConfig) {
             if (assetId && !templateCache.has(assetId)) {
                 logger.logMessage(`Obteniendo nombre de plantilla WhatsApp: ${assetId}`);
                 try {
-                    // searchContentAssets ya maneja la búsqueda por ID exacto internamente
-                    const results = await mcApiService.searchContentAssets(assetId.toString(), apiConfig);
+                    const results = await mcApiService.searchContentAssets(assetId.toString(), apiConfig, 'id');
                     const templateName = (results && results.length > 0) ? results[0].name : `ID: ${assetId}`;
                     templateCache.set(assetId, templateName);
                 } catch (e) {
@@ -794,7 +793,7 @@ async function enrichJourneyWithFieldNames(journey, apiConfig) {
             if (assetId && !templateCache.has(assetId)) {
                 logger.logMessage(`Obteniendo nombre de mensaje SMS: ${assetId}`);
                 try {
-                    const results = await mcApiService.searchContentAssets(assetId.toString(), apiConfig);
+                    const results = await mcApiService.searchContentAssets(assetId.toString(), apiConfig, 'id');
                     const smsName = (results && results.length > 0) ? results[0].name : `ID: ${assetId}`;
                     templateCache.set(assetId, smsName);
                 } catch (e) {

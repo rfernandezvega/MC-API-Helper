@@ -2,7 +2,7 @@
 // Fichero: api-journeys.js
 // ===================================================================
 import { executeRestRequest, executeSoapRequest } from './api-core.js';
-import { getFolderPath } from './api-helpers.js';
+import { resolveFolderPaths } from './api-helpers.js';
 
 /**
  * Recupera el historial y el estado actual de un contacto dentro de todos los Journeys.
@@ -108,12 +108,10 @@ export async function fetchAllEventDefinitions(apiConfig) {
  */
 export async function buildJourneyFolderMap(journeys, apiConfig) {
     const allCategoryIds = [...new Set(journeys.map(j => j.categoryId).filter(Boolean))];
-    const folderMap = {};
+    const paths = await resolveFolderPaths(allCategoryIds, apiConfig);
 
-    for (const id of allCategoryIds) {
-        folderMap[id] = await getFolderPath(id, apiConfig);
-    }
-    
+    const folderMap = {};
+    allCategoryIds.forEach(id => { folderMap[id] = paths.get(String(id)) || ''; });
     return folderMap;
 }
 

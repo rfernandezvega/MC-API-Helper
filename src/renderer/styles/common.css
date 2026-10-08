@@ -123,6 +123,39 @@
 :root[data-theme="dark"] .audit-callout-warning { background: #3d2f10; color: #f0c066; }
 :root[data-theme="dark"] .audit-callout-danger  { background: #3d1f1c; color: #f0938c; }
 
+/* ==========================================================
+   BARRAS DE DESPLAZAMIENTO
+   Se pintan con los tokens para que sigan al tema activo: por defecto
+   Chromium las dibuja en blanco y en oscuro cantan sobre las tablas.
+   color-scheme además ajusta los controles nativos (pickers de fecha,
+   scroll interno de selects) al tema.
+   ========================================================== */
+:root { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    /* El borde transparente con background-clip deja aire alrededor del pulgar
+       sin necesidad de pintar el carril. */
+    background: var(--sf-border);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+    border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--sf-text-muted);
+    background-clip: padding-box;
+}
+::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
 
 /* ==========================================================
    1. ESTILOS GLOBALES Y LAYOUT PRINCIPAL
@@ -627,6 +660,17 @@ body {
     font-size: 0.75rem;
     padding: 5px 10px;
     line-height: 1.2;
+}
+
+/* Botón de acción que actúa como conmutador de un filtro (p. ej. "Incluir WhatsApp"
+   en Clientes o "Compartidas" en Contenidos): gris apagado, verde encendido. Los
+   colores van por token para que no desentonen en modo oscuro. */
+.action-button.toggle-btn {
+    background-color: var(--sf-text-muted);
+    color: #fff;
+}
+.action-button.toggle-btn.active {
+    background-color: var(--sf-green);
 }
 
 /* --- 3.3. Formularios y Bloques de Configuración --- */
@@ -1223,6 +1267,51 @@ td a:hover { color: var(--sf-blue-dark); text-decoration: underline; }
     background-color: var(--sf-hover);
 }
 
+/* Grupo derecho de la barra colapsable: botón de copiar + flecha. */
+.sql-toggle-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Botón con icono de copiar (ui/copy-utils.js). Hereda el color del contenedor para
+   leerse igual sobre la cabecera azul, la barra clara o el fondo oscuro del código, en
+   ambos temas, sin variantes por contexto. */
+.copy-code-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: inherit;
+    opacity: 0.85;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background-color 0.2s, border-color 0.2s, opacity 0.2s;
+}
+.copy-code-btn:hover {
+    opacity: 1;
+    background-color: rgba(127, 127, 127, 0.25);
+    border-color: rgba(127, 127, 127, 0.35);
+}
+.copy-code-btn svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.copy-code-btn.copied {
+    opacity: 1;
+}
+
 /* Contenedor unificado para SQL y JS (estilo code-block de referencia) */
 .sql-content, .js-content {
     display: none;
@@ -1297,14 +1386,6 @@ td a:hover { color: var(--sf-blue-dark); text-decoration: underline; }
     font-weight: bold;
     color: white;
     text-transform: uppercase;
-}
-
-#sendManagement-section .table-container::-webkit-scrollbar {
-    width: 8px;
-}
-#sendManagement-section .table-container::-webkit-scrollbar-thumb {
-    background: var(--sf-border);
-    border-radius: 4px;
 }
 
 /* ==========================================================

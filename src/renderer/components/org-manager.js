@@ -325,7 +325,10 @@ async function activateClientBU(clientName, mid, buName) {
         // Antes de cambiar de contexto, atribuye las llamadas pendientes al anterior.
         await flushApiUsage();
 
-        // Limpiar cachés en memoria al cambiar de contexto.
+        // Limpiar cachés en memoria al cambiar de contexto. Las rutas de carpeta y los
+        // automatismos se indexan por ID, y esos IDs son distintos en cada BU.
+        mcApiService.clearFolderPathCache();
+        mcApiService.clearAutomationDetailsCache();
         calendar.clearData();
         automationsManager.clearCache();
         journeysManager.clearCache();

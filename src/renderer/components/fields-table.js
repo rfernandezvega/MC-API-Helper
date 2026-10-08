@@ -2,8 +2,13 @@
 // Descripción: Módulo que encapsula toda la lógica de la tabla de campos de una Data Extension.
 
 import elements from '../ui/dom-elements.js';
+import { downloadCsv, buildCsvFileName } from '../ui/csv-export.js';
 
 let selectedRow = null;
+
+// Cabecera del CSV que exporta la vista. Se reutiliza al importar para reconocerla y
+// descartarla, de modo que un fichero exportado se pueda volver a cargar tal cual.
+const FIELDS_CSV_HEADERS = ['Campo MC', 'Tipo Campo', 'Longitud', 'Default', 'PK', 'Requerido'];
 
 /**
  * Devuelve el HTML de un botón conmutable (PK o Requerido) que sustituye al
@@ -157,6 +162,28 @@ export function init() {
         if (elements.delimiterSelect.value === 'other') elements.customDelimiterInput.focus(); 
     });
     elements.processPasteBtn.addEventListener('click', processPastedData);
+
+    elements.downloadFieldsCsvBtn?.addEventListener('click', downloadFieldsCsv);
+}
+
+/**
+ * Descarga en CSV la configuración de campos de la tabla, en el mismo orden en que
+ * está definida. Solo salen las filas con nombre y tipo (las válidas para crear la DE).
+ */
+function downloadFieldsCsv() {
+    const fields = getFieldsData();
+    downloadCsv({
+        headers: FIELDS_CSV_HEADERS,
+        rows: fields.map(f => [
+            f.name,
+            f.type,
+            f.length,
+            f.defaultValue,
+            f.isPrimaryKey ? 'Sí' : 'No',
+            f.isRequired ? 'Sí' : 'No'
+        ]),
+        fileName: buildCsvFileName('configuracion_campos')
+    });
 }
 
 /**
@@ -189,10 +216,29 @@ function moveRow(direction) {
 
 
 /**
- * Rellena la tabla con un array de datos de campos.
+ * Elimina las filas que no tienen ningún dato introducido (las que se añaden en blanco
+ * al abrir la vista). Evita que quede una fila vacía por delante de los campos cargados.
+ */
+function removeEmptyRows() {
+    elements.fieldsTableBody.querySelectorAll('tr').forEach(row => {
+        const isEmpty = !row.cells[0].textContent.trim()
+            && !row.querySelector('.type-select')?.value
+            && !row.cells[2].textContent.trim()
+            && !row.cells[3].textContent.trim();
+        if (isEmpty) {
+            if (selectedRow === row) selectedRow = null;
+            row.remove();
+        }
+    });
+}
+
+/**
+ * Rellena la tabla con un array de datos de campos, descartando antes las filas en blanco.
  * @param {Array<object>} fieldsData - Array de objetos de campo.
  */
-export function populate(fieldsData) {    
+export function populate(fieldsData) {
+    removeEmptyRows();
+
     fieldsData.forEach(field => {
         const newRow = elements.fieldsTableBody.insertRow();
         newRow.innerHTML = `
@@ -284,10 +330,71 @@ export function closeImportModal() {
 }
 
 /**
+ * Trocea una línea pegada respetando las celdas entrecomilladas: el CSV que exporta la
+ * vista entrecomilla todas las celdas y el separador puede aparecer dentro de una de
+ * ellas, así que un split directo partiría columnas y dejaría las comillas en el texto.
+ * @param {string} line - La línea a trocear.
+ * @param {string} delimiter - Separador elegido en el modal.
+ * @returns {Array<string>} Las celdas ya sin comillas de envoltura.
+ */
+function splitPastedLine(line, delimiter) {
+    const cells = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+            // Dos comillas seguidas dentro de una celda entrecomillada son una comilla literal.
+            if (inQuotes && line[i + 1] === '"') {
+                current += '"';
+                i++;
+            } else {
+                inQuotes = !inQuotes;
+            }
+        } else if (!inQuotes && line.startsWith(delimiter, i)) {
+            cells.push(current);
+            current = '';
+            i += delimiter.length - 1;
+        } else {
+            current += char;
+        }
+    }
+    cells.push(current);
+
+    return cells;
+}
+
+/**
+ * Interpreta una celda de PK/Requerido. Se admiten las formas con las que la gente
+ * suele marcar estas columnas, con o sin mayúsculas y con o sin tilde; cualquier otro
+ * valor (o la celda vacía) cuenta como "no".
+ * @param {string} [value] - Contenido de la celda.
+ * @returns {boolean}
+ */
+function parseBooleanCell(value) {
+    const normalized = (value || '').trim().toLowerCase();
+    return ['si', 'sí', 'yes', 'y', 'true', 'verdadero', '1', 'x'].includes(normalized);
+}
+
+/**
+ * Detecta la fila de cabecera del CSV exportado por la vista para no cargarla como campo.
+ * @param {object} field - Campo ya troceado.
+ * @returns {boolean}
+ */
+function isHeaderRow(field) {
+    return field.name.toLowerCase() === FIELDS_CSV_HEADERS[0].toLowerCase()
+        && field.type.toLowerCase() === FIELDS_CSV_HEADERS[1].toLowerCase();
+}
+
+/**
  * Procesa los datos pegados desde el portapapeles y los añade a la tabla.
  */
 export function processPastedData() {
-    const data = elements.pasteDataArea.value.trim();
+    // Se quita el BOM inicial: si se pega el contenido de un CSV exportado por la app
+    // viaja pegado al primer nombre de campo.
+    const pasted = elements.pasteDataArea.value;
+    const data = (pasted.charCodeAt(0) === 0xFEFF ? pasted.slice(1) : pasted).trim();
     if (!data) return;
 
     let delimiter = '';
@@ -303,17 +410,25 @@ export function processPastedData() {
         return;
     }
 
-    const lines = data.split('\n');
-    const newFields = lines.map(line => {
-        const parts = line.split(delimiter);
+    const newFields = data.split('\n').map(line => {
+        const cells = splitPastedLine(line, delimiter).map(cell => cell.trim());
+        // El CSV que exporta la vista trae Default en la cuarta columna (6 en total);
+        // en pegados más cortos se entiende que la cuarta y la quinta son PK y Requerido.
+        const hasDefaultColumn = cells.length >= 6;
+        const isPrimaryKey = parseBooleanCell(cells[hasDefaultColumn ? 4 : 3]);
         return {
-            name: parts[0]?.trim() || '',
-            type: parts[1]?.trim() || 'Text',
-            length: parts[2]?.trim() || ''
+            name: cells[0] || '',
+            type: cells[1] || 'Text',
+            length: cells[2] || '',
+            defaultValue: hasDefaultColumn ? cells[3] : '',
+            isPrimaryKey,
+            // Una PK es siempre obligatoria, igual que al marcarla a mano en la tabla.
+            isRequired: isPrimaryKey || parseBooleanCell(cells[hasDefaultColumn ? 5 : 4])
         };
-    }).filter(f => f.name);
-    
-    clear(false);
-    populate(getFieldsData().concat(newFields));
+    }).filter(f => f.name && !isHeaderRow(f));
+
+    // populate conserva los campos ya definidos y descarta las filas en blanco,
+    // así lo importado se añade sin dejar huecos por delante.
+    populate(newFields);
     closeImportModal();
 }

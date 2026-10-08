@@ -3,26 +3,58 @@ import * as mcApiService from '../api/mc-api-service.js';
 import elements from '../ui/dom-elements.js';
 import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
-import { formatCodeWithIndentation, highlightCloudPageCode } from '../ui/code-utils.js';
+import { buildCodeViewer } from '../ui/code-utils.js';
 import { escapeHtml } from '../ui/format-utils.js';
+import { downloadCsv, buildCsvFileName } from '../ui/csv-export.js';
 
 // --- 1. ESTADO ---
 let getAuthenticatedConfig;
 let cachedResults = [];
 let selectedAssetId = null;
 
+// Tope de anidamiento al expandir componentes. Junto al registro de assets ya visitados
+// evita que una referencia circular (A incluye B y B incluye A) recorra sin fin.
+const MAX_COMPONENT_DEPTH = 10;
+
 let currentDetailAsset = null;
 let currentDetailComponents = [];
 
 let currentDrawerContent = null;
 
+/**
+ * Engancha el comportamiento de alternar activo/inactivo a un botón conmutador (toggle),
+ * sincronizando aria-pressed. Extraído para no duplicarlo entre "Incluir contenido" y "Compartidas".
+ * @param {HTMLElement} btn - Botón conmutador con clase `toggle-btn`.
+ */
+function wireToggleButton(btn) {
+    btn.addEventListener('click', () => {
+        const isActive = btn.classList.toggle('active');
+        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+}
+
 // --- 2. INIT ---
 export function init(dependencies) {
     getAuthenticatedConfig = dependencies.getAuthenticatedConfig;
     elements.searchContentBtn.addEventListener('click', searchContent);
+    ui.submitOnEnter(elements.contentSearchValue, elements.searchContentBtn);
     elements.contentDetailBtn.addEventListener('click', showContentDetail);
 
+    // Conmutador "Compartidas": el texto del botón es fijo, así que el estado activo/inactivo
+    // no se puede deducir del contenido y hay que sincronizar aria-pressed a mano para que los
+    // lectores de pantalla lo anuncien correctamente.
+    wireToggleButton(elements.contentSharedToggle);
+
+    elements.downloadContentSearchCsvBtn?.addEventListener('click', downloadResultsCsv);
+
     elements.contentSearchResultsTbody.addEventListener('click', (e) => {
+        // El icono de código tiene prioridad y no debe disparar la selección de fila.
+        const inspectBtn = e.target.closest('.cp-inspect-btn');
+        if (inspectBtn) {
+            e.stopPropagation();
+            openContentSearchResultCode(inspectBtn.dataset.contentId);
+            return;
+        }
         const row = e.target.closest('tr');
         if (!row || !row.dataset.assetId) return;
         elements.contentSearchResultsTbody.querySelectorAll('tr').forEach(r => r.classList.remove('selected'));
@@ -72,30 +104,48 @@ export function init(dependencies) {
 async function searchContent() {
     ui.blockUI("Buscando contenidos...");
     logger.startLogBuffering();
-    elements.contentSearchResultsTbody.innerHTML = '<tr><td colspan="4">Buscando...</td></tr>';
+    elements.contentSearchResultsTbody.innerHTML = '<tr><td colspan="6">Buscando...</td></tr>';
     elements.contentDetailBlock.style.display = 'none';
     elements.contentDetailBtn.disabled = true;
     selectedAssetId = null;
+    cachedResults = [];
+    if (elements.downloadContentSearchCsvBtn) elements.downloadContentSearchCsvBtn.disabled = true;
+    ui.setResultsCount(elements.contentSearchResultsTitle, null);
 
     try {
         const apiConfig = await getAuthenticatedConfig();
         mcApiService.setLogger(logger);
         const value = elements.contentSearchValue.value.trim();
         if (!value) throw new Error("El campo de búsqueda no puede estar vacío.");
+        const searchType = elements.contentSearchProperty.value;
+        const includeShared = elements.contentSharedToggle.classList.contains('active');
 
-        const contentList = await mcApiService.searchContentAssets(value, apiConfig);
+        const contentList = await mcApiService.searchContentAssets(value, apiConfig, searchType, includeShared);
         if (contentList.length === 0) { cachedResults = []; renderTable([]); return; }
 
         logger.logMessage(`Se encontraron ${contentList.length} contenidos. Obteniendo rutas...`);
-        const enriched = await Promise.all(contentList.map(async (asset) => {
-            const folderPath = await mcApiService.getFolderPath(asset.category.id, apiConfig);
-            return { id: asset.id, name: asset.name, type: asset.assetType.displayName, assetTypeId: asset.assetType.id, path: folderPath || 'Content Builder' };
+        // Rutas en bloque: una llamada por nivel del árbol en lugar de una cadena por asset.
+        const paths = await mcApiService.resolveFolderPaths(
+            contentList.map(asset => asset.category?.id).filter(Boolean),
+            apiConfig
+        );
+        const enriched = contentList.map(asset => ({
+            id: asset.id,
+            name: asset.name,
+            type: asset.assetType.displayName,
+            assetTypeId: asset.assetType.id,
+            path: paths.get(String(asset.category?.id)) || 'Content Builder',
+            shared: asset.isShared === true,
+            // El cuerpo viene siempre en la búsqueda, así que el icono de código lo muestra
+            // sin gastar otra llamada a la API.
+            content: asset.views?.html?.content || asset.content || null
         }));
         cachedResults = enriched;
         renderTable(enriched);
     } catch (error) {
         logger.logMessage(`Error: ${error.message}`);
-        elements.contentSearchResultsTbody.innerHTML = `<tr><td colspan="4" style="color:red;">Error: ${error.message}</td></tr>`;
+        elements.contentSearchResultsTbody.innerHTML = `<tr><td colspan="6" style="color:red;">Error: ${error.message}</td></tr>`;
+        ui.setResultsCount(elements.contentSearchResultsTitle, null);
     } finally { ui.unblockUI(); logger.endLogBuffering(); }
 }
 
@@ -111,11 +161,13 @@ async function showContentDetail() {
 
     try {
         const apiConfig = await getAuthenticatedConfig();
+        const context = { assets: new Map(), expanded: new Set() };
+
         logger.logMessage(`Obteniendo detalle completo del asset ${selected.id}...`);
-        const fullAsset = await mcApiService.fetchAssetById(selected.id, apiConfig);
+        const fullAsset = await fetchAssetOnce(selected.id, apiConfig, context);
 
         // 1. Componentes hijos (slots/blocks) + ContentBlockBy* en código
-        const components = await extractComponents(fullAsset, apiConfig, 0);
+        const components = await extractComponents(fullAsset, apiConfig, 0, null, context);
 
         // Contenido principal: intentar ensamblar (emails), luego push/sms/wa, luego content directo
         let mainContent = assembleFullContent(fullAsset, components) || null;
@@ -199,10 +251,43 @@ async function showContentDetail() {
 }
 
 /**
- * Extrae componentes hijos: recorre slots/blocks y detecta ContentBlockBy* en código.
+ * Descarga un asset reutilizando los ya obtenidos en este detalle, porque un mismo bloque
+ * suele estar referenciado desde varios slots y antes se pedía una vez por referencia.
+ * @param {string|number} assetId - ID del asset.
+ * @param {object} apiConfig - Configuración autenticada de la API.
+ * @param {object} context - Contexto del detalle en curso ({ assets, expanded }).
+ * @returns {Promise<object>} El asset completo.
  */
-async function extractComponents(asset, apiConfig, depth, parentName) {
+async function fetchAssetOnce(assetId, apiConfig, context) {
+    const key = String(assetId);
+    if (context.assets.has(key)) return context.assets.get(key);
+
+    // Se guarda la promesa, no el resultado, para que dos referencias simultáneas
+    // al mismo bloque compartan una única petición.
+    const promise = mcApiService.fetchAssetById(assetId, apiConfig);
+    context.assets.set(key, promise);
+    return promise;
+}
+
+/**
+ * Extrae componentes hijos: recorre slots/blocks y detecta ContentBlockBy* en código.
+ * @param {object} asset - Asset del que se extraen los componentes.
+ * @param {object} apiConfig - Configuración autenticada de la API.
+ * @param {number} depth - Nivel de anidamiento actual.
+ * @param {string} [parentName] - Nombre del componente que lo referencia.
+ * @param {object} context - Contexto del detalle en curso ({ assets, expanded }).
+ * @returns {Promise<Array>} Lista plana de componentes encontrados.
+ */
+async function extractComponents(asset, apiConfig, depth, parentName, context) {
     const components = [];
+
+    if (depth >= MAX_COMPONENT_DEPTH) return components;
+
+    // Un asset se expande una sola vez: si vuelve a aparecer se sigue listando como
+    // componente, pero no se recorren otra vez sus hijos.
+    const assetKey = String(asset.id ?? '');
+    if (assetKey && context.expanded.has(assetKey)) return components;
+    if (assetKey) context.expanded.add(assetKey);
 
     // A. Template (obtener detalle completo para tener content y ruta)
     const templateId = asset.views?.html?.template?.id;
@@ -210,7 +295,7 @@ async function extractComponents(asset, apiConfig, depth, parentName) {
     if (templateName && depth === 0 && templateId) {
         try {
             logger.logMessage(`→ Obteniendo template ${templateId}...`);
-            const templateAsset = await mcApiService.fetchAssetById(templateId, apiConfig);
+            const templateAsset = await fetchAssetOnce(templateId, apiConfig, context);
             const templatePath = templateAsset.category?.id
                 ? await mcApiService.getFolderPath(templateAsset.category.id, apiConfig) : '---';
             components.push({
@@ -263,7 +348,7 @@ async function extractComponents(asset, apiConfig, depth, parentName) {
                     // Reference block → fetch the referenced asset
                     try {
                         logger.logMessage(`${'  '.repeat(depth)}→ Obteniendo componente ID ${refId}...`);
-                        const childAsset = await mcApiService.fetchAssetById(refId, apiConfig);
+                        const childAsset = await fetchAssetOnce(refId, apiConfig, context);
                         const childPath = childAsset.category?.id
                             ? await mcApiService.getFolderPath(childAsset.category.id, apiConfig) : '---';
 
@@ -279,7 +364,7 @@ async function extractComponents(asset, apiConfig, depth, parentName) {
                             depth: depth
                         });
 
-                        const subComps = await extractComponents(childAsset, apiConfig, depth + 1, childAsset.name);
+                        const subComps = await extractComponents(childAsset, apiConfig, depth + 1, childAsset.name, context);
                         components.push(...subComps);
 
                     } catch (err) {
@@ -326,11 +411,11 @@ async function extractComponents(asset, apiConfig, depth, parentName) {
 
                 if (ref.type === 'Id') {
                     logger.logMessage(`${'  '.repeat(depth)}→ Resolviendo ContentBlockById(${ref.value})...`);
-                    resolvedAsset = await mcApiService.fetchAssetById(ref.value, apiConfig);
+                    resolvedAsset = await fetchAssetOnce(ref.value, apiConfig, context);
                 } else if (ref.type === 'Key' || ref.type === 'Name') {
                     logger.logMessage(`${'  '.repeat(depth)}→ Resolviendo ContentBlockBy${ref.type}("${ref.value}")...`);
                     const results = await mcApiService.searchContentAssets(ref.value, apiConfig);
-                    if (results.length > 0) resolvedAsset = await mcApiService.fetchAssetById(results[0].id, apiConfig);
+                    if (results.length > 0) resolvedAsset = await fetchAssetOnce(results[0].id, apiConfig, context);
                 }
 
                 if (resolvedAsset) {
@@ -347,7 +432,7 @@ async function extractComponents(asset, apiConfig, depth, parentName) {
                         referencedBy: `${sourceName} → ContentBlockBy${ref.type}`,
                         depth: depth + 1
                     });
-                    const subComps = await extractComponents(resolvedAsset, apiConfig, depth + 2, resolvedAsset.name);
+                    const subComps = await extractComponents(resolvedAsset, apiConfig, depth + 2, resolvedAsset.name, context);
                     components.push(...subComps);
                 } else {
                     components.push({
@@ -513,19 +598,69 @@ function initCollapsibleListeners(container) {
 
 // --- 7. RENDERIZADO ---
 
+/** Descarga en CSV los contenidos encontrados, en el mismo orden que la tabla. */
+function downloadResultsCsv() {
+    downloadCsv({
+        headers: ['ID', 'Nombre del Contenido', 'Tipo', 'Compartido', 'Ruta de Carpeta'],
+        rows: cachedResults.map(r => [r.id, r.name, r.type, r.shared ? 'Sí' : 'No', r.path]),
+        fileName: buildCsvFileName('buscador_contenidos')
+    });
+}
+
 function renderTable(results) {
     elements.contentSearchResultsTbody.innerHTML = '';
+    if (elements.downloadContentSearchCsvBtn) {
+        elements.downloadContentSearchCsvBtn.disabled = !results || results.length === 0;
+    }
     if (!results || results.length === 0) {
-        elements.contentSearchResultsTbody.innerHTML = '<tr><td colspan="4">No se encontraron contenidos.</td></tr>';
+        elements.contentSearchResultsTbody.innerHTML = '<tr><td colspan="6">No se encontraron contenidos.</td></tr>';
+        ui.setResultsCount(elements.contentSearchResultsTitle, 0);
         return;
     }
+    ui.setResultsCount(elements.contentSearchResultsTitle, results.length);
     results.sort((a, b) => (a.path + a.name).localeCompare(b.path + b.name));
     results.forEach(r => {
         const row = elements.contentSearchResultsTbody.insertRow();
         row.dataset.assetId = r.id;
         row.style.cursor = 'pointer';
-        row.innerHTML = `<td>${r.id}</td><td>${r.name}</td><td>${r.type}</td><td>${r.path}</td>`;
+        // Mismo icono que la vista de Contenidos (content-manager.js) para abrir el drawer de código.
+        const codeBtn = `<span class="cp-inspect-btn" data-content-id="${r.id}" title="Ver código"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>`;
+        row.innerHTML = `<td class="ta-center">${codeBtn}</td><td>${r.id}</td><td>${r.name}</td><td>${r.type}</td><td>${r.shared ? 'Sí' : 'No'}</td><td>${r.path}</td>`;
     });
+}
+
+/**
+ * Abre el drawer de código para una fila del buscador de Contenidos. Si el resultado cacheado
+ * ya trae el cuerpo (búsqueda con "Incluir contenido" activo o por Contenido), lo reutiliza sin
+ * llamar a la API; si no, descarga solo ese asset para gastar una única llamada y que el icono
+ * funcione siempre, se haya bajado el cuerpo en bloque o no.
+ * @param {string} assetId - ID del asset cuya fila se pulsó.
+ */
+async function openContentSearchResultCode(assetId) {
+    const cached = cachedResults.find(r => String(r.id) === String(assetId));
+    if (cached?.content) {
+        openFinderCodeDrawer({ name: cached.name, content: cached.content });
+        return;
+    }
+
+    ui.blockUI("Obteniendo código del contenido...");
+    logger.startLogBuffering();
+    try {
+        const apiConfig = await getAuthenticatedConfig();
+        mcApiService.setLogger(logger);
+        const asset = await mcApiService.fetchAssetById(assetId, apiConfig);
+        const content = asset.views?.html?.content || asset.content || asset.views?.text?.content || null;
+        if (!content) {
+            logger.logMessage(`El contenido "${asset.name || assetId}" no tiene cuerpo que mostrar.`);
+            return;
+        }
+        openFinderCodeDrawer({ name: asset.name, content });
+    } catch (error) {
+        logger.logMessage(`Error obteniendo el código: ${error.message}`);
+    } finally {
+        ui.unblockUI();
+        logger.endLogBuffering();
+    }
 }
 
 /**
@@ -642,10 +777,7 @@ function openFinderCodeDrawer(comp) {
     currentDrawerContent = comp.content;
     elements.finderCodeTitle.textContent = comp.name || 'Código Fuente';
 
-    const highlighted = highlightCloudPageCode(formatCodeWithIndentation(comp.content));
-    elements.finderCodeContent.innerHTML = `
-        <div class="code-header">Código Fuente</div>
-        <pre><code>${highlighted}</code></pre>`;
+    elements.finderCodeContent.innerHTML = buildCodeViewer(comp.content, 'Código Fuente');
 
     elements.finderCodeDrawer.classList.add('open');
     elements.finderCodeBackdrop.classList.add('active');

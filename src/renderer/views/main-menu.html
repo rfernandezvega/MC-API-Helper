@@ -4,7 +4,7 @@
         <h3>Panel Principal</h3>
         <div class="menu-buttons-container">
             <p class="info-text">
-                Para empezar, configura un cliente en "Configuración de APIs". 
+                Para empezar, configura un cliente en "Configuración de Cuentas". 
                 Al pulsar en login (o seleccionándolo si ya estaba guardado) se iniciará el proceso de autenticación. 
                 Una vez iniciada sesión en un cliente, podrás utilizar las funcionalidades de la aplicación.
             </p>
@@ -15,8 +15,89 @@
     <div class="menu-group changelog-group">
         <h3>Novedades</h3>
         <div class="changelog-list">
-            <!-- ======================== v2.6.2 ======================== -->
+            <!-- ======================== v2.6.8 ======================== -->
             <details class="changelog-entry" open>
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.6.8</span>
+                    <span class="changelog-date">07 Octubre 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Buscador de Data Extensions: botón "Compartidas" para buscar también en Shared Data Extensions desde una BU hija, y nueva columna Compartida con su ruta de carpeta.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.6.7 ======================== -->
+            <details class="changelog-entry">
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.6.7</span>
+                    <span class="changelog-date">02 Octubre 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Icono de copiar en la parte superior de los bloques de código y queries (Cloud Pages, Contenidos, Buscadores y Analizador de Automatismos) para llevar todo el contenido al portapapeles sin tener que seleccionarlo.</li>
+                    <li><span class="changelog-tag fix">Fix</span> El Buscador de Contenidos por Contenido ya no se deja fuera resultados con textos con guiones o signos (p. ej. mc-deep-link) ni con comillas tipográficas.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.6.6 ======================== -->
+            <details class="changelog-entry">
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.6.6</span>
+                    <span class="changelog-date">27 Agosto 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> En el Buscador de Contenidos se elige en una picklist si buscar por Nombre, Id o Contenido y descarga el contenido. La búsqueda por Contenido localiza el texto dentro de todo el contenido aunque no es del todo fiable.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Botón Compartidas en el Buscador de Contenidos: al seleccionarlo la búsqueda incluye también Shared Content y una columna Compartido indica qué resultados lo son.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> El visor de código fuente pasa a resaltar la sintaxis con Prism.js, que colorea correctamente el código.</li>
+                    <li><span class="changelog-tag fix">Fix</span> Los bloques de código fuente (Cloud Pages, Contenidos, Buscadores y Journeys) ajustan las líneas largas al ancho de la caja en lugar de obligar a un scroll horizontal que dejaba parte del código fuera de la vista.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> La tabla de resultados de los Buscadores tiene ahora una altura fija con scroll.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Las rutas de carpeta se cachean mientras se trabaja con el mismo cliente/BU y se reutilizan entre búsquedas y vistas (Contenidos, Automatismos, Data Extensions, Journeys), reduciendo mucho las llamadas a la API. Se refrescan al cambiar de cliente o Business Unit.</li>
+                    <li><span class="changelog-tag fix">Fix</span> En el Analizador de Journeys, los nombres de plantillas de WhatsApp y de mensajes SMS se resuelven buscando por ID exacto; antes podía desviarlos un contenido cuyo nombre contuviera ese mismo número.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Se retira la vista de Estadísticas de Uso y el registro local de acciones y accesos que la alimentaba por rendimiento. El contador de llamadas API por cliente se mantiene.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.6.5 ======================== -->
+            <details class="changelog-entry" >
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.6.5</span>
+                    <span class="changelog-date">17 Agosto 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Botón Descargar en Data Extensions &gt; Configuración de Campos: exporta a CSV la configuración de la tabla de campos.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Vista de Estadísticas de Uso: accesos, llamadas API, vistas abiertas y ranking de las acciones más utilizadas de todos los clientes, con desglose al pulsar un cliente en la gráfica o una fila de la tabla de detalle. Los datos se guardan en local y las BUs ocultas no cuentan.</li>
+                    <li><span class="changelog-tag fix">Fix</span> En la vista de Data Extensions, al importar o recuperar campos ya no queda una fila vacía por delante en la tabla de configuración de campos.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> En la vista de Data Extensions, la importación de campos admite columnas de PK y Requerido (Sí/No, Yes/No, True/False, 1/0) y acepta directamente el CSV descargado, ignorando comillas y cabecera.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> En los Buscadores, pulsar Enter en el campo de búsqueda lanza la búsqueda sin tener que pulsar el botón.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> En Automatismos el nombre pasa a ser un enlace que abre el automatismo en Automation Studio.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.6.4 ======================== -->
+            <details class="changelog-entry" >
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.6.4</span>
+                    <span class="changelog-date">07 Agosto 2026</span>
+                </summary>
+                <ul class="changelog-items">                    
+                    <li><span class="changelog-tag new">Nuevo</span> Botón Descargar sobre cada tabla de resultados de los Buscadores: exporta la tabla a CSV saneando saltos de línea, comillas y separadores del texto de queries y scripts.</li>
+                    <li><span class="changelog-tag fix">Fix</span> Las búsquedas de queries excluyen las que están en estado Inactive (las que se han borrado), mostrando solo las activas.</li>
+                    <li><span class="changelog-tag fix">Fix</span> Las barras de desplazamiento se pintan con los colores del tema; en modo oscuro ya no se ven en blanco.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.6.3 ======================== -->
+            <details class="changelog-entry">
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.6.3</span>
+                    <span class="changelog-date">04 Agosto 2026</span>
+                </summary>
+                <ul class="changelog-items">                    
+                    <li><span class="changelog-tag improved">Mejora</span> Optimización del consumo de llamadas, con una reducción significativa, principalmente en los buscadores.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.6.2 ======================== -->
+            <details class="changelog-entry">
                 <summary class="changelog-version">
                     <span class="changelog-badge">v2.6.2</span>
                     <span class="changelog-date">20 Julio 2026</span>
@@ -30,6 +111,7 @@
                     <li><span class="changelog-tag new">Nuevo</span> Gestión de almacenamiento: tamaño de cada caché (Contenidos, Journeys, Auditoría y Cloud Pages) con sus elementos, y borrado individual o completo.</li>
                     <li><span class="changelog-tag improved">Mejora</span> En Configuración de campos de Data Extensions, los PK y Requerido son ahora botones (más cómodos de pulsar) y marcar PK activa Requerido automáticamente.</li>
                     <li><span class="changelog-tag new">Nuevo</span> Contador acumulado de llamadas API por Business Unit: en Configuración de Cuentas &gt; Business Units, nueva columna "Llamadas API" con el total histórico hecho contra cada BU.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Los buscadores y el análisis de automatismos hacen muchas menos llamadas a la API: las rutas de carpeta se piden agrupadas, no se repiten búsquedas ya hechas dentro de la misma operación y el buscador de actividades recorre la colección una sola vez para todos los valores.</li>
                 </ul>
             </details>
 
