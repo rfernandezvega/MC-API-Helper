@@ -1,0 +1,20 @@
+/* Estilos propios de la vista Gestión de Automatismos */
+
+/* Modal de Notificaciones: más ancha que la de Acciones porque en el paso 2 se escriben listas de emails. */
+.automation-notif-modal-content { width: 520px; max-width: calc(100vw - 32px); }
+
+.automation-notif-check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 15px;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--sf-text);
+}
+.automation-notif-check input[type="checkbox"] { width: 18px; height: 18px; }
+
+.automation-notif-input { width: 100%; box-sizing: border-box; margin-top: 8px; }
+.automation-notif-input.is-invalid { border-color: var(--sf-red); background-color: var(--sf-red-bg); }
+
+.automation-notif-hint { font-size: 13px; color: var(--sf-text-muted); margin-top: 15px; }

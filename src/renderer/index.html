@@ -554,6 +554,47 @@
     </div>
 </div>
 
+<!-- MODAL: NOTIFICACIONES DE AUTOMATISMOS (paso 1: elegir acción; paso 2: actualizar) -->
+<div id="automation-notif-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-content automation-notif-modal-content">
+        <h3>Notificaciones de Automatismos</h3>
+
+        <div id="automation-notif-step-choose">
+            <p id="automation-notif-message" class="u-mb-25" style="font-size: 14px;"></p>
+            <div class="u-flex-col u-gap-15">
+                <button id="automation-notif-load-btn" class="action-button">Cargar</button>
+                <button id="automation-notif-update-btn" class="action-button warn-btn">Actualizar</button>
+            </div>
+            <div class="modal-actions u-mt-25">
+                <button id="automation-notif-cancel-btn" class="action-button cancel-btn">Cancelar</button>
+            </div>
+        </div>
+
+        <div id="automation-notif-step-update" style="display:none;">
+            <p id="automation-notif-update-message" class="automation-notif-hint"></p>
+
+            <label class="automation-notif-check">
+                <input type="checkbox" id="automation-notif-error-chk">
+                <span>Actualizar notificación de errores</span>
+            </label>
+            <input type="text" id="automation-notif-error-input" class="filter-input automation-notif-input" placeholder="email1@dominio.com, email2@dominio.com" disabled>
+
+            <label class="automation-notif-check">
+                <input type="checkbox" id="automation-notif-complete-chk">
+                <span>Actualizar notificación de ejecuciones</span>
+            </label>
+            <input type="text" id="automation-notif-complete-input" class="filter-input automation-notif-input" placeholder="email1@dominio.com, email2@dominio.com" disabled>
+
+            <p class="automation-notif-hint">Separa varias direcciones con comas. Si marcas un tipo y dejas el campo vacío, se eliminan las notificaciones de ese tipo. Los tipos no marcados se mantienen como están.</p>
+
+            <div class="modal-actions u-mt-25">
+                <button id="automation-notif-back-btn" class="action-button cancel-btn">Atrás</button>
+                <button id="automation-notif-apply-btn" class="action-button warn-btn">Aplicar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- 10. SECCIÓN: GESTIÓN DE AUTOMATISMOS -->
 <div id="gestion-automatismos-section" class="section">
     <div class="section-header">
@@ -562,7 +603,7 @@
             <button id="refreshAutomationsTableBtn" class="action-button">Refrescar</button>
             <button id="calendarBtn" class="action-button">Calendario</button>
             <button id="analyzeAutomationBtn" class="action-button" disabled>Analizar</button>
-            <button id="getNotificationsBtn" class="action-button">Cargar Notificaciones</button>
+            <button id="getNotificationsBtn" class="action-button">Notificaciones</button>
             <button id="downloadAutomationsCsvBtn" class="action-button download-btn">Exportar</button>
             <button id="actionsAutomationBtn" class="action-button warn-btn" disabled>Acciones</button>
             <button id="cloneAutomationBtn" class="action-button activate-btn" disabled>Clonar</button>            
@@ -1127,7 +1168,12 @@
 							<li><b>Refrescar</b> — Recarga los datos por API.</li>
 							<li><b>Calendario</b> — Abre un panel lateral con un calendario que sitúa los automatismos <b>actualmente filtrados</b> en la vista por su próxima fecha de ejecución. Los días con algo programado se marcan en azul; al pulsar un día, el panel derecho muestra qué automatismos hay y a qué hora. Se puede cambiar el <b>Año</b>.</li>
 							<li><b>Analizar</b> (1 seleccionado) — Abre el análisis detallado del automatismo.</li>
-							<li><b>Cargar Notificaciones</b> — Obtiene los emails de alerta configurados y muestra las columnas de notificación.</li>
+							<li><b>Notificaciones</b> — Abre una modal que actúa sobre los automatismos <b>actualmente filtrados</b>:
+								<ul>
+									<li><b>Cargar</b> — Obtiene los emails de alerta configurados y muestra las columnas de notificación. Las direcciones se muestran separadas por comas, el mismo formato que pide Automation Studio.</li>
+									<li><b>Actualizar</b> — Paso siguiente en la modal para sobrescribir la notificación de <b>errores</b> y/o de <b>ejecuciones</b> de todos ellos. Solo se modifican los tipos marcados (varias direcciones separadas por comas; si se usan espacios o <code>;</code>, al salir del campo se reescribe con comas y las direcciones no válidas lo marcan en rojo); marcar un tipo y dejarlo vacío elimina ese tipo de notificación. Pide confirmación, muestra el progreso y deja el detalle de cada llamada y de los fallos en el log.</li>
+								</ul>
+							</li>
 							<li><b>Exportar</b> — Descarga un CSV con los datos visibles (respeta filtros).</li>
 							<li><b>Acciones</b> (selección) — Modal para <b>Activar</b>, <b>Ejecutar</b> o <b>Parar</b>; cada acción solo se habilita si el estado de lo seleccionado es compatible.</li>
 							<li><b>Clonar</b> (1 seleccionado) — Abre el clonador selectivo del automatismo.</li>
@@ -1137,7 +1183,7 @@
 						<ul>
 							<li>Por <b>nombre</b> (uno o varios separados por <code>,</code> <code>;</code> <code>|</code>), por <b>estado</b> y por <b>lanza Journey</b>.</li>
 							<li><b>Filtro de fecha</b> — Campo (Última / Próxima Ejecución) + rango Desde/Hasta.</li>
-							<li><b>Filtro por notificación</b> — Aparece solo tras pulsar <b>Cargar Notificaciones</b>; filtra los automatismos por el texto de las columnas de notificación de error/ejecución.</li>
+							<li><b>Filtro por notificación</b> — Aparece solo tras cargar o actualizar las notificaciones; filtra los automatismos por el texto de las columnas de notificación de error/ejecución. Por defecto basta con que la columna lo contenga; si se escribe entre comillas (<code>"a@x.com"</code>) solo salen los que tienen exactamente ese valor y ninguna dirección más.</li>
 						</ul>
 
 						<h4>Clonador de Automatismos</h4>
@@ -2214,14 +2260,26 @@
     <div class="menu-group changelog-group">
         <h3>Novedades</h3>
         <div class="changelog-list">
-            <!-- ======================== v2.6.8 ======================== -->
+            <!-- ======================== v2.6.9 ======================== -->
             <details class="changelog-entry" open>
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.6.9</span>
+                    <span class="changelog-date">23 Octubre 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Automatismos: el botón "Notificaciones" permite Cargar o Actualizar en bloque los emails de notificación de errores y ejecuciones de los automatismos filtrados, que ahora se muestran separados por comas.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Automatismos: el filtro por notificación admite búsqueda exacta escribiendo el valor entre comillas.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.6.8 ======================== -->
+            <details class="changelog-entry">
                 <summary class="changelog-version">
                     <span class="changelog-badge">v2.6.8</span>
                     <span class="changelog-date">07 Octubre 2026</span>
                 </summary>
                 <ul class="changelog-items">
-                    <li><span class="changelog-tag new">Nuevo</span> Buscador de Data Extensions: conmutador "Compartidas" para buscar también en Shared Data Extensions desde una BU hija, y nueva columna Compartida con su ruta de carpeta.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Buscador de Data Extensions: botón "Compartidas" para buscar también en Shared Data Extensions desde una BU hija, y nueva columna Compartida con su ruta de carpeta.</li>
                 </ul>
             </details>
 

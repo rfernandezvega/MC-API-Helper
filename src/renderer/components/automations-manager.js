@@ -76,11 +76,10 @@ function renderFilteredTable() {
     // Filtro por notificaciones (solo aplica cuando se han cargado)
     const notifFilter = isNotifColumnsVisible ? elements.automationNotifFilter.value.toLowerCase().trim() : '';
     if (notifFilter) {
-        filtered = filtered.filter(auto => {
-            const err = (auto.notifications?.Error || '').toLowerCase();
-            const comp = (auto.notifications?.Complete || '').toLowerCase();
-            return err.includes(notifFilter) || comp.includes(notifFilter);
-        });
+        const matchesNotif = buildNotifMatcher(notifFilter);
+        filtered = filtered.filter(auto =>
+            matchesNotif(auto.notifications?.Error) || matchesNotif(auto.notifications?.Complete)
+        );
     }
 
     currentFilteredList = filtered; // Guardamos la lista filtrada
@@ -149,7 +148,8 @@ export function init(dependencies) {
     elements.refreshAutomationsTableBtn.addEventListener('click', refreshData);
     // Abre el calendario (drawer) con los automatismos actualmente filtrados en la vista.
     elements.calendarBtn?.addEventListener('click', () => calendar.open(currentFilteredList));
-    elements.getNotificationsBtn.addEventListener('click', loadNotificationsForVisibleRows);
+    elements.getNotificationsBtn.addEventListener('click', showNotificationsModal);
+    initNotificationsModal();
     elements.analyzeAutomationBtn.addEventListener('click', () => analyzeSelectedAutomation());
 
     elements.automationNameFilter.addEventListener('input', applyFiltersAndRender);
@@ -579,6 +579,226 @@ function downloadAutomationsCsv() {
 }
 
 
+// --- 6. NOTIFICACIONES ---
+
+const NOTIF_TYPES = ['Error', 'Complete'];
+const EMAIL_REGEX = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
+
+/**
+ * Trocea un texto con direcciones de email. Acepta comas, punto y coma y espacios porque
+ * SFMC a veces devuelve las listas separadas por espacio y el usuario puede pegar cualquiera.
+ * @param {string} text - Texto con una o varias direcciones.
+ * @returns {Array<string>} Direcciones limpias, sin vacíos ni duplicados.
+ */
+function splitEmails(text) {
+    return [...new Set(String(text || '').split(/[\s,;]+/).map(e => e.trim()).filter(Boolean))];
+}
+
+/**
+ * Agrupa los emails de los workers de un tipo en una única lista separada por comas,
+ * que es el formato que pide Automation Studio al rellenarlo a mano.
+ * @param {Array} workers - Workers devueltos por la API de notificaciones.
+ * @param {string} type - 'Error' o 'Complete'.
+ * @returns {string} Lista "a@x.com, b@x.com" o '---' si no hay ninguno.
+ */
+function formatNotifEmails(workers, type) {
+    const emails = splitEmails((workers || [])
+        .filter(w => w.notificationType === type)
+        .map(w => w.definition)
+        .join(','));
+    return emails.length > 0 ? emails.join(', ') : '---';
+}
+
+/**
+ * Construye la función de comparación del filtro de notificaciones.
+ * Entre comillas ("a@x.com") exige que la columna tenga exactamente esas direcciones y ninguna
+ * más (sin importar orden ni separador); sin comillas basta con que la contenga.
+ * @param {string} filterText - Texto del filtro, ya en minúsculas y sin espacios en los extremos.
+ * @returns {function(string): boolean} Recibe el valor de una columna de notificación.
+ */
+function buildNotifMatcher(filterText) {
+    const quoted = filterText.match(/^["“”](.*)["“”]$/);
+    if (!quoted) {
+        return value => (value || '').toLowerCase().includes(filterText);
+    }
+    const expected = splitEmails(quoted[1]).sort().join(',');
+    return value => splitEmails((value || '').toLowerCase()).sort().join(',') === expected;
+}
+
+/**
+ * Registra una única vez los listeners de la modal de Notificaciones (sus elementos son fijos).
+ */
+function initNotificationsModal() {
+    const modal = elements.automationNotifModal;
+    elements.automationNotifCancelBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+    elements.automationNotifLoadBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+        loadNotificationsForVisibleRows();
+    });
+    elements.automationNotifUpdateBtn.addEventListener('click', showNotificationsUpdateStep);
+    elements.automationNotifBackBtn.addEventListener('click', showNotificationsChooseStep);
+    elements.automationNotifApplyBtn.addEventListener('click', applyNotificationsUpdate);
+
+    // El input solo se habilita si se marca su tipo: así queda claro qué se va a sobrescribir.
+    const bindCheck = (chk, input) => chk.addEventListener('change', () => {
+        input.disabled = !chk.checked;
+        if (chk.checked) input.focus();
+    });
+    bindCheck(elements.automationNotifErrorChk, elements.automationNotifErrorInput);
+    bindCheck(elements.automationNotifCompleteChk, elements.automationNotifCompleteInput);
+
+    // Al salir del campo se reescribe con el formato definitivo (comas) y se marcan los
+    // inválidos: el usuario ve cómo se ha interpretado su texto sin tener que pulsar Aplicar.
+    [elements.automationNotifErrorInput, elements.automationNotifCompleteInput].forEach(input => {
+        input.addEventListener('blur', () => validateNotifInput(input, true));
+        input.addEventListener('input', () => input.classList.remove('is-invalid'));
+    });
+}
+
+/**
+ * Valida las direcciones de un campo de la modal y lo marca en rojo si alguna no es un email.
+ * @param {HTMLInputElement} input - Campo de emails (errores o ejecuciones).
+ * @param {boolean} [normalize=false] - Si es true, reescribe el valor separado por comas.
+ * @returns {{emails: Array<string>, invalid: Array<string>}} Direcciones leídas y las no válidas.
+ */
+function validateNotifInput(input, normalize = false) {
+    const emails = splitEmails(input.value);
+    const invalid = emails.filter(e => !EMAIL_REGEX.test(e));
+    if (normalize) input.value = emails.join(', ');
+    input.classList.toggle('is-invalid', invalid.length > 0);
+    return { emails, invalid };
+}
+
+/**
+ * Abre la modal de Notificaciones en el paso de elección (Cargar / Actualizar).
+ */
+function showNotificationsModal() {
+    if (currentFilteredList.length === 0) {
+        ui.showCustomAlert("No hay automatismos filtrados.");
+        return;
+    }
+    showNotificationsChooseStep();
+    elements.automationNotifModal.style.display = 'flex';
+}
+
+/**
+ * Muestra el paso 1 de la modal con el número de automatismos afectados.
+ */
+function showNotificationsChooseStep() {
+    elements.automationNotifMessage.textContent = `Hay ${currentFilteredList.length} automatismo(s) filtrados. ¿Qué deseas hacer con sus notificaciones?`;
+    elements.automationNotifStepUpdate.style.display = 'none';
+    elements.automationNotifStepChoose.style.display = '';
+}
+
+/**
+ * Muestra el paso 2 (formulario de actualización) con los campos vacíos y desmarcados.
+ */
+function showNotificationsUpdateStep() {
+    elements.automationNotifUpdateMessage.textContent = `Se actualizarán las notificaciones de los ${currentFilteredList.length} automatismo(s) filtrados.`;
+    [
+        [elements.automationNotifErrorChk, elements.automationNotifErrorInput],
+        [elements.automationNotifCompleteChk, elements.automationNotifCompleteInput]
+    ].forEach(([chk, input]) => {
+        chk.checked = false;
+        input.value = '';
+        input.disabled = true;
+        input.classList.remove('is-invalid');
+    });
+    elements.automationNotifStepChoose.style.display = 'none';
+    elements.automationNotifStepUpdate.style.display = '';
+}
+
+/**
+ * Valida el formulario del paso 2 y sobrescribe las notificaciones marcadas en todos los
+ * automatismos filtrados. Antes de cada escritura se leen las actuales, porque el POST
+ * reemplaza la lista entera y hay que conservar los tipos no marcados y el mensaje (body).
+ */
+async function applyNotificationsUpdate() {
+    const newEmails = {};
+    if (elements.automationNotifErrorChk.checked) newEmails.Error = splitEmails(elements.automationNotifErrorInput.value);
+    if (elements.automationNotifCompleteChk.checked) newEmails.Complete = splitEmails(elements.automationNotifCompleteInput.value);
+
+    if (Object.keys(newEmails).length === 0) {
+        ui.showCustomAlert("Marca al menos un tipo de notificación para actualizar.");
+        return;
+    }
+    // La modal sigue abierta ante cualquier error para que el usuario corrija sin perder lo escrito.
+    const invalid = [
+        [elements.automationNotifErrorChk, elements.automationNotifErrorInput],
+        [elements.automationNotifCompleteChk, elements.automationNotifCompleteInput]
+    ].filter(([chk]) => chk.checked).flatMap(([, input]) => validateNotifInput(input, true).invalid);
+    if (invalid.length > 0) {
+        ui.showCustomAlert(`Direcciones no válidas: ${invalid.join(', ')}`);
+        return;
+    }
+
+    const targets = [...currentFilteredList];
+    const describe = (type, label) => type in newEmails
+        ? `${label}: ${newEmails[type].length > 0 ? newEmails[type].join(', ') : '(se eliminan)'}`
+        : `${label}: sin cambios`;
+    const summary = `${describe('Error', 'Errores')}. ${describe('Complete', 'Ejecuciones')}.`;
+
+    elements.automationNotifModal.style.display = 'none';
+    if (!await ui.showCustomConfirm(`¿Seguro que quieres actualizar las notificaciones de ${targets.length} automatismo(s)? ${summary}`)) return;
+
+    ui.blockUI(`Actualizando notificaciones de ${targets.length} automatismos...`);
+    logger.startLogBuffering();
+    const failures = [];
+    let successCount = 0;
+
+    try {
+        const apiConfig = await getAuthenticatedConfig();
+        mcApiService.setLogger(logger);
+        logger.logMessage(`Actualizando notificaciones de ${targets.length} automatismo(s). ${summary}`);
+        const onProgress = ui.makeEtaProgress('Actualizando notificaciones');
+
+        // Secuencial: son escrituras y así no saturamos la API ni mezclamos respuestas en el log.
+        for (let i = 0; i < targets.length; i++) {
+            const auto = targets[i];
+            try {
+                const current = await mcApiService.fetchAutomationNotifications(auto.id, apiConfig);
+                const currentWorkers = current?.workers || [];
+
+                // Otros tipos que pudiera devolver la API se conservan tal cual.
+                const workers = currentWorkers.filter(w => !NOTIF_TYPES.includes(w.notificationType));
+                NOTIF_TYPES.forEach(type => {
+                    const existing = currentWorkers.filter(w => w.notificationType === type);
+                    if (type in newEmails) {
+                        // La API valida cada definition como un único email: un worker por dirección.
+                        const body = existing[0]?.body || '';
+                        newEmails[type].forEach(email => workers.push({ notificationType: type, definition: email, body }));
+                    } else {
+                        workers.push(...existing);
+                    }
+                });
+
+                await mcApiService.updateAutomationNotifications(auto.id, workers, apiConfig);
+                auto.notifications = {
+                    Error: formatNotifEmails(workers, 'Error'),
+                    Complete: formatNotifEmails(workers, 'Complete')
+                };
+                successCount++;
+            } catch (err) {
+                logger.logMessage(`FALLO al actualizar notificaciones de "${auto.name}": ${err.message}`);
+                failures.push({ name: auto.name, reason: err.message });
+            }
+            onProgress(i + 1, targets.length);
+        }
+    } catch (error) {
+        logger.logMessage(`Error fatal al actualizar notificaciones: ${error.message}`);
+    } finally {
+        const alertSummary = `Actualización de notificaciones completada. Éxitos: ${successCount}, Fallos: ${failures.length}.`;
+        logger.logMessage(alertSummary + (failures.length > 0 ? `\n\n--- Detalles de Fallos ---\n${failures.map(f => `  - ${f.name}: ${f.reason}`).join('\n')}` : ''));
+        ui.unblockUI();
+        logger.endLogBuffering();
+        ui.showCustomAlert(alertSummary);
+        if (successCount > 0) {
+            isNotifColumnsVisible = true;
+            renderFilteredTable();
+        }
+    }
+}
+
 /**
  * Carga las notificaciones para todos los automatismos que están visibles actualmente (filtrados).
  */
@@ -590,33 +810,16 @@ async function loadNotificationsForVisibleRows() {
 
     try {
         const apiConfig = await getAuthenticatedConfig();
-        
+        mcApiService.setLogger(logger);
+
         // Ejecutamos las llamadas en paralelo para mayor velocidad
         const promises = currentFilteredList.map(async (auto) => {
             try {
                 const data = await mcApiService.fetchAutomationNotifications(auto.id, apiConfig);
-                
-                // Inicializamos el objeto de notificaciones en el automatismo
                 auto.notifications = {
-                    Error: '---',
-                    Complete: '---'
+                    Error: formatNotifEmails(data?.workers, 'Error'),
+                    Complete: formatNotifEmails(data?.workers, 'Complete')
                 };
-
-                if (data && data.workers && data.workers.length > 0) {
-                    // Agrupamos los emails por tipo (Error o Complete)
-                    const errors = data.workers
-                        .filter(w => w.notificationType === 'Error')
-                        .map(w => w.definition)
-                        .join(' ');
-                    
-                    const completes = data.workers
-                        .filter(w => w.notificationType === 'Complete')
-                        .map(w => w.definition)
-                        .join(' ');
-
-                    auto.notifications.Error = errors || '---';
-                    auto.notifications.Complete = completes || '---';
-                }
             } catch (err) {
                 console.error(`Error cargando notificación para ${auto.id}`, err);
                 auto.notifications = { Error: 'Error API', Complete: 'Error API' };

@@ -315,7 +315,12 @@
 							<li><b>Refrescar</b> — Recarga los datos por API.</li>
 							<li><b>Calendario</b> — Abre un panel lateral con un calendario que sitúa los automatismos <b>actualmente filtrados</b> en la vista por su próxima fecha de ejecución. Los días con algo programado se marcan en azul; al pulsar un día, el panel derecho muestra qué automatismos hay y a qué hora. Se puede cambiar el <b>Año</b>.</li>
 							<li><b>Analizar</b> (1 seleccionado) — Abre el análisis detallado del automatismo.</li>
-							<li><b>Cargar Notificaciones</b> — Obtiene los emails de alerta configurados y muestra las columnas de notificación.</li>
+							<li><b>Notificaciones</b> — Abre una modal que actúa sobre los automatismos <b>actualmente filtrados</b>:
+								<ul>
+									<li><b>Cargar</b> — Obtiene los emails de alerta configurados y muestra las columnas de notificación. Las direcciones se muestran separadas por comas, el mismo formato que pide Automation Studio.</li>
+									<li><b>Actualizar</b> — Paso siguiente en la modal para sobrescribir la notificación de <b>errores</b> y/o de <b>ejecuciones</b> de todos ellos. Solo se modifican los tipos marcados (varias direcciones separadas por comas; si se usan espacios o <code>;</code>, al salir del campo se reescribe con comas y las direcciones no válidas lo marcan en rojo); marcar un tipo y dejarlo vacío elimina ese tipo de notificación. Pide confirmación, muestra el progreso y deja el detalle de cada llamada y de los fallos en el log.</li>
+								</ul>
+							</li>
 							<li><b>Exportar</b> — Descarga un CSV con los datos visibles (respeta filtros).</li>
 							<li><b>Acciones</b> (selección) — Modal para <b>Activar</b>, <b>Ejecutar</b> o <b>Parar</b>; cada acción solo se habilita si el estado de lo seleccionado es compatible.</li>
 							<li><b>Clonar</b> (1 seleccionado) — Abre el clonador selectivo del automatismo.</li>
@@ -325,7 +330,7 @@
 						<ul>
 							<li>Por <b>nombre</b> (uno o varios separados por <code>,</code> <code>;</code> <code>|</code>), por <b>estado</b> y por <b>lanza Journey</b>.</li>
 							<li><b>Filtro de fecha</b> — Campo (Última / Próxima Ejecución) + rango Desde/Hasta.</li>
-							<li><b>Filtro por notificación</b> — Aparece solo tras pulsar <b>Cargar Notificaciones</b>; filtra los automatismos por el texto de las columnas de notificación de error/ejecución.</li>
+							<li><b>Filtro por notificación</b> — Aparece solo tras cargar o actualizar las notificaciones; filtra los automatismos por el texto de las columnas de notificación de error/ejecución. Por defecto basta con que la columna lo contenga; si se escribe entre comillas (<code>"a@x.com"</code>) solo salen los que tienen exactamente ese valor y ninguna dirección más.</li>
 						</ul>
 
 						<h4>Clonador de Automatismos</h4>

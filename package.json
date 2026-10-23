@@ -1,12 +1,13 @@
 {
   "name": "mc-api-helper",
-  "version": "2.6.8",
+  "version": "2.6.9",
   "description": "Herramienta para interactuar con la API de Marketing Cloud",
   "main": "src/main/main.js",
   "scripts": {
     "start": "npm run build:html && electron .",
     "dist": "npm run build:html && electron-builder --publish always",
     "dist:local": "npm run build:html && electron-builder --publish never",
+    "dist:github": "node scripts/dist-github.js",
     "build:html": "node build-html.js"
   },
   "keywords": [],

@@ -1,0 +1,38 @@
+# Compila el instalador de Windows en GitHub y lo sube como borrador de release.
+# Existe porque la política ASR de Defender del equipo de desarrollo bloquea el paso de NSIS
+# que ejecuta el instalador intermedio. Se lanza a mano: `npm run dist:github` (scripts/dist-github.js) o desde Actions.
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write # necesario para crear el borrador de release y subir el instalador
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # google-credentials.json no se versiona pero el main lo lee empaquetado para validar el acceso.
+      - name: Generar credenciales de Google
+        shell: pwsh
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: |
+          if (-not $env:GOOGLE_CREDENTIALS) { throw "Falta el secreto GOOGLE_CREDENTIALS en el repositorio." }
+          [IO.File]::WriteAllText("$PWD\google-credentials.json", $env:GOOGLE_CREDENTIALS)
+
+      - name: Compilar y publicar
+        run: npm run dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
