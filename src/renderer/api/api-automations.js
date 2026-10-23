@@ -130,7 +130,37 @@ export async function findAutomationByName(automationName, apiConfig) {
 export async function fetchAutomationNotifications(automationId, apiConfig) {
     const url = `${apiConfig.restUri}/legacy/v1/beta/automations/notifications/${automationId}`;
     const options = { 
-        headers: { "Authorization": `Bearer ${apiConfig.accessToken}` } 
+        headers: { "Authorization": `Bearer ${apiConfig.accessToken}` }
     };
     return await executeRestRequest(url, options);
+}
+
+/**
+ * Sustituye las notificaciones (Error/Complete) de un automatismo. Usa el mismo endpoint legacy
+ * que la lectura (es el que usa Automation Studio): el POST reemplaza la lista completa de
+ * workers, así que el llamador debe incluir también los que quiera conservar.
+ * @param {string} automationId - ID interno del automatismo (programId).
+ * @param {Array<{notificationType: string, definition: string, body?: string}>} workers - Notificaciones finales;
+ *        un worker por destinatario, ya que `definition` solo admite un email.
+ * @param {object} apiConfig - Configuración autenticada de la API.
+ * @returns {Promise<object>} Respuesta de la API tras guardar las notificaciones.
+ */
+export async function updateAutomationNotifications(automationId, workers, apiConfig) {
+    const url = `${apiConfig.restUri}legacy/v1/beta/automations/notifications/${automationId}`;
+    const payload = {
+        programId: automationId,
+        workers: workers.map(w => ({
+            programId: automationId,
+            notificationType: w.notificationType,
+            definition: w.definition,
+            body: w.body || '',
+            channelType: 'Account'
+        }))
+    };
+    const options = {
+        method: 'POST',
+        headers: { "Authorization": `Bearer ${apiConfig.accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    };
+    return executeRestRequest(url, options);
 }

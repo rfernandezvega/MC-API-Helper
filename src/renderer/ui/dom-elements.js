@@ -273,6 +273,22 @@ export function init() {
     elements.automationActionsStopBtn = document.getElementById('automation-actions-stop-btn');
     elements.automationActionsCancelBtn = document.getElementById('automation-actions-cancel-btn');
 
+    // --- 11c. MODAL: NOTIFICACIONES DE AUTOMATISMOS ---
+    elements.automationNotifModal = document.getElementById('automation-notif-modal');
+    elements.automationNotifStepChoose = document.getElementById('automation-notif-step-choose');
+    elements.automationNotifStepUpdate = document.getElementById('automation-notif-step-update');
+    elements.automationNotifMessage = document.getElementById('automation-notif-message');
+    elements.automationNotifUpdateMessage = document.getElementById('automation-notif-update-message');
+    elements.automationNotifLoadBtn = document.getElementById('automation-notif-load-btn');
+    elements.automationNotifUpdateBtn = document.getElementById('automation-notif-update-btn');
+    elements.automationNotifCancelBtn = document.getElementById('automation-notif-cancel-btn');
+    elements.automationNotifErrorChk = document.getElementById('automation-notif-error-chk');
+    elements.automationNotifErrorInput = document.getElementById('automation-notif-error-input');
+    elements.automationNotifCompleteChk = document.getElementById('automation-notif-complete-chk');
+    elements.automationNotifCompleteInput = document.getElementById('automation-notif-complete-input');
+    elements.automationNotifBackBtn = document.getElementById('automation-notif-back-btn');
+    elements.automationNotifApplyBtn = document.getElementById('automation-notif-apply-btn');
+
     // --- 12. Sección: Gestión de Journeys ---
     elements.gestionJourneysSection = document.getElementById('gestion-journeys-section');
     elements.journeysTbody = document.getElementById('journeys-tbody');
