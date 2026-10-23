@@ -76,11 +76,10 @@ function renderFilteredTable() {
     // Filtro por notificaciones (solo aplica cuando se han cargado)
     const notifFilter = isNotifColumnsVisible ? elements.automationNotifFilter.value.toLowerCase().trim() : '';
     if (notifFilter) {
-        filtered = filtered.filter(auto => {
-            const err = (auto.notifications?.Error || '').toLowerCase();
-            const comp = (auto.notifications?.Complete || '').toLowerCase();
-            return err.includes(notifFilter) || comp.includes(notifFilter);
-        });
+        const matchesNotif = buildNotifMatcher(notifFilter);
+        filtered = filtered.filter(auto =>
+            matchesNotif(auto.notifications?.Error) || matchesNotif(auto.notifications?.Complete)
+        );
     }
 
     currentFilteredList = filtered; // Guardamos la lista filtrada
@@ -608,6 +607,22 @@ function formatNotifEmails(workers, type) {
         .map(w => w.definition)
         .join(','));
     return emails.length > 0 ? emails.join(', ') : '---';
+}
+
+/**
+ * Construye la función de comparación del filtro de notificaciones.
+ * Entre comillas ("a@x.com") exige que la columna tenga exactamente esas direcciones y ninguna
+ * más (sin importar orden ni separador); sin comillas basta con que la contenga.
+ * @param {string} filterText - Texto del filtro, ya en minúsculas y sin espacios en los extremos.
+ * @returns {function(string): boolean} Recibe el valor de una columna de notificación.
+ */
+function buildNotifMatcher(filterText) {
+    const quoted = filterText.match(/^["“”](.*)["“”]$/);
+    if (!quoted) {
+        return value => (value || '').toLowerCase().includes(filterText);
+    }
+    const expected = splitEmails(quoted[1]).sort().join(',');
+    return value => splitEmails((value || '').toLowerCase()).sort().join(',') === expected;
 }
 
 /**

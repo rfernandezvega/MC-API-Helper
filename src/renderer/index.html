@@ -1183,7 +1183,7 @@
 						<ul>
 							<li>Por <b>nombre</b> (uno o varios separados por <code>,</code> <code>;</code> <code>|</code>), por <b>estado</b> y por <b>lanza Journey</b>.</li>
 							<li><b>Filtro de fecha</b> — Campo (Última / Próxima Ejecución) + rango Desde/Hasta.</li>
-							<li><b>Filtro por notificación</b> — Aparece solo tras cargar o actualizar las notificaciones; filtra los automatismos por el texto de las columnas de notificación de error/ejecución.</li>
+							<li><b>Filtro por notificación</b> — Aparece solo tras cargar o actualizar las notificaciones; filtra los automatismos por el texto de las columnas de notificación de error/ejecución. Por defecto basta con que la columna lo contenga; si se escribe entre comillas (<code>"a@x.com"</code>) solo salen los que tienen exactamente ese valor y ninguna dirección más.</li>
 						</ul>
 
 						<h4>Clonador de Automatismos</h4>
@@ -2268,6 +2268,7 @@
                 </summary>
                 <ul class="changelog-items">
                     <li><span class="changelog-tag new">Nuevo</span> Automatismos: el botón "Notificaciones" permite Cargar o Actualizar en bloque los emails de notificación de errores y ejecuciones de los automatismos filtrados, que ahora se muestran separados por comas.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Automatismos: el filtro por notificación admite búsqueda exacta escribiendo el valor entre comillas.</li>
                 </ul>
             </details>
 
