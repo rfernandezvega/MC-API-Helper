@@ -128,6 +128,16 @@ Para crear el instalador para Windows (`.exe`), el script también se encarga de
     ```
     El instalador se generará en la carpeta `/dist`.
 
+#### Compilación en GitHub Actions
+Alternativa cuando el equipo local no puede generar el instalador (p. ej. por políticas de Defender). Compila en un runner Windows de GitHub con el código de `main` y crea el mismo borrador de release.
+
+1.  Requisito (una sola vez): el secreto `GOOGLE_CREDENTIALS` en el repositorio (Settings → Secrets and variables → Actions) con el contenido de `google-credentials.json`.
+2.  Con los cambios ya en `main`, ejecutar:
+    ```bash
+    npm run dist:github
+    ```
+    Si la terminal tiene `GH_TOKEN` (con permiso Actions: write), lanza la compilación directamente; si no, abre la página del workflow para pulsar **Run workflow**. Al terminar, publicar el borrador de release como siempre.
+
 ---
 
 ## ⚖️ Licencia
