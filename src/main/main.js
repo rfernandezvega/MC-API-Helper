@@ -88,6 +88,36 @@ function createWindow() {
     });
 }
 
+/**
+ * Convierte las notas de la release (GitHub las entrega como HTML) a texto plano legible en el
+ * diálogo nativo, que no renderiza HTML: viñetas como guiones (sangradas si están anidadas),
+ * títulos y párrafos separados por línea en blanco y entidades decodificadas.
+ * @param {string} html - Notas en HTML generadas por GitHub a partir del Markdown de la release.
+ * @returns {string} Texto plano listo para `dialog.showMessageBox`.
+ */
+function releaseNotesToText(html) {
+    let depth = 0;
+    const text = html
+        // Los saltos del HTML no significan nada; los saltos reales los ponen las etiquetas.
+        .replace(/\s*\n\s*/g, ' ')
+        // Las viñetas se sangran según la profundidad de la lista en la que están.
+        .replace(/<(\/?)(ul|ol)[^>]*>|<li[^>]*>/gi, (tag, closing) => {
+            if (/^<li/i.test(tag)) return `\n${'   '.repeat(Math.max(depth - 1, 0))}- `;
+            depth += closing ? -1 : 1;
+            return '';
+        })
+        .replace(/<\/(p|div)>|<br\s*\/?>/gi, '\n')
+        .replace(/<(h[1-6]|p|div)[^>]*>/gi, '\n\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&');
+
+    return text
+        .split('\n').map(l => l.trimEnd()).join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
 // --- 3. GESTIÓN DEL CICLO DE VIDA Y ACTUALIZACIONES ---
 app.whenReady().then(() => {
     initializeGoogleClient();
@@ -100,9 +130,9 @@ app.whenReady().then(() => {
 
         let notas = '';
         if (typeof info.releaseNotes === 'string') {
-            notas = info.releaseNotes.replace(/<[^>]+>/g, '');
+            notas = releaseNotesToText(info.releaseNotes);
         } else if (Array.isArray(info.releaseNotes)) {
-            notas = info.releaseNotes.map(n => n.note || '').join('\n');
+            notas = info.releaseNotes.map(n => releaseNotesToText(n.note || '')).join('\n\n');
         }
 
         dialog.showMessageBox(mainWindow, {

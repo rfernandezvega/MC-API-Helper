@@ -104,6 +104,8 @@ export async function getQueriesFromFolder(folderId, apiConfig) {
  * @returns {Promise<object>} IDs y nombre base de la nueva query (para gatillar en el nuevo automatismo).
  */
 export async function createClonedQuery(originalQuery, clonedDE, newQueryName, targetCategoryId, apiConfig) {
+    // Sin carpeta se omite el nodo: SFMC rechaza el XML entero si CategoryID no es numérico.
+    const categoryXml = targetCategoryId ? `<CategoryID>${targetCategoryId}</CategoryID>` : '';
     const createPayload = `
     <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing">
         <s:Header>
@@ -114,7 +116,7 @@ export async function createClonedQuery(originalQuery, clonedDE, newQueryName, t
         <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
             <CreateRequest xmlns="http://exacttarget.com/wsdl/partnerAPI">
                 <Objects xsi:type="QueryDefinition">
-                    <CategoryID>${targetCategoryId}</CategoryID>
+                    ${categoryXml}
                     <CustomerKey></CustomerKey>
                     <Name>${newQueryName}</Name>
                     <QueryText><![CDATA[${originalQuery.queryText}]]></QueryText>
@@ -212,7 +214,8 @@ export async function fetchQueryDefinitionDetails(queryObjectId, apiConfig) {
             <Properties>TargetUpdateType</Properties>
             <Properties>DataExtensionTarget.Name</Properties>
             <Properties>DataExtensionTarget.CustomerKey</Properties>
-            
+            <Properties>CategoryID</Properties>
+
             <Filter xsi:type="ComplexFilterPart">
             <LeftOperand xsi:type="SimpleFilterPart">
                 <Property>ObjectID</Property>
@@ -242,6 +245,8 @@ export async function fetchQueryDefinitionDetails(queryObjectId, apiConfig) {
         description: resultNode.querySelector("Description")?.textContent,
         queryText: resultNode.querySelector("QueryText")?.textContent,
         updateType: resultNode.querySelector("TargetUpdateType")?.textContent,
+        // Se acota con ":scope >" para no confundirlo con nodos anidados del target.
+        categoryId: resultNode.querySelector(":scope > CategoryID")?.textContent,
         targetDE: {
             name: resultNode.querySelector("DataExtensionTarget > Name")?.textContent,
             key: resultNode.querySelector("DataExtensionTarget > CustomerKey")?.textContent

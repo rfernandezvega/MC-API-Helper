@@ -1190,6 +1190,7 @@
 						<ul>
 							<li>Permite duplicar un automatismo de forma <b>selectiva</b>: por cada actividad se elige si clonarla o reutilizar la original, y se puede cambiar su nombre y su DE de destino.</li>
 							<li>Se puede fijar el <b>Nombre destino</b>, la <b>Carpeta destino</b> y una <b>carpeta de DEs por defecto</b> para no configurarlas una a una. El proceso crea primero las DEs, luego las actividades y por último el automatismo.</li>
+							<li>Por defecto, cada query y cada DE clonadas se crean en la misma carpeta que su original; se puede cambiar por fila o con los destinos por defecto.</li>
 						</ul>
 					</div>
 				</div>
@@ -2260,8 +2261,19 @@
     <div class="menu-group changelog-group">
         <h3>Novedades</h3>
         <div class="changelog-list">
-            <!-- ======================== v2.6.9 ======================== -->
+            <!-- ======================== v2.6.10 ======================== -->
             <details class="changelog-entry" open>
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.6.10</span>
+                    <span class="changelog-date">28 Octubre 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag fix">Fix</span> Clonador de Automatismos: las queries clonadas usan por defecto la carpeta de la query original y ya no falla la clonación si no se elige carpeta.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.6.9 ======================== -->
+            <details class="changelog-entry">
                 <summary class="changelog-version">
                     <span class="changelog-badge">v2.6.9</span>
                     <span class="changelog-date">23 Octubre 2026</span>
