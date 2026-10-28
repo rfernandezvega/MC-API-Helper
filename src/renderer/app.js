@@ -561,6 +561,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		await settings.applyStoredTheme();
 		setupEventListeners();
 		copyUtils.initCopyButtons();
+		ui.renderChangelogSummaries();
 
 		elements.licenseModal.style.display = 'flex';
 		elements.licenseStatusMessage.textContent = 'Verificando licencia de usuario...';

@@ -270,6 +270,42 @@ export function showSection(sectionId, navigationHistory, addToHistory = true) {
 }
 
 /**
+ * Añade junto a la versión de cada entrada del changelog un resumen con el número de
+ * novedades, mejoras y fixes. Se cuenta a partir de las etiquetas de cada <li> para que
+ * el resumen no haya que mantenerlo a mano al añadir cambios en main-menu.html.
+ * No recibe parámetros: usa elements.changelogList.
+ */
+export function renderChangelogSummaries() {
+    const list = elements.changelogList;
+    if (!list) return;
+
+    // Orden y textos (singular/plural) de cada tipo de etiqueta.
+    const tagTypes = [
+        { cls: 'new', one: 'nueva', many: 'nuevas' },
+        { cls: 'improved', one: 'mejora', many: 'mejoras' },
+        { cls: 'fix', one: 'fix', many: 'fixes' }
+    ];
+
+    list.querySelectorAll('.changelog-entry').forEach(entry => {
+        const summary = entry.querySelector('.changelog-version');
+        const date = summary?.querySelector('.changelog-date');
+        if (!summary || summary.querySelector('.changelog-summary')) return;
+
+        const counts = tagTypes
+            .map(t => ({ ...t, n: entry.querySelectorAll(`.changelog-items .changelog-tag.${t.cls}`).length }))
+            .filter(t => t.n > 0);
+        if (counts.length === 0) return;
+
+        const container = document.createElement('span');
+        container.className = 'changelog-summary';
+        container.innerHTML = counts
+            .map(t => `<span class="changelog-tag ${t.cls}">${t.n} ${t.n === 1 ? t.one : t.many}</span>`)
+            .join('');
+        summary.insertBefore(container, date || null);
+    });
+}
+
+/**
  * Muestra un modal reutilizable para buscar, seleccionar y confirmar la selección de una carpeta.
  * @param {string} contentType - El tipo de contenido a buscar (ej. 'dataextension').
  * @param {object} dependencies - Un objeto que contiene las dependencias necesarias.

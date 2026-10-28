@@ -36,6 +36,7 @@ export function init() {
 
     // --- 2. Navegación y Barras Laterales ---
     elements.mainMenu = document.getElementById('main-menu');
+    elements.changelogList = document.getElementById('changelog-list');
     elements.allSections = document.querySelectorAll('#main-content > .section');
     elements.clientSelectorBtn = document.getElementById('clientSelectorBtn');
     elements.clientSelectorLabel = document.getElementById('clientSelectorLabel');
