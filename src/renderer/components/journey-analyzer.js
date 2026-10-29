@@ -21,6 +21,7 @@ const sendClassificationCache = new Map();
 const listCache = new Map();
 const automationCache = new Map();
 const templateCache = new Map();
+const eventDefinitionCache = new Map();
 
 const ACTIVITY_TYPE_MAP = {
     'EMAILV2': '[EMAIL]', 'SMS': '[SMS]', 'MOBILEPUSH': '[PUSH]', 'PUSHNOTIFICATIONACTIVITY': '[PUSH]',
@@ -932,9 +933,15 @@ async function resolveEntrySource(journey, apiConfig) {
     let eventDef = null;
 
     if (eventDefId) {
-        try {
-            eventDef = await mcApiService.getEventDefinitionById(eventDefId, apiConfig);
-        } catch (e) { console.error("Error EventDefinition:", e); }
+        // Orden: la que viene con el journey (caché de journeys), la ya resuelta en esta sesión y, si no, la API.
+        const stored = journey.eventDefinition?.id === eventDefId ? journey.eventDefinition : null;
+        eventDef = stored || eventDefinitionCache.get(eventDefId) || null;
+        if (!eventDef) {
+            try {
+                eventDef = await mcApiService.getEventDefinitionById(eventDefId, apiConfig);
+            } catch (e) { console.error("Error EventDefinition:", e); }
+        }
+        if (eventDef) eventDefinitionCache.set(eventDefId, eventDef);
     }
 
     journey.entryDetails = {
@@ -948,6 +955,11 @@ async function resolveEntrySource(journey, apiConfig) {
         ...(eventDef || {}),
         ...(eventDef?.arguments || {})
     };
+
+    // El Event Definition ya trae el nombre de su DE de entrada: se aprovecha para no pedirlo a la API.
+    if (eventDef?.dataExtensionId && eventDef.dataExtensionName && !deCache.has(eventDef.dataExtensionId)) {
+        deCache.set(eventDef.dataExtensionId, eventDef.dataExtensionName);
+    }
 
     if (trigger.type === 'EmailAudience') {
         const deId = config.dataExtensionId || config.dataExtensionObjectID;

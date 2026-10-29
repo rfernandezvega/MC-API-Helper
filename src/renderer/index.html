@@ -1137,7 +1137,7 @@
 						<ul>
 							<li><b>Refrescar</b> — Recarga la lista de journeys por API.</li>
 							<li><b>Exportar</b> — Descarga un CSV con los journeys visibles (respeta filtros).</li>
-							<li><b>Analizar</b> (1 seleccionado) — Abre el análisis detallado del journey.</li>
+							<li><b>Analizar</b> (1 seleccionado) — Abre el análisis detallado del journey. Si el journey está en la caché de journeys, muestra su fecha de modificación actual y la de la versión guardada (avisando si ha cambiado) y pregunta si usar la caché, sin llamadas a la API, o descargar el detalle. Lo que se descarga se guarda en la caché junto con su fuente de entrada (Event Definition), así que al volver a analizarlo desde la caché no se hace ninguna llamada para el detalle ni para la entrada. Las versiones cacheadas antes de esta mejora no guardaban la fuente de entrada: se descargan la primera vez, o se completa la entrada al usar la caché.</li>
 							<li><b>Data Extensions</b> — Escanea las DEs usadas en las actividades de los journeys filtrados y las muestra en su columna.</li>
 							<li><b>Descargar detalle</b> — Descarga el journey completo (actividades + comunicaciones) y lo <b>cachea</b>. Permite elegir <b>todos</b> o solo los <b>seleccionados</b>. Esta caché alimenta el filtro de uso de la vista de Contenidos y se <b>sobrescribe</b> con la última descarga.</li>
 							<li><b>Copiar</b> (1 seleccionado) — Abre el asistente de clonación del journey.</li>

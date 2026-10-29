@@ -48,10 +48,15 @@ export async function view(automationDetails) {
     if (cache) {
         // El loader del listado de automatismos taparía el modal de la pregunta.
         ui.unblockUI();
+        const modified = automationDetails.modifiedDate || automationDetails.lastSavedDate;
+        const thisAutomation = updated
+            ? `Este automatismo se acaba de actualizar en ella con su versión actual${modified ? ` (modificado el ${formatDate(modified)})` : ''}; ` +
+              'los datos de los demás automatismos son de esa descarga. '
+            : '';
         const useCache = await ui.showCustomConfirmComplex(
-            `Hay una caché de automatismos del ${formatDate(cache.lastRefresh)}. ¿Usarla para ver en qué otros ` +
-            'automatismos están las actividades y quién más escribe en sus Data Extensions (sin llamadas a la API), ' +
-            'o consultar la API para tener los datos actualizados?',
+            `Hay una caché de automatismos descargada el ${formatDate(cache.lastRefresh)}. ${thisAutomation}` +
+            '¿Usarla para ver en qué otros automatismos están las actividades y quién más escribe en sus Data Extensions ' +
+            '(sin llamadas a la API), o consultar la API para tener los datos actualizados?',
             'Usar caché', 'Consultar API');
         if (useCache) cacheToUse = cache;
     }
