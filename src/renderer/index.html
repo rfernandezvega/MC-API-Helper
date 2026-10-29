@@ -964,7 +964,7 @@
 						<ul>
 							<li>Registra todas las acciones y llamadas a la API. Pulsa los iconos <b>&lt;</b> / <b>&gt;</b> para mostrar u ocultar el panel.</li>
 							<li>Tres apartados: <b>Mensajes</b> (qué se está haciendo), <b>Petición</b> (llamadas a la API) y <b>Respuesta</b> (lo que devuelve la API).</li>
-							<li>Desde <b>Log de Eventos</b> puedes descargar los logs con fecha. Útil para revisar qué llamadas se hicieron si algo da error.</li>
+							<li>Con el botón <b>Descargar</b> de la cabecera del <b>Log de Eventos</b> puedes descargar los logs con fecha. Útil para revisar qué llamadas se hicieron si algo da error.</li>
 						</ul>
 
 						<h4>Novedades</h4>
@@ -2269,6 +2269,7 @@
                 </summary>
                 <ul class="changelog-items">
                     <li><span class="changelog-tag fix">Fix</span> Clonador de Automatismos: las queries clonadas usan por defecto la carpeta de la query original y ya no falla la clonación si no se elige carpeta.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Log de Eventos: nuevo botón "Descargar" en la cabecera para bajar el log como fichero .txt.</li>
                 </ul>
             </details>
 
@@ -2541,7 +2542,7 @@
             <details class="changelog-entry">
                 <summary class="changelog-version">
                     <span class="changelog-badge">v2.1.1</span>
-                    <span class="changelog-date">26 Mayo 2025</span>
+                    <span class="changelog-date">26 Mayo 2026</span>
                 </summary>
                 <ul class="changelog-items">
                     <li><span class="changelog-tag improved">Mejora</span> La app tiene menos zoom, pensado para quienes la usan desde portátil.</li>
@@ -3038,6 +3039,7 @@
   </button>
   <div class="log-header">
     <h2 id="log-header-title">Log de Eventos</h2>
+    <button id="downloadLogBtn" class="action-button download-btn small-text-btn" title="Descargar el log como fichero .txt">Descargar</button>
   </div>
   <div class="log-blocks-row">
     <div id="log-message-block" class="log-block">

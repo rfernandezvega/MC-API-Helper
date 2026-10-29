@@ -51,6 +51,7 @@ export function init() {
     elements.logDrawer = document.getElementById('log-sidebar');
     elements.logDrawerBackdrop = document.getElementById('log-drawer-backdrop');
     elements.logHeaderTitle = document.getElementById('log-header-title');
+    elements.downloadLogBtn = document.getElementById('downloadLogBtn');
     elements.logMessagesEl = document.getElementById('log-messages');
     elements.logTranscriptEl = document.getElementById('log-transcript');
 

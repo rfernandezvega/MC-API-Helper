@@ -129,6 +129,7 @@
   </button>
   <div class="log-header">
     <h2 id="log-header-title">Log de Eventos</h2>
+    <button id="downloadLogBtn" class="action-button download-btn small-text-btn" title="Descargar el log como fichero .txt">Descargar</button>
   </div>
   <div class="log-blocks-row">
     <div id="log-message-block" class="log-block">

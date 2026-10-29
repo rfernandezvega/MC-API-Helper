@@ -341,8 +341,8 @@ document.addEventListener('DOMContentLoaded', function () {
 	// ==========================================================
 	
 	function setupEventListeners() {
-		// Listener para el título del log
-    	elements.logHeaderTitle.addEventListener('click', generateAndDownloadLog);
+		// Listener para el botón de descarga del log
+    	elements.downloadLogBtn.addEventListener('click', generateAndDownloadLog);
 
 		// Listeners para el modal de licencia y alertas personalizadas.
 		elements.customAlertCloseBtn.addEventListener('click', ui.closeCustomAlert);
