@@ -20,6 +20,8 @@ let currentDetailAsset = null;
 let currentDetailComponents = [];
 
 let currentDrawerContent = null;
+// Extensión con la que se descarga el código abierto en el drawer (html, sql, js...).
+let currentDrawerExtension = 'html';
 
 /**
  * Engancha el comportamiento de alternar activo/inactivo a un botón conmutador (toggle),
@@ -92,7 +94,7 @@ export function init(dependencies) {
         const blob = new Blob([currentDrawerContent], { type: 'text/html;charset=utf-8;' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `${clientName}_${contentName}.html`;
+        a.download = `${clientName}_${contentName}.${currentDrawerExtension}`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -771,10 +773,19 @@ function buildDEsTable(des) {
     return html;
 }
 
-function openFinderCodeDrawer(comp) {
+/**
+ * Abre el drawer de código de los buscadores. Lo usan el Buscador de Contenidos y la búsqueda
+ * de usos de DEs (queries, scripts y contenidos).
+ * @param {object} comp
+ * @param {string} comp.name - Título del drawer y base del nombre del fichero de descarga.
+ * @param {string} comp.content - Código a mostrar.
+ * @param {string} [comp.fileExtension='html'] - Extensión del fichero al descargarlo.
+ */
+export function openFinderCodeDrawer(comp) {
     if (!comp || !comp.content) return;
 
     currentDrawerContent = comp.content;
+    currentDrawerExtension = comp.fileExtension || 'html';
     elements.finderCodeTitle.textContent = comp.name || 'Código Fuente';
 
     elements.finderCodeContent.innerHTML = buildCodeViewer(comp.content, 'Código Fuente');

@@ -9,6 +9,7 @@ import { escapeHtml, formatDate } from '../ui/format-utils.js';
 import { createTableSorter, createPaginator } from '../ui/table-utils.js';
 import { getRowsPerPage } from './settings.js';
 import { buildJourneyUrl, linkCell } from '../ui/mc-links.js';
+import { findCachedJourney, updateJourneyInCache } from './journeys-cache.js';
 
 // --- 1. ESTADO DEL MÓDULO ---
 
@@ -602,7 +603,7 @@ async function getCommunications() {
             logger.logMessage(`Obteniendo actividades para: "${journey.name}"`);
             const details = await mcApiService.fetchJourneyDetailsById(journey.id, apiConfig);
             const comms = parseJourneyActivities(details.activities);
-            Object.assign(journey, { ...comms, activities: details.activities || [], hasCommunications: true, _commsStale: false });
+            Object.assign(journey, { ...comms, activities: details.activities || [], triggers: details.triggers || [], hasCommunications: true, _commsStale: false });
         }
         
         // Enriquecer emails con SOAP
@@ -665,6 +666,7 @@ async function getAllCommunications() {
                     Object.assign(journey, {
                         ...comms,
                         activities: details.activities || [],
+                        triggers: details.triggers || [],
                         hasCommunications: true,
                         _commsStale: false
                     });
@@ -1054,18 +1056,86 @@ function parseJourneyActivities(activities = []) {
     return communications;
 }
 
+/**
+ * Añade al journey su Event Definition (fuente de entrada) para que el análisis no tenga que pedirla
+ * y quede guardada en la caché de journeys.
+ * @param {object} journey - Detalle del journey (con triggers).
+ * @param {boolean} refresh - true para pedirla siempre (descarga nueva); false solo si falta o no corresponde.
+ * @returns {Promise<boolean>} true si se ha pedido y añadido.
+ */
+async function attachEventDefinition(journey, refresh) {
+    const eventDefId = journey.triggers?.[0]?.metaData?.eventDefinitionId;
+    if (!eventDefId) return false;
+    if (!refresh && journey.eventDefinition?.id === eventDefId) return false;
+    try {
+        journey.eventDefinition = await mcApiService.getEventDefinitionById(eventDefId, await getAuthenticatedConfig());
+        return true;
+    } catch (error) {
+        logger.logMessage(`No se pudo obtener la fuente de entrada: ${error.message}`);
+        return false;
+    }
+}
+
+/**
+ * Guarda en la caché de journeys la versión del journey que se va a analizar y lo indica en el log.
+ * @param {string} clientName - Clave de caché (cliente + BU).
+ * @param {object} journey - Detalle del journey.
+ */
+async function saveJourneyToCache(clientName, journey) {
+    const { updated, saved } = await updateJourneyInCache(clientName, journey);
+    if (updated) {
+        logger.logMessage(saved
+            ? 'Caché de journeys: guardado este journey con su detalle y su fuente de entrada.'
+            : 'Caché de journeys: no se pudo guardar este journey.');
+    }
+}
+
+/**
+ * Abre el análisis del journey seleccionado. Si está en la caché de journeys (con su fuente de entrada),
+ * enseña la fecha de modificación actual y la de la versión cacheada y pregunta si usar la caché (sin
+ * llamada) o descargarlo. Lo que se descarga se guarda en la caché para la próxima vez.
+ * No recibe parámetros: usa el journey seleccionado en la tabla.
+ */
 async function inspectAndShowAnalyzer() {
     const selected = getSelectedJourneys();
     const j = selected[0];
     ui.blockUI(`Cargando análisis de "${j.name}"...`);
 
-    logger.startLogBuffering(); 
+    logger.startLogBuffering();
     mcApiService.setLogger(logger);
     logger.logMessage(`Iniciando inspección técnica de: ${j.name}`);
 
     try {
-        const apiConfig = await getAuthenticatedConfig();
-        const details = await mcApiService.fetchJourneyDetailsById(j.id, apiConfig);
+        const clientName = elements.clientNameInput.value.trim();
+        const cached = await findCachedJourney(clientName, j.id);
+        let details = null;
+
+        // Las versiones cacheadas antes de guardar la fuente de entrada no sirven para el análisis.
+        if (cached && Array.isArray(cached.journey.triggers) && Array.isArray(cached.journey.activities)) {
+            const unchanged = cached.journey.modifiedDate === j.modifiedDate;
+            ui.unblockUI();
+            const useCache = await ui.showCustomConfirmComplex(
+                `Este journey está en la caché (descargada el ${formatDate(cached.lastRefresh)}). ` +
+                `Última modificación del journey: ${formatDate(j.modifiedDate)}. ` +
+                `Versión guardada en la caché: modificada el ${formatDate(cached.journey.modifiedDate)}, ` +
+                (unchanged ? 'sin cambios desde entonces. ' : 'ha cambiado desde que se guardó: conviene descargarlo. ') +
+                '¿Usar la caché (sin llamadas a la API) o descargar el detalle actual?',
+                'Usar caché', 'Descargar');
+            ui.blockUI(`Cargando análisis de "${j.name}"...`);
+            if (useCache) {
+                details = cached.journey;
+                logger.logMessage(`Análisis con la versión de la caché (modificada el ${formatDate(cached.journey.modifiedDate)}).`);
+                // Las versiones cacheadas sin su fuente de entrada la piden una vez y la guardan.
+                if (await attachEventDefinition(details, false)) await saveJourneyToCache(clientName, details);
+            }
+        }
+
+        if (!details) {
+            const apiConfig = await getAuthenticatedConfig();
+            details = await mcApiService.fetchJourneyDetailsById(j.id, apiConfig);
+            await attachEventDefinition(details, true);
+            await saveJourneyToCache(clientName, details);
+        }
         showJourneyAnalyzerView(details);
     } catch (error) {
         ui.showCustomAlert(error.message);

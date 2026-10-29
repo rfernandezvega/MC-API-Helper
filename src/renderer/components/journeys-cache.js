@@ -73,6 +73,8 @@ export async function ensureJourneysDetailCache({ apiConfig, clientName, onProgr
         const j = list[i];
         const cachedJ = cacheById[String(j.id)];
         let activities;
+        // La fuente de entrada (triggers) la necesita el analizador para trabajar desde la caché.
+        let triggers = cachedJ?.triggers;
 
         // Reutilizar si está cacheado con el mismo modifiedDate (misma versión)
         if (cachedJ && Array.isArray(cachedJ.activities) && cachedJ.modifiedDate === j.modifiedDate) {
@@ -84,13 +86,17 @@ export async function ensureJourneysDetailCache({ apiConfig, clientName, onProgr
                 apiCalls++;
                 downloaded++;
                 activities = (detail && detail.activities) || [];
+                triggers = (detail && detail.triggers) || [];
             } catch {
                 activities = [];
+                triggers = undefined;
             }
         }
 
         const comms = parseJourneyActivities(activities);
-        full.push({ ...j, activities, ...comms, hasCommunications: hasComms(comms) });
+        const entry = { ...j, activities, ...comms, hasCommunications: hasComms(comms) };
+        if (triggers) entry.triggers = triggers;
+        full.push(entry);
 
         if (onProgress && (i % 5 === 0 || i === list.length - 1)) {
             let sub = '';
@@ -109,4 +115,69 @@ export async function ensureJourneysDetailCache({ apiConfig, clientName, onProgr
     } catch { /* si falla el guardado, seguimos con los datos en memoria */ }
 
     return { journeys: full, lastRefresh, apiCalls, downloaded, reused };
+}
+
+/**
+ * Devuelve un journey de la caché del contexto activo, con la fecha de la caché.
+ * @param {string} clientName - Clave de caché (cliente + BU).
+ * @param {string} journeyId - Id del journey (versión concreta).
+ * @returns {Promise<{journey: object, lastRefresh: string}|null>} null si no hay caché o no está en ella.
+ */
+export async function findCachedJourney(clientName, journeyId) {
+    if (!clientName || !journeyId) return null;
+    try {
+        const cached = await window.electronAPI.loadClientJourneys(clientName);
+        if (!cached?.success || !Array.isArray(cached.journeys)) return null;
+        const journey = cached.journeys.find(j => String(j.id) === String(journeyId));
+        return journey ? { journey, lastRefresh: cached.lastRefresh } : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Sustituye en la caché un journey por su detalle recién descargado (o lo añade) y la guarda, sin
+ * cambiar la fecha general de la caché; la entrada lleva su propia fecha en refreshedAt.
+ * Si la versión cacheada tenía la misma fecha de modificación se conservan sus comunicaciones (que
+ * pueden venir enriquecidas con datos de envío); si no, se recalculan desde las actividades nuevas.
+ * Si no existe caché no hace nada, para no crear una caché con un solo journey.
+ * @param {string} clientName - Clave de caché (cliente + BU).
+ * @param {object} detail - Detalle REST del journey (con id, activities y triggers).
+ * @returns {Promise<{updated: boolean, saved: boolean}>}
+ */
+export async function updateJourneyInCache(clientName, detail) {
+    if (!clientName || !detail?.id || !Array.isArray(detail.activities)) return { updated: false, saved: false };
+    let cached;
+    try {
+        cached = await window.electronAPI.loadClientJourneys(clientName);
+    } catch {
+        return { updated: false, saved: false };
+    }
+    if (!cached?.success || !Array.isArray(cached.journeys)) return { updated: false, saved: false };
+
+    const journeys = cached.journeys;
+    const index = journeys.findIndex(j => String(j.id) === String(detail.id));
+    const previous = index >= 0 ? journeys[index] : null;
+    const sameVersion = previous && previous.modifiedDate === detail.modifiedDate;
+    const comms = sameVersion
+        ? { emails: previous.emails, sms: previous.sms, pushes: previous.pushes, whatsapps: previous.whatsapps }
+        : parseJourneyActivities(detail.activities);
+    const entry = {
+        ...(previous || {}),
+        ...detail,
+        ...comms,
+        triggers: detail.triggers || [],
+        hasCommunications: sameVersion ? previous.hasCommunications : hasComms(comms),
+        _commsStale: false,
+        refreshedAt: new Date().toISOString()
+    };
+    if (index >= 0) journeys[index] = entry;
+    else journeys.push(entry);
+
+    try {
+        const result = await window.electronAPI.saveClientJourneys({ clientName, journeys, lastRefresh: cached.lastRefresh });
+        return { updated: true, saved: !!result?.success };
+    } catch {
+        return { updated: true, saved: false };
+    }
 }

@@ -88,6 +88,36 @@ function createWindow() {
     });
 }
 
+/**
+ * Convierte las notas de la release (GitHub las entrega como HTML) a texto plano legible en el
+ * diálogo nativo, que no renderiza HTML: viñetas como guiones (sangradas si están anidadas),
+ * títulos y párrafos separados por línea en blanco y entidades decodificadas.
+ * @param {string} html - Notas en HTML generadas por GitHub a partir del Markdown de la release.
+ * @returns {string} Texto plano listo para `dialog.showMessageBox`.
+ */
+function releaseNotesToText(html) {
+    let depth = 0;
+    const text = html
+        // Los saltos del HTML no significan nada; los saltos reales los ponen las etiquetas.
+        .replace(/\s*\n\s*/g, ' ')
+        // Las viñetas se sangran según la profundidad de la lista en la que están.
+        .replace(/<(\/?)(ul|ol)[^>]*>|<li[^>]*>/gi, (tag, closing) => {
+            if (/^<li/i.test(tag)) return `\n${'   '.repeat(Math.max(depth - 1, 0))}- `;
+            depth += closing ? -1 : 1;
+            return '';
+        })
+        .replace(/<\/(p|div)>|<br\s*\/?>/gi, '\n')
+        .replace(/<(h[1-6]|p|div)[^>]*>/gi, '\n\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&');
+
+    return text
+        .split('\n').map(l => l.trimEnd()).join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
 // --- 3. GESTIÓN DEL CICLO DE VIDA Y ACTUALIZACIONES ---
 app.whenReady().then(() => {
     initializeGoogleClient();
@@ -100,9 +130,9 @@ app.whenReady().then(() => {
 
         let notas = '';
         if (typeof info.releaseNotes === 'string') {
-            notas = info.releaseNotes.replace(/<[^>]+>/g, '');
+            notas = releaseNotesToText(info.releaseNotes);
         } else if (Array.isArray(info.releaseNotes)) {
-            notas = info.releaseNotes.map(n => n.note || '').join('\n');
+            notas = info.releaseNotes.map(n => releaseNotesToText(n.note || '')).join('\n\n');
         }
 
         dialog.showMessageBox(mainWindow, {
@@ -291,6 +321,7 @@ ipcMain.handle('set-zoom', (event, factor) => {
 const CACHE_DIRS = [
     { key: 'contents',  label: 'Contenidos',            dir: 'ClientContents' },
     { key: 'journeys',  label: 'Journeys',              dir: 'ClientJourneys' },
+    { key: 'automations', label: 'Automatismos',         dir: 'ClientAutomations' },
     { key: 'clientcache', label: 'Auditoría y Cloud Pages', dir: 'ClientCache' }
 ];
 
@@ -630,6 +661,70 @@ ipcMain.handle('load-client-journeys-from-file', async (event, clientName) => {
         return { success: true, journeys, lastRefresh };
     } catch (error) {
         console.error('Error al cargar journeys desde fichero:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+// Caché de automatismos (pasos, actividades y DEs destino) por cliente+BU, en ClientAutomations.
+// Mismo formato que la de journeys: primera línea con metadatos y una línea por automatismo,
+// para poder escribir y leer ficheros grandes por streaming.
+ipcMain.handle('save-client-automations-to-file', async (event, { clientName, automations, lastRefresh }) => {
+    try {
+        const dirPath = path.join(app.getPath('userData'), 'ClientAutomations');
+        if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath);
+        const filePath = path.join(dirPath, `${clientName}.json`);
+
+        const writeStream = fs.createWriteStream(filePath, { encoding: 'utf-8' });
+        writeStream.write(JSON.stringify({ lastRefresh: lastRefresh || new Date().toISOString() }) + '\n');
+        for (const item of automations) {
+            writeStream.write(JSON.stringify(item) + '\n');
+        }
+        writeStream.end();
+
+        return new Promise((resolve) => {
+            writeStream.on('finish', () => resolve({ success: true }));
+            writeStream.on('error', (err) => resolve({ success: false, error: err.message }));
+        });
+    } catch (error) {
+        console.error('Error al guardar automatismos en fichero:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+// Carga la caché de automatismos de un cliente+BU. Devuelve automations: null si no existe.
+ipcMain.handle('load-client-automations-from-file', async (event, clientName) => {
+    try {
+        const filePath = path.join(app.getPath('userData'), 'ClientAutomations', `${clientName}.json`);
+        if (!fs.existsSync(filePath)) {
+            return { success: true, automations: null, lastRefresh: null };
+        }
+
+        const readline = require('readline');
+        const automations = [];
+        let lastRefresh = null;
+        let isFirstLine = true;
+
+        const rl = readline.createInterface({
+            input: fs.createReadStream(filePath, { encoding: 'utf-8' }),
+            crlfDelay: Infinity
+        });
+
+        for await (const line of rl) {
+            if (!line.trim()) continue;
+            try {
+                const parsed = JSON.parse(line);
+                if (isFirstLine && parsed.lastRefresh && !parsed.id) {
+                    lastRefresh = parsed.lastRefresh;
+                } else {
+                    automations.push(parsed);
+                }
+                isFirstLine = false;
+            } catch { /* línea corrupta: se ignora */ }
+        }
+
+        return { success: true, automations, lastRefresh };
+    } catch (error) {
+        console.error('Error al cargar automatismos desde fichero:', error);
         return { success: false, error: error.message };
     }
 });

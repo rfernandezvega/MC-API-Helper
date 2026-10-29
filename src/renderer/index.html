@@ -957,14 +957,14 @@
 						<h4>Visor de código</h4>
 						<ul>
 							<li>Las vistas que muestran código (Cloud Pages, Contenidos, Buscadores y Journeys) resaltan la sintaxis de HTML, CSS, JavaScript/SSJS y AMPscript, y ajustan las líneas largas al ancho de la caja para no obligar a un scroll horizontal.</li>
-							<li>Los bloques de código y queries tienen arriba a la derecha un icono de <b>copiar</b> que lleva el contenido completo al portapapeles, sin tener que seleccionarlo. Está en el detalle de Cloud Pages y Contenidos (código, código resuelto y mensaje de WhatsApp), en el código fuente de los componentes del Buscador de Contenidos, en las queries de los Buscadores de Origen de datos y Texto en Queries y en las queries y scripts del Analizador de Automatismos (se puede copiar sin desplegar el bloque). Al copiar, el icono cambia a un check durante un momento.</li>
+							<li>Los bloques de código y queries tienen arriba a la derecha un icono de <b>copiar</b> que lleva el contenido completo al portapapeles, sin tener que seleccionarlo. Está en el detalle de Cloud Pages y Contenidos (código, código resuelto y mensaje de WhatsApp), en el código fuente de los componentes del Buscador de Contenidos, en el código de los usos de una DE (Buscador de Data Extensions), en las queries del Buscador de Texto en Queries y en las queries y scripts del Analizador de Automatismos (se puede copiar sin desplegar el bloque). Al copiar, el icono cambia a un check durante un momento.</li>
 						</ul>
 
 						<h4>Panel de logs (lateral derecho)</h4>
 						<ul>
 							<li>Registra todas las acciones y llamadas a la API. Pulsa los iconos <b>&lt;</b> / <b>&gt;</b> para mostrar u ocultar el panel.</li>
 							<li>Tres apartados: <b>Mensajes</b> (qué se está haciendo), <b>Petición</b> (llamadas a la API) y <b>Respuesta</b> (lo que devuelve la API).</li>
-							<li>Desde <b>Log de Eventos</b> puedes descargar los logs con fecha. Útil para revisar qué llamadas se hicieron si algo da error.</li>
+							<li>Con el botón <b>Descargar</b> de la cabecera del <b>Log de Eventos</b> puedes descargar los logs con fecha. Útil para revisar qué llamadas se hicieron si algo da error.</li>
 						</ul>
 
 						<h4>Novedades</h4>
@@ -1014,11 +1014,21 @@
 							<li>La columna <b>Compartida</b> indica si la DE está en una carpeta de Shared Data Extensions, y la ruta de carpeta se muestra también para las compartidas.</li>
 						</ul>
 
-						<h4>Buscador de Orígenes de datos</h4>
+						<h4>Dónde se usa una Data Extension</h4>
 						<ul>
-							<li>Indica qué <b>query</b> o <b>import</b> inserta/actualiza datos en una DE, mostrando en qué automatismo y paso se encuentra.</li>
-							<li>El check <b>Mostrar Descripción / Query</b> oculta o muestra la columna con la query o la descripción del import.</li>
+							<li>En el Buscador de Data Extensions, selecciona una fila y pulsa <b>Dónde se usa</b>. Se busca con el nombre, la External Key y el ObjectID exactos de esa DE, en la <b>BU activa</b>. Los resultados aparecen debajo, en pestañas por tipología con su contador.</li>
+							<li><b>Escritura Queries/Imports</b>: queries e imports que escriben en la DE, con su acción (Overwrite / Update / Append) o la descripción del import, y el automatismo y paso donde están.</li>
+							<li><b>Lectura Queries</b>: queries con la DE en un <code>FROM</code> o <code>JOIN</code> (incluido el prefijo <code>ENT.</code> y el nombre entre corchetes). Si el nombre aparece en otra parte de la query (subconsulta, columna con el mismo nombre, join con coma) se indica como <i>Mención</i>.</li>
+							<li><b>Scripts</b>: scripts SSJS que usan la DE por nombre o External Key (<code>DataExtension.Init</code>, <code>Platform.Function.Lookup</code>...), con su automatismo.</li>
+							<li><b>Contenidos</b> (incluido Shared Content): assets cuyo AMPscript/SSJS referencia la DE (<code>Lookup</code>, <code>LookupRows</code>, <code>UpsertData</code>...), con su carpeta.</li>
+							<li><b>CloudPages</b>: se revisa el código de todas las CloudPages de la BU, incluido el de la Web Page a la que apunta cada Landing Page (slots y bloques), y se muestra con el nombre de la CloudPage visible.</li>
+							<li>Se descartan los nombres que solo contienen al buscado (p. ej. <i>Clientes_Bajas</i> al buscar <i>Clientes</i>). No se detectan los nombres de DE montados dinámicamente en el código.</li>
 							<li>Solo se listan las queries <b>activas</b>: las que están en estado Inactive (borradas lógicamente en Marketing Cloud) se descartan.</li>
+							<li><b>Automatismos</b>: resumen de en qué automatismos se usa la DE, agrupado por automatismo y paso: reúne las queries, imports y scripts de las otras pestañas que están en algún automatismo, con su uso (escribe, lee, referencia). Con la <b>caché de automatismos</b> de la BU añade el estado de cada automatismo y las actividades que solo ella conoce (p. ej. filtros que escriben en la DE). Las verificaciones no se detectan, porque su DE no viene en el detalle del automatismo.</li>
+							<li><b>Journeys</b>: los journeys que usan la DE como <b>entrada</b> (se consulta siempre a la API) y los que la usan en sus <b>actividades</b> (decisiones por atributos, Update Contact...), según la <b>caché de journeys</b>. Es la misma caché que la vista de Journeys, pero allí "Descargar detalle" la sobrescribe solo con los journeys procesados: si a la caché le faltan journeys o alguno ha cambiado, la pestaña lo avisa para que la actualices desde aquí, donde siempre se revisan todos.</li>
+							<li>Las cachés de automatismos y journeys se muestran con su fecha encima de las pestañas y solo se descargan o actualizan al pulsar su botón (<b>Descargar</b> / <b>Actualizar</b>), tras confirmar. La de automatismos cuesta una llamada por automatismo; la de journeys solo descarga los journeys nuevos o modificados. Al actualizarlas se recalculan los resultados sin repetir las búsquedas.</li>
+							<li>Con caché de automatismos, el automatismo y paso de las queries, imports y scripts se toman de ella (sin una llamada por actividad) y la pestaña lo indica con la fecha de la caché. Las cachés se pueden borrar desde Ajustes.</li>
+							<li>Si una de las búsquedas falla, su pestaña muestra el error y el resto se completa igualmente. El icono de código abre la query, el script o el contenido, y <b>Descargar</b> exporta en un único CSV los usos de todas las pestañas (columna <i>Tipología</i>); del resumen de Automatismos solo se incluyen las actividades que no aparecen en otra pestaña, para no duplicar filas.</li>
 						</ul>
 
 						<h4>Buscador de Clientes</h4>
@@ -1127,7 +1137,7 @@
 						<ul>
 							<li><b>Refrescar</b> — Recarga la lista de journeys por API.</li>
 							<li><b>Exportar</b> — Descarga un CSV con los journeys visibles (respeta filtros).</li>
-							<li><b>Analizar</b> (1 seleccionado) — Abre el análisis detallado del journey.</li>
+							<li><b>Analizar</b> (1 seleccionado) — Abre el análisis detallado del journey. Si el journey está en la caché de journeys, muestra su fecha de modificación actual y la de la versión guardada (avisando si ha cambiado) y pregunta si usar la caché, sin llamadas a la API, o descargar el detalle. Lo que se descarga se guarda en la caché junto con su fuente de entrada (Event Definition), así que al volver a analizarlo desde la caché no se hace ninguna llamada para el detalle ni para la entrada. Las versiones cacheadas antes de esta mejora no guardaban la fuente de entrada: se descargan la primera vez, o se completa la entrada al usar la caché.</li>
 							<li><b>Data Extensions</b> — Escanea las DEs usadas en las actividades de los journeys filtrados y las muestra en su columna.</li>
 							<li><b>Descargar detalle</b> — Descarga el journey completo (actividades + comunicaciones) y lo <b>cachea</b>. Permite elegir <b>todos</b> o solo los <b>seleccionados</b>. Esta caché alimenta el filtro de uso de la vista de Contenidos y se <b>sobrescribe</b> con la última descarga.</li>
 							<li><b>Copiar</b> (1 seleccionado) — Abre el asistente de clonación del journey.</li>
@@ -1153,6 +1163,15 @@
 							<li><b>Clonador</b>: para entrada <b>EmailAudience</b> pregunta si clonar la DE de entrada o reutilizar una existente; para <b>AutomationAudience</b> permite elegir la DE de destino del automatismo origen como fuente. En ambos casos se puede cambiar el nombre del nuevo journey.</li>
 							<li><b>Errores de Journeys</b>: muestra los errores de un journey en un rango de fechas, con filtros por journey, estado, actividad y tipo, y exportación a CSV.</li>
 						</ul>
+
+						<h4>Análisis de Journey: diagrama</h4>
+						<ul>
+							<li>El desplegable <b>Flujo Lógico del Journey</b> muestra el journey dibujado como en Journey Builder: cada actividad con su icono y color de categoría, su nombre y su número en la lista de actividades. Las ramas llevan su etiqueta (Yes/No, porcentaje, criterio) y las uniones se dibujan con la línea llegando a la actividad común.</li>
+							<li>Al hacer <b>clic en una actividad</b> se resalta junto con sus líneas, y la lista de actividades de abajo muestra solo esa, desplegada. <b>Ver todas</b> quita la selección; cambiar el filtro por tipo también la quita.</li>
+							<li>Zoom con los botones <b>-</b> / <b>+</b> o con <b>Ctrl + rueda</b>; <b>Ajustar</b> encaja el journey en el espacio visible y se puede mover arrastrando sobre una zona vacía.</li>
+							<li><b>Descargar imagen</b> guarda el diagrama completo en PNG, a tamaño real e independientemente del zoom.</li>
+							<li>El PDF y el Word siguen incluyendo el flujo lógico en formato texto, que encaja mejor en página vertical que la imagen.</li>
+						</ul>
 					</div>
 				</div>
 
@@ -1167,7 +1186,7 @@
 						<ul>
 							<li><b>Refrescar</b> — Recarga los datos por API.</li>
 							<li><b>Calendario</b> — Abre un panel lateral con un calendario que sitúa los automatismos <b>actualmente filtrados</b> en la vista por su próxima fecha de ejecución. Los días con algo programado se marcan en azul; al pulsar un día, el panel derecho muestra qué automatismos hay y a qué hora. Se puede cambiar el <b>Año</b>.</li>
-							<li><b>Analizar</b> (1 seleccionado) — Abre el análisis detallado del automatismo.</li>
+							<li><b>Analizar</b> (1 seleccionado) — Abre el análisis detallado del automatismo. Si existe caché de automatismos de la BU (se descarga desde "Dónde se usa" del Buscador de Data Extensions), pregunta si usarla para calcular en qué otros automatismos están las actividades y quién más escribe en sus DEs, sin llamadas a la API, o consultar la API. Si se usa la caché, la cabecera del análisis lo indica con su fecha. Al analizar, ese automatismo se actualiza en la caché con su versión actual (sin llamadas extra), elijas caché o API; el resto de automatismos mantiene la fecha de la última descarga completa.</li>
 							<li><b>Notificaciones</b> — Abre una modal que actúa sobre los automatismos <b>actualmente filtrados</b>:
 								<ul>
 									<li><b>Cargar</b> — Obtiene los emails de alerta configurados y muestra las columnas de notificación. Las direcciones se muestran separadas por comas, el mismo formato que pide Automation Studio.</li>
@@ -1190,6 +1209,7 @@
 						<ul>
 							<li>Permite duplicar un automatismo de forma <b>selectiva</b>: por cada actividad se elige si clonarla o reutilizar la original, y se puede cambiar su nombre y su DE de destino.</li>
 							<li>Se puede fijar el <b>Nombre destino</b>, la <b>Carpeta destino</b> y una <b>carpeta de DEs por defecto</b> para no configurarlas una a una. El proceso crea primero las DEs, luego las actividades y por último el automatismo.</li>
+							<li>Por defecto, cada query y cada DE clonadas se crean en la misma carpeta que su original; se puede cambiar por fila o con los destinos por defecto.</li>
 						</ul>
 					</div>
 				</div>
@@ -1471,7 +1491,6 @@
     <div class="tabs-container">
     <div class="tab-buttons">
         <button class="tab-button active" data-tab="busqueda-de-tab">Data Extensions</button>
-        <button class="tab-button" data-tab="origenes-tab">Origen de datos</button>
         <button class="tab-button" data-tab="clientes-tab">Clientes</button>
         <button class="tab-button" data-tab="queries-tab">Texto en Queries</button>
         <button class="tab-button" data-tab="script-texto-tab">Texto en Scripts</button>
@@ -1503,7 +1522,7 @@
                 <h3 class="u-m-0" id="de-search-results-title" data-results-label="Resultados">Resultados</h3>
                 <div class="u-flex u-gap-8">
                     <button id="downloadDeSearchCsvBtn" class="action-button download-btn" disabled title="Descargar los resultados en CSV">Descargar</button>
-                    <button id="deToSourcesBtn" class="action-button" disabled title="Buscar los orígenes de datos de la DE seleccionada">Origen de datos</button>
+                    <button id="deUsageBtn" class="action-button" disabled title="Buscar dónde se usa la DE seleccionada">Dónde se usa</button>
                 </div>
             </div>
             <div class="table-container">
@@ -1513,31 +1532,16 @@
                 </table>
             </div>
         </div>
-    </div>
 
-    <!-- ============== Pestaña: Buscador de Orígenes de Datos ============== -->
-    <div id="origenes-tab" class="tab-content config-section-container">
-        <div class="config-block">
-            <div class="finder-filter-row">
-                <div class="form-group finder-field">
-                    <label for="deNameToFind">Nombre exacto de la Data Extension:</label>
-                    <input type="text" id="deNameToFind" placeholder="Introduce el nombre exacto de la DE">
-                </div>
-                <button id="showSourceQueryBtn" class="action-button finder-btn" type="button" title="Mostrar u ocultar la columna de query">Mostrar Query</button>
-                <button id="findDataSourcesBtn" class="action-button finder-btn">Buscar Orígenes</button>
-            </div>
-        </div>
-        <div class="config-block u-grow">
+        <!-- Usos de la DE seleccionada (se muestra tras pulsar "Dónde se usa") -->
+        <div id="deUsagePanel" class="config-block hidden">
             <div class="u-flex-between u-mb-10">
-                <h3 class="u-m-0" id="data-sources-results-title" data-results-label="Resultados">Resultados</h3>
-                <button id="downloadDataSourcesCsvBtn" class="action-button download-btn" disabled title="Descargar los resultados en CSV">Descargar</button>
+                <h3 class="u-m-0" id="deUsageTitle">Usos</h3>
+                <button id="downloadDeUsageCsvBtn" class="action-button download-btn" disabled title="Descargar todos los usos en CSV">Descargar</button>
             </div>
-            <div class="table-container">
-                <table id="data-sources-table">
-                    <thead><tr><th>Actividad</th><th>Tipo</th><th>Automatización</th><th>Paso</th><th>Acción</th><th>Descripción / Query</th></tr></thead>
-                    <tbody id="data-sources-tbody"><tr><td colspan="6">Inicia una búsqueda...</td></tr></tbody>
-                </table>
-            </div>
+            <div id="deUsageCacheBar" class="de-usage-cache-bar"></div>
+            <div id="deUsageTabs" class="de-usage-tabs"></div>
+            <div id="deUsageContent"></div>
         </div>
     </div>
 
@@ -1733,7 +1737,7 @@
             </div>
         </div>
     </div>
-    <!-- Drawer de código para el buscador de contenidos -->
+    <!-- Drawer de código de los buscadores (Contenidos y usos de Data Extensions) -->
     <div id="finder-code-backdrop" class="cp-detail-backdrop"></div>
     <aside id="finder-code-drawer" class="cp-detail-drawer">
         <button id="finder-code-close-btn" class="cp-detail-close-tab">
@@ -1998,12 +2002,43 @@
         <!-- 2. Goals y Exits -->
         <div id="journeyAnalyzerGlobalWrapper" class="u-mb-20"></div>
 
-        <!-- 3. Flujo Lógico -->
-        <div id="journeyAnalyzerFlowWrapper" class="u-mb-20"></div>
+        <!-- 3. Flujo Lógico: diagrama del journey (estilo canvas de Journey Builder).
+             El flujo en texto ya no se muestra; solo se usa para el PDF y el Word. -->
+        <div id="journeyAnalyzerFlowWrapper" class="u-mb-20">
+            <div class="analyzer-collapsible active" id="container-flow-logic">
+                <div class="analyzer-collapsible-header">
+                    <span>Flujo Lógico del Journey</span>
+                    <span class="analyzer-icon">▼</span>
+                </div>
+                <div class="analyzer-collapsible-content" style="max-height: none;">
+                    <div class="ja-collapsible-inner">
+                        <div class="ja-canvas-section">
+                            <div class="ja-canvas-toolbar">
+                                <span class="ja-canvas-hint">Clic en una actividad para ver su detalle · Ctrl + rueda para zoom · arrastra para moverte</span>
+                                <div class="ja-canvas-actions">
+                                    <button id="jaCanvasZoomOutBtn" class="action-button secondary-btn small-text-btn" title="Alejar">-</button>
+                                    <span id="jaCanvasZoomLabel" class="ja-canvas-zoom-label">100%</span>
+                                    <button id="jaCanvasZoomInBtn" class="action-button secondary-btn small-text-btn" title="Acercar">+</button>
+                                    <button id="jaCanvasFitBtn" class="action-button secondary-btn small-text-btn" title="Ajustar el diagrama al espacio visible">Ajustar</button>
+                                    <button id="jaCanvasDownloadBtn" class="action-button download-btn small-text-btn">Descargar imagen</button>
+                                </div>
+                            </div>
+                            <div id="jaCanvasViewport" class="ja-canvas-viewport"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="ja-section-title-row">
             <div class="u-flex-center u-gap-10">
                 <span style="font-size: 1.2rem;">⚙️</span>
                 <h3>Actividades del Journey</h3>
+            </div>
+
+            <!-- Aviso de actividad seleccionada en el diagrama -->
+            <div id="analyzerFocusBar" class="ja-focus-bar hidden">
+                <span id="analyzerFocusLabel"></span>
+                <button id="analyzerShowAllActivitiesBtn" class="action-button secondary-btn small-text-btn">Ver todas</button>
             </div>
 
             <!-- Multipicklist de Filtrado -->
@@ -2259,9 +2294,24 @@
     <!-- CHANGELOG / NOVEDADES -->
     <div class="menu-group changelog-group">
         <h3>Novedades</h3>
-        <div class="changelog-list">
-            <!-- ======================== v2.6.9 ======================== -->
+        <div id="changelog-list" class="changelog-list">
+            <!-- ======================== v2.7.0 ======================== -->
             <details class="changelog-entry" open>
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.7.0</span>
+                    <span class="changelog-date">28 Octubre 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag fix">Fix</span> Clonador de Automatismos: las queries clonadas usan por defecto la carpeta de la query original y ya no falla la clonación si no se elige carpeta.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Log de Eventos: nuevo botón "Descargar" en la cabecera para bajar el log como fichero .txt.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Análisis de Journey: diagrama al estilo de Journey Builder con iconos, ramas y uniones; al pulsar una actividad se filtra su detalle en la lista y se puede descargar como imagen.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Buscador de Data Extensions: botón "Dónde se usa" que muestra, por pestañas, las queries e imports que escriben en la DE, las queries que la leen, los scripts, los contenidos, las CloudPages, los automatismos y los journeys que la usan. Sustituye a la pestaña "Origen de datos".</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Caché de automatismos por BU (se descarga bajo demanda desde "Dónde se usa"): evita repetir consultas en la búsqueda de usos y el Analizador de Automatismos pregunta si usarla o consultar la API.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.6.9 ======================== -->
+            <details class="changelog-entry">
                 <summary class="changelog-version">
                     <span class="changelog-badge">v2.6.9</span>
                     <span class="changelog-date">23 Octubre 2026</span>
@@ -2529,7 +2579,7 @@
             <details class="changelog-entry">
                 <summary class="changelog-version">
                     <span class="changelog-badge">v2.1.1</span>
-                    <span class="changelog-date">26 Mayo 2025</span>
+                    <span class="changelog-date">26 Mayo 2026</span>
                 </summary>
                 <ul class="changelog-items">
                     <li><span class="changelog-tag improved">Mejora</span> La app tiene menos zoom, pensado para quienes la usan desde portátil.</li>
@@ -3026,6 +3076,7 @@
   </button>
   <div class="log-header">
     <h2 id="log-header-title">Log de Eventos</h2>
+    <button id="downloadLogBtn" class="action-button download-btn small-text-btn" title="Descargar el log como fichero .txt">Descargar</button>
   </div>
   <div class="log-blocks-row">
     <div id="log-message-block" class="log-block">

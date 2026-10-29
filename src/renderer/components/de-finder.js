@@ -7,11 +7,12 @@ import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import { escapeHtml } from '../ui/format-utils.js';
 import { downloadCsv, buildCsvFileName } from '../ui/csv-export.js';
+import * as deUsage from './de-usage.js';
 
 // --- 1. ESTADO DEL MÓDULO ---
 
 let getAuthenticatedConfig; // Dependencia inyectada desde app.js
-let selectedDeName = null;  // Nombre de la DE seleccionada en la tabla de resultados
+let selectedDe = null;      // DE seleccionada en la tabla de resultados ({ name, key, objectID, shared })
 let lastResults = [];       // Últimos resultados pintados (origen de la descarga en CSV)
 
 // --- 2. FUNCIONES PÚBLICAS ---
@@ -33,21 +34,24 @@ export function init(dependencies) {
         elements.deSharedToggle.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
 
-    // Selección de una fila de resultados (para el botón "Origen de datos").
+    // Selección de una fila de resultados (para el botón "Dónde se usa").
     elements.deSearchResultsTbody.addEventListener('click', (e) => {
         const row = e.target.closest('tr');
-        if (!row || !row.dataset.deName) return;
+        if (!row || row.dataset.resultIndex === undefined) return;
         elements.deSearchResultsTbody.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
         row.classList.add('selected');
-        selectedDeName = row.dataset.deName;
-        elements.deToSourcesBtn.disabled = false;
+        selectedDe = lastResults[parseInt(row.dataset.resultIndex, 10)] || null;
+        elements.deUsageBtn.disabled = !selectedDe;
     });
 
-    // Botón "Origen de datos": salta a la pestaña de Orígenes con la DE seleccionada
-    // y lanza la búsqueda automáticamente.
-    elements.deToSourcesBtn.addEventListener('click', goToDataSources);
+    // "Dónde se usa": busca los usos con el nombre, la key y el ObjectID exactos de la fila,
+    // sin volver a consultar la DE (desde una BU hija una compartida no se encontraría por nombre).
+    elements.deUsageBtn.addEventListener('click', () => {
+        if (selectedDe) deUsage.searchUsages(selectedDe);
+    });
 
     elements.downloadDeSearchCsvBtn?.addEventListener('click', downloadResultsCsv);
+    deUsage.init({ getAuthenticatedConfig });
 }
 
 /** Descarga en CSV las Data Extensions encontradas, en el mismo orden que la tabla. */
@@ -59,15 +63,6 @@ function downloadResultsCsv() {
     });
 }
 
-/** Cambia a la pestaña "Origen de datos", rellena el nombre y busca sus orígenes. */
-function goToDataSources() {
-    if (!selectedDeName) return;
-    const tabBtn = document.querySelector('.tab-button[data-tab="origenes-tab"]');
-    if (tabBtn) tabBtn.click();
-    elements.deNameToFindInput.value = selectedDeName;
-    elements.findDataSourcesBtn.click();
-}
-
 // --- 3. LÓGICA PRINCIPAL ---
 
 /**
@@ -76,6 +71,10 @@ function goToDataSources() {
 async function searchDE() {
     ui.blockUI("Buscando Data Extension...");
     logger.startLogBuffering();
+    // La selección y los usos anteriores dejan de valer aunque la búsqueda falle.
+    selectedDe = null;
+    elements.deUsageBtn.disabled = true;
+    deUsage.reset();
     elements.deSearchResultsTbody.innerHTML = '<tr><td colspan="4">Buscando...</td></tr>';
     ui.setResultsCount(elements.deSearchResultsTitle, null);
     try {
@@ -109,6 +108,7 @@ async function searchDE() {
             return {
                 name: deInfo.deName,
                 key: deInfo.customerKey,
+                objectID: deInfo.objectID,
                 clientId: deInfo.clientId,
                 shared: folder?.isShared === true,
                 path: folder?.path || 'Data Extensions'
@@ -185,9 +185,10 @@ function keepOwnAndSharedDEs(results) {
  * @param {Array} results - Array de objetos con { name, key, shared, path }.
  */
 function renderTable(results) {
-    // Cada nueva búsqueda resetea la selección y deshabilita el botón.
-    selectedDeName = null;
-    elements.deToSourcesBtn.disabled = true;
+    // Cada nueva búsqueda resetea la selección, deshabilita el botón y oculta los usos anteriores.
+    selectedDe = null;
+    elements.deUsageBtn.disabled = true;
+    deUsage.reset();
     elements.deSearchResultsTbody.innerHTML = '';
     lastResults = [];
     if (elements.downloadDeSearchCsvBtn) elements.downloadDeSearchCsvBtn.disabled = true;
@@ -204,9 +205,10 @@ function renderTable(results) {
     if (elements.downloadDeSearchCsvBtn) elements.downloadDeSearchCsvBtn.disabled = false;
     ui.setResultsCount(elements.deSearchResultsTitle, results.length);
 
-    results.forEach(result => {
+    results.forEach((result, index) => {
         const row = elements.deSearchResultsTbody.insertRow();
-        row.dataset.deName = result.name;
+        // Índice en lastResults: la fila guarda la DE completa (nombre, key, ObjectID) para "Dónde se usa".
+        row.dataset.resultIndex = index;
         row.innerHTML = `<td>${escapeHtml(result.name)}</td><td>${escapeHtml(result.key || '')}</td><td>${result.shared ? 'Sí' : 'No'}</td><td>${escapeHtml(result.path)}</td>`;
     });
 }

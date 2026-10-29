@@ -14,9 +14,24 @@
     <!-- CHANGELOG / NOVEDADES -->
     <div class="menu-group changelog-group">
         <h3>Novedades</h3>
-        <div class="changelog-list">
-            <!-- ======================== v2.6.9 ======================== -->
+        <div id="changelog-list" class="changelog-list">
+            <!-- ======================== v2.7.0 ======================== -->
             <details class="changelog-entry" open>
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.7.0</span>
+                    <span class="changelog-date">28 Octubre 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag fix">Fix</span> Clonador de Automatismos: las queries clonadas usan por defecto la carpeta de la query original y ya no falla la clonación si no se elige carpeta.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Log de Eventos: nuevo botón "Descargar" en la cabecera para bajar el log como fichero .txt.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Análisis de Journey: diagrama al estilo de Journey Builder con iconos, ramas y uniones; al pulsar una actividad se filtra su detalle en la lista y se puede descargar como imagen.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Buscador de Data Extensions: botón "Dónde se usa" que muestra, por pestañas, las queries e imports que escriben en la DE, las queries que la leen, los scripts, los contenidos, las CloudPages, los automatismos y los journeys que la usan. Sustituye a la pestaña "Origen de datos".</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Caché de automatismos por BU (se descarga bajo demanda desde "Dónde se usa"): evita repetir consultas en la búsqueda de usos y el Analizador de Automatismos pregunta si usarla o consultar la API.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.6.9 ======================== -->
+            <details class="changelog-entry">
                 <summary class="changelog-version">
                     <span class="changelog-badge">v2.6.9</span>
                     <span class="changelog-date">23 Octubre 2026</span>
@@ -284,7 +299,7 @@
             <details class="changelog-entry">
                 <summary class="changelog-version">
                     <span class="changelog-badge">v2.1.1</span>
-                    <span class="changelog-date">26 Mayo 2025</span>
+                    <span class="changelog-date">26 Mayo 2026</span>
                 </summary>
                 <ul class="changelog-items">
                     <li><span class="changelog-tag improved">Mejora</span> La app tiene menos zoom, pensado para quienes la usan desde portátil.</li>

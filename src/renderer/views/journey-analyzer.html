@@ -18,12 +18,43 @@
         <!-- 2. Goals y Exits -->
         <div id="journeyAnalyzerGlobalWrapper" class="u-mb-20"></div>
 
-        <!-- 3. Flujo Lógico -->
-        <div id="journeyAnalyzerFlowWrapper" class="u-mb-20"></div>
+        <!-- 3. Flujo Lógico: diagrama del journey (estilo canvas de Journey Builder).
+             El flujo en texto ya no se muestra; solo se usa para el PDF y el Word. -->
+        <div id="journeyAnalyzerFlowWrapper" class="u-mb-20">
+            <div class="analyzer-collapsible active" id="container-flow-logic">
+                <div class="analyzer-collapsible-header">
+                    <span>Flujo Lógico del Journey</span>
+                    <span class="analyzer-icon">▼</span>
+                </div>
+                <div class="analyzer-collapsible-content" style="max-height: none;">
+                    <div class="ja-collapsible-inner">
+                        <div class="ja-canvas-section">
+                            <div class="ja-canvas-toolbar">
+                                <span class="ja-canvas-hint">Clic en una actividad para ver su detalle · Ctrl + rueda para zoom · arrastra para moverte</span>
+                                <div class="ja-canvas-actions">
+                                    <button id="jaCanvasZoomOutBtn" class="action-button secondary-btn small-text-btn" title="Alejar">-</button>
+                                    <span id="jaCanvasZoomLabel" class="ja-canvas-zoom-label">100%</span>
+                                    <button id="jaCanvasZoomInBtn" class="action-button secondary-btn small-text-btn" title="Acercar">+</button>
+                                    <button id="jaCanvasFitBtn" class="action-button secondary-btn small-text-btn" title="Ajustar el diagrama al espacio visible">Ajustar</button>
+                                    <button id="jaCanvasDownloadBtn" class="action-button download-btn small-text-btn">Descargar imagen</button>
+                                </div>
+                            </div>
+                            <div id="jaCanvasViewport" class="ja-canvas-viewport"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="ja-section-title-row">
             <div class="u-flex-center u-gap-10">
                 <span style="font-size: 1.2rem;">⚙️</span>
                 <h3>Actividades del Journey</h3>
+            </div>
+
+            <!-- Aviso de actividad seleccionada en el diagrama -->
+            <div id="analyzerFocusBar" class="ja-focus-bar hidden">
+                <span id="analyzerFocusLabel"></span>
+                <button id="analyzerShowAllActivitiesBtn" class="action-button secondary-btn small-text-btn">Ver todas</button>
             </div>
 
             <!-- Multipicklist de Filtrado -->

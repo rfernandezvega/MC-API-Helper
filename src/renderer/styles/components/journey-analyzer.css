@@ -160,18 +160,6 @@
     border-top: none;
 }
 
-/* --- Bloque <pre> del flujo lógico --- */
-.ja-flow-pre {
-    background: var(--sf-bg-alt);
-    padding: 15px;
-    border-radius: 5px;
-    font-size: 0.9em;
-    line-height: 1.4;
-    overflow-x: auto;
-    margin: 0;
-    border: 1px solid var(--sf-border);
-}
-
 /* --- Nombre del journey/automatismo en el <h2> de las cabeceras --- */
 .ja-title-name {
     color: var(--sf-blue-dark);
@@ -404,4 +392,176 @@
     background: #143a1c !important;
     color: #82d989 !important;
     border-color: #1f5a2a !important;
+}
+
+/* ===================================================================
+   Diagrama del journey (journey-canvas.js)
+   Los iconos traen su propio color de categoría; aquí solo van líneas,
+   textos y contenedor, con sus variantes de modo oscuro.
+   =================================================================== */
+:root {
+    --jc-line: #c9d6e6;
+    --jc-canvas-bg: #f7f9fc;
+}
+:root[data-theme="dark"] {
+    --jc-line: #4a5668;
+    --jc-canvas-bg: var(--sf-bg);
+}
+
+.ja-canvas-section {
+    border: 1px solid var(--sf-border);
+    border-radius: var(--sf-radius-lg);
+    background: var(--sf-surface);
+    overflow: hidden;
+}
+
+.ja-canvas-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--sf-border);
+    background: var(--sf-bg-alt);
+    flex-wrap: wrap;
+}
+.ja-canvas-hint {
+    font-size: 0.78rem;
+    color: var(--sf-text-muted);
+}
+.ja-canvas-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+.ja-canvas-zoom-label {
+    min-width: 42px;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--sf-text-soft);
+}
+
+/* Contenedor con scroll; el lienzo se escala dentro con transform. */
+.ja-canvas-viewport {
+    position: relative;
+    overflow: auto;
+    max-height: 560px;
+    min-height: 160px;
+    background-color: var(--jc-canvas-bg);
+    cursor: grab;
+    user-select: none;
+}
+.ja-canvas-viewport.jc-panning { cursor: grabbing; }
+
+.jc-sizer { position: relative; }
+.jc-stage {
+    position: relative;
+    transform-origin: 0 0;
+}
+.jc-lines {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    overflow: visible;
+}
+.jc-edge {
+    fill: none;
+    stroke: var(--jc-line);
+    stroke-width: 2;
+}
+.jc-edge-active {
+    stroke: var(--sf-blue);
+    stroke-width: 2.5;
+}
+.jc-arrow { fill: none; stroke: var(--jc-line); stroke-width: 1.6; }
+.jc-arrow-active { stroke: var(--sf-blue); }
+
+.jc-node {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 0 8px;
+    box-sizing: border-box;
+}
+.jc-node[data-key] { cursor: pointer; }
+.jc-icon {
+    display: block;
+    border-radius: 12px;
+    transition: box-shadow 0.15s, transform 0.15s;
+}
+/* En oscuro, halo que sigue la silueta (también en los rombos) para que los iconos
+   azul marino de Einstein no se pierdan sobre el fondo. */
+:root[data-theme="dark"] .jc-icon { filter: drop-shadow(0 0 1.5px rgba(255, 255, 255, 0.35)); }
+.jc-node[data-key]:hover .jc-icon { transform: scale(1.06); }
+.jc-node.jc-selected .jc-icon { box-shadow: 0 0 0 3px var(--sf-surface), 0 0 0 6px var(--sf-blue); }
+
+/* Nombre y subtítulo van en un bloque con el fondo del lienzo: las líneas de las ramas
+   pasan por debajo del texto en vez de tacharlo, como en Journey Builder. */
+.jc-text {
+    margin-top: 4px;
+    padding: 2px 3px;
+    max-width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: var(--jc-canvas-bg);
+    position: relative;
+}
+.jc-name {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--sf-text);
+    max-width: 100%;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    word-break: break-word;
+}
+.jc-sub {
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--sf-text-muted);
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.jc-end .jc-name { font-weight: 400; color: var(--sf-text-muted); }
+
+.jc-edge-label {
+    position: absolute;
+    font-size: 11px;
+    line-height: 16px;
+    padding: 0 6px;
+    border-radius: 8px;
+    background: var(--sf-surface);
+    border: 1px solid var(--jc-line);
+    color: var(--sf-text-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
+}
+
+.jc-empty {
+    padding: 20px;
+    color: var(--sf-text-muted);
+    text-align: center;
+}
+
+/* Aviso "Mostrando solo..." cuando se pulsa una actividad del diagrama. */
+.ja-focus-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+    margin-right: 15px;
+    font-size: 0.85rem;
+    color: var(--sf-text-soft);
 }

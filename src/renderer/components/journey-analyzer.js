@@ -5,11 +5,14 @@ import elements from '../ui/dom-elements.js';
 import * as logger from '../ui/logger.js';
 import { loadCustomFonts } from '../ui/fonts.js';
 import { escapeHtml } from '../ui/format-utils.js';
+import * as journeyCanvas from './journey-canvas.js';
 
 let goBackFunction;
 let getAuthenticatedConfig;
 let currentJourneyDetails = null;
 let selectedActivityTypes = new Set();
+// Actividad pulsada en el diagrama: mientras exista, la lista solo muestra esa actividad.
+let focusedActivityKey = null;
 
 // CACHÉs: Evita llamadas repetidas a la API por el mismo campo/tabla
 const fieldCache = new Map(); 
@@ -18,6 +21,7 @@ const sendClassificationCache = new Map();
 const listCache = new Map();
 const automationCache = new Map();
 const templateCache = new Map();
+const eventDefinitionCache = new Map();
 
 const ACTIVITY_TYPE_MAP = {
     'EMAILV2': '[EMAIL]', 'SMS': '[SMS]', 'MOBILEPUSH': '[PUSH]', 'PUSHNOTIFICATIONACTIVITY': '[PUSH]',
@@ -71,6 +75,9 @@ export function init(dependencies) {
     });
 
     elements.journeyAnalyzerActivitiesContainer.addEventListener('click', ui.handleExternalLink);
+
+    journeyCanvas.init();
+    if (elements.analyzerShowAllActivitiesBtn) elements.analyzerShowAllActivitiesBtn.addEventListener('click', clearActivityFocus);
 }
 
 export async function view(journeyDetails) {
@@ -95,15 +102,19 @@ export async function view(journeyDetails) {
         // 2. Renderizar Goals y Exits
         renderGlobalSettings(journeyDetails);
         
-        // 3. Flujo y actividades
-        const flowResult = generateFlow(journeyDetails); 
-        elements.journeyAnalyzerFlowWrapper.innerHTML = createCollapsibleHtml(
-            "Flujo Lógico del Journey", 
-            `<pre class="ja-flow-pre">${flowResult.text}</pre>`,
-            "flow-logic",
-            false
-        );
+        // 3. Flujo (diagrama) y actividades. El flujo en texto solo se calcula para el PDF/Word
+        // y para numerar las actividades igual en el diagrama y en la lista.
+        const flowResult = generateFlow(journeyDetails);
         renderActivities(journeyDetails.activities, flowResult.numberMap);
+
+        hideActivityFocus();
+        // El desplegable del diagrama es fijo en la vista: se reabre en cada análisis por si se cerró en el anterior.
+        setCollapsibleState(elements.journeyAnalyzerFlowWrapper.querySelector('.analyzer-collapsible'), true);
+        journeyCanvas.render(journeyDetails, {
+            numberMap: flowResult.numberMap,
+            getTypeLabel: getActivityTypeLabel,
+            onSelect: focusActivity
+        });
 
         applyActivityFilter();
 
@@ -650,6 +661,7 @@ function renderActivities(activities, numberMap) {
         const wrapper = document.createElement('div');
         wrapper.className = 'analyzer-activity-block'; // Clase para localizarlos
         wrapper.dataset.type = act.type;             // Atributo para filtrar
+        wrapper.dataset.key = act.key;               // Enlaza el bloque con su nodo del diagrama
         wrapper.innerHTML = createCollapsibleHtml(`#${logicNumber} - [${act.type}] ${act.name}`, innerContent, `act-${act.key}`, false);
         container.appendChild(wrapper);
     });
@@ -921,9 +933,15 @@ async function resolveEntrySource(journey, apiConfig) {
     let eventDef = null;
 
     if (eventDefId) {
-        try {
-            eventDef = await mcApiService.getEventDefinitionById(eventDefId, apiConfig);
-        } catch (e) { console.error("Error EventDefinition:", e); }
+        // Orden: la que viene con el journey (caché de journeys), la ya resuelta en esta sesión y, si no, la API.
+        const stored = journey.eventDefinition?.id === eventDefId ? journey.eventDefinition : null;
+        eventDef = stored || eventDefinitionCache.get(eventDefId) || null;
+        if (!eventDef) {
+            try {
+                eventDef = await mcApiService.getEventDefinitionById(eventDefId, apiConfig);
+            } catch (e) { console.error("Error EventDefinition:", e); }
+        }
+        if (eventDef) eventDefinitionCache.set(eventDefId, eventDef);
     }
 
     journey.entryDetails = {
@@ -938,6 +956,11 @@ async function resolveEntrySource(journey, apiConfig) {
         ...(eventDef?.arguments || {})
     };
 
+    // El Event Definition ya trae el nombre de su DE de entrada: se aprovecha para no pedirlo a la API.
+    if (eventDef?.dataExtensionId && eventDef.dataExtensionName && !deCache.has(eventDef.dataExtensionId)) {
+        deCache.set(eventDef.dataExtensionId, eventDef.dataExtensionName);
+    }
+
     if (trigger.type === 'EmailAudience') {
         const deId = config.dataExtensionId || config.dataExtensionObjectID;
         if (deId) {
@@ -947,6 +970,7 @@ async function resolveEntrySource(journey, apiConfig) {
                 deCache.set(deId, deName);
             }
             journey.entryDetails.summary = `<b>Data Extension:</b><br>${deCache.get(deId)}`;
+            journey.entryDetails.canvasLabel = deCache.get(deId);
         }
     } 
     else if (trigger.type === 'AutomationAudience') {
@@ -970,7 +994,8 @@ async function resolveEntrySource(journey, apiConfig) {
 
         const nameAuto = automationCache.get(autoId) || "No detectado";
         const nameDe = deCache.get(deId) || "No detectada";
-        
+        journey.entryDetails.canvasLabel = deCache.get(deId) || nameAuto;
+
         journey.entryDetails.summary = `
             <div><b>Automatismo:</b> ${nameAuto}</div>
             <div><b>DE Entrada:</b> ${nameDe}</div>
@@ -979,6 +1004,7 @@ async function resolveEntrySource(journey, apiConfig) {
     else if (trigger.type === 'APIEvent') {
         const eventKey = eventDef?.eventDefinitionKey || trigger.metaData?.eventDefinitionKey || config.eventDefinitionKey;
         journey.entryDetails.summary = `<b>Event Key:</b><br>${eventKey || '---'}`;
+        journey.entryDetails.canvasLabel = eventKey;
     }
     else if (trigger.type === 'SalesforceObjectTriggerV2' || trigger.type === 'SalesforceObjectTrigger') {
         const ca = eventDef?.configurationArguments || {};
@@ -989,8 +1015,9 @@ async function resolveEntrySource(journey, apiConfig) {
             ? ca.eventDataSummary.split(';').map(f => f.trim()).filter(f => f).join(', ') 
             : '---';
 
+        journey.entryDetails.canvasLabel = ca.objectAPIName || eventDef?.dataExtensionName;
         journey.entryDetails.summary = `
-            <div><b>Data Extension:</b> ${eventDef?.dataExtensionName || '---'}</div>    
+            <div><b>Data Extension:</b> ${eventDef?.dataExtensionName || '---'}</div>
             <div><b>Objeto:</b> ${ca.objectAPIName || '---'}</div>
             <div><b>Criterio:</b> ${ca.salesforceTriggerCriteria || '---'}</div>
             <div><b>¿A quién enviar?:</b> ${schema.sendableCustomObjectField || '---'} (${ca.contactPersonType || '---'})</div>            
@@ -1479,21 +1506,21 @@ function generatePDF() {
 
 
 function bulkToggle(expand) {
-    const collapsibles = document.querySelectorAll('.analyzer-collapsible');
-    collapsibles.forEach(container => {
-        const content = container.querySelector('.analyzer-collapsible-content');
-        const icon = container.querySelector('.analyzer-icon');
-        
-        if (expand) {
-            container.classList.add('active');
-            content.style.maxHeight = "none";
-            icon.textContent = '▼';
-        } else {
-            container.classList.remove('active');
-            content.style.maxHeight = "0";
-            icon.textContent = '▶';
-        }
-    });
+    document.querySelectorAll('.analyzer-collapsible').forEach(container => setCollapsibleState(container, expand));
+}
+
+/**
+ * Abre o cierra un desplegable del analizador (.analyzer-collapsible).
+ * @param {HTMLElement|null} container - Contenedor del desplegable.
+ * @param {boolean} expand - true para abrirlo, false para cerrarlo.
+ */
+function setCollapsibleState(container, expand) {
+    if (!container) return;
+    const content = container.querySelector('.analyzer-collapsible-content');
+    const icon = container.querySelector('.analyzer-icon');
+    container.classList.toggle('active', expand);
+    content.style.maxHeight = expand ? "none" : "0";
+    icon.textContent = expand ? '▼' : '▶';
 }
 
 function createCollapsibleHtml(title, content, id, isExpanded = false) {
@@ -1862,7 +1889,8 @@ function buildActivityTypeFilter(activities) {
             if (cb.checked) selectedActivityTypes.add(type);
             else selectedActivityTypes.delete(type);
             updateActivityTypeDropdownLabel();
-            applyActivityFilter(); // Solo oculta/muestra, mucho más seguro y rápido
+            // Cambiar el filtro por tipo anula la selección hecha desde el diagrama.
+            clearActivityFocus();
         });
         lbl.appendChild(cb);
         lbl.appendChild(document.createTextNode(`${friendlyName} ${type}`));
@@ -1901,8 +1929,63 @@ function applyActivityFilter() {
     const blocks = document.querySelectorAll('.analyzer-activity-block');
     blocks.forEach(block => {
         const type = block.dataset.type;
-        // Si no hay nada seleccionado o el tipo está en el Set, se muestra
-        const isVisible = selectedActivityTypes.size === 0 || selectedActivityTypes.has(type);
+        // La actividad pulsada en el diagrama manda sobre el filtro por tipo.
+        const isVisible = focusedActivityKey
+            ? block.dataset.key === focusedActivityKey
+            : selectedActivityTypes.size === 0 || selectedActivityTypes.has(type);
         block.style.display = isVisible ? 'block' : 'none';
     });
+}
+
+/**
+ * Devuelve el nombre legible de un tipo de actividad para el diagrama (sin corchetes).
+ * @param {string} type - Tipo técnico de la actividad (EMAILV2, WAIT...).
+ * @returns {string}
+ */
+function getActivityTypeLabel(type) {
+    return (ACTIVITY_TYPE_MAP[type] || type || '').replace(/^\[|\]$/g, '');
+}
+
+/**
+ * Muestra en la lista solo la actividad pulsada en el diagrama, la despliega y se desplaza hasta ella.
+ * @param {string} key - Key de la actividad.
+ */
+function focusActivity(key) {
+    const block = elements.journeyAnalyzerActivitiesContainer
+        .querySelector(`.analyzer-activity-block[data-key="${CSS.escape(key)}"]`);
+    if (!block) return;
+
+    focusedActivityKey = key;
+    applyActivityFilter();
+
+    const collapsible = block.querySelector('.analyzer-collapsible');
+    if (collapsible && !collapsible.classList.contains('active')) {
+        collapsible.querySelector('.analyzer-collapsible-header')?.click();
+    }
+
+    const act = currentJourneyDetails?.activities?.find(a => a.key === key);
+    const number = currentJourneyDetails?.numberMap?.get(key);
+    elements.analyzerFocusLabel.textContent = `Mostrando solo: ${number ? `#${number} ` : ''}${act?.name || getActivityTypeLabel(act?.type)}`;
+    elements.analyzerFocusBar.classList.remove('hidden');
+
+    block.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/**
+ * Quita la selección del diagrama y vuelve a mostrar las actividades según el filtro por tipo.
+ * No recibe parámetros.
+ */
+function clearActivityFocus() {
+    hideActivityFocus();
+    journeyCanvas.setSelected(null);
+    applyActivityFilter();
+}
+
+/**
+ * Oculta el aviso de actividad seleccionada y olvida la selección (sin repintar nada).
+ * No recibe parámetros.
+ */
+function hideActivityFocus() {
+    focusedActivityKey = null;
+    elements.analyzerFocusBar?.classList.add('hidden');
 }

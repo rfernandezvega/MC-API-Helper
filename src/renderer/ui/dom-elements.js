@@ -36,6 +36,7 @@ export function init() {
 
     // --- 2. Navegación y Barras Laterales ---
     elements.mainMenu = document.getElementById('main-menu');
+    elements.changelogList = document.getElementById('changelog-list');
     elements.allSections = document.querySelectorAll('#main-content > .section');
     elements.clientSelectorBtn = document.getElementById('clientSelectorBtn');
     elements.clientSelectorLabel = document.getElementById('clientSelectorLabel');
@@ -50,6 +51,7 @@ export function init() {
     elements.logDrawer = document.getElementById('log-sidebar');
     elements.logDrawerBackdrop = document.getElementById('log-drawer-backdrop');
     elements.logHeaderTitle = document.getElementById('log-header-title');
+    elements.downloadLogBtn = document.getElementById('downloadLogBtn');
     elements.logMessagesEl = document.getElementById('log-messages');
     elements.logTranscriptEl = document.getElementById('log-transcript');
 
@@ -125,24 +127,23 @@ export function init() {
     elements.searchDEBtn = document.getElementById('searchDEBtn');
     elements.deSearchResultsTbody = document.querySelector('#de-search-results-tbody');
     elements.deSearchResultsTitle = document.getElementById('de-search-results-title');
-    elements.deToSourcesBtn = document.getElementById('deToSourcesBtn');
+    elements.deUsageBtn = document.getElementById('deUsageBtn');
     elements.downloadDeSearchCsvBtn = document.getElementById('downloadDeSearchCsvBtn');
     elements.deSharedToggle = document.getElementById('deSharedToggle');
 
-    // --- 8b. Pestaña: Origen de Datos ---
-    elements.deNameToFindInput = document.getElementById('deNameToFind');
-    elements.findDataSourcesBtn = document.getElementById('findDataSourcesBtn');
-    elements.dataSourcesTbody = document.getElementById('data-sources-tbody');
-    elements.dataSourcesResultsTitle = document.getElementById('data-sources-results-title');
-    elements.dataSourcesTable = document.getElementById('data-sources-table');
+    // --- 8b. Usos de la DE seleccionada (dentro de la pestaña Data Extensions) ---
+    elements.deUsagePanel = document.getElementById('deUsagePanel');
+    elements.deUsageTitle = document.getElementById('deUsageTitle');
+    elements.deUsageTabs = document.getElementById('deUsageTabs');
+    elements.deUsageCacheBar = document.getElementById('deUsageCacheBar');
+    elements.deUsageContent = document.getElementById('deUsageContent');
+    elements.downloadDeUsageCsvBtn = document.getElementById('downloadDeUsageCsvBtn');
+
+    // --- 8c. Pestaña: Clientes ---
     elements.deSelectionBlock = document.getElementById('de-selection-block');
     elements.deSelectionTable = document.getElementById('de-selection-table');
     elements.selectAllDEsCheckbox = document.getElementById('selectAllDEsCheckbox');
     elements.searchSelectedDEsBtn = document.getElementById('searchSelectedDEsBtn');
-    elements.showSourceQueryBtn = document.getElementById('showSourceQueryBtn');
-    elements.downloadDataSourcesCsvBtn = document.getElementById('downloadDataSourcesCsvBtn');
-
-    // --- 8c. Pestaña: Clientes ---
     elements.customerSearchValue = document.getElementById('customerSearchValue');
     elements.searchCustomerBtn = document.getElementById('searchCustomerBtn');
     elements.customerSearchTbody = document.getElementById('customer-search-tbody');
@@ -516,6 +517,15 @@ export function init() {
     elements.analyzerActivityTypeFilterLabel = document.getElementById('analyzerActivityTypeFilterLabel');
     elements.analyzerActivityTypeFilterMenu = document.getElementById('analyzerActivityTypeFilterMenu');
     elements.analyzerActivityTypeCheckboxList = document.getElementById('analyzerActivityTypeCheckboxList');
+    elements.analyzerFocusBar = document.getElementById('analyzerFocusBar');
+    elements.analyzerFocusLabel = document.getElementById('analyzerFocusLabel');
+    elements.analyzerShowAllActivitiesBtn = document.getElementById('analyzerShowAllActivitiesBtn');
+    elements.jaCanvasViewport = document.getElementById('jaCanvasViewport');
+    elements.jaCanvasZoomInBtn = document.getElementById('jaCanvasZoomInBtn');
+    elements.jaCanvasZoomOutBtn = document.getElementById('jaCanvasZoomOutBtn');
+    elements.jaCanvasZoomLabel = document.getElementById('jaCanvasZoomLabel');
+    elements.jaCanvasFitBtn = document.getElementById('jaCanvasFitBtn');
+    elements.jaCanvasDownloadBtn = document.getElementById('jaCanvasDownloadBtn');
 
     // --- 26. USUARIOS Y PERMISOS ---
     elements.usersTbody = document.getElementById('users-tbody');

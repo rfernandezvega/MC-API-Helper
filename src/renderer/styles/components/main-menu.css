@@ -101,6 +101,14 @@
     color: #7fc9f5;
 }
 
+/* Resumen de novedades/mejoras/fixes junto a la versión; reutiliza los colores de .changelog-tag. */
+.changelog-summary {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.changelog-summary .changelog-tag { margin-right: 0; }
+
 .changelog-date {
     color: var(--sf-text-muted);
     font-weight: 400;

@@ -455,13 +455,6 @@ body {
   border-bottom: none;
 }
 
-#log-header-title {
-  cursor: pointer;
-  transition: color 0.2s;
-}
-#log-header-title:hover {
-  color: var(--sf-blue-dark);
-}
 /* Pestaña para cerrar el drawer (centrada arriba) */
 .log-close-tab {
   position: absolute;
