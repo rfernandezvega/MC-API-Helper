@@ -127,24 +127,23 @@ export function init() {
     elements.searchDEBtn = document.getElementById('searchDEBtn');
     elements.deSearchResultsTbody = document.querySelector('#de-search-results-tbody');
     elements.deSearchResultsTitle = document.getElementById('de-search-results-title');
-    elements.deToSourcesBtn = document.getElementById('deToSourcesBtn');
+    elements.deUsageBtn = document.getElementById('deUsageBtn');
     elements.downloadDeSearchCsvBtn = document.getElementById('downloadDeSearchCsvBtn');
     elements.deSharedToggle = document.getElementById('deSharedToggle');
 
-    // --- 8b. Pestaña: Origen de Datos ---
-    elements.deNameToFindInput = document.getElementById('deNameToFind');
-    elements.findDataSourcesBtn = document.getElementById('findDataSourcesBtn');
-    elements.dataSourcesTbody = document.getElementById('data-sources-tbody');
-    elements.dataSourcesResultsTitle = document.getElementById('data-sources-results-title');
-    elements.dataSourcesTable = document.getElementById('data-sources-table');
+    // --- 8b. Usos de la DE seleccionada (dentro de la pestaña Data Extensions) ---
+    elements.deUsagePanel = document.getElementById('deUsagePanel');
+    elements.deUsageTitle = document.getElementById('deUsageTitle');
+    elements.deUsageTabs = document.getElementById('deUsageTabs');
+    elements.deUsageCacheBar = document.getElementById('deUsageCacheBar');
+    elements.deUsageContent = document.getElementById('deUsageContent');
+    elements.downloadDeUsageCsvBtn = document.getElementById('downloadDeUsageCsvBtn');
+
+    // --- 8c. Pestaña: Clientes ---
     elements.deSelectionBlock = document.getElementById('de-selection-block');
     elements.deSelectionTable = document.getElementById('de-selection-table');
     elements.selectAllDEsCheckbox = document.getElementById('selectAllDEsCheckbox');
     elements.searchSelectedDEsBtn = document.getElementById('searchSelectedDEsBtn');
-    elements.showSourceQueryBtn = document.getElementById('showSourceQueryBtn');
-    elements.downloadDataSourcesCsvBtn = document.getElementById('downloadDataSourcesCsvBtn');
-
-    // --- 8c. Pestaña: Clientes ---
     elements.customerSearchValue = document.getElementById('customerSearchValue');
     elements.searchCustomerBtn = document.getElementById('searchCustomerBtn');
     elements.customerSearchTbody = document.getElementById('customer-search-tbody');

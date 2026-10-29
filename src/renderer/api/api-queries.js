@@ -11,12 +11,15 @@ import { findAutomationForActivity } from './api-activities.js'; // Importante p
  * (borradas de forma lógica en Marketing Cloud) no deben aparecer en los buscadores.
  * @param {object} filter - Filtros estructurados (property, simpleOperator, value).
  * @param {object} apiConfig - Configuración autenticada de la API.
+ * @param {object} [options]
+ * @param {boolean} [options.resolveAutomations=true] - Si es false no se busca el automatismo de
+ *   cada query; sirve cuando el llamador criba antes los resultados y solo resuelve los que se quedan.
  * @returns {Promise<Array>} Lista de Query Definitions activas y sus automatismos asociados.
  */
-export async function searchQueriesBySimpleFilter({ property, simpleOperator, value }, apiConfig) {
+export async function searchQueriesBySimpleFilter({ property, simpleOperator, value }, apiConfig, { resolveAutomations = true } = {}) {
     const filterValue = simpleOperator === 'like' ? `%${value}%` : value;
     const filterXml = `<Filter xsi:type="ComplexFilterPart"><LeftOperand xsi:type="SimpleFilterPart"><Property>${property}</Property><SimpleOperator>${simpleOperator}</SimpleOperator><Value>${filterValue}</Value></LeftOperand><LogicalOperator>AND</LogicalOperator><RightOperand xsi:type="SimpleFilterPart"><Property>Status</Property><SimpleOperator>equals</SimpleOperator><Value>Active</Value></RightOperand></Filter>`;
-    return findQueriesByFilter(filterXml, apiConfig);
+    return findQueriesByFilter(filterXml, apiConfig, resolveAutomations);
 }
 
 /**
@@ -24,9 +27,10 @@ export async function searchQueriesBySimpleFilter({ property, simpleOperator, va
  * Descarta las queries que no estén activas antes de resolver sus automatismos.
  * @param {string} filterXml - Estructura XML del tag Filter de Marketing Cloud.
  * @param {object} apiConfig - Configuración autenticada de la API.
+ * @param {boolean} [resolveAutomations=true] - Si es false se devuelven sin la lista de automatismos.
  * @returns {Promise<Array>} Arreglo de queries extraídas.
  */
-async function findQueriesByFilter(filterXml, apiConfig) {
+async function findQueriesByFilter(filterXml, apiConfig, resolveAutomations = true) {
     const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>QueryDefinition</ObjectType><Properties>Name</Properties><Properties>QueryText</Properties><Properties>TargetUpdateType</Properties><Properties>ObjectID</Properties><Properties>Status</Properties>${filterXml}</RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
 
     const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
@@ -41,6 +45,8 @@ async function findQueriesByFilter(filterXml, apiConfig) {
     // Segundo filtro en cliente: si el Retrieve no trae Status se asume activa, pero
     // cualquier Inactive explícito se descarta para no gastar llamadas de automatismos.
     })).filter(q => q.status.toLowerCase() !== 'inactive');
+
+    if (!resolveAutomations) return queries;
 
     // Enriquecer cada query con la lista de automatizaciones donde se usa
     const queriesWithAutomations = await Promise.all(queries.map(async (q) => {

@@ -433,9 +433,12 @@ export async function getDataExtensionDetailsByName(deName, apiConfig) {
  * Recupera todas las actividades "Import Definition" cuyo destino sea el ObjectID proporcionado de una DE.
  * @param {string} deObjectId - El ObjectID de la Data Extension destino.
  * @param {object} apiConfig - Configuración autenticada de la API.
+ * @param {object} [options]
+ * @param {boolean} [options.resolveAutomations=true] - Si es false no se busca el automatismo de cada import
+ *   (el llamador ya lo resuelve, p. ej. con la caché de automatismos).
  * @returns {Promise<Array>} Arreglo con la info de la importación y los automatismos que la utilizan.
  */
-export async function findImportsTargetingDE(deObjectId, apiConfig) {
+export async function findImportsTargetingDE(deObjectId, apiConfig, { resolveAutomations = true } = {}) {
     const soapPayload = `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">Retrieve</a:Action><a:To s:mustUnderstand="1">${apiConfig.soapUri}</a:To><fueloauth xmlns="http://exacttarget.com">${apiConfig.accessToken}</fueloauth></s:Header><s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI"><RetrieveRequest><ObjectType>ImportDefinition</ObjectType><Properties>Name</Properties><Properties>Description</Properties><Properties>ObjectID</Properties><Filter xsi:type="SimpleFilterPart"><Property>DestinationObject.ObjectID</Property><SimpleOperator>equals</SimpleOperator><Value>${deObjectId}</Value></Filter></RetrieveRequest></RetrieveRequestMsg></s:Body></s:Envelope>`;
     
     const responseText = await executeSoapRequest(apiConfig.soapUri, soapPayload);
@@ -443,8 +446,10 @@ export async function findImportsTargetingDE(deObjectId, apiConfig) {
         name: node.querySelector("Name")?.textContent || 'N/A',
         type: 'Import',
         description: node.querySelector("Description")?.textContent || '---',
-        objectID: node.querySelector("ObjectID")?.textContent 
+        objectID: node.querySelector("ObjectID")?.textContent
     }));
+
+    if (!resolveAutomations) return importDefinitions;
 
     const importsWithAutomations = await Promise.all(importDefinitions.map(async (imp) => {
         const automations = await findAutomationForActivity(imp.objectID, apiConfig);

@@ -151,3 +151,95 @@
 .finder-content-detail-title {
     color: var(--sf-blue-dark);
 }
+
+/* ===================================================================
+   Usos de una Data Extension (de-usage.js), dentro de la pestaña
+   Data Extensions. Las pestañas usan su propia clase (.de-usage-tab) y no
+   .tab-button, que gestiona de forma global app.js.
+   =================================================================== */
+.de-usage-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    border-bottom: 2px solid var(--sf-blue);
+    margin-bottom: 10px;
+}
+.de-usage-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid var(--sf-border);
+    border-bottom: none;
+    border-radius: var(--sf-radius) var(--sf-radius) 0 0;
+    background-color: var(--sf-bg-alt);
+    color: var(--sf-text-soft);
+    font-size: 0.88em;
+    font-weight: 600;
+    cursor: pointer;
+}
+.de-usage-tab:hover { background-color: var(--sf-hover); }
+.de-usage-tab.active {
+    background-color: var(--sf-blue);
+    border-color: var(--sf-blue);
+    color: #fff;
+}
+.de-usage-count {
+    min-width: 18px;
+    padding: 0 7px;
+    border-radius: 9px;
+    background-color: var(--sf-surface);
+    color: var(--sf-text-soft);
+    font-size: 0.85em;
+    text-align: center;
+}
+.de-usage-tab.active .de-usage-count {
+    background-color: rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+.de-usage-count.de-usage-count-error {
+    background-color: var(--sf-red);
+    color: #fff;
+}
+/* Una actividad puede estar en varios automatismos: uno por línea. */
+.de-usage-multiline { white-space: pre-line; }
+.de-usage-empty {
+    margin: 0;
+    padding: 12px 0;
+    color: var(--sf-text-muted);
+}
+/* Aviso de resultados incompletos (falló una de las búsquedas de la pestaña). */
+.de-usage-warning {
+    margin: 0 0 8px 0;
+    padding: 6px 10px;
+    border-left: 3px solid var(--sf-orange);
+    background-color: var(--sf-bg-alt);
+    color: var(--sf-text-soft);
+    font-size: 0.85em;
+}
+/* Nota de origen de los datos (p. ej. "según la caché del..."). */
+.de-usage-note {
+    margin: 0 0 8px 0;
+    color: var(--sf-text-muted);
+    font-size: 0.82em;
+    font-style: italic;
+}
+/* Barra con la fecha de las cachés de automatismos y journeys y sus botones. */
+.de-usage-cache-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin-bottom: 12px;
+    font-size: 0.85em;
+    color: var(--sf-text-soft);
+}
+.de-usage-cache-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+/* Misma altura máxima que la tabla de resultados del buscador, para que ambas quepan. */
+#deUsageContent .table-container {
+    max-height: 45vh;
+    overflow-y: auto;
+}

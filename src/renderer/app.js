@@ -26,7 +26,6 @@ import * as journeysManager from './components/journeys-manager.js';       // L�
 import * as cloudPagesManager from './components/cloud-pages-manager.js';    // Lógica de la vista "Gestión de Cloud Pages".
 import * as queryCloner from './components/query-cloner.js';           // Lógica del clonador masivo de queries.
 import * as deFinder from './components/de-finder.js';               // Lógica del buscador de Data Extensions.
-import * as dataSourceFinder from './components/data-source-finder.js';  // Lógica del buscador de orígenes de datos.
 import * as queryTextFinder from './components/query-text-finder.js';      // Lógica del buscador de texto en queries.
 import * as contentFinder from './components/content-finder.js';  			// Lógica del buscador de contenidos
 import * as customerFinder from './components/customer-finder.js';         // Lógica del buscador de clientes/suscriptores.
@@ -621,7 +620,6 @@ document.addEventListener('DOMContentLoaded', function () {
 		cloudPagesManager.init({ getAuthenticatedConfig });
 		queryCloner.init({ getAuthenticatedConfig });
 		deFinder.init({ getAuthenticatedConfig }); 
-		dataSourceFinder.init({ getAuthenticatedConfig });
 		queryTextFinder.init({ getAuthenticatedConfig });
 		scriptTextFinder.init({ getAuthenticatedConfig });
 		customerFinder.init({ getAuthenticatedConfig });

@@ -459,9 +459,10 @@ async function retrieveActivitiesInSoap(soapType, label, keyPropertyName, values
 /**
  * Realiza una búsqueda profunda cargando todo el código SSJS de todos los scripts y haciendo
  * un barrido string.includes() masivo en la máquina para encontrar un trozo de código o variable concreta.
- * @param {string} searchText - Fragmento literal de código SSJS a localizar.
+ * @param {string|Array<string>} searchText - Fragmento literal de código SSJS a localizar, o varios:
+ *   basta con que el script contenga uno (así varios términos se resuelven en un solo recorrido).
  * @param {object} apiConfig - Configuración autenticada de la API.
- * @returns {Promise<Array>} Lista de todos los Scripts que en su código alojan dicho string.
+ * @returns {Promise<Array>} Lista de todos los Scripts que en su código alojan dicho string, con su código en `script`.
  */
 export async function searchScriptsByText(searchText, apiConfig) {
     let page = 1;
@@ -469,7 +470,9 @@ export async function searchScriptsByText(searchText, apiConfig) {
     let allProcessed = 0;
     let lastPageCount = 0;
     const results = [];
-    const term = searchText.toLowerCase();
+    const terms = (Array.isArray(searchText) ? searchText : [searchText])
+        .map(t => String(t || '').toLowerCase())
+        .filter(Boolean);
 
     try {
         do {
@@ -483,8 +486,12 @@ export async function searchScriptsByText(searchText, apiConfig) {
             lastPageCount = items.length;
             allProcessed += items.length;
 
-            const matches = items.filter(s => s.script && s.script.toLowerCase().includes(term));
-            
+            const matches = items.filter(s => {
+                if (!s.script) return false;
+                const code = s.script.toLowerCase();
+                return terms.some(term => code.includes(term));
+            });
+
             matches.forEach(m => {
                 if (m.ssjsActivityId) {
                     results.push({
@@ -492,7 +499,8 @@ export async function searchScriptsByText(searchText, apiConfig) {
                         customerKey: m.key,
                         name: m.name,
                         soapType: 'ScriptActivity',
-                        typeLabel: 'Script'
+                        typeLabel: 'Script',
+                        script: m.script
                     });
                 }
             });

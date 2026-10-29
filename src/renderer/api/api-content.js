@@ -4,6 +4,9 @@
 import { executeRestRequest, logger, setSilentResponses } from './api-core.js';
 import { resolveFolderPaths } from './api-helpers.js';
 
+// Tipos de asset que la app trata como Cloud Pages (landing pages, code resources...).
+export const CLOUDPAGE_ASSET_TYPE_IDS = [205, 240, 241, 242, 243, 244, 245, 247, 248, 249];
+
 /** Formatea una duración en segundos a un texto de estimación (~X s / ~X min / ~X h). */
 function etaFromSeconds(seconds) {
     if (!isFinite(seconds) || seconds < 0) return '';
@@ -32,11 +35,11 @@ export async function fetchAllCloudPages(apiConfig) {
         "query": {
             "property": "assetType.id",
             "simpleOperator": "in",
-            "values": [205, 240, 241, 242, 243, 244, 245, 247, 248, 249]
+            "values": CLOUDPAGE_ASSET_TYPE_IDS
         },
         "sort": [{ "property": "id", "direction": "ASC" }],
         "fields": [
-            "id", "name", "assetType", "modifiedDate", "category", 
+            "id", "name", "assetType", "modifiedDate", "category",
             "content", "meta", "views", "memberId", "customerKey", 
             "status", "modifiedBy"
         ]
@@ -181,7 +184,7 @@ const NON_CONTENT_KEYS = new Set([
  * @param {object} item - Asset devuelto por la API.
  * @returns {string} Todo su texto concatenado, con comillas normalizadas y en minúsculas.
  */
-function collectSearchableText(item) {
+export function collectSearchableText(item) {
     const parts = [];
     const walk = (value) => {
         if (typeof value === 'string') parts.push(value);

@@ -91,6 +91,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadClientJourneys: (clientName) => ipcRenderer.invoke('load-client-journeys-from-file', clientName),
 
   /**
+   * Guarda la caché de automatismos (pasos, actividades y DEs destino) de un cliente+BU (carpeta ClientAutomations).
+   * @param {object} data - Un objeto con { clientName: string, automations: Array<object>, lastRefresh: string }.
+   * @returns {Promise<object>} Una promesa que resuelve con el resultado de la operación.
+   */
+  saveClientAutomations: (data) => ipcRenderer.invoke('save-client-automations-to-file', data),
+
+  /**
+   * Carga la caché de automatismos de un cliente+BU desde la carpeta ClientAutomations.
+   * @param {string} clientName - Clave de caché del contexto activo.
+   * @returns {Promise<object>} Una promesa que resuelve con { automations, lastRefresh } (nulos si no existe).
+   */
+  loadClientAutomations: (clientName) => ipcRenderer.invoke('load-client-automations-from-file', clientName),
+
+  /**
    * Guarda la lista enriquecida de Cloud Pages en un fichero de caché local.
    * @param {object} data - Un objeto con { clientName: string, cloudPagesData: Array<object> }.
    * @returns {Promise<object>}

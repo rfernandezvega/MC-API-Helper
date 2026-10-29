@@ -7,6 +7,7 @@ import { loadCustomFonts } from '../ui/fonts.js';
 import { escapeHtml } from '../ui/format-utils.js';
 import { highlightSQLHtml } from '../ui/sql-highlight.js';
 import { copyButtonHtml } from '../ui/copy-utils.js';
+import { updateAutomationInCache, buildActivityLocationIndex, findActivitiesTargetingDe } from './automations-cache.js';
 
 let getAuthenticatedConfig;
 let goBackFunction;
@@ -32,16 +33,41 @@ export function init(dependencies) {
     }
 }
 
+/**
+ * Muestra el análisis de impacto de un automatismo. Si existe caché de automatismos para la BU
+ * activa, primero actualiza en ella este automatismo (su detalle ya viene descargado, sin coste) y
+ * pregunta si usarla (sin llamadas) o consultar la API para tener datos actualizados.
+ * @param {object} automationDetails - Detalle REST del automatismo a analizar.
+ */
 export async function view(automationDetails) {
-    ui.blockUI("Preparando análisis de impacto...");
     elements.analyzerAutomationNameTitle.textContent = automationDetails.name;
     elements.automationAnalyzerStepsContainer.innerHTML = '';
 
+    const { cache, updated, saved } = await updateAutomationInCache(elements.clientNameInput?.value?.trim(), automationDetails);
+    let cacheToUse = null;
+    if (cache) {
+        // El loader del listado de automatismos taparía el modal de la pregunta.
+        ui.unblockUI();
+        const useCache = await ui.showCustomConfirmComplex(
+            `Hay una caché de automatismos del ${formatDate(cache.lastRefresh)}. ¿Usarla para ver en qué otros ` +
+            'automatismos están las actividades y quién más escribe en sus Data Extensions (sin llamadas a la API), ' +
+            'o consultar la API para tener los datos actualizados?',
+            'Usar caché', 'Consultar API');
+        if (useCache) cacheToUse = cache;
+    }
+
+    ui.blockUI("Preparando análisis de impacto...");
     logger.startLogBuffering();
-    mcApiService.setLogger(logger); 
+    mcApiService.setLogger(logger);
 
     try {
-        currentAutomationDetails = await enrichAutomationData(automationDetails);
+        if (updated) {
+            logger.logMessage(saved
+                ? `Caché de automatismos: actualizado "${automationDetails.name}" con su detalle actual.`
+                : `Caché de automatismos: no se pudo guardar la versión actual de "${automationDetails.name}".`);
+        }
+        if (cacheToUse) logger.logMessage(`Análisis de impacto con la caché de automatismos del ${formatDate(cacheToUse.lastRefresh)}.`);
+        currentAutomationDetails = await enrichAutomationData(automationDetails, cacheToUse);
         renderHeaderInfo(currentAutomationDetails);
         await renderAnalysis(currentAutomationDetails);
     } catch (error) {
@@ -61,14 +87,24 @@ function renderHeaderInfo(auto) {
                 <div><strong>Próxima Ejecución:</strong> ${formatDate(auto.scheduledTime)}</div>
             </div>
             <div class="ja-header-desc"><strong>Descripción:</strong> ${escapeHtml(auto.description) || 'Sin descripción'}</div>
+            ${auto.impactCacheDate ? `<div class="ja-header-desc"><em>Uso en otros automatismos e impacto en las DEs calculados con la caché de automatismos del ${escapeHtml(formatDate(auto.impactCacheDate))}.</em></div>` : ''}
         </div>
     `;
     elements.automationAnalyzerStepsContainer.insertAdjacentHTML('afterbegin', headerHtml);
 }
 
-async function enrichAutomationData(details) {
+/**
+ * Completa cada actividad del automatismo con su detalle, en qué otros automatismos está y quién más
+ * escribe en sus DEs. Con caché, esas dos últimas partes salen de ella; el resto se pide a la API.
+ * @param {object} details - Detalle REST del automatismo.
+ * @param {{automations: Array, lastRefresh: string}|null} cache - Caché de automatismos a usar, o null para la API.
+ * @returns {Promise<object>} El mismo detalle enriquecido.
+ */
+async function enrichAutomationData(details, cache = null) {
     const apiConfig = await getAuthenticatedConfig();
     mcApiService.setLogger(logger);
+    const cacheIndex = cache ? buildActivityLocationIndex(cache.automations) : null;
+    details.impactCacheDate = cache ? cache.lastRefresh : null;
 
     // El JSON de este automatismo ya está descargado, así que se registra en la caché de
     // detalles para que la búsqueda de usos de cada actividad no vuelva a pedirlo una vez
@@ -84,6 +120,9 @@ async function enrichAutomationData(details) {
     const getReverseImpactSources = async (deName, deObjectId, currentActName) => {
         const cacheKey = `${deObjectId}|${deName}`.toLowerCase();
 
+        if (!reverseImpactCache.has(cacheKey) && cache) {
+            reverseImpactCache.set(cacheKey, Promise.resolve(findSourcesInCache(cache.automations, deName, deObjectId)));
+        }
         if (!reverseImpactCache.has(cacheKey)) {
             reverseImpactCache.set(cacheKey, Promise.all([
                 mcApiService.findImportsTargetingDE(deObjectId, apiConfig),
@@ -110,8 +149,13 @@ async function enrichAutomationData(details) {
                 ui.blockUI(`Analizando: ${act.name}...`);
                 
                 // 1. Impacto de ejecución: ¿Dónde se usa esta actividad?
-                const usages = await mcApiService.findAutomationForActivity(act.activityObjectId, apiConfig);
-                act.otherUsages = usages.filter(u => u.automationName !== details.name);
+                const usages = cacheIndex
+                    ? (cacheIndex.get(String(act.activityObjectId || '').toLowerCase()) || [])
+                    : await mcApiService.findAutomationForActivity(act.activityObjectId, apiConfig);
+                // Se excluye el propio automatismo; por id solo si ambos lo traen.
+                const isSameAutomation = u => u.automationId && details.id &&
+                    String(u.automationId).toLowerCase() === String(details.id).toLowerCase();
+                act.otherUsages = usages.filter(u => u.automationName !== details.name && !isSameAutomation(u));
 
                 // --- ENRIQUECIMIENTO SEGÚN TIPO ---
                 
@@ -207,6 +251,27 @@ async function enrichAutomationData(details) {
         }
     }
     return details;
+}
+
+/**
+ * Equivalente con caché de la búsqueda de "quién más escribe en la DE": queries e imports de los
+ * automatismos cacheados cuyo destino es la DE, con el automatismo y paso donde están.
+ * @param {Array} automations - Automatismos de la caché.
+ * @param {string} deName - Nombre de la DE.
+ * @param {string} deObjectId - ObjectID de la DE.
+ * @returns {Array<{name: string, type: string, automations: Array}>} Mismo formato que la búsqueda en la API.
+ */
+function findSourcesInCache(automations, deName, deObjectId) {
+    const sources = new Map();
+    for (const { automation, step, activity } of findActivitiesTargetingDe(automations, { name: deName, objectID: deObjectId })) {
+        if (activity.objectTypeId !== 300 && activity.objectTypeId !== 43) continue;
+        const key = String(activity.activityObjectId || activity.id || activity.name).toLowerCase();
+        if (!sources.has(key)) {
+            sources.set(key, { name: activity.name, type: activity.objectTypeId === 300 ? 'Query' : 'Import', automations: [] });
+        }
+        sources.get(key).automations.push({ automationName: automation.name, step: step.step });
+    }
+    return [...sources.values()];
 }
 
 async function renderAnalysis(automation) {
