@@ -1153,6 +1153,15 @@
 							<li><b>Clonador</b>: para entrada <b>EmailAudience</b> pregunta si clonar la DE de entrada o reutilizar una existente; para <b>AutomationAudience</b> permite elegir la DE de destino del automatismo origen como fuente. En ambos casos se puede cambiar el nombre del nuevo journey.</li>
 							<li><b>Errores de Journeys</b>: muestra los errores de un journey en un rango de fechas, con filtros por journey, estado, actividad y tipo, y exportación a CSV.</li>
 						</ul>
+
+						<h4>Análisis de Journey: diagrama</h4>
+						<ul>
+							<li>El desplegable <b>Flujo Lógico del Journey</b> muestra el journey dibujado como en Journey Builder: cada actividad con su icono y color de categoría, su nombre y su número en la lista de actividades. Las ramas llevan su etiqueta (Yes/No, porcentaje, criterio) y las uniones se dibujan con la línea llegando a la actividad común.</li>
+							<li>Al hacer <b>clic en una actividad</b> se resalta junto con sus líneas, y la lista de actividades de abajo muestra solo esa, desplegada. <b>Ver todas</b> quita la selección; cambiar el filtro por tipo también la quita.</li>
+							<li>Zoom con los botones <b>-</b> / <b>+</b> o con <b>Ctrl + rueda</b>; <b>Ajustar</b> encaja el journey en el espacio visible y se puede mover arrastrando sobre una zona vacía.</li>
+							<li><b>Descargar imagen</b> guarda el diagrama completo en PNG, a tamaño real e independientemente del zoom.</li>
+							<li>El PDF y el Word siguen incluyendo el flujo lógico en formato texto, que encaja mejor en página vertical que la imagen.</li>
+						</ul>
 					</div>
 				</div>
 
@@ -1999,12 +2008,43 @@
         <!-- 2. Goals y Exits -->
         <div id="journeyAnalyzerGlobalWrapper" class="u-mb-20"></div>
 
-        <!-- 3. Flujo Lógico -->
-        <div id="journeyAnalyzerFlowWrapper" class="u-mb-20"></div>
+        <!-- 3. Flujo Lógico: diagrama del journey (estilo canvas de Journey Builder).
+             El flujo en texto ya no se muestra; solo se usa para el PDF y el Word. -->
+        <div id="journeyAnalyzerFlowWrapper" class="u-mb-20">
+            <div class="analyzer-collapsible active" id="container-flow-logic">
+                <div class="analyzer-collapsible-header">
+                    <span>Flujo Lógico del Journey</span>
+                    <span class="analyzer-icon">▼</span>
+                </div>
+                <div class="analyzer-collapsible-content" style="max-height: none;">
+                    <div class="ja-collapsible-inner">
+                        <div class="ja-canvas-section">
+                            <div class="ja-canvas-toolbar">
+                                <span class="ja-canvas-hint">Clic en una actividad para ver su detalle · Ctrl + rueda para zoom · arrastra para moverte</span>
+                                <div class="ja-canvas-actions">
+                                    <button id="jaCanvasZoomOutBtn" class="action-button secondary-btn small-text-btn" title="Alejar">-</button>
+                                    <span id="jaCanvasZoomLabel" class="ja-canvas-zoom-label">100%</span>
+                                    <button id="jaCanvasZoomInBtn" class="action-button secondary-btn small-text-btn" title="Acercar">+</button>
+                                    <button id="jaCanvasFitBtn" class="action-button secondary-btn small-text-btn" title="Ajustar el diagrama al espacio visible">Ajustar</button>
+                                    <button id="jaCanvasDownloadBtn" class="action-button download-btn small-text-btn">Descargar imagen</button>
+                                </div>
+                            </div>
+                            <div id="jaCanvasViewport" class="ja-canvas-viewport"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="ja-section-title-row">
             <div class="u-flex-center u-gap-10">
                 <span style="font-size: 1.2rem;">⚙️</span>
                 <h3>Actividades del Journey</h3>
+            </div>
+
+            <!-- Aviso de actividad seleccionada en el diagrama -->
+            <div id="analyzerFocusBar" class="ja-focus-bar hidden">
+                <span id="analyzerFocusLabel"></span>
+                <button id="analyzerShowAllActivitiesBtn" class="action-button secondary-btn small-text-btn">Ver todas</button>
             </div>
 
             <!-- Multipicklist de Filtrado -->
@@ -2270,6 +2310,7 @@
                 <ul class="changelog-items">
                     <li><span class="changelog-tag fix">Fix</span> Clonador de Automatismos: las queries clonadas usan por defecto la carpeta de la query original y ya no falla la clonación si no se elige carpeta.</li>
                     <li><span class="changelog-tag improved">Mejora</span> Log de Eventos: nuevo botón "Descargar" en la cabecera para bajar el log como fichero .txt.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Análisis de Journey: diagrama al estilo de Journey Builder con iconos, ramas y uniones; al pulsar una actividad se filtra su detalle en la lista y se puede descargar como imagen.</li>
                 </ul>
             </details>
 

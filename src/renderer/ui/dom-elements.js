@@ -518,6 +518,15 @@ export function init() {
     elements.analyzerActivityTypeFilterLabel = document.getElementById('analyzerActivityTypeFilterLabel');
     elements.analyzerActivityTypeFilterMenu = document.getElementById('analyzerActivityTypeFilterMenu');
     elements.analyzerActivityTypeCheckboxList = document.getElementById('analyzerActivityTypeCheckboxList');
+    elements.analyzerFocusBar = document.getElementById('analyzerFocusBar');
+    elements.analyzerFocusLabel = document.getElementById('analyzerFocusLabel');
+    elements.analyzerShowAllActivitiesBtn = document.getElementById('analyzerShowAllActivitiesBtn');
+    elements.jaCanvasViewport = document.getElementById('jaCanvasViewport');
+    elements.jaCanvasZoomInBtn = document.getElementById('jaCanvasZoomInBtn');
+    elements.jaCanvasZoomOutBtn = document.getElementById('jaCanvasZoomOutBtn');
+    elements.jaCanvasZoomLabel = document.getElementById('jaCanvasZoomLabel');
+    elements.jaCanvasFitBtn = document.getElementById('jaCanvasFitBtn');
+    elements.jaCanvasDownloadBtn = document.getElementById('jaCanvasDownloadBtn');
 
     // --- 26. USUARIOS Y PERMISOS ---
     elements.usersTbody = document.getElementById('users-tbody');
