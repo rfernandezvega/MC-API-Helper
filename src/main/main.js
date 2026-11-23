@@ -14,7 +14,26 @@ autoUpdater.logger = log;
 
 const path = require('path');
 const axios = require('axios');
+const https = require('https');
+const tls = require('tls');
 const keytar = require('keytar'); // Librería para el llavero seguro
+
+/**
+ * Hace que axios (main process) confíe en las CAs del almacén de Windows además de las de Node.
+ * Con VPNs/proxies corporativos que inspeccionan TLS, la cadena viene firmada por una CA propia
+ * instalada en Windows; Chromium la acepta pero Node no, y el intercambio del token fallaba con
+ * "self signed certificate in certificate chain". No recibe parámetros.
+ */
+function trustSystemCertificates() {
+    try {
+        if (typeof tls.getCACertificates !== 'function') return;
+        const ca = [...new Set([...tls.getCACertificates('default'), ...tls.getCACertificates('system')])];
+        axios.defaults.httpsAgent = new https.Agent({ ca, keepAlive: true });
+    } catch (e) {
+        log.warn('No se pudieron cargar las CAs del sistema:', e.message);
+    }
+}
+trustSystemCertificates();
 
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=2048');
 
