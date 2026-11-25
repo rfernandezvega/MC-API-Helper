@@ -684,6 +684,70 @@ ipcMain.handle('load-client-journeys-from-file', async (event, clientName) => {
     }
 });
 
+// Busca en la caché de contenidos de un cliente+BU los assets pedidos por id, customerKey o nombre
+// y devuelve solo sus datos básicos. Lee el fichero línea a línea y solo parsea las líneas que
+// contienen alguno de los valores buscados, para no cargar en memoria cachés de cientos de MB.
+// Recibe la clave de caché y { ids, keys, names } (arrays de texto).
+ipcMain.handle('lookup-client-contents', async (event, clientName, query = {}) => {
+    if (!clientName || /[\\/]|\.\./.test(clientName)) return { success: false, items: [] };
+    const filePath = path.join(app.getPath('userData'), 'ClientContents', `${clientName}.json`);
+    const ids = new Set((query.ids || []).map(String));
+    const keys = new Set((query.keys || []).map(k => String(k).toLowerCase()));
+    const names = new Set((query.names || []).map(n => String(n).toLowerCase()));
+    const needles = [...ids, ...(query.keys || []), ...(query.names || [])].map(String).filter(Boolean);
+    if (!needles.length || !fs.existsSync(filePath)) return { success: true, exists: fs.existsSync(filePath), items: [] };
+    try {
+        const readline = require('readline');
+        const rl = readline.createInterface({ input: fs.createReadStream(filePath, { encoding: 'utf-8' }), crlfDelay: Infinity });
+        const items = [];
+        for await (const line of rl) {
+            if (!line || !needles.some(n => line.includes(n))) continue;
+            let item;
+            try { item = JSON.parse(line); } catch { continue; }
+            if (!item || item.id === undefined) continue;
+            if (ids.has(String(item.id)) || keys.has(String(item.customerKey || '').toLowerCase()) || names.has(String(item.name || '').toLowerCase())) {
+                items.push({
+                    id: item.id, customerKey: item.customerKey || '', name: item.name || '',
+                    assetType: item.assetTypeName || item.assetType?.displayName || item.assetType?.name || ''
+                });
+            }
+        }
+        return { success: true, exists: true, items };
+    } catch (error) {
+        return { success: false, error: error.message, items: [] };
+    }
+});
+
+// Devuelve si existe la caché de contenidos o journeys de un cliente+BU y su fecha, leyendo solo
+// la primera línea (metadatos) para no cargar ficheros de cientos de MB en memoria.
+// Recibe kind ('contents' | 'journeys') y la clave de caché del contexto activo.
+ipcMain.handle('get-client-cache-meta', async (event, kind, clientName) => {
+    const dirs = { contents: 'ClientContents', journeys: 'ClientJourneys' };
+    if (!dirs[kind] || !clientName || /[\\/]|\.\./.test(clientName)) return { exists: false };
+    const filePath = path.join(app.getPath('userData'), dirs[kind], `${clientName}.json`);
+    try {
+        if (!fs.existsSync(filePath)) return { exists: false };
+        const st = fs.statSync(filePath);
+        let lastRefresh = null;
+        const readline = require('readline');
+        const stream = fs.createReadStream(filePath, { encoding: 'utf-8' });
+        const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+        for await (const line of rl) {
+            if (!line.trim()) continue;
+            try {
+                const parsed = JSON.parse(line);
+                if (parsed && parsed.lastRefresh && !parsed.id) lastRefresh = parsed.lastRefresh;
+            } catch { /* formato antiguo: se usa la fecha del fichero */ }
+            break;
+        }
+        rl.close();
+        stream.destroy();
+        return { exists: st.size > 0, lastRefresh: lastRefresh || st.mtime.toISOString(), sizeBytes: st.size };
+    } catch (error) {
+        return { exists: false, error: error.message };
+    }
+});
+
 // Caché de automatismos (pasos, actividades y DEs destino) por cliente+BU, en ClientAutomations.
 // Mismo formato que la de journeys: primera línea con metadatos y una línea por automatismo,
 // para poder escribir y leer ficheros grandes por streaming.
@@ -795,6 +859,37 @@ ipcMain.handle('save-cloud-pages-cache', (event, { clientName, cloudPagesData })
     } catch (error) {
         console.error('Error al guardar caché de Cloud Pages:', error);
         return { success: false, error: error.message };
+    }
+});
+
+/**
+ * Descarga https://<host>/robots.txt para comprobar si los crawlers pueden leerlo (la guía de
+ * Salesforce exige 200 y text/plain). Se hace en el main porque la CSP del renderer no permite
+ * conectar con los dominios de los clientes. Solo admite un nombre de host, nunca una URL libre.
+ * @param {string} host - Dominio de las Cloud Pages (p. ej. cloud.ejemplo.com).
+ * @returns {Promise<{success:boolean, status?:number, contentType?:string, body?:string, error?:string}>}
+ */
+ipcMain.handle('check-robots-txt', async (event, host) => {
+    if (typeof host !== 'string' || !/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(host)) {
+        return { success: false, error: 'Dominio no válido' };
+    }
+    try {
+        const response = await axios.get(`https://${host}/robots.txt`, {
+            timeout: 10000,
+            maxRedirects: 3,
+            maxContentLength: 200000,
+            responseType: 'text',
+            transformResponse: data => data,
+            validateStatus: () => true
+        });
+        return {
+            success: true,
+            status: response.status,
+            contentType: String(response.headers['content-type'] || ''),
+            body: String(response.data || '').slice(0, 20000)
+        };
+    } catch (error) {
+        return { success: false, error: error.code || error.message };
     }
 });
 

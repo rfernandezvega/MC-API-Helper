@@ -64,6 +64,7 @@ export function init() {
     elements.authUriInput = document.getElementById('authUri');
     elements.clientIdInput = document.getElementById('clientId');
     elements.clientSecretInput = document.getElementById('clientSecret');
+    elements.copyApiConfigBtn = document.getElementById('copyApiConfigBtn');
     elements.businessUnitInput = document.getElementById('businessUnit');  // MID principal (formulario/guardado)
     elements.activeMidInput = document.getElementById('activeMid');         // MID de la BU activa (account_id)
     elements.tokenField = document.getElementById('token');
@@ -353,6 +354,7 @@ export function init() {
     elements.cloudPageIdFilter = document.getElementById('cloudPageIdFilter');
     elements.cloudPageNameFilter = document.getElementById('cloudPageNameFilter');
     elements.cloudPageContentFilter = document.getElementById('cloudPageContentFilter');
+    elements.cloudPageLocationFilter = document.getElementById('cloudPageLocationFilter');
     elements.cloudPageTypeFilter = document.getElementById('cloudPageTypeFilter');
     elements.refreshCloudPagesTableBtn = document.getElementById('refreshCloudPagesTableBtn');
     elements.getCloudPageIdsBtn = document.getElementById('getCloudPageIdsBtn');
@@ -453,7 +455,11 @@ export function init() {
     elements.cloudPageIdsPasteArea = document.getElementById('cloudpage-ids-paste-area');
     elements.cloudPageIdsCancelBtn = document.getElementById('cloudpage-ids-cancel-btn');
     elements.cloudPageIdsImportBtn = document.getElementById('cloudpage-ids-import-btn');
-
+    elements.cloudPagesMapBtn = document.getElementById('cloudPagesMapBtn');
+    elements.cloudPagesMapModal = document.getElementById('cloudpages-map-modal');
+    elements.cloudPagesMapCloseBtn = document.getElementById('cloudpages-map-close-btn');
+    elements.cloudPagesMapSummary = document.getElementById('cloudpages-map-summary');
+    elements.cloudPagesMapBody = document.getElementById('cloudpages-map-body');
     // --- Cloud Page Detail Drawer ---
     elements.cpDetailDrawer = document.getElementById('cp-detail-drawer');
     elements.cpDetailBackdrop = document.getElementById('cp-detail-backdrop');
@@ -610,6 +616,15 @@ export function init() {
     elements.journeyPauseRetain = document.getElementById('journey-pause-retain');
     elements.journeyPauseConfirmBtn = document.getElementById('journey-pause-confirm-btn');
     elements.journeyPauseCancelBtn = document.getElementById('journey-pause-cancel-btn');
+
+    // --- 33. AUDITORÍA: SELECTOR DE PESTAÑAS A ESCANEAR ---
+    elements.auditScopeModal = document.getElementById('audit-scope-modal');
+    elements.auditScopeAll = document.getElementById('audit-scope-all');
+    elements.auditScopeTabChecks = document.querySelectorAll('#audit-scope-modal .audit-scope-tab');
+    elements.auditScopeStartBtn = document.getElementById('audit-scope-start-btn');
+    elements.auditScopeCancelBtn = document.getElementById('audit-scope-cancel-btn');
+    elements.auditScopeCpWarning = document.getElementById('audit-scope-cp-warning');
+    elements.auditScopeContentInfo = document.getElementById('audit-scope-content-info');
 }
 
 export default elements;

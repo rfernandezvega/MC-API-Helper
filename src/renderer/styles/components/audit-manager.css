@@ -351,3 +351,116 @@
 .audit-loading-text {
     font-size: 0.9em;
 }
+
+/* ---------- Fecha de escaneo por pestaña (tras escaneos parciales pueden diferir) ---------- */
+.audit-tab-date {
+    font-size: 0.78em;
+    color: var(--sf-text-muted);
+    text-align: right;
+    margin-bottom: 8px;
+}
+
+/* ---------- Selector de pestañas a escanear ---------- */
+.audit-scope-content { max-width: 460px; }
+.audit-scope-help {
+    font-size: 0.86em;
+    color: var(--sf-text-soft);
+    line-height: 1.5;
+    margin: 0 0 14px 0;
+}
+.audit-scope-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.92em;
+    color: var(--sf-text);
+    cursor: pointer;
+    padding: 4px 0;
+}
+.audit-scope-all-option {
+    font-weight: 700;
+    border-bottom: 1px solid var(--sf-border);
+    padding-bottom: 8px;
+    margin-bottom: 6px;
+}
+.audit-scope-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 16px;
+    margin-bottom: 8px;
+}
+#audit-scope-start-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.audit-scope-warning { font-size: 0.84em; line-height: 1.5; margin: 6px 0 4px; }
+
+/* ---------- Icono "i" con la explicación de una métrica ---------- */
+.audit-info-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-left: 6px;
+    border-radius: 50%;
+    border: 1.5px solid var(--sf-blue);
+    color: var(--sf-blue);
+    font-size: 10.5px;
+    font-weight: 700;
+    font-style: normal;
+    line-height: 1;
+    vertical-align: middle;
+    cursor: help;
+    text-transform: none;
+}
+.audit-info-tip {
+    display: none;
+    position: absolute;
+    top: 22px;
+    left: -10px;
+    z-index: 50;
+    width: 420px;
+    max-width: 70vw;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--sf-border);
+    background: var(--sf-surface);
+    color: var(--sf-text);
+    box-shadow: var(--sf-shadow-menu);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+    text-align: left;
+    white-space: pre-line;
+}
+.audit-info-icon:hover .audit-info-tip,
+.audit-info-icon:focus .audit-info-tip { display: block; }
+
+/* ---------- Secciones plegables (Avisos, Inventario, Seguridad...) ---------- */
+.audit-section > .audit-section-toggle {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    user-select: none;
+}
+.audit-section > .audit-section-toggle::-webkit-details-marker { display: none; }
+/* Flecha dibujada con bordes: apunta a la derecha plegada y hacia abajo desplegada. */
+.audit-section > .audit-section-toggle::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.15s ease;
+    flex: 0 0 auto;
+}
+.audit-section[open] > .audit-section-toggle::before { transform: rotate(45deg); }
+.audit-section > .audit-section-toggle:hover { color: var(--sf-blue-dark); }
+.audit-section:not([open]) > .audit-section-toggle { margin-bottom: 4px; }
+.audit-section-body > .audit-callout:last-child { margin-bottom: 4px; }
+
+/* Dentro de un título en mayúsculas el icono "i" y su explicación conservan su formato. */
+.audit-section-header .audit-info-icon { margin-left: 2px; letter-spacing: 0; }
+.audit-info-tip { letter-spacing: 0; text-transform: none; font-family: inherit; cursor: default; }

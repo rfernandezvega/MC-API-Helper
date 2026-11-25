@@ -11,7 +11,7 @@
             background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; backdrop-filter: blur(2px);
         }
         .audit-modal-content {
-            background-color: var(--sf-surface); padding: 25px; border-radius: 12px; width: 85%; max-width: 1000px;
+            background-color: var(--sf-surface); padding: 25px; border-radius: 12px; width: 95%; max-width: 1600px;
             max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
         .audit-modal-header {
@@ -52,7 +52,7 @@
         <ol style="color:var(--sf-text-soft); font-size:0.88em; line-height:1.8; margin:0 0 6px 0; padding-left:22px;">
             <li>Para que la pestaña <b>Contenidos</b> tenga datos, entra antes a la vista de <b>Contenidos</b> y pulsa <b>Refrescar</b> (la auditoría reutiliza esa caché, no descarga contenidos).</li>
             <li>Para auditar <b>Data Extensions</b> (opcional), copia el script de abajo, ejecútalo en la consola de <b>Contact Builder</b> y pega el JSON resultante en el cuadro.</li>
-            <li>Pulsa <b>«Iniciar Escaneo de Instancia»</b> (arriba a la derecha) y confirma. <b>No cierres la aplicación</b> mientras dura el proceso.</li>
+            <li>Pulsa <b>«Iniciar Escaneo de Instancia»</b> (arriba a la derecha), elige si escanear todas las pestañas o solo algunas y confirma. <b>No cierres la aplicación</b> mientras dura el proceso. Las pestañas que no escanees conservan los datos de la última auditoría guardada.</li>
             <li>Al terminar, revisa las pestañas del panel y descarga el <b>Informe (PDF)</b> o los <b>Detalles</b>.</li>
         </ol>
         <p style="color:var(--sf-text-soft); font-size:0.84em; line-height:1.6; margin:0 0 6px 0;">
@@ -92,8 +92,8 @@
                 </tr>
                 <tr class="audit-info-alt">
                     <td class="audit-info-name">Cloud Pages</td>
-                    <td>Cantidad, tipo y estado de publicación de las páginas.</td>
-                    <td>Se descarga durante el escaneo (no depende de otra vista).</td>
+                    <td>Tipo y publicación; robots.txt de cada dominio; control de crawlers en el servidor; posibles credenciales en el código (enmascaradas); indexación, cabeceras de seguridad e identificadores en la URL; Landing Pages que podrían ser Code Resource; llamadas a endpoints y referencias entre páginas (el diagrama está en la vista de Cloud Pages).</td>
+                    <td>Se descarga durante el escaneo con el contenido de cada página y actualiza la caché de la vista de <b>Cloud Pages</b>. Comprueba la URL real de cada <b>robots.txt</b>. Importa antes los <b>Page IDs</b> en esa vista para resolver las referencias por id.</td>
                 </tr>
                 <tr>
                     <td class="audit-info-name">Send Management</td>
@@ -107,8 +107,8 @@
                 </tr>
                 <tr>
                     <td class="audit-info-name">Contenidos</td>
-                    <td>Contenidos por tipo, plantillas inexistentes, bloques/plantillas sin uso y comunicaciones dentro/fuera de journeys.</td>
-                    <td>Caché de la vista de <b>Contenidos</b> (refréscala antes) + caché de <b>Journeys</b>. No consume llamadas aquí.</td>
+                    <td>Contenidos por tipo, plantillas inexistentes, bloques/plantillas sin uso, catch vacíos en SSJS/JavaScript (errores silenciados) y comunicaciones dentro/fuera de journeys.</td>
+                    <td>Caché de la vista de <b>Contenidos</b> (refréscala antes) + caché de <b>Journeys</b> (si se escanea también Journeys, se actualiza antes). No consume llamadas aquí.</td>
                 </tr>
             </tbody>
         </table>
@@ -161,6 +161,36 @@
             <div id="audit-tab-content"  class="tab-content"></div>
         </div>
 
+    </div>
+
+    <!-- MODAL: PESTAÑAS A ESCANEAR -->
+    <div id="audit-scope-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-content audit-scope-content">
+            <h3>Qué quieres escanear</h3>
+            <p class="audit-scope-help">
+                Las pestañas que no marques conservan los datos de la última auditoría guardada de este cliente.
+                No cierres la aplicación mientras dura el escaneo.
+            </p>
+            <label class="audit-scope-option audit-scope-all-option">
+                <input type="checkbox" id="audit-scope-all" checked>
+                <span>Todas las pestañas</span>
+            </label>
+            <div class="audit-scope-list">
+                <label class="audit-scope-option"><input type="checkbox" class="audit-scope-tab" value="users" checked><span>Usuarios</span></label>
+                <label class="audit-scope-option"><input type="checkbox" class="audit-scope-tab" value="autos" checked><span>Automatismos</span></label>
+                <label class="audit-scope-option"><input type="checkbox" class="audit-scope-tab" value="journeys" checked><span>Journeys</span></label>
+                <label class="audit-scope-option"><input type="checkbox" class="audit-scope-tab" value="cp" checked><span>Cloud Pages</span></label>
+                <label class="audit-scope-option"><input type="checkbox" class="audit-scope-tab" value="sm" checked><span>Send Management</span></label>
+                <label class="audit-scope-option"><input type="checkbox" class="audit-scope-tab" value="de" checked><span>Data Extensions</span></label>
+                <label class="audit-scope-option"><input type="checkbox" class="audit-scope-tab" value="content" checked><span>Contenidos</span></label>
+            </div>
+            <div id="audit-scope-cp-warning" class="audit-callout audit-callout-warning audit-scope-warning" style="display:none;"></div>
+            <div id="audit-scope-content-info" class="audit-callout audit-callout-info audit-scope-warning" style="display:none;"></div>
+            <div class="modal-actions">
+                <button id="audit-scope-cancel-btn" class="action-button cancel-btn">Cancelar</button>
+                <button id="audit-scope-start-btn" class="action-button activate-btn">Iniciar escaneo</button>
+            </div>
+        </div>
     </div>
 
     <!-- MODAL DE DETALLES -->

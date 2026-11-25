@@ -226,7 +226,8 @@ function hasSharedWith(item) {
  * Busca contenido en Content Builder según el tipo de búsqueda elegido en la picklist del Buscador.
  * @param {string} searchValue - Texto o número a buscar.
  * @param {object} apiConfig - Configuración autenticada de la API.
- * @param {string} [searchType='name'] - 'name' (like), 'id' (exacto) o 'content' (dentro del cuerpo).
+ * @param {string} [searchType='name'] - 'name' (like), 'id' (exacto), 'key' (customerKey exacto)
+ *   o 'content' (dentro del cuerpo).
  *   La búsqueda por 'content' se apoya en el operador `mustcontain` (ver `buildMustContainValue`),
  *   pero como devuelve assets que no llevan el texto, después se criba en local contra el cuerpo
  *   ya descargado, igual que hace el buscador de la vista de Contenidos.
@@ -285,6 +286,14 @@ export async function searchContentAssets(searchValue, apiConfig, searchType = '
             const needle = mustContainValue.toLowerCase();
             const results = rawResults.filter(item => assetContainsText(item, needle));
             logger.logMessage(`La API devolvió ${rawResults.length} resultado(s)${sharedSuffix}; tras descartar los que no contienen "${searchValue}" quedan ${results.length}.`);
+            return results;
+        }
+
+        if (searchType === 'key') {
+            logger.logMessage(`Buscando contenidos por clave exacta "${searchValue}"${sharedSuffix}...`);
+            const keyQuery = { "property": "customerKey", "simpleOperator": "equal", "value": searchValue };
+            const results = markShared(await executePaginatedQuery(keyQuery, apiConfig, fields, pageSize, scope));
+            logger.logMessage(`Búsqueda por clave completada. Total ${results.length} resultado(s)${sharedSuffix}.`);
             return results;
         }
 

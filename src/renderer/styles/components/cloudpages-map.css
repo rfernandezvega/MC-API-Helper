@@ -1,0 +1,149 @@
+/* ===================================================================
+   cloudpages-map.css
+   Mapa de referencias entre Cloud Pages. Lo usan la pestaña Cloud Pages
+   de la Auditoría y el botón "Mapa de referencias" de la vista de Cloud Pages.
+   =================================================================== */
+
+.cpmap-card { grid-column: 1 / -1; margin-top: 4px; }
+.cpmap-drill-link {
+    color: var(--sf-blue);
+    text-decoration: underline;
+    cursor: pointer;
+}
+.cpmap-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    font-size: 0.8em;
+    color: var(--sf-text-soft);
+    margin: 8px 0 10px;
+}
+.cpmap-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.cpmap-legend-hint { color: var(--sf-text-muted); font-style: italic; }
+.cpmap-swatch {
+    display: inline-block;
+    width: 14px;
+    height: 10px;
+    border-radius: 3px;
+    border: 1.5px solid var(--audit-blue);
+    background: color-mix(in srgb, var(--audit-blue) 14%, var(--sf-surface));
+}
+.cpmap-swatch.is-cr {
+    border-color: var(--audit-teal);
+    background: color-mix(in srgb, var(--audit-teal) 14%, var(--sf-surface));
+}
+.cpmap-swatch.is-self { border-style: dashed; border-color: var(--audit-gray); background: var(--sf-surface); }
+.cpmap-viewport {
+    overflow: auto;
+    max-height: 620px;
+    border: 1px solid var(--sf-border);
+    border-radius: 8px;
+    background: var(--sf-bg-alt);
+}
+.cpmap-svg { display: block; font-family: inherit; overflow: visible; }
+.cpmap-node { cursor: pointer; }
+.cpmap-node rect {
+    fill: color-mix(in srgb, var(--audit-blue) 12%, var(--sf-surface));
+    stroke: var(--audit-blue);
+    stroke-width: 1.5;
+}
+.cpmap-node.is-cr rect {
+    fill: color-mix(in srgb, var(--audit-teal) 12%, var(--sf-surface));
+    stroke: var(--audit-teal);
+}
+.cpmap-node.is-self rect { stroke-dasharray: 5 3; stroke: var(--audit-gray); }
+.cpmap-node-name { font-size: 12px; font-weight: 700; fill: var(--sf-text); }
+.cpmap-node-type { font-size: 10.5px; fill: var(--sf-text-muted); }
+.cpmap-edge {
+    fill: none;
+    stroke: var(--sf-text-muted);
+    stroke-width: 1.4;
+    opacity: 0.7;
+    marker-end: var(--cpmap-arrow, url(#cpmap-arrow));
+}
+.cpmap-arrow { fill: var(--sf-text-muted); }
+.cpmap-arrow-hl { fill: var(--sf-orange); }
+/* Con una página seleccionada se atenúa todo lo que no está conectado con ella. */
+.cpmap-svg.has-active .cpmap-node:not(.is-active):not(.is-hl) { opacity: 0.3; }
+.cpmap-svg.has-active .cpmap-edge:not(.is-hl) { opacity: 0.12; }
+.cpmap-edge.is-hl {
+    stroke: var(--sf-orange);
+    stroke-width: 2.2;
+    opacity: 1;
+    marker-end: var(--cpmap-arrow-hl, url(#cpmap-arrow-hl));
+}
+.cpmap-node.is-active rect { stroke: var(--sf-orange); stroke-width: 2.5; }
+.cpmap-node.is-hl rect { stroke-width: 2.2; }
+.cpmap-info {
+    font-size: 0.84em;
+    color: var(--sf-text-soft);
+    margin-top: 8px;
+    line-height: 1.5;
+}
+
+/* ---------- Modal del mapa en la vista de Cloud Pages ---------- */
+.cpmap-modal-content {
+    width: 95%;
+    max-width: 1600px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.cpmap-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--sf-border);
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+.cpmap-modal-header h3 { margin: 0; color: var(--sf-text); }
+.cpmap-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
+    color: var(--sf-text-muted);
+}
+.cpmap-modal-close:hover { color: var(--sf-red); }
+.cpmap-modal-summary {
+    font-size: 0.86em;
+    color: var(--sf-text-soft);
+    line-height: 1.5;
+}
+#cloudpages-map-body { overflow: auto; min-height: 0; }
+#cloudpages-map-body .cpmap-viewport { max-height: 68vh; }
+
+/* Botones de descarga del mapa, alineados a la derecha de la leyenda. */
+/* Fila de botones del mapa: los de quien lo pinta a la izquierda y los del mapa a la derecha. */
+.cpmap-actions { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; flex-wrap: wrap; }
+.cpmap-actions-left { display: inline-flex; gap: 6px; }
+.cpmap-download-group { margin-left: auto; display: inline-flex; gap: 6px; }
+.cpmap-actions .action-button { font-size: 0.8em; padding: 4px 10px; }
+
+/* Content blocks en el mapa (opcional desde la vista de Cloud Pages). */
+.cpmap-swatch.is-cb {
+    border-color: var(--audit-green);
+    background: color-mix(in srgb, var(--audit-green) 14%, var(--sf-surface));
+}
+.cpmap-node.is-cb rect {
+    fill: color-mix(in srgb, var(--audit-green) 12%, var(--sf-surface));
+    stroke: var(--audit-green);
+}
+/* Botón de content blocks pulsado: se pinta con el verde de los bloques del mapa. */
+.cpmap-blocks-toggle.is-active {
+    background: var(--audit-green);
+    border-color: var(--audit-green);
+    color: #fff;
+}
+
+/* Páginas fuera del filtro de la vista que aparecen por estar conectadas con alguna filtrada. */
+.cpmap-node.is-outside { opacity: 0.45; }
+.cpmap-swatch.is-outside { opacity: 0.45; }
+
+/* Las cajas del mapa se pueden arrastrar en la vista de Cloud Pages. */
+.cpmap-node { cursor: grab; }
+.cpmap-svg.is-dragging, .cpmap-svg.is-dragging .cpmap-node { cursor: grabbing; }
+.cpmap-svg.is-dragging .cpmap-edge { transition: none; }

@@ -133,6 +133,7 @@
 							<li>Dar de alta un cliente con los datos del paquete (Client Id, Client Secret, Auth/REST/SOAP URI, MID/Business Unit, etc.).</li>
 							<li><b>Login</b> — Inicia el flujo de autenticación por navegador contra Marketing Cloud.</li>
 							<li><b>Logout</b> — Cierra la sesión del cliente y borra las credenciales seguras guardadas; también limpia las cachés locales de ese cliente.</li>
+							<li><b>Copiar datos</b> — Con una cuenta seleccionada, el botón junto a "Datos Aplicación" copia al portapapeles el <b>MID</b>, la <b>Auth URI</b> y el <b>Client ID</b> (una línea por dato) para compartirlos. Nunca copia el Client Secret.</li>
 						</ul>
 
 						<h4>Pestaña "DEs de Búsqueda de Clientes"</h4>
@@ -255,19 +256,20 @@
 
 						<h4>Botones de cabecera</h4>
 						<ul>
-							<li><b>Refrescar</b> — Recarga la lista (y el contenido) de Cloud Pages por API.</li>
+							<li><b>Refrescar</b> — Recarga la lista (y el contenido) de Cloud Pages por API y actualiza la caché del cliente/BU. Al entrar en la vista se usa esa caché si existe (la genera esta vista y también el escaneo de Cloud Pages de la Auditoría); pulsa Refrescar para traer los cambios recientes. Solo se vuelve a pedir una a una una Landing Page si ha cambiado desde la última descarga.</li>
 							<li><b>Exportar</b> — Descarga un CSV con las Cloud Pages visibles (respeta filtros).</li>
 							<li><b>Recuperar IDs</b> — Abre un modal con instrucciones: hay que abrir un enlace a la API interna en el navegador (con sesión MC activa) y pegar el JSON resultante para rellenar la columna <b>Page ID</b>/URL.</li>
+							<li><b>Mapa de referencias</b> — Muestra el diagrama de las Cloud Pages que se referencian entre sí (por URL, ruta relativa o id en <code>CloudPagesURL</code>/<code>MicrositeURL</code>), pintado con las Cloud Pages que cumplen los filtros de la tabla (sin filtros, todas). Si una página filtrada llama o es llamada por otra que no cumple el filtro, esa otra aparece atenuada. Al pulsar una página se resaltan sus conexiones. Las cajas se pueden <b>arrastrar</b> para deshacer cruces de líneas, y el botón <b>Ordenar automáticamente</b> las devuelve a su posición calculada. Avisa de las Landing Pages sin Page ID. El botón <b>Mostrar content blocks</b> añade los bloques que usa cada página (<code>ContentBlockBy*</code> y Reference Content colocados en slots), en verde y a la derecha, con su nombre leído de la caché de Contenidos; al pulsar un bloque se ven las páginas que lo usan. Los botones <b>Descargar SVG</b> y <b>Descargar PNG</b> guardan el mapa completo como imagen.</li>
 						</ul>
 
 						<h4>Filtros</h4>
 						<ul>
-							<li>Por <b>nombre</b>, por <b>Page ID</b>, por <b>contenido</b>, por <b>tipo</b>, por <b>publicación</b> (publicadas / no publicadas), por <b>URL</b> (con/sin URL) y por <b>rango de fechas</b> (Fecha Modificación / Fecha Publicación + Desde/Hasta).</li>
+							<li>Por <b>nombre</b>, por <b>Page ID</b>, por <b>contenido</b>, por <b>ubicación</b> (texto parcial de la ruta de carpeta), por <b>tipo</b>, por <b>publicación</b> (publicadas / no publicadas), por <b>URL</b> (con/sin URL) y por <b>rango de fechas</b> (Fecha Modificación / Fecha Publicación + Desde/Hasta).</li>
 						</ul>
 
 						<h4>Columna de acción y detalle</h4>
 						<ul>
-							<li>Cada fila tiene un icono que abre un <b>panel lateral (drawer)</b> con las <b>dependencias</b> de la Cloud Page (DEs referenciadas, parámetros, atributos, Content Blocks, Triggered Sends, URLs de HTTP.Post y redirecciones) y el <b>código fuente</b> con resaltado.</li>
+							<li>Cada fila tiene un icono que abre un <b>panel lateral (drawer)</b> con las <b>dependencias</b> de la Cloud Page (DEs referenciadas, parámetros, atributos, Content Blocks, Triggered Sends, URLs de HTTP.Post y redirecciones) y el <b>código fuente</b> con resaltado. El código es el de la página, igual que el Code View de Marketing Cloud; los bloques colocados en sus slots aparecen en <b>Content Blocks</b> (una vez cada uno) y se tienen en cuenta en las dependencias, la búsqueda por contenido, el mapa de referencias y la auditoría. Los slots y bloques que Content Builder guarda pero no están colocados en la página se ignoran.</li>
 							<li>Desde el drawer se puede <b>descargar el código</b> de la página.</li>
 						</ul>
 					</div>
@@ -517,7 +519,25 @@
 
 						<h4>Áreas analizadas</h4>
 						<ul>
-							<li>Seis pestañas de resultados: <b>Usuarios</b>, <b>Automatismos</b>, <b>Journeys</b>, <b>Cloud Pages</b>, <b>Send Management</b> y <b>Data Extensions</b>.</li>
+							<li>Siete pestañas de resultados: <b>Usuarios</b>, <b>Automatismos</b>, <b>Journeys</b>, <b>Cloud Pages</b>, <b>Send Management</b>, <b>Data Extensions</b> y <b>Contenidos</b>.</li>
+							<li>Al pulsar <b>Iniciar Escaneo de Instancia</b> se elige si escanear <b>todas las pestañas</b> o solo algunas. Las que no se marquen conservan los datos de la última auditoría guardada del cliente, y cada pestaña muestra arriba la fecha en que se escaneó. Si se marca <b>Contenidos</b>, el selector indica si existen las cachés de Contenidos y Journeys y de qué fecha son, porque esa pestaña no descarga datos: analiza esas cachés locales. Si también se marca <b>Journeys</b>, esa pestaña descarga o actualiza la caché de journeys antes de Contenidos.</li>
+						</ul>
+
+						<h4>Cloud Pages: seguridad, consumo y referencias</h4>
+						<p>El escaneo descarga todas las Cloud Pages y Code Resources con su código (deja actualizada la caché de la vista de Cloud Pages) y lo analiza siguiendo la guía de Salesforce para crawlers de IA (artículo 005315904) y las buenas prácticas de seguridad de CloudPages. Es un análisis del código, no se visitan las páginas (salvo el robots.txt de cada dominio): todo son avisos a revisar, no errores. Cada tarjeta tiene un icono <b>i</b> que explica qué se revisa y cómo. Todos los detalles indican si la página está <b>publicada</b> (con su fecha) y muestran primero las publicadas, para poder priorizar.</p>
+						<p>Si Cloud Pages está entre las pestañas a escanear y hay Landing Pages sin Page ID importado (o no hay caché), el selector avisa antes de lanzar el escaneo: sin Page ID no se resuelven las referencias por <code>CloudPagesURL(id)</code>.</p>
+						<ul>
+							<li><b>robots.txt por dominio</b> — Comprueba si cada dominio tiene un Code Resource de tipo Text en <code>/robots.txt</code>, pide la URL real para ver que responde 200 con <code>text/plain</code> y qué crawlers de IA bloquea. Avisa si está publicado como Landing Page (cada lectura consume una vista), fuera de la raíz, si bloquea todo el sitio o si el dominio es de Salesforce (no admite robots.txt).</li>
+							<li><b>Control de crawlers en el servidor</b> — En las páginas publicadas busca el mecanismo de la guía escrito de cualquier forma, en la propia página o en un content block incluido al principio: la lectura del User-Agent (<code>GetRequestHeader</code>/<code>HTTPRequestHeader("User-Agent")</code>, <code>Platform.Request.UserAgent</code>…) y el corte de la petición con <code>RaiseError</code> o con una redirección. Señala incidencias: <code>RaiseError</code> dentro de un <code>try...catch</code>, script que no está en la línea 1, crawlers de entrenamiento que faltan (un patrón genérico "bot" cuenta como que cubre gptbot, claudebot…) o patrón "bot" sin lista de permitidos. Separa las páginas sin control que validan parámetros y las que manejan datos sin ninguna de las dos protecciones.</li>
+							<li><b>Posibles credenciales</b> — Valores con aspecto de credencial con cualquier nombre habitual (client id/secret, API key, tokens, contraseñas, app id…) en SSJS, AMPscript, JavaScript o JSON; cabeceras <code>Authorization</code> fijas; URLs con usuario y contraseña o con claves en parámetros; formatos conocidos (AWS, Google, JWT, claves privadas…) y peticiones de token a SFMC. Los valores se muestran <b>enmascarados</b>.</li>
+							<li><b>Validación de parámetros e identificación</b> — Según la guía de seguridad de CloudPages de Salesforce: páginas que leen parámetros y comprueban (o no) que no lleguen vacíos antes de procesar, páginas que manejan datos identificando al suscriptor con un solo parámetro, identificadores del suscriptor en la URL y uso de Base64 o StringToHex (son codificación, no cifrado: hay que usar CloudPagesURL).</li>
+							<li><b>Cabeceras de seguridad</b> — Páginas visuales publicadas que fijan todas, algunas o ninguna de las cabeceras recomendadas (Strict-Transport-Security, X-XSS-Protection, X-Frame-Options, X-Content-Type-Options, Referrer-Policy y Content-Security-Policy) con <code>Platform.Response.SetResponseHeader</code>/<code>AddResponseHeader</code> o <code>&lt;meta http-equiv&gt;</code>. Solo se mira que se fijen, no su valor.</li>
+							<li><b>Errores silenciados (catch vacíos)</b> — Bloques <code>catch</code> vacíos o que solo tienen comentarios (<code>try { } catch (e) { }</code> y <code>.catch()</code> de promesas), separados en SSJS, JavaScript del navegador y código minificado (librerías). Un catch vacío oculta errores como una escritura fallida en una DE. Esta misma revisión se hace también en la pestaña <b>Contenidos</b>.</li>
+							<li><b>Contenido remoto</b> — Páginas que descargan contenido con <code>HTTPGet</code> y lo ejecutan con <code>TreatAsContent</code>, y descargas desde servicios de ficheros compartidos (Google Drive, Dropbox, OneDrive, SharePoint…): quien pueda modificar ese fichero cambia lo que se ejecuta en Marketing Cloud.</li>
+							<li><b>Indexación</b> — Páginas visuales publicadas sin <code>noindex</code> (meta robots o cabecera X-Robots-Tag): Google, Bing y los buscadores con IA pueden mostrarlas en sus resultados si las encuentran. Conviene revisarlo en páginas pensadas para llegar desde un email (preferencias, bajas, formularios de campaña, páginas con datos del suscriptor), que si no acaban en buscadores fuera de contexto y cada visita desde ellos consume una vista.</li>
+							<li><b>Landing Pages sin parte visual</b> — Landing Pages que devuelven JSON o procesan envíos, candidatas a Code Resource: cada visita a una Landing Page consume una vista (Super Messages) y a un Code Resource no. No muestra consumos reales.</li>
+							<li><b>Llamadas a endpoints</b> — Llamadas desde SSJS (HTTP.Post/Get, Script.Util), AMPscript (HTTPGet/HTTPPost), JavaScript (fetch, axios, jQuery, XMLHttpRequest, sendBeacon) y formularios, con el endpoint resuelto (variables, variables AMPscript y concatenaciones; las partes que solo se conocen al ejecutarse se muestran como {variable} y se clasifica por la parte conocida del dominio) y su destino: externo, API de Marketing Cloud, Salesforce, otra Cloud Page o la propia página.</li>
+							<li><b>Referencias entre Cloud Pages</b> — Recuento de las páginas que se referencian entre sí por su URL, su ruta relativa o su id (<code>CloudPagesURL</code>/<code>MicrositeURL</code>), con el detalle de referencias, autorreferencias e ids sin resolver. El diagrama está en la vista de Cloud Pages (botón <b>Mapa de referencias</b>). Para resolver las referencias por id importa antes los <b>Page IDs</b> en la vista de Cloud Pages.</li>
 						</ul>
 
 						<h4>Opciones de análisis profundo (antes de escanear)</h4>
@@ -530,6 +550,7 @@
 						<h4>Resultados y exportación</h4>
 						<ul>
 							<li>Cada barra de los gráficos abre un <b>modal de detalle</b> con la lista de elementos, exportable en CSV.</li>
+							<li>Los <b>avisos</b> de cada pestaña se agrupan en una sección "Avisos" (con el número de avisos por gravedad) plegada por defecto, igual que las secciones de Automatismos y Cloud Pages. El icono <b>i</b> junto a un título explica qué se revisa.</li>
 							<li><b>Descargar PDF</b> — Informe con gráficos y KPIs. <b>Exportar Detalles</b> — ZIP con un CSV por categoría. <b>Volver a Opciones</b> — Relanza el escaneo con otras opciones.</li>
 						</ul>
 						<div class="docu-note">Los resultados se guardan en disco para el cliente activo y se cargan la próxima vez.</div>

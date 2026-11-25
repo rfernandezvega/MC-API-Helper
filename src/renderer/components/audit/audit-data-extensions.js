@@ -187,7 +187,7 @@ export async function auditDataExtensions(jsonText) {
         { value: noDescCount,    label: 'Sin descripción',     color: noDescPct > 50 ? AUDIT_PALETTE.red : AUDIT_PALETTE.orange, drillKey: 'de_no_desc' },
         { value: sendableCount,  label: 'Sendable',            color: AUDIT_PALETTE.green,  drillKey: 'de_sendable' },
         { value: testableCount,  label: 'Testable',            color: AUDIT_PALETTE.teal,   drillKey: 'de_testable' },
-        { value: retentionCount, label: 'Con Retención',       color: AUDIT_PALETTE.purple, drillKey: 'de_retention' },
+        { value: retentionCount, label: 'Con Retención',       color: AUDIT_PALETTE.teal, drillKey: 'de_retention' },
         { value: over1MCount,    label: '>1M registros',       color: over1MCount > 0 ? AUDIT_PALETTE.red : AUDIT_PALETTE.gray, drillKey: 'de_over1m' },
         { value: emptyCount,     label: 'Sin registros',       color: emptyCount > total * 0.3 ? AUDIT_PALETTE.orange : AUDIT_PALETTE.gray, drillKey: 'de_empty' },
         { value: testNameCount,  label: 'Nombre de prueba',    color: testNameCount > 0 ? AUDIT_PALETTE.orange : AUDIT_PALETTE.gray, drillKey: 'de_test_name' },
@@ -204,13 +204,13 @@ export async function auditDataExtensions(jsonText) {
             { label: 'Testable', value: testableCount, total, color: AUDIT_PALETTE.teal,  drillKey: 'de_testable' },
         ]},
         { title: 'Data Retention', help: 'DEs con política de retención de datos activa. Desglose por tipo de política.', bars: [
-            { label: 'Con retención',   value: retentionCount,         total, color: AUDIT_PALETTE.purple, drillKey: 'de_retention' },
+            { label: 'Con retención',   value: retentionCount,         total, color: AUDIT_PALETTE.teal, drillKey: 'de_retention' },
             { label: 'Sin retención',   value: total - retentionCount, total, color: AUDIT_PALETTE.gray,   drillKey: 'de_no_retention' },
             ...Object.entries(retentionTypes).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({
                 label, value, total: retentionCount || 1,
                 // Borrado individual → naranja (aviso), borrado total → morado, resto → azul
                 color: label.startsWith('Delete_Individual') ? AUDIT_PALETTE.orange
-                    : label.startsWith('Delete_All') ? AUDIT_PALETTE.purple
+                    : label.startsWith('Delete_All') ? AUDIT_PALETTE.teal
                     : AUDIT_PALETTE.blue,
                 drillKey: `de_ret_${label.replace(/[^a-z0-9]/gi, '')}`,
             })),

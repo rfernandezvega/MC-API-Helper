@@ -15,8 +15,26 @@
     <div class="menu-group changelog-group">
         <h3>Novedades</h3>
         <div id="changelog-list" class="changelog-list">
-            <!-- ======================== v2.7.1 ======================== -->
+            <!-- ======================== v2.8.0 ======================== -->
             <details class="changelog-entry" open>
+                <summary class="changelog-version">
+                    <span class="changelog-badge">v2.8.0</span>
+                    <span class="changelog-date">25 Noviembre 2026</span>
+                </summary>
+                <ul class="changelog-items">
+                    <li><span class="changelog-tag new">Nuevo</span> Auditoría de Cloud Pages: seguridad del código (robots.txt por dominio, control de crawlers de IA, posibles credenciales, indexación, validación de parámetros, cabeceras de seguridad y contenido remoto ejecutado) y llamadas a endpoints. Deja actualizada la caché de la vista de Cloud Pages.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Auditoría de Cloud Pages y Contenidos: detecta bloques catch vacíos (errores silenciados) en SSJS y JavaScript.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Cloud Pages: "Mapa de referencias" con las páginas que se referencian entre sí y, opcionalmente, los content blocks que usan. Respeta los filtros de la tabla, permite mover las cajas y se descarga como SVG o PNG.</li>
+                    <li><span class="changelog-tag new">Nuevo</span> Configuración de Cuentas: botón "Copiar datos" con MID, Auth URI y Client ID de la cuenta seleccionada.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Auditoría: se eligen las pestañas a escanear y las demás conservan sus datos, con la fecha de escaneo de cada una. Antes de empezar avisa si faltan Page IDs y del estado de las cachés de Contenidos y Journeys.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Auditoría: avisos y secciones plegables con icono de información, detalles en ventana más ancha (en Cloud Pages, primero las publicadas) y sin color morado.</li>
+                    <li><span class="changelog-tag improved">Mejora</span> Cloud Pages: filtro por ubicación y aviso de carga mientras se lee la caché.</li>
+                    <li><span class="changelog-tag fix">Fix</span> Cloud Pages: el código ya no lleva pegados al final los slots y bloques; los colocados se listan en Content Blocks sin duplicados y se ignoran los no publicados.</li>
+                </ul>
+            </details>
+
+            <!-- ======================== v2.7.1 ======================== -->
+            <details class="changelog-entry">
                 <summary class="changelog-version">
                     <span class="changelog-badge">v2.7.1</span>
                     <span class="changelog-date">23 Noviembre 2026</span>

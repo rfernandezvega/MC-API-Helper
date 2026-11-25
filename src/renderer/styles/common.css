@@ -48,7 +48,7 @@
        las tarjetas y barras se relean bien en oscuro aunque el HTML esté
        cacheado. El informe PDF usa los HEX de AUDIT_PALETTE (papel blanco). */
     --audit-green: #4caf50; --audit-red: #c23934; --audit-orange: #dd7a01;
-    --audit-blue: #0070d2; --audit-teal: #0b827c; --audit-purple: #7f5fc7; --audit-gray: #706e6b;
+    --audit-blue: #0070d2; --audit-teal: #0b827c; --audit-purple: #0b827c; /* auditorías guardadas antes de quitar el morado: se pintan en teal */ --audit-gray: #706e6b;
 }
 
 /* ==========================================================
@@ -84,7 +84,7 @@
     --sf-shadow-modal: 0 20px 60px rgba(0,0,0,0.6);
     /* Acentos de auditoría: versiones más luminosas para leerse en oscuro. */
     --audit-green: #5cc463; --audit-red: #e0685f; --audit-orange: #eda151;
-    --audit-blue: #4ea3ea; --audit-teal: #34b3a9; --audit-purple: #a98fe0; --audit-gray: #99a0aa;
+    --audit-blue: #4ea3ea; --audit-teal: #34b3a9; --audit-purple: #34b3a9; --audit-gray: #99a0aa;
 }
 
 /* Badges de estado globales (pastel, estilo Lightning) */

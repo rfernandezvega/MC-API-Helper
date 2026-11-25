@@ -22,14 +22,31 @@ import { auditCloudPages } from './audit/audit-cloudpages.js';
 import { auditSendManagement } from './audit/audit-send-management.js';
 import { auditDataExtensions } from './audit/audit-data-extensions.js';
 import { auditContent } from './audit/audit-content.js';
+import { handleCpMapClick } from './audit/cloudpages-map.js';
+import { countMissingPageIds } from './audit/cloudpages-security.js';
+import { loadCloudPagesCache } from './cloudpages-cache.js';
+import { escapeHtml, formatDate } from '../ui/format-utils.js';
 
 let getAuthenticatedConfig;
 
 let currentDrillKey = null;
 let currentStats    = null;
 let hasAuditResult  = false; // hay un panel de auditoría (recién ejecutado o de caché) al que volver
+let contentCacheMeta = null; // estado de las cachés de Contenidos y Journeys para el selector de escaneo
 
 const TAB_IDS = ['users', 'autos', 'journeys', 'cp', 'sm', 'de', 'content'];
+
+// Nombre visible de cada pestaña (mensajes de progreso y fecha de escaneo).
+const TAB_LABELS = {
+    users: 'Usuarios', autos: 'Automatismos', journeys: 'Journeys', cp: 'Cloud Pages',
+    sm: 'Send Management', de: 'Data Extensions', content: 'Contenidos',
+};
+
+// Prefijo de las claves de drill de cada pestaña: en un escaneo parcial permite conservar el
+// detalle de las pestañas no escaneadas y sustituir solo el de las que se vuelven a escanear.
+const TAB_DRILL_PREFIX = {
+    users: 'users_', autos: 'auto_', journeys: 'journey_', cp: 'cp_', sm: 'sm_', de: 'de_', content: 'ct_',
+};
 
 // ==========================================
 // INIT + VIEW
@@ -57,9 +74,31 @@ export function init(dependencies) {
 
     document.getElementById('auditoria-section')
         ?.addEventListener('click', e => {
+            // El icono "i" de un título plegable solo muestra su explicación: no debe plegar la sección.
+            if (e.target.closest('.audit-info-icon')) { e.preventDefault(); return; }
+            // El mapa de Cloud Pages se gestiona aquí por delegación porque su HTML puede venir de caché.
+            if (handleCpMapClick(e)) return;
             const t = e.target.closest('[data-drill]');
             if (t) showDrillDownModal(t.getAttribute('data-drill'));
         });
+
+    // Selector de pestañas a escanear
+    elements.auditScopeAll?.addEventListener('change', () => {
+        elements.auditScopeTabChecks.forEach(cb => { cb.checked = elements.auditScopeAll.checked; });
+        updateScopeStartButton();
+    });
+    elements.auditScopeTabChecks?.forEach(cb => cb.addEventListener('change', () => {
+        const checked = [...elements.auditScopeTabChecks].filter(c => c.checked).length;
+        elements.auditScopeAll.checked = checked === elements.auditScopeTabChecks.length;
+        updateScopeStartButton();
+    }));
+    elements.auditScopeCancelBtn?.addEventListener('click', () => ui.hideModal(elements.auditScopeModal));
+    elements.auditScopeStartBtn?.addEventListener('click', () => {
+        const selected = [...elements.auditScopeTabChecks].filter(c => c.checked).map(c => c.value);
+        if (selected.length === 0) return;
+        ui.hideModal(elements.auditScopeModal);
+        runAudit(selected);
+    });
 
     document.getElementById('audit-drill-download')
         ?.addEventListener('click', downloadDrillCsv);
@@ -241,9 +280,117 @@ async function handleRunAuditClick() {
         // Si hay una auditoría ya calculada, ofrecer volver a ella sin re-escanear.
         document.getElementById('backToAuditBtn').style.display = hasAuditResult ? 'block' : 'none';
     } else {
-        // El usuario pulsa "Iniciar Escaneo" explícitamente → siempre lanza un nuevo escaneo,
-        // aunque haya caché. La caché solo se carga automáticamente al entrar en la vista.
-        await runAudit();
+        // El usuario pulsa "Iniciar Escaneo" explícitamente → elige qué pestañas escanear y
+        // siempre se lanza un escaneo nuevo de ellas, aunque haya caché.
+        openScopeModal();
+    }
+}
+
+/**
+ * Abre el selector de pestañas a escanear con todas marcadas. Si hay caché de Cloud Pages,
+ * prepara el aviso de Landing Pages sin Page ID (sin él no se resuelven las referencias por id).
+ */
+async function openScopeModal() {
+    if (!elements.auditScopeModal) { runAudit(TAB_IDS); return; }
+    elements.auditScopeAll.checked = true;
+    elements.auditScopeTabChecks.forEach(cb => { cb.checked = true; });
+
+    const warning = elements.auditScopeCpWarning;
+    if (warning) {
+        warning.textContent = '';
+        try {
+            const cached = await loadCloudPagesCache(elements.clientNameInput?.value?.trim());
+            if (!cached) {
+                warning.textContent = 'No hay caché de Cloud Pages, así que no se conocen sus Page IDs. ' +
+                    'Las referencias por CloudPagesURL(id) / MicrositeURL(id) no se podrán resolver en el mapa: ' +
+                    'si las necesitas, ve antes a la vista de Cloud Pages y usa "Recuperar IDs".';
+            } else {
+                const { total, missing } = countMissingPageIds(cached);
+                if (missing > 0) {
+                    warning.textContent = `${missing} de ${total} Landing Pages no tienen Page ID importado. ` +
+                        'Las referencias por CloudPagesURL(id) / MicrositeURL(id) a esas páginas no se podrán resolver en el mapa: ' +
+                        'si las necesitas, ve antes a la vista de Cloud Pages y usa "Recuperar IDs".';
+                }
+            }
+        } catch (e) {
+            warning.textContent = '';
+        }
+    }
+    await fillContentCacheInfo();
+    updateScopeStartButton();
+    ui.showModal(elements.auditScopeModal);
+}
+
+/**
+ * Prepara el aviso de la pestaña Contenidos: esa pestaña no descarga nada, analiza la caché de
+ * la vista de Contenidos (y la de Journeys para saber qué se usa en journeys), así que se indica
+ * si existen y de qué fecha son antes de lanzar el escaneo.
+ */
+async function fillContentCacheInfo() {
+    contentCacheMeta = null;
+    const cacheKey = elements.clientNameInput?.value?.trim();
+    if (cacheKey && window.electronAPI?.getClientCacheMeta) {
+        try {
+            const [contents, journeys] = await Promise.all([
+                window.electronAPI.getClientCacheMeta('contents', cacheKey),
+                window.electronAPI.getClientCacheMeta('journeys', cacheKey)
+            ]);
+            contentCacheMeta = { contents, journeys };
+        } catch (e) {
+            contentCacheMeta = null;
+        }
+    }
+    renderContentCacheInfo();
+}
+
+/**
+ * Pinta el aviso de cachés de la pestaña Contenidos según lo marcado: si Journeys también se
+ * escanea, esa pestaña actualiza la caché de journeys antes que Contenidos, así que no falta.
+ */
+function renderContentCacheInfo() {
+    const box = elements.auditScopeContentInfo;
+    if (!box) return;
+    box.innerHTML = '';
+    if (!contentCacheMeta) return;
+    const { contents, journeys } = contentCacheMeta;
+    const journeysChecked = [...(elements.auditScopeTabChecks || [])].some(c => c.value === 'journeys' && c.checked);
+
+    const contentsLine = contents?.exists
+        ? `Caché de contenidos del <b>${escapeHtml(formatDate(contents.lastRefresh))}</b>.`
+        : '<b>No hay caché de contenidos</b>: la pestaña saldrá vacía. Ve antes a la vista de Contenidos y pulsa Refrescar.';
+    let journeysLine;
+    if (journeysChecked) {
+        journeysLine = journeys?.exists
+            ? `Caché de journeys del ${escapeHtml(formatDate(journeys.lastRefresh))}: se actualizará al escanear Journeys (solo los nuevos o modificados).`
+            : 'No hay caché de journeys: se descargará al escanear Journeys, antes de Contenidos.';
+    } else {
+        journeysLine = journeys?.exists
+            ? `Caché de journeys del <b>${escapeHtml(formatDate(journeys.lastRefresh))}</b>.`
+            : 'No hay caché de journeys: no se podrá saber qué contenidos se usan en journeys. Marca también Journeys para descargarla.';
+    }
+    box.innerHTML = 'La pestaña Contenidos no descarga contenidos: analiza la caché de la vista de Contenidos ' +
+        '(refréscala allí si está desactualizada) y la de Journeys.<br>' +
+        `${contentsLine}<br>${journeysLine}`;
+    box.classList.toggle('audit-callout-warning', !contents?.exists);
+    box.classList.toggle('audit-callout-info', !!contents?.exists);
+}
+
+/**
+ * Deshabilita el botón de iniciar si no hay ninguna pestaña marcada y muestra el aviso de
+ * Page IDs solo cuando Cloud Pages está entre las pestañas a escanear.
+ */
+function updateScopeStartButton() {
+    if (!elements.auditScopeStartBtn) return;
+    const checks = [...elements.auditScopeTabChecks];
+    elements.auditScopeStartBtn.disabled = !checks.some(c => c.checked);
+    const cpChecked = checks.some(c => c.value === 'cp' && c.checked);
+    if (elements.auditScopeCpWarning) {
+        elements.auditScopeCpWarning.style.display = cpChecked && elements.auditScopeCpWarning.textContent ? '' : 'none';
+    }
+    const contentChecked = checks.some(c => c.value === 'content' && c.checked);
+    renderContentCacheInfo();
+    if (elements.auditScopeContentInfo) {
+        elements.auditScopeContentInfo.style.display = contentChecked && elements.auditScopeContentInfo.textContent ? '' : 'none';
     }
 }
 
@@ -433,12 +580,26 @@ async function downloadAllDetailsCsv() {
 // ==========================================
 
 /**
- * Lanza el escaneo completo de la instancia: recorre las 7 pestañas en orden (cada módulo
- * pinta su pestaña y registra su drill/PDF en audit-state) y al terminar guarda el resultado
- * en la caché de auditoría del cliente activo.
+ * Lanza el escaneo de las pestañas elegidas en orden (cada módulo pinta su pestaña y registra su
+ * drill/PDF en audit-state). Las pestañas no elegidas conservan los datos de la última auditoría
+ * guardada. Al terminar guarda el resultado combinado en la caché del cliente activo.
+ * @param {string[]} selectedTabs - Ids de las pestañas a escanear (ver TAB_IDS).
  */
-async function runAudit() {
-    if (!await ui.showCustomConfirm('El escaneo va a comenzar. No cierres la aplicación durante el proceso.')) return;
+async function runAudit(selectedTabs = TAB_IDS) {
+    const selected = TAB_IDS.filter(id => selectedTabs.includes(id));
+    if (selected.length === 0) return;
+    const clientName = elements.clientNameInput?.value?.trim();
+
+    // Datos previos para las pestañas que no se escanean ahora.
+    let previous = null;
+    if (selected.length < TAB_IDS.length && clientName) {
+        try {
+            const result = await window.electronAPI.loadAuditCache(clientName);
+            previous = result?.success ? result.data : null;
+        } catch (e) {
+            previous = null;
+        }
+    }
 
     document.getElementById('audit-stats-container').innerHTML      = '';
     document.getElementById('downloadAuditPdfBtn').style.display    = 'none';
@@ -451,47 +612,65 @@ async function runAudit() {
     const dashboard = document.getElementById('audit-dashboard');
     dashboard.style.display       = 'flex';
     dashboard.style.flexDirection = 'column';
-    TAB_IDS.forEach(id => {
-        document.getElementById(`audit-tab-${id}`).innerHTML = buildLoadingPlaceholder();
-    });
-
     initAuditState();
+    const renderedTabs = {};
+    const tabDates = { ...(previous?.tabDates || {}) };
+
+    // Pestañas no escaneadas: se restauran su HTML, su detalle y su parte del PDF.
+    TAB_IDS.forEach(id => {
+        const el = document.getElementById(`audit-tab-${id}`);
+        if (selected.includes(id)) { el.innerHTML = buildLoadingPlaceholder(); return; }
+        renderedTabs[id] = previous?.tabs?.[id]
+            || `<div class="audit-tab-pad"><div class="audit-metric-empty">Esta pestaña no se incluyó en el escaneo.</div></div>`;
+        el.innerHTML = renderedTabs[id];
+    });
+    if (previous) {
+        const keptDrill = {};
+        for (const [key, entry] of Object.entries(previous.drillData || {})) {
+            const owner = TAB_IDS.find(id => key.startsWith(TAB_DRILL_PREFIX[id]));
+            if (owner && !selected.includes(owner)) keptDrill[key] = entry;
+        }
+        const keptPdf = {};
+        for (const [key, entry] of Object.entries(previous.pdfData || {})) {
+            if (!selected.includes(key)) keptPdf[key] = entry;
+        }
+        setDrillData(keptDrill);
+        setPdfData(keptPdf);
+    }
+
     const startTime = Date.now();
     logger.startLogBuffering();
     mcApiService.setLogger(logger);
-    const renderedTabs = {};
+
+    // Cada pestaña con su función de escaneo; el progreso muestra solo las elegidas.
+    const deJson = document.getElementById('audit-de-json')?.value?.trim();
+    const steps = {
+        users:    (apiConfig) => auditUsers(apiConfig),
+        autos:    (apiConfig) => auditAutomations(apiConfig, true),
+        journeys: (apiConfig) => auditJourneys(apiConfig),
+        cp:       (apiConfig, label) => auditCloudPages(apiConfig, clientName, { onProgress: (msg) => ui.blockUI(label, msg) }),
+        sm:       (apiConfig) => auditSendManagement(apiConfig),
+        de:       () => auditDataExtensions(deJson),
+        content:  () => auditContent(clientName),
+    };
 
     try {
         const apiConfig = await getAuthenticatedConfig();
+        const scanDate = new Date();
 
-        ui.blockUI('1/7: Escaneando Usuarios…');
-        await auditUsers(apiConfig);
-        renderedTabs.users = document.getElementById('audit-tab-users').innerHTML;
-
-        ui.blockUI('2/7: Escaneando Automatismos…');
-        await auditAutomations(apiConfig, true);
-        renderedTabs.autos = document.getElementById('audit-tab-autos').innerHTML;
-
-        ui.blockUI('3/7: Escaneando Journeys…');
-        await auditJourneys(apiConfig);
-        renderedTabs.journeys = document.getElementById('audit-tab-journeys').innerHTML;
-
-        ui.blockUI('4/7: Escaneando Cloud Pages…');
-        await auditCloudPages(apiConfig);
-        renderedTabs.cp = document.getElementById('audit-tab-cp').innerHTML;
-
-        ui.blockUI('5/7: Escaneando Send Management…');
-        await auditSendManagement(apiConfig);
-        renderedTabs.sm = document.getElementById('audit-tab-sm').innerHTML;
-
-        const deJson = document.getElementById('audit-de-json')?.value?.trim();
-        ui.blockUI('6/7: Analizando Data Extensions…');
-        await auditDataExtensions(deJson);
-        renderedTabs.de = document.getElementById('audit-tab-de').innerHTML;
-
-        ui.blockUI('7/7: Analizando Contenidos (caché)…');
-        await auditContent(elements.clientNameInput?.value?.trim());
-        renderedTabs.content = document.getElementById('audit-tab-content').innerHTML;
+        for (let i = 0; i < selected.length; i++) {
+            const id = selected[i];
+            const label = `${i + 1}/${selected.length}: Escaneando ${TAB_LABELS[id]}…`;
+            ui.blockUI(label);
+            await steps[id](apiConfig, label);
+            const el = document.getElementById(`audit-tab-${id}`);
+            // La fecha queda dentro del HTML de la pestaña porque, tras escaneos parciales,
+            // cada pestaña puede tener datos de un día distinto.
+            el.querySelector('.audit-tab-pad')?.insertAdjacentHTML('afterbegin',
+                `<div class="audit-tab-date">Escaneado el ${escapeHtml(scanDate.toLocaleString('es-ES'))}</div>`);
+            renderedTabs[id] = el.innerHTML;
+            tabDates[id] = scanDate.toISOString();
+        }
 
         const durationMs = Date.now() - startTime;
         const min = Math.floor(durationMs / 60000);
@@ -499,25 +678,26 @@ async function runAudit() {
         const timeStr = min > 0 ? `${min} m ${sec} s` : `${sec} s`;
         currentStats = { timeStr, calls: getApiCalls() };
 
-        // Se muestra también la fecha del escaneo (coincide con la de la caché que se guarda).
+        const partial = selected.length < TAB_IDS.length;
+        const scopeText = partial ? ` &nbsp;·&nbsp; Parcial: ${selected.map(id => TAB_LABELS[id]).join(', ')}` : '';
         document.getElementById('audit-stats-container').innerHTML =
             `<div class="audit-stats-box">
-                <span class="audit-stats-line">Tiempo: <b>${timeStr}</b> &nbsp;·&nbsp; Llamadas API: <b>${getApiCalls()}</b></span>
-                <span class="audit-stats-cache">Datos del ${new Date().toLocaleString('es-ES')}</span>
+                <span class="audit-stats-line">Tiempo: <b>${timeStr}</b> &nbsp;·&nbsp; Llamadas API: <b>${getApiCalls()}</b>${scopeText}</span>
+                <span class="audit-stats-cache">Datos del ${scanDate.toLocaleString('es-ES')}</span>
             </div>`;
         document.getElementById('downloadAuditPdfBtn').style.display    = 'block';
         document.getElementById('downloadAuditDetailsBtn').style.display = 'block';
         hasAuditResult = true; // panel disponible para volver desde las opciones
 
-        const clientName = elements.clientNameInput?.value?.trim();
         if (clientName) {
             await window.electronAPI.saveAuditCache({
                 clientName,
                 auditData: {
-                    savedAt:   new Date().toISOString(),
-                    options:   { autos: true, journeys: true },
-                    deJson:    document.getElementById('audit-de-json')?.value?.trim() || '',
+                    savedAt:   scanDate.toISOString(),
+                    options:   { tabs: selected },
+                    deJson:    deJson || previous?.deJson || '',
                     tabs:      renderedTabs,
+                    tabDates,
                     drillData: getDrillData(),
                     pdfData:   getPdfData(),
                     stats:     currentStats,
