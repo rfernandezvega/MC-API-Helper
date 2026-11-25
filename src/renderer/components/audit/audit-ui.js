@@ -10,8 +10,8 @@
 import { escapeHtml } from '../../ui/format-utils.js';
 
 /**
- * Paleta de la auditoría en HEX (espejo de los tokens --sf-* de common.css).
- * El morado es el único color fuera de tokens: se reserva para Salesforce/CRM y journeys.
+ * Paleta de la auditoría en HEX (espejo de los tokens --sf-* de common.css). Sin morado: todo
+ * sale de los tokens de la app.
  */
 export const AUDIT_PALETTE = {
     green:    '#4caf50', // --sf-green   → positivo (activo, en uso, publicado…)
@@ -19,8 +19,7 @@ export const AUDIT_PALETTE = {
     orange:   '#dd7a01', // --sf-orange  → intermedio / aviso (borrador, sin descripción…)
     blue:     '#0070d2', // --sf-blue    → color por defecto y canal Email
     blueDark: '#005fb2', // --sf-blue-dark
-    teal:     '#0b827c', // --sf-teal    → exportaciones y canales SMS
-    purple:   '#7f5fc7', // fuera de tokens: Salesforce/CRM y journeys
+    teal:     '#0b827c', // --sf-teal    → exportaciones, SMS, Salesforce/CRM, journeys e integraciones
     gray:     '#706e6b', // --sf-text-muted → neutro / sin dato
 };
 
@@ -55,7 +54,6 @@ const HEX_TO_VAR = {
     [AUDIT_PALETTE.blue]:   'var(--audit-blue)',
     [AUDIT_PALETTE.blueDark]: 'var(--audit-blue)',
     [AUDIT_PALETTE.teal]:   'var(--audit-teal)',
-    [AUDIT_PALETTE.purple]: 'var(--audit-purple)',
     [AUDIT_PALETTE.gray]:   'var(--audit-gray)',
 };
 function themeColor(hex) {
@@ -90,18 +88,18 @@ export function resolveBarColor(label) {
     if (/^con |activos? con login|activos$|en uso|exclusiv|publicad|published|scheduled|^login en \d{4}/.test(l)) return AUDIT_PALETTE.green;
     if (/^sin |huérfano|sin historial|stopped|inactiv|>.*mes/.test(l)) return AUDIT_PALETTE.red;
     if (/anterior|antiguo|paused|compartid|draft|solo lógica/.test(l)) return AUDIT_PALETTE.orange;
-    if (/salesforce|crm/.test(l))   return AUDIT_PALETTE.purple;
-    if (/api|integrac/.test(l))     return AUDIT_PALETTE.purple;
+    if (/salesforce|crm/.test(l))   return AUDIT_PALETTE.teal;
+    if (/api|integrac/.test(l))     return AUDIT_PALETTE.teal;
     if (/email/.test(l))            return AUDIT_PALETTE.blue;
     if (/sms/.test(l))              return AUDIT_PALETTE.teal;
     if (/push|in-app/.test(l))      return AUDIT_PALETTE.orange;
     if (/whatsapp/.test(l))         return AUDIT_PALETTE.green;
     if (/running/.test(l))          return AUDIT_PALETTE.blue;
     if (/sql|query/.test(l))        return AUDIT_PALETTE.blue;
-    if (/script|ssjs/.test(l))      return AUDIT_PALETTE.purple;
+    if (/script|ssjs/.test(l))      return AUDIT_PALETTE.teal;
     if (/import/.test(l))           return AUDIT_PALETTE.blue;
     if (/export|extract/.test(l))   return AUDIT_PALETTE.teal;
-    if (/journey/.test(l))          return AUDIT_PALETTE.purple;
+    if (/journey/.test(l))          return AUDIT_PALETTE.teal;
     return AUDIT_PALETTE.blue;
 }
 
@@ -142,14 +140,46 @@ export function buildCallout(callout) {
         `<span class="audit-callout-title">${title}</span><br>${message}</div>`;
 }
 
-/** Renderiza una lista de objetos callout a HTML concatenado. */
+/**
+ * Renderiza los avisos de una pestaña dentro de una sección plegable "Avisos", con el número de
+ * avisos por gravedad en el título, plegada por defecto. Sin avisos no pinta nada.
+ * @param {Array<{type:string,title:string,message:string}>} callouts
+ * @returns {string} HTML de la sección.
+ */
 export function renderCallouts(callouts) {
-    return (callouts || []).map(buildCallout).join('');
+    const list = callouts || [];
+    if (list.length === 0) return '';
+    const counts = { danger: 0, warning: 0, info: 0, success: 0 };
+    list.forEach(c => { counts[c.type in counts ? c.type : 'info']++; });
+    const parts = [];
+    if (counts.danger)  parts.push(`${counts.danger} crítico${counts.danger > 1 ? 's' : ''}`);
+    if (counts.warning) parts.push(`${counts.warning} a revisar`);
+    if (counts.info)    parts.push(`${counts.info} informativo${counts.info > 1 ? 's' : ''}`);
+    if (counts.success) parts.push(`${counts.success} correcto${counts.success > 1 ? 's' : ''}`);
+    // Plegados por defecto: el título ya resume cuántos hay de cada gravedad.
+    return buildSection(`Avisos (${parts.join(', ')})`, list.map(buildCallout).join(''), { open: false });
 }
 
-/** Cabecera de sección dentro de una pestaña. */
+/** Cabecera de sección dentro de una pestaña (no plegable). */
 export function buildSectionHeader(text) {
     return `<div class="audit-section-header">${text}</div>`;
+}
+
+/**
+ * Sección plegable de una pestaña: título con el estilo de las cabeceras de sección (y un icono
+ * de información opcional) que pliega o despliega su contenido. Usa <details>, así que funciona
+ * sin JavaScript también en el HTML cacheado de la auditoría.
+ * @param {string} title - Título de la sección.
+ * @param {string} content - HTML del contenido.
+ * @param {{info?:string, open?:boolean}} [options] - info: texto del icono "i"; open: si se
+ *   muestra desplegada al pintar (por defecto sí).
+ * @returns {string} HTML de la sección.
+ */
+export function buildSection(title, content, options = {}) {
+    const open = options.open === false ? '' : ' open';
+    return `<details class="audit-section"${open}>` +
+        `<summary class="audit-section-header audit-section-toggle">${title}${buildInfoIcon(options.info)}</summary>` +
+        `<div class="audit-section-body">${content}</div></details>`;
 }
 
 /** Grid de 2 columnas para las tarjetas de métricas. */
@@ -163,7 +193,8 @@ export function buildGrid(cards) {
  * @param {string} title
  * @param {string} help
  * @param {Array<{label:string,value:number,total:number,color?:string,drillKey?:string}>} bars
- * @param {{wide?:boolean}} [options]
+ * @param {{wide?:boolean, info?:string}} [options] - info: explicación de qué se revisa y cómo,
+ *   que se muestra al pasar el ratón por el icono "i" junto al título.
  */
 export function buildMetricCard(title, help, bars, options = {}) {
     const barsHtml = (bars || []).map(({ label, value, total, color, drillKey }) => {
@@ -185,10 +216,22 @@ export function buildMetricCard(title, help, bars, options = {}) {
 
     const gridSpan = options.wide ? ' style="grid-column:1 / -1;"' : '';
     return `<div class="audit-metric-card"${gridSpan}>
-        <div class="audit-metric-title">${title}</div>
+        <div class="audit-metric-title">${title}${buildInfoIcon(options.info)}</div>
         <div class="audit-metric-help">${help}</div>
         ${barsHtml || '<div class="audit-metric-empty">Sin datos disponibles.</div>'}
     </div>`;
+}
+
+/**
+ * Icono "i" con la explicación de una métrica en un tooltip (CSS, así funciona también con el
+ * HTML cacheado de la auditoría).
+ * @param {string} [info] - Texto explicativo; sin texto no se pinta nada.
+ * @returns {string} HTML del icono.
+ */
+export function buildInfoIcon(info) {
+    if (!info) return '';
+    return `<span class="audit-info-icon" tabindex="0" aria-label="Información">i` +
+        `<span class="audit-info-tip">${escapeHtml(info)}</span></span>`;
 }
 
 /** Placeholder de carga por pestaña. Usa el spinner común (sin emojis). */

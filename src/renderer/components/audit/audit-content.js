@@ -12,6 +12,8 @@ import {
 import {
     registerDrill, addDrillRow, registerPdfData,
 } from './audit-state.js';
+import { escapeHtml } from '../../ui/format-utils.js';
+import { detectEmptyCatches, summarizeEmptyCatches, EMPTY_CATCH_CATEGORIES, EMPTY_CATCH_INFO } from './cloudpages-security.js';
 
 const EMAIL_IDS = [207, 208, 209];
 const EMAIL_TYPE_LABEL = { 207: 'Template-Based', 208: 'HTML', 209: 'Text-only' };
@@ -256,6 +258,33 @@ export async function auditContent(clientName) {
     if (!hasJourneys) callouts.push({ type: 'info', title: 'Sin caché de Journeys',
         message: 'No hay journeys cacheados: las métricas de "en/fuera de Journeys" no son fiables. Cachéalos desde la vista de Journeys ("Descargar detalle → Todos").' });
 
+    // ── 8. Errores silenciados (catch vacíos en SSJS / JavaScript) ────────
+    const CATCH_COLS = ['ID', 'Nombre', 'Tipo', 'Categoría', 'Catch vacíos', 'Forma', 'Líneas', 'Modificado'];
+    const catchKey = (c) => `ct_catch_${c.replace(/[^a-z0-9]/gi, '')}`;
+    registerDrill('ct_catch_all', 'Catch vacíos (errores silenciados)', CATCH_COLS);
+    EMPTY_CATCH_CATEGORIES.forEach(c => registerDrill(catchKey(c), `Catch vacíos: ${c}`, CATCH_COLS));
+    const catchCounts = Object.fromEntries(EMPTY_CATCH_CATEGORIES.map(c => [c, 0]));
+    let contentsWithCode = 0;
+    contents.forEach(c => {
+        // Solo los contenidos con scripts pueden tener try/catch (AMPscript no lo tiene).
+        if (!c.content || !/<script|\btry\s*\{|\.catch\s*\(/i.test(c.content)) return;
+        contentsWithCode++;
+        for (const g of summarizeEmptyCatches(detectEmptyCatches(c.content))) {
+            // El drill pinta HTML: se escapan los valores (nombres con < o &).
+            const row = [c.id, c.name, c.assetTypeName || '---', g.category, g.count, g.forms, g.lines, fmtDate(c.modifiedDate)]
+                .map(v => escapeHtml(String(v ?? '---')));
+            addDrillRow('ct_catch_all', row);
+            addDrillRow(catchKey(g.category), row);
+            catchCounts[g.category]++;
+        }
+    });
+    const catchBars = EMPTY_CATCH_CATEGORIES.map((label, i) => ({
+        label, value: catchCounts[label], total: contentsWithCode || 1,
+        color: [AUDIT_PALETTE.red, AUDIT_PALETTE.orange, AUDIT_PALETTE.gray][i], drillKey: catchKey(label),
+    }));
+    if (catchCounts[EMPTY_CATCH_CATEGORIES[0]] > 0) callouts.push({ type: 'warning', title: 'Errores silenciados en SSJS',
+        message: `${catchCounts[EMPTY_CATCH_CATEGORIES[0]]} contenido(s) tienen bloques catch vacíos en SSJS: si falla una escritura en una DE o una llamada a una API, el error se oculta.` });
+
     // ── KPIs ──────────────────────────────────────────────────────────────
     const kpis = [
         { value: contents.length, label: 'Total contenidos', color: AUDIT_PALETTE.blue, drillKey: 'ct_overview' },
@@ -265,7 +294,7 @@ export async function auditContent(clientName) {
         { value: whatsapps.length, label: 'WhatsApp', color: AUDIT_PALETTE.green, drillKey: 'ct_cat_WhatsApp' },
         { value: tplMissing, label: 'Plantilla inexistente', color: tplMissing > 0 ? AUDIT_PALETTE.red : AUDIT_PALETTE.gray, drillKey: 'ct_tpl_missing' },
         { value: unusedBlocksTotal, label: 'Bloques sin uso', color: unusedBlocksTotal > 0 ? AUDIT_PALETTE.orange : AUDIT_PALETTE.gray, drillKey: null },
-        { value: waTplUnused, label: 'Plantillas WA sin uso', color: waTplUnused > 0 ? AUDIT_PALETTE.purple : AUDIT_PALETTE.gray, drillKey: 'ct_wa_tpl_unused' },
+        { value: waTplUnused, label: 'Plantillas WA sin uso', color: waTplUnused > 0 ? AUDIT_PALETTE.teal : AUDIT_PALETTE.gray, drillKey: 'ct_wa_tpl_unused' },
     ];
 
     // ── Tarjetas ──────────────────────────────────────────────────────────
@@ -275,10 +304,12 @@ export async function auditContent(clientName) {
         { title: 'Bloques sin uso por tipo', help: 'Bloques y snippets no referenciados por ningún contenido.', bars: unusedBlockBars },
         { title: 'Comunicaciones en Journeys', help: 'Emails/Push/SMS/WhatsApp referenciados en journeys cacheados.', bars: journeyBars },
         { title: 'WhatsApp · componentes', help: 'Tipos de componentes usados en mensajes y plantillas de WhatsApp.', bars: waComponentBars },
+        { title: 'Errores silenciados (catch vacíos)', info: EMPTY_CATCH_INFO,
+          help: `Contenidos con bloques catch vacíos o solo con comentarios, por tipo de código. Base: ${contentsWithCode} contenidos con scripts.`, bars: catchBars },
     ];
 
     registerPdfData('content', kpis, cards, callouts);
     tabEl.innerHTML = buildTabWrapper(
-        buildKpiRow(kpis) + renderCallouts(callouts) + buildGrid(cards.map(c => buildMetricCard(c.title, c.help, c.bars, { wide: c.wide })))
+        buildKpiRow(kpis) + renderCallouts(callouts) + buildGrid(cards.map(c => buildMetricCard(c.title, c.help, c.bars, { wide: c.wide, info: c.info })))
     );
 }

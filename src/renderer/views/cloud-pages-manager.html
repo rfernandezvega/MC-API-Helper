@@ -6,6 +6,7 @@
             <button id="refreshCloudPagesTableBtn" class="action-button">Refrescar</button>
             <button id="downloadCloudPagesCsvBtn" class="action-button download-btn">Exportar</button>
             <button id="getCloudPageIdsBtn" class="action-button">Recuperar IDs</button>
+            <button id="cloudPagesMapBtn" class="action-button">Mapa de referencias</button>
         </div>          
     </div>
     <h2>Gestión de Cloud Pages <span id="cloudpage-count" class="u-title-hint"></span></h2>
@@ -14,6 +15,8 @@
         <input type="text" id="cloudPageNameFilter" class="filter-input" placeholder="Buscar por nombre...">
         <input type="text" id="cloudPageIdFilter" class="filter-input" placeholder="Buscar por Page ID...">
         <input type="text" id="cloudPageContentFilter" class="filter-input" placeholder="Buscar en contenido...">
+        <input type="text" id="cloudPageLocationFilter" class="filter-input" placeholder="Buscar por ubicación...">
+
         <select id="cloudPageTypeFilter" class="filter-input">
             <option value="">Todos los tipos</option>
             <!-- Opciones se cargarán dinámicamente -->
@@ -85,6 +88,17 @@
             <button id="cloudpage-ids-cancel-btn" class="action-button cancel-btn">Cancelar</button>
             <button id="cloudpage-ids-import-btn" class="action-button activate-btn">Importar</button>
         </div>
+    </div>
+</div>
+
+<!-- ===================== MODAL: MAPA DE REFERENCIAS ===================== -->
+<div id="cloudpages-map-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-content cpmap-modal-content">
+        <div class="cpmap-modal-header">
+            <h3>Mapa de referencias entre Cloud Pages</h3>
+            <button id="cloudpages-map-close-btn" class="cpmap-modal-close" title="Cerrar">&times;</button>
+        </div>
+        <div id="cloudpages-map-summary" class="cpmap-modal-summary"></div>        <div id="cloudpages-map-body"></div>
     </div>
 </div>
 

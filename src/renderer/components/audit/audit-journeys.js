@@ -212,7 +212,7 @@ export async function auditJourneys(apiConfig) {
 
     const deepCards = [
         { title: 'Integración con CRM (Salesforce)', help: 'Presencia de actividades de Salesforce.', bars: [
-            { label: 'Con nodos Salesforce', value: sfIntegration['Con nodos Salesforce'], total, color: AUDIT_PALETTE.purple, drillKey: 'journey_sf_yes' },
+            { label: 'Con nodos Salesforce', value: sfIntegration['Con nodos Salesforce'], total, color: AUDIT_PALETTE.teal, drillKey: 'journey_sf_yes' },
             { label: 'Sin nodos Salesforce', value: sfIntegration['Sin nodos Salesforce'], total, color: AUDIT_PALETTE.gray,   drillKey: 'journey_sf_no' },
         ]},
         { title: 'Multicanalidad', help: 'Combinación de canales (Email, SMS, Push/In-App, WhatsApp).', bars: channelBars },

@@ -9,12 +9,19 @@ import { formatCodeWithIndentation, highlightCloudPageCode, buildCodeViewer } fr
 import { escapeHtml, formatDate } from '../ui/format-utils.js';
 import { createTableSorter, createPaginator } from '../ui/table-utils.js';
 import { getRowsPerPage } from './settings.js';
+import { fetchCloudPagesWithContent, loadCloudPagesCache, withSlotContent } from './cloudpages-cache.js';
+import { buildReferenceGraph, countMissingPageIds, isCodeResource, detectBlockReferences } from './audit/cloudpages-security.js';
+import { buildCloudPagesMap, handleCpMapClick, enableCpMapDrag, fitCpMaps } from './audit/cloudpages-map.js';
 
 
 // --- 1. ESTADO DEL MÓDULO ---
 
 let fullCloudPageList = [];
 let currentFilteredList = [];
+// Datos de los content blocks del mapa leídos de la caché de Contenidos ("Id:123" → {name, assetType} | null).
+const blockInfoCache = new Map();
+// Si el mapa de referencias muestra los content blocks.
+let mapShowBlocks = false;
 
 // Controladores reutilizables de ordenación y paginación (WP-4/WP-5), instanciados en
 // init(). La ordenación inicial se mantiene: 'modifiedDate' (fecha) descendente.
@@ -40,6 +47,21 @@ export function init(dependencies) {
     elements.cloudPageIdsCancelBtn.addEventListener('click', () => ui.hideModal(elements.cloudPageIdsModal));
     elements.cloudPageIdsImportBtn.addEventListener('click', processPastedIds);
 
+    // Mapa de referencias entre Cloud Pages (mismo análisis que la Auditoría, sobre la lista cargada)
+    elements.cloudPagesMapBtn.addEventListener('click', showReferenceMap);
+    elements.cloudPagesMapCloseBtn.addEventListener('click', () => ui.hideModal(elements.cloudPagesMapModal));
+    elements.cloudPagesMapModal.addEventListener('click', (e) => {
+        if (e.target === elements.cloudPagesMapModal) ui.hideModal(elements.cloudPagesMapModal);
+    });
+    elements.cloudPagesMapBody.addEventListener('click', handleCpMapClick);
+    enableCpMapDrag(elements.cloudPagesMapBody);
+    // El botón de content blocks se pinta dentro del mapa, así que se escucha por delegación.
+    elements.cloudPagesMapBody.addEventListener('click', (e) => {
+        if (!e.target.closest('.cpmap-blocks-toggle')) return;
+        mapShowBlocks = !mapShowBlocks;
+        renderReferenceMap(mapShowBlocks);
+    });
+
     // Listener centralizado para el tbody (chevron + enlaces externos)
     elements.cloudPagesTbody.addEventListener('click', (e) => {
         const chevron = e.target.closest('.cp-inspect-btn');
@@ -57,6 +79,7 @@ export function init(dependencies) {
     elements.cloudPageIdFilter.addEventListener('input', applyFiltersAndRender);
     elements.cloudPageNameFilter.addEventListener('input', applyFiltersAndRender);
     elements.cloudPageContentFilter.addEventListener('input', applyFiltersAndRender);
+    elements.cloudPageLocationFilter?.addEventListener('input', applyFiltersAndRender);
     elements.cloudPageTypeFilter.addEventListener('change', applyFiltersAndRender);
     elements.cloudPagePublishedFilter.addEventListener('change', applyFiltersAndRender);
     elements.cloudPageUrlFilter.addEventListener('change', applyFiltersAndRender);
@@ -110,9 +133,9 @@ export function init(dependencies) {
     elements.cpDetailBackdrop.addEventListener('click', closeCpDrawer);
 
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && elements.cpDetailDrawer.classList.contains('open')) {
-            closeCpDrawer();
-        }
+        if (e.key !== 'Escape') return;
+        if (elements.cpDetailDrawer.classList.contains('open')) closeCpDrawer();
+        if (elements.cloudPagesMapModal.style.display === 'flex') ui.hideModal(elements.cloudPagesMapModal);
     });
 
     elements.cpDetailDownloadBtn.addEventListener('click', () => {
@@ -134,11 +157,28 @@ export function init(dependencies) {
 
 /**
  * Prepara la vista de "Gestión de Cloud Pages" para ser mostrada.
- * Si los datos no están en caché, los obtiene de la API.
+ * Usa la caché del cliente/BU (la generan esta vista y la Auditoría) y solo va a la API si no
+ * existe. Para traer cambios recientes está el botón Refrescar.
  */
 export async function view() {
     if (fullCloudPageList.length === 0) {
-        await fetchData();
+        const clientName = elements.clientNameInput.value.trim();
+        // La caché puede pesar varios MB y tardar unos segundos en leerse.
+        ui.blockUI('Cargando Cloud Pages desde la caché...');
+        let cached = null;
+        try {
+            cached = await loadCloudPagesCache(clientName);
+        } finally {
+            ui.unblockUI();
+        }
+        // Si el usuario cambió de cliente mientras se leía la caché, no se pinta la de otro.
+        if (cached && cached.length > 0 && elements.clientNameInput.value.trim() === clientName) {
+            fullCloudPageList = cached;
+            logger.logMessage(`Cloud Pages cargadas desde la caché (${cached.length}). Pulsa Refrescar para obtener los cambios recientes.`);
+            populateCloudPageFilters(fullCloudPageList);
+        } else {
+            await fetchData();
+        }
     }
     applyFiltersAndRender();
 }
@@ -148,9 +188,11 @@ export async function view() {
  */
 export function clearCache() {
     fullCloudPageList = [];
+    blockInfoCache.clear();
     elements.cloudPageIdFilter.value = '';
     elements.cloudPageNameFilter.value = '';
     elements.cloudPageContentFilter.value = '';
+    if (elements.cloudPageLocationFilter) elements.cloudPageLocationFilter.value = '';
     elements.cloudPageTypeFilter.innerHTML = '<option value="">Todos los tipos</option>';
     elements.cloudPagesTbody.innerHTML = '';
     elements.cloudPagePublishedFilter.value = '';
@@ -167,15 +209,17 @@ export function clearCache() {
 // --- 3. LÓGICA DE DATOS Y API ---
 
 /**
- * Fuerza una recarga completa de los datos de Cloud Pages desde la API.
+ * Fuerza una recarga completa de los datos de Cloud Pages desde la API (actualiza la caché).
  */
 async function refreshData() {
     clearCache();
-    await view();
+    await fetchData();
+    applyFiltersAndRender();
 }
 
 /**
- * Orquesta la obtención de todos los datos de Cloud Pages.
+ * Descarga las Cloud Pages con su contenido mediante el módulo compartido de caché (que
+ * conserva los Page IDs importados y guarda el resultado) y rellena los filtros.
  */
 async function fetchData() {
     ui.blockUI("Recuperando datos de Cloud Pages...");
@@ -185,114 +229,10 @@ async function fetchData() {
         mcApiService.setLogger(logger);
         const clientName = elements.clientNameInput.value.trim();
 
-        // 1. Cargar la caché guardada
-        logger.logMessage("Cargando caché local de Cloud Pages...");
-        const cacheResult = await window.electronAPI.loadCloudPagesCache(clientName);
-        const cachedPagesMap = new Map();
-        if (cacheResult.success && cacheResult.data) {
-            cacheResult.data.forEach(page => cachedPagesMap.set(page.id, page));
-            logger.logMessage(`Se encontraron ${cachedPagesMap.size} Cloud Pages en la caché.`);
-        } else {
-            logger.logMessage("No se encontró caché local.");
-        }
-
-        // 2. Obtener la lista fresca desde la API
-        logger.logMessage("Obteniendo lista actualizada de Cloud Pages desde la API...");
-        const rawAssets = await mcApiService.fetchAllCloudPages(apiConfig);
-        logger.logMessage(`API devolvió ${rawAssets.length} assets. Obteniendo rutas de carpeta...`);
-        const assetsWithFolders = await mcApiService.enrichCloudPagesWithFolders(rawAssets, apiConfig);
-
-        // 3. Separar Web Pages (205) como fuente de contenido y el resto como elementos visibles
-        logger.logMessage("Separando Web Pages (contenido) de Cloud Pages (visibles)...");
-
-        const webPagesByIdMap = new Map();
-        const webPagesByNameMap = new Map();
-        const visibleAssets = [];
-
-        for (const asset of assetsWithFolders) {
-            if (asset.assetType.id === 205) {
-                const meta205 = {
-                    content: extractFullAssetContent(asset),
-                    modifiedByName: asset.modifiedBy?.name || null,
-                    modifiedDate: asset.modifiedDate || null
-                };
-                webPagesByIdMap.set(asset.id, meta205);
-                const normalizedName = (asset.name || '').toLowerCase().trim();
-                if (normalizedName) webPagesByNameMap.set(normalizedName, meta205);
-            } else {
-                visibleAssets.push(asset);
-            }
-        }
-
-        logger.logMessage(`Encontrados ${webPagesByIdMap.size} Web Pages (fuente de contenido) y ${visibleAssets.length} Cloud Pages visibles.`);
-
-        // 4. Fusionar datos de la API con la caché y asignar contenido a las Landing Pages
-        fullCloudPageList = visibleAssets.map(apiPage => {
-            const cachedPage = cachedPagesMap.get(apiPage.id);
-
-            let extractedContent = apiPage.content || '';
-            let resolvedModifiedBy = null;
-            let resolvedModifiedDate = null;
-
-            if (apiPage.assetType.id === 247) {
-                let meta205 = null;
-                const refId = apiPage.meta?.thumbnailRefAssetId;
-
-                if (refId && webPagesByIdMap.has(refId)) {
-                    meta205 = webPagesByIdMap.get(refId);
-                } else {
-                    const normalizedName = (apiPage.name || '').toLowerCase().trim();
-                    if (webPagesByNameMap.has(normalizedName)) {
-                        meta205 = webPagesByNameMap.get(normalizedName);
-                    }
-                }
-
-                if (meta205) {
-                    extractedContent = meta205.content;
-                    // Para LPs, el 205 es el contenido real — usar siempre su modifiedBy
-                    resolvedModifiedBy = meta205.modifiedByName;
-                    resolvedModifiedDate = meta205.modifiedDate;
-                }
-            }
-
-            const finalContent = (cachedPage?.content) || extractedContent;
-
-            return {
-                ...apiPage,
-                url: extractCloudPageUrl(apiPage),
-                publishDate: apiPage.meta?.cloudPages?.publishDate || null,
-                pageId: cachedPage?.pageId || null,
-                content: finalContent,
-                modifiedByName: resolvedModifiedBy || apiPage.modifiedBy?.name || '---',
-                modifiedDate: resolvedModifiedDate || apiPage.modifiedDate,
-                hasDetailedContent: !!finalContent && !finalContent.trim().startsWith('{')
-            };
+        const { pages } = await fetchCloudPagesWithContent(apiConfig, clientName, {
+            onProgress: (msg) => ui.blockUI(msg)
         });
-
-        // 5. Fallback: Landing Pages que no pudieron resolver contenido
-        const unresolved = fullCloudPageList.filter(
-            p => p.assetType.id === 247 && !p.hasDetailedContent && p.meta?.thumbnailRefAssetId
-        );
-        if (unresolved.length > 0) {
-            logger.logMessage(`⚠️ ${unresolved.length} Landing Pages sin contenido resuelto. Intentando vía API individual...`);
-            const batchSize = 10;
-            for (let i = 0; i < unresolved.length; i += batchSize) {
-                const batch = unresolved.slice(i, i + batchSize);
-                await Promise.all(batch.map(async (page) => {
-                    try {
-                        const assetDetail = await mcApiService.fetchAssetById(
-                            page.meta.thumbnailRefAssetId, apiConfig
-                        );
-                        page.content = extractFullAssetContent(assetDetail);
-                        page.hasDetailedContent = !!page.content && !page.content.trim().startsWith('{');
-                    } catch (e) {
-                        logger.logMessage(`⚠️ No se pudo obtener contenido de LP ${page.id} (${page.name}): ${e.message}`);
-                    }
-                }));
-            }
-        }
-
-        logger.logMessage("Fusión completada. La nueva lista tiene " + fullCloudPageList.length + " elementos.");
+        fullCloudPageList = pages;
         populateCloudPageFilters(fullCloudPageList);
 
     } catch (error) {
@@ -335,11 +275,19 @@ function renderFilteredTable() {
 
     const contentFilter = elements.cloudPageContentFilter.value.toLowerCase().trim();
     if (contentFilter) {
-        filtered = filtered.filter(p => 
-            p.content && p.content.toLowerCase().includes(contentFilter)
-        );
+        // Se busca también en los slots y bloques colocados, que forman parte de lo publicado.
+        filtered = filtered.filter(p => {
+            const text = withSlotContent(p).content;
+            return text && text.toLowerCase().includes(contentFilter);
+        });
     }
     
+    // Búsqueda parcial en la ruta de carpeta (p. ej. "Formularios" encuentra todo lo que cuelga de ella).
+    const locationFilter = (elements.cloudPageLocationFilter?.value || '').toLowerCase().trim();
+    if (locationFilter) {
+        filtered = filtered.filter(p => String(p.location || '').toLowerCase().includes(locationFilter));
+    }
+
     const typeFilter = elements.cloudPageTypeFilter.value;
     if (typeFilter) {
         filtered = filtered.filter(p => p.assetType.displayName === typeFilter);
@@ -429,10 +377,10 @@ function toggleContentRow(cloudpageId) {
     // Título del drawer
     elements.cpDetailTitle.textContent = page.name || 'Cloud Page';
  
-    // 1. Generar dependencias en columnas
-    elements.cpDetailDeps.innerHTML = buildDependenciesGrid(page.content, page.name);
- 
-    // 2. Generar visor de código fuente
+    // 1. Dependencias: se analizan el código y los slots/bloques colocados
+    elements.cpDetailDeps.innerHTML = buildDependenciesGrid(withSlotContent(page).content, page.name, page.slotBlocks);
+
+    // 2. Código fuente: solo el de la página, como el Code View de Marketing Cloud
     elements.cpDetailCode.innerHTML = buildCodeViewer(page.content);
  
     // 3. Abrir el drawer
@@ -452,30 +400,6 @@ function populateCloudPageFilters(cloudPages) {
     const types = [...new Set(cloudPages.map(p => p.assetType.displayName).filter(Boolean))].sort();
     types.forEach(type => elements.cloudPageTypeFilter.appendChild(new Option(type, type)));
     elements.cloudPageTypeFilter.value = currentType;
-}
-
-/**
- * Intenta extraer la URL de una Cloud Page desde diferentes partes del objeto de la API.
- * @param {object} item - El objeto del asset.
- * @returns {string} La URL encontrada o un mensaje por defecto.
- */
-function extractCloudPageUrl(item) {
-    try {
-        if (item.content?.trim().startsWith('{')) {
-            const contentJson = JSON.parse(item.content);
-            if (contentJson.url) return contentJson.url;
-        }
-        if (item.data?.site?.content?.trim().startsWith('{')) {
-            const nestedContentJson = JSON.parse(item.data.site.content);
-            if (nestedContentJson.url) return nestedContentJson.url;
-        }
-    } catch (e) { /* Ignorar errores de parseo JSON */ }
-    
-    if (item.meta?.cloudPages?.url) {
-        return item.meta.cloudPages.url;
-    }
-    
-    return 'URL no encontrada';
 }
 
 /**
@@ -549,6 +473,149 @@ async function processPastedIds() {
 }
 
 /**
+ * Abre el mapa de referencias de las Cloud Pages que muestra la tabla con los filtros actuales:
+ * qué páginas referencian a cuáles por URL, ruta relativa o id, con un resumen y el aviso de
+ * Landing Pages sin Page ID importado.
+ */
+function showReferenceMap() {
+    if (fullCloudPageList.length === 0) {
+        ui.showCustomAlert('No hay Cloud Pages cargadas. Pulsa Refrescar para descargarlas.');
+        return;
+    }
+    if (currentFilteredList.length === 0) {
+        ui.showCustomAlert('Ninguna Cloud Page cumple los filtros actuales.');
+        return;
+    }
+    mapShowBlocks = false;
+    renderReferenceMap(false);
+    ui.showModal(elements.cloudPagesMapModal);
+}
+
+/** HTML del botón que muestra u oculta los content blocks, según el estado actual del mapa. */
+function mapBlocksButtonHtml() {
+    return `<button type="button" class="action-button cpmap-blocks-toggle${mapShowBlocks ? ' is-active' : ''}" ` +
+        `title="Añade los bloques que usa cada página: ContentBlockBy* y Reference Content colocados en slots">` +
+        `${mapShowBlocks ? 'Ocultar content blocks' : 'Mostrar content blocks'}</button>`;
+}
+
+/**
+ * Pinta el mapa de referencias en el modal, con o sin los content blocks que usa cada página.
+ * Muestra las páginas filtradas en la tabla y sus referencias; las páginas fuera del filtro que
+ * llaman o son llamadas por ellas aparecen atenuadas. El grafo se calcula sobre todas las páginas
+ * para poder resolver las URLs y los ids de las que no están en el filtro.
+ * @param {boolean} withBlocks - Si se añaden los content blocks como nodos.
+ */
+async function renderReferenceMap(withBlocks) {
+    const analysisPages = fullCloudPageList.map(withSlotContent);
+    const graph = buildReferenceGraph(analysisPages);
+
+    const isFiltered = currentFilteredList.length < fullCloudPageList.length;
+    const filteredIds = new Set(currentFilteredList.map(p => String(p.id)));
+    const inFilter = (p) => !isFiltered || filteredIds.has(String(p.id));
+    const scopePages = analysisPages.filter(inFilter);
+
+    const pageEdges = graph.edges.filter(e => inFilter(e.from) || inFilter(e.to));
+    const selfRefPages = [...graph.selfRefs.keys()].filter(inFilter);
+    const unresolvedCount = [...graph.unresolved.keys()].filter(inFilter).length;
+    const selfRefIds = new Set(selfRefPages.map(p => String(p.id)));
+    const { total, missing } = countMissingPageIds(isFiltered ? currentFilteredList : fullCloudPageList);
+
+    // Páginas fuera del filtro que aparecen por estar conectadas con alguna filtrada.
+    const outsideIds = new Set();
+    if (isFiltered) {
+        for (const e of pageEdges) {
+            if (!inFilter(e.from)) outsideIds.add(String(e.from.id));
+            if (!inFilter(e.to)) outsideIds.add(String(e.to.id));
+        }
+    }
+
+    let nodes = analysisPages;
+    let edges = pageEdges;
+    let blockSummary = '';
+    if (withBlocks) {
+        const blocks = await buildBlockNodes(scopePages);
+        nodes = [...analysisPages, ...blocks.nodes];
+        edges = [...pageEdges, ...blocks.edges];
+        blockSummary = ` · ${blocks.nodes.length} content blocks usados por ${blocks.pagesWithBlocks} Cloud Pages` +
+            (blocks.unnamed > 0 ? ` (${blocks.unnamed} sin nombre: no están en la caché de Contenidos)` : '');
+    }
+
+    const scopeText = isFiltered
+        ? `Filtro aplicado: ${scopePages.length} de ${fullCloudPageList.length} Cloud Pages` +
+          (outsideIds.size > 0 ? ` (${outsideIds.size} páginas fuera del filtro, atenuadas, por estar conectadas)` : '') + ' · '
+        : '';
+    let summary = `${scopeText}${pageEdges.length} referencias entre ${scopePages.length} Cloud Pages · ` +
+        `${selfRefPages.length} páginas se referencian a sí mismas · ` +
+        `${unresolvedCount} páginas usan ids que no se han podido asociar.${blockSummary}`;
+    if (missing > 0) {
+        summary += ` ${missing} de ${total} Landing Pages no tienen Page ID: usa "Recuperar IDs" para resolver las referencias por CloudPagesURL(id).`;
+    }
+    elements.cloudPagesMapSummary.textContent = summary;
+    elements.cloudPagesMapBody.innerHTML = buildCloudPagesMap(nodes, edges, selfRefIds, isCodeResource, { outsideIds, leftActionsHtml: mapBlocksButtonHtml() });
+    // Se ajusta cuando el modal ya está visible y el recuadro tiene tamaño.
+    requestAnimationFrame(() => fitCpMaps(elements.cloudPagesMapBody));
+}
+
+/**
+ * Crea un nodo por cada content block que referencian las páginas (ContentBlockBy* con valor
+ * literal, incluidos los Reference Content de los slots) y una arista página → bloque. Los nombres
+ * se leen de la caché de Contenidos sin llamar a la API; se guardan en memoria para no releerla.
+ * @param {Array<object>} analysisPages - Cloud Pages con el contenido de sus slots incluido.
+ * @returns {Promise<{nodes:Array<object>, edges:Array<object>, pagesWithBlocks:number, unnamed:number}>}
+ */
+async function buildBlockNodes(analysisPages) {
+    const refsByPage = analysisPages.map(p => ({ page: p, refs: detectBlockReferences(p.content) }));
+    const all = new Map();
+    for (const { refs } of refsByPage) for (const r of refs) all.set(`${r.by}:${r.value.toLowerCase()}`, r);
+
+    const pending = [...all.entries()].filter(([k]) => !blockInfoCache.has(k)).map(([, r]) => r);
+    if (pending.length > 0 && window.electronAPI?.lookupClientContents) {
+        ui.blockUI('Leyendo los nombres de los content blocks de la caché de Contenidos...');
+        try {
+            const res = await window.electronAPI.lookupClientContents(elements.clientNameInput.value.trim(), {
+                ids: pending.filter(r => r.by === 'Id').map(r => r.value),
+                keys: pending.filter(r => r.by === 'Key').map(r => r.value),
+                names: pending.filter(r => r.by === 'Name').map(r => r.value)
+            });
+            for (const r of pending) {
+                const v = r.value.toLowerCase();
+                const hit = (res?.items || []).find(it =>
+                    (r.by === 'Id' && String(it.id) === r.value) ||
+                    (r.by === 'Key' && String(it.customerKey).toLowerCase() === v) ||
+                    (r.by === 'Name' && String(it.name).toLowerCase() === v));
+                blockInfoCache.set(`${r.by}:${v}`, hit || null);
+            }
+        } catch (e) {
+            logger.logMessage(`No se pudo leer la caché de Contenidos para el mapa: ${e.message}`);
+        } finally {
+            ui.unblockUI();
+        }
+    }
+
+    const nodes = new Map();
+    const edges = [];
+    let pagesWithBlocks = 0;
+    for (const { page, refs } of refsByPage) {
+        if (refs.length) pagesWithBlocks++;
+        for (const r of refs) {
+            const key = `${r.by}:${r.value.toLowerCase()}`;
+            if (!nodes.has(key)) {
+                const info = blockInfoCache.get(key);
+                const refLabel = `ContentBlockBy${r.by}(${r.by === 'Id' ? r.value : `"${r.value}"`})`;
+                nodes.set(key, {
+                    id: `cb:${key}`, isContentBlock: true, named: !!info,
+                    name: info?.name || refLabel, refLabel,
+                    assetType: { displayName: info?.assetType ? `Content block · ${info.assetType}` : 'Content block' }
+                });
+            }
+            edges.push({ from: page, to: nodes.get(key), vias: [`ContentBlockBy${r.by}`] });
+        }
+    }
+    const list = [...nodes.values()];
+    return { nodes: list, edges, pagesWithBlocks, unnamed: list.filter(n => !n.named).length };
+}
+
+/**
  * Genera y descarga un fichero CSV con las Cloud Pages filtradas.
  */
 function downloadCloudPagesCsv() {
@@ -602,46 +669,15 @@ function updateCloudPageCount() {
 }
 
 /**
- * Extrae el contenido completo de un Web Page (tipo 205), 
- * combinando el HTML principal con el contenido de sus slots.
- * @param {object} asset - El objeto del asset Web Page.
- * @returns {string} El HTML completo combinado.
- */
-function extractWebPageContent(asset) {
-    let fullContent = '';
-    
-    // Contenido principal del view HTML
-    const mainContent = asset?.views?.html?.content || '';
-    fullContent += mainContent;
-    
-    // Contenido de los slots
-    const slots = asset?.views?.html?.slots;
-    if (slots) {
-        for (const slotKey of Object.keys(slots)) {
-            const slot = slots[slotKey];
-            // Contenido directo del slot
-            if (slot.content) fullContent += '\n' + slot.content;
-            // Bloques dentro del slot
-            if (slot.blocks) {
-                for (const blockKey of Object.keys(slot.blocks)) {
-                    const block = slot.blocks[blockKey];
-                    if (block.content) fullContent += '\n' + block.content;
-                }
-            }
-        }
-    }
-    
-    return fullContent;
-}
-
-/**
  * Analiza el contenido de una Cloud Page y devuelve HTML con las dependencias
  * distribuidas en columnas (estilo panel de logs: flex 1 1 0).
- * @param {string} content - El contenido completo HTML/AMPscript/SSJS.
+ * @param {string} content - Código de la página más el de sus slots/bloques colocados.
  * @param {string} pageName - Nombre de la página para contexto.
+ * @param {Array<{slot:string, block:string|null, content:string}>} [slotBlocks] - Slots y bloques
+ *        colocados; los que no incluyen un ContentBlockBy* se listan como bloque de slot.
  * @returns {string} HTML con bloques de dependencias en columnas.
  */
-function buildDependenciesGrid(content, pageName) {
+function buildDependenciesGrid(content, pageName, slotBlocks = []) {
     if (!content) return '<div class="cp-detail-no-deps">Sin contenido disponible</div>';
 
     // Alias local del helper compartido de escape (sustituye a la copia que había aquí)
@@ -697,12 +733,21 @@ function buildDependenciesGrid(content, pageName) {
     }
  
     // --- 4. Content Blocks ---
-    const cbs = [];
-    for (const m of content.matchAll(/ContentBlockByKey\s*\(\s*["']([^"']+)["']\s*\)/gi)) cbs.push(`ContentBlockByKey("${esc(m[1])}")`);
-    for (const m of content.matchAll(/ContentBlockById\s*\(\s*["']?(\d+)["']?\s*\)/gi)) cbs.push(`ContentBlockById(${m[1]})`);
-    for (const m of content.matchAll(/ContentBlockByName\s*\(\s*["']([^"']+)["']\s*\)/gi)) cbs.push(`ContentBlockByName("${esc(m[1])}")`);
-    if (cbs.length > 0) {
-        sections.push({ title: 'Content Blocks', items: cbs });
+    // Cada referencia se lista una vez aunque aparezca en el código y en un slot.
+    const cbs = new Set();
+    for (const m of content.matchAll(/ContentBlockByKey\s*\(\s*["']([^"']+)["']\s*\)/gi)) cbs.add(`ContentBlockByKey("${esc(m[1])}")`);
+    for (const m of content.matchAll(/ContentBlockById\s*\(\s*["']?(\d+)["']?\s*\)/gi)) cbs.add(`ContentBlockById(${m[1]})`);
+    for (const m of content.matchAll(/ContentBlockByName\s*\(\s*["']([^"']+)["']\s*\)/gi)) cbs.add(`ContentBlockByName("${esc(m[1])}")`);
+    // Los bloques de slot con contenido propio (no una referencia) no salen en el código de la
+    // página, así que se indica que existen y dónde están.
+    for (const sb of slotBlocks || []) {
+        if (/ContentBlockBy(Key|Id|Name)\s*\(/i.test(sb.content)) continue;
+        cbs.add(sb.block
+            ? `Bloque HTML en slot <code>${esc(sb.slot)}</code> (clave <code>${esc(sb.block)}</code>)`
+            : `Contenido del slot <code>${esc(sb.slot)}</code>`);
+    }
+    if (cbs.size > 0) {
+        sections.push({ title: 'Content Blocks', items: [...cbs] });
     }
  
     // --- 5. Triggered Sends ---
@@ -788,40 +833,3 @@ function buildDependenciesGrid(content, pageName) {
     return html;
 }
 
-
- 
-
-/**
- * Extrae el contenido completo de un asset, combinando el HTML principal 
- * con el contenido de sus slots y bloques internos.
- * @param {object} asset - El objeto completo del asset devuelto por la API.
- * @returns {string} El contenido combinado.
- */
-function extractFullAssetContent(asset) {
-    let fullContent = '';
-    
-    // Contenido principal del view HTML
-    fullContent += asset?.views?.html?.content || '';
-    
-    // Contenido de los slots
-    const slots = asset?.views?.html?.slots;
-    if (slots) {
-        for (const slotKey of Object.keys(slots)) {
-            const slot = slots[slotKey];
-            if (slot.content) fullContent += '\n' + slot.content;
-            if (slot.blocks) {
-                for (const blockKey of Object.keys(slot.blocks)) {
-                    const block = slot.blocks[blockKey];
-                    if (block.content) fullContent += '\n' + block.content;
-                }
-            }
-        }
-    }
-    
-    // Contenido directo del asset (por si no tiene views)
-    if (!fullContent && asset?.content) {
-        fullContent = asset.content;
-    }
-    
-    return fullContent;
-}

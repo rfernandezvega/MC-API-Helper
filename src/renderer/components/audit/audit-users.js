@@ -136,7 +136,7 @@ export async function auditUsers(apiConfig) {
         { value: total,               label: 'Total Usuarios',       color: AUDIT_PALETTE.blue,   drillKey: 'users_total' },
         { value: activeCount,         label: 'Activos',              color: AUDIT_PALETTE.green,  drillKey: 'users_active' },
         { value: inactiveCount,       label: 'Inactivos',            color: AUDIT_PALETTE.gray,   drillKey: 'users_inactive' },
-        { value: apiCheckCount,       label: 'Con check "API User"', color: AUDIT_PALETTE.purple, drillKey: 'users_api' },
+        { value: apiCheckCount,       label: 'Con check "API User"', color: AUDIT_PALETTE.teal, drillKey: 'users_api' },
         { value: inactiveOver3Months, label: 'Sin login >3 meses',   color: inactiveOver3Pct > 20 ? AUDIT_PALETTE.red : AUDIT_PALETTE.orange, drillKey: 'users_inactive_3m' },
         { value: noRolesCount, label: 'Sin roles asignados', color: noRolesCount > 0 ? AUDIT_PALETTE.orange : AUDIT_PALETTE.gray, drillKey: 'users_no_roles' },
     ];
@@ -147,7 +147,7 @@ export async function auditUsers(apiConfig) {
             { label: 'Inactivos', value: inactiveCount, total, color: AUDIT_PALETTE.gray,  drillKey: 'users_inactive' },
         ]},
         { title: 'Check "API User"', help: 'Usuarios con el check API habilitado en su perfil.', bars: [
-            { label: 'Con check API', value: apiCheckCount,         total, color: AUDIT_PALETTE.purple, drillKey: 'users_api' },
+            { label: 'Con check API', value: apiCheckCount,         total, color: AUDIT_PALETTE.teal, drillKey: 'users_api' },
             { label: 'Sin check API', value: total - apiCheckCount, total, color: AUDIT_PALETTE.blue,   drillKey: 'users_api_no' },
         ]},
         { title: 'Usuarios sin roles', help: 'Usuarios que no tienen ningún rol asignado. Pueden ser cuentas huérfanas o pendientes de configurar.', bars: [

@@ -9,6 +9,7 @@ import * as ui from '../ui/ui-helpers.js';
 import * as logger from '../ui/logger.js';
 import * as mcApiService from '../api/mc-api-service.js';
 import { escapeHtml } from '../ui/format-utils.js';
+import { copyToClipboard } from '../ui/copy-utils.js';
 
 
 // --- ESTADO DEL MÓDULO ---
@@ -168,6 +169,37 @@ function setClientConfigForm(config, clientName = '') {
 }
 
 /** Carga las configuraciones guardadas: desplegable plano (editar) + selector de dos niveles (sidebar). */
+/**
+ * Muestra el botón "Copiar datos" de Datos Aplicación solo cuando hay una cuenta seleccionada
+ * en el desplegable de configuraciones. No recibe parámetros.
+ */
+function updateCopyApiConfigButton() {
+    if (!elements.copyApiConfigBtn) return;
+    elements.copyApiConfigBtn.style.display = elements.savedConfigsSelect.value ? '' : 'none';
+}
+
+/**
+ * Copia al portapapeles el MID, la Auth URI y el Client ID de la cuenta seleccionada (una línea
+ * por dato) para poder compartirlos. Nunca incluye el Client Secret. No recibe parámetros.
+ */
+async function copyApiConfigToClipboard() {
+    const btn = elements.copyApiConfigBtn;
+    const text = [
+        `MID: ${elements.businessUnitInput.value.trim()}`,
+        `Auth URI: ${elements.authUriInput.value.trim()}`,
+        `Client ID: ${elements.clientIdInput.value.trim()}`,
+    ].join('\n');
+
+    if (!await copyToClipboard(text)) {
+        ui.showCustomAlert('No se pudieron copiar los datos al portapapeles.');
+        return;
+    }
+    // Confirmación breve en el propio botón.
+    clearTimeout(btn._copyTimer);
+    btn.textContent = 'Copiado';
+    btn._copyTimer = setTimeout(() => { btn.textContent = 'Copiar datos'; }, 1500);
+}
+
 export async function loadConfigsIntoSelect() {
     const configs = await window.electronAPI.loadGlobalConfigs();
 
@@ -176,6 +208,7 @@ export async function loadConfigsIntoSelect() {
     const names = Object.keys(configs).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     for (const name of names) elements.savedConfigsSelect.appendChild(new Option(name, name));
     elements.savedConfigsSelect.value = activeContext.clientName || '';
+    updateCopyApiConfigButton();
 
     // Selector de dos niveles de la barra lateral (solo BUs marcadas como visibles).
     sidebarClientsData = names.map(name => ({ name, bus: getBusFor(configs[name]).filter(b => !b.hidden) }));
@@ -352,6 +385,7 @@ async function activateClientBU(clientName, mid, buName) {
             setSidebarLabel(clientName, buName);
 
             if (auditManager) auditManager.view();
+            updateCopyApiConfigButton();
 
             getAuthenticatedConfig()
                 .catch(() => { /* error ya gestionado */ })
@@ -364,6 +398,7 @@ async function activateClientBU(clientName, mid, buName) {
             elements.savedConfigsSelect.value = '';
             setSidebarLabel('', '');
             if (auditManager) auditManager.view();
+            updateCopyApiConfigButton();
         }
     } finally {
         logger.endLogBuffering();
@@ -732,6 +767,7 @@ export async function init(dependencies) {
 
     // Desplegable plano (editar/activar por BU principal).
     elements.savedConfigsSelect.addEventListener('change', (e) => loadAndSyncClientConfig(e.target.value));
+    elements.copyApiConfigBtn?.addEventListener('click', copyApiConfigToClipboard);
 
     // Selector de dos niveles (cliente → BU) de la barra lateral.
     ensureSidebarMenuEls();

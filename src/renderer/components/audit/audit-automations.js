@@ -9,7 +9,7 @@ import elements from '../../ui/dom-elements.js';
 import * as ui from '../../ui/ui-helpers.js';
 import {
     AUDIT_PALETTE, formatDate,
-    buildTabWrapper, buildKpiRow, buildGrid, buildMetricCard, buildSectionHeader,
+    buildTabWrapper, buildKpiRow, buildGrid, buildMetricCard, buildSection,
     buildCallout, renderCallouts,
 } from './audit-ui.js';
 import {
@@ -194,7 +194,7 @@ export async function auditAutomations(apiConfig, isDetailed) {
         { title: 'Tipo de ejecución', help: 'Cómo se dispara cada automatismo: calendario (Schedule), llamada API (Fire Trigger), llegada de fichero (FileDrop) o sin tipo identificado.', bars:
             Object.entries(execTypeCounts).filter(([, v]) => v > 0).map(([label, value]) => {
                 const color = label.includes('Schedule') ? AUDIT_PALETTE.green
-                    : label.includes('Fire') ? AUDIT_PALETTE.purple
+                    : label.includes('Fire') ? AUDIT_PALETTE.teal
                     : label.includes('File') ? AUDIT_PALETTE.teal
                     : AUDIT_PALETTE.gray;
                 return { label, value, total: totalAutos, color, drillKey: `auto_exec_${label.replace(/[^a-z0-9]/gi, '')}` };
@@ -385,9 +385,9 @@ export async function auditAutomations(apiConfig, isDetailed) {
             ]},
         ];
 
-        detailedHtml = renderCallouts(detailedCallouts) +
-            buildSectionHeader('Análisis Detallado — Inspección Individual') +
-            buildGrid(detailedCards.map(c => buildMetricCard(c.title, c.help, c.bars, { wide: c.wide })));
+        detailedHtml = buildSection('Análisis Detallado — Inspección Individual',
+            renderCallouts(detailedCallouts) +
+            buildGrid(detailedCards.map(c => buildMetricCard(c.title, c.help, c.bars, { wide: c.wide }))));
     } else {
         detailedHtml = buildCallout({ type: 'info', title: 'Análisis profundo no ejecutado',
             message: 'Activa la opción para obtener: alertas de error, dominios de aviso, descripciones, responsables de contenido sin documentar y reutilización de actividades.' });
@@ -403,7 +403,7 @@ export async function auditAutomations(apiConfig, isDetailed) {
         { value: totalAutos,               label: 'Total Automatismos',  color: AUDIT_PALETTE.blue, drillKey: 'auto_total' },
         { value: autos.filter(a => ['Scheduled','Ready','Running'].includes(a.status)).length, label: 'Activos / Prog.', color: AUDIT_PALETTE.green, drillKey: 'auto_active' },
         { value: execByYear['Sin historial'], label: 'Sin historial',    color: execByYear['Sin historial'] > totalAutos * 0.3 ? AUDIT_PALETTE.red : AUDIT_PALETTE.orange, drillKey: 'auto_stale' },
-        { value: journeyLaunchingCount,    label: 'Lanzan Journeys',     color: AUDIT_PALETTE.purple, drillKey: 'auto_launch_journey' },
+        { value: journeyLaunchingCount,    label: 'Lanzan Journeys',     color: AUDIT_PALETTE.teal, drillKey: 'auto_launch_journey' },
         { value: importCountAll,           label: 'Acts. Import',        color: AUDIT_PALETTE.blue, drillKey: 'auto_import' },
         { value: exportCountAll,           label: 'Acts. Export',        color: AUDIT_PALETTE.teal, drillKey: 'auto_export' },
         { value: testNameCount, label: 'Nombre prueba/test', color: testNameCount > 0 ? AUDIT_PALETTE.orange : AUDIT_PALETTE.gray, drillKey: 'auto_test_name' },

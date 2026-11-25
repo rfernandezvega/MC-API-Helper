@@ -79,7 +79,7 @@ export async function auditSendManagement(apiConfig) {
         { value: sp.length,                     label: 'Sender Profiles',      color: AUDIT_PALETTE.teal,   drillKey: 'sm_sp' },
         { value: usage['En uso'],               label: 'Perfiles en uso',      color: AUDIT_PALETTE.green,  drillKey: 'sm_in_use' },
         { value: orphanCount,                   label: 'Perfiles huérfanos',   color: orphanCount > 0 ? AUDIT_PALETTE.red : AUDIT_PALETTE.gray, drillKey: 'sm_orphans' },
-        { value: config['From dinámico (%%=)'], label: 'From dinámico',        color: AUDIT_PALETTE.purple, drillKey: 'sm_dynamic' },
+        { value: config['From dinámico (%%=)'], label: 'From dinámico',        color: AUDIT_PALETTE.teal, drillKey: 'sm_dynamic' },
     ];
 
     const cards = [
@@ -88,7 +88,7 @@ export async function auditSendManagement(apiConfig) {
             { label: 'Huérfanos (sin clasificación)', value: usage['Huérfanos (sin clasificación)'], total: sp.length, color: AUDIT_PALETTE.red,   drillKey: 'sm_orphans' },
         ]},
         { title: 'Funcionalidades avanzadas', help: 'Revisa si el Sender contiene AMPScript además de AutoReply y Forward.', bars: [
-            { label: 'From dinámico (%%=)', value: config['From dinámico (%%=)'], total: sp.length, color: AUDIT_PALETTE.purple, drillKey: 'sm_dynamic' },
+            { label: 'From dinámico (%%=)', value: config['From dinámico (%%=)'], total: sp.length, color: AUDIT_PALETTE.teal, drillKey: 'sm_dynamic' },
             { label: 'Con AutoReply',       value: config['Con AutoReply'],       total: sp.length, color: AUDIT_PALETTE.orange, drillKey: 'sm_reply' },
             { label: 'Con Forward',         value: config['Con Forward'],         total: sp.length, color: AUDIT_PALETTE.blue,   drillKey: 'sm_forward' },
         ]},

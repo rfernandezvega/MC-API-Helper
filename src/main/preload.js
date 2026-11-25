@@ -91,6 +91,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadClientJourneys: (clientName) => ipcRenderer.invoke('load-client-journeys-from-file', clientName),
 
   /**
+   * Indica si existe la caché de contenidos o journeys de un cliente+BU y su fecha, sin cargarla.
+   * @param {'contents'|'journeys'} kind - Tipo de caché.
+   * @param {string} clientName - Clave de caché del contexto activo.
+   * @returns {Promise<{exists:boolean, lastRefresh?:string, sizeBytes?:number}>}
+   */
+  getClientCacheMeta: (kind, clientName) => ipcRenderer.invoke('get-client-cache-meta', kind, clientName),
+
+  /**
+   * Busca en la caché de contenidos los assets indicados y devuelve sus datos básicos, sin cargarla entera.
+   * @param {string} clientName - Clave de caché del contexto activo.
+   * @param {{ids?:string[], keys?:string[], names?:string[]}} query - Valores a buscar.
+   * @returns {Promise<{success:boolean, exists?:boolean, items:Array<{id, customerKey, name, assetType}>}>}
+   */
+  lookupClientContents: (clientName, query) => ipcRenderer.invoke('lookup-client-contents', clientName, query),
+
+  /**
    * Guarda la caché de automatismos (pasos, actividades y DEs destino) de un cliente+BU (carpeta ClientAutomations).
    * @param {object} data - Un objeto con { clientName: string, automations: Array<object>, lastRefresh: string }.
    * @returns {Promise<object>} Una promesa que resuelve con el resultado de la operación.
@@ -117,6 +133,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * @returns {Promise<object>}
    */
   loadCloudPagesCache: (clientName) => ipcRenderer.invoke('load-cloud-pages-cache', clientName),
+
+  /**
+   * Comprueba el robots.txt publicado en la raíz de un dominio de Cloud Pages.
+   * @param {string} host - Dominio (sin protocolo ni ruta).
+   * @returns {Promise<{success:boolean, status?:number, contentType?:string, body?:string, error?:string}>}
+   */
+  checkRobotsTxt: (host) => ipcRenderer.invoke('check-robots-txt', host),
 
    /**
    * Guarda el resultado completo de una auditoría técnica para un cliente.

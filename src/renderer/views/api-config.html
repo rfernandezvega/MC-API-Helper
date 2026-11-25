@@ -36,7 +36,10 @@
         <div id="api-settings-tab" class="tab-content active">
             <!-- Datos de la Aplicación API (Bloque movido aquí) -->
             <div class="config-block">
-                <h3>Datos Aplicación</h3>
+                <div class="config-block-header">
+                    <h3>Datos Aplicación</h3>
+                    <button type="button" id="copyApiConfigBtn" class="action-button" style="display:none;" title="Copia MID, Auth URI y Client ID para compartirlos">Copiar datos</button>
+                </div>
                 <div class="form-group"><label for="businessUnit">Business Unit principal (MID)</label><input type="text" id="businessUnit" placeholder="MID de la BU principal (Enterprise)"></div>
                 <div class="form-group"><label for="authUri">Auth URI</label><input type="text" id="authUri" placeholder="Ej: https://...mc.auth.marketingcloudapis.com/v2/token"></div>
                 <div class="form-group"><label for="clientId">Client ID</label><input type="text" id="clientId"></div>
