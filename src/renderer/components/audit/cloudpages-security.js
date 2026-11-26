@@ -935,14 +935,89 @@ export function buildPagesByUrl(pages) {
     return map;
 }
 
+// Argumento de una llamada aún abierto: admite un nivel de paréntesis dentro (p. ej. Concat(...)).
+const OPEN_ARG = String.raw`[^)\n;]*(?:\([^)\n;]*)?$`;
+
+// Contextos en los que una URL o un id de Cloud Page se usa para navegar o llamar a la página.
+// Se comprueban sobre el texto inmediatamente anterior a la referencia.
+const REF_CALL_CONTEXTS = [
+    { label: 'Redirección', re: new RegExp(String.raw`\b(?:RedirectTo|Redirect)\s*\(` + OPEN_ARG, 'i') },
+    { label: 'Redirección', re: /\blocation(?:\.href)?\s*=\s*[^;\n]*$/i },
+    { label: 'Redirección', re: new RegExp(String.raw`\b(?:location\.(?:replace|assign)|window\.open)\s*\(` + OPEN_ARG, 'i') },
+    { label: 'Formulario', re: /<form\b[^>]*\baction\s*=\s*[^>]*$/i },
+    { label: 'Enlace', re: /<a\b[^>]*\bhref\s*=\s*[^>]*$/i },
+    { label: 'Iframe', re: /<i?frame\b[^>]*\bsrc\s*=\s*[^>]*$/i },
+    { label: 'Recurso (script, estilo o imagen)', re: /<(?:script|link|img)\b[^>]*\b(?:src|href)\s*=\s*[^>]*$/i },
+    { label: 'Llamada HTTP', re: new RegExp(String.raw`(?:\bHTTP\.(?:Post|Get)\w*|Platform\.Function\.HTTP\w*|Script\.Util\.Http\w*|(?<![.\w])HTTP(?:Get|Post2?)|\bfetch|\baxios(?:\.\w+)?|\$\.(?:get|post|getJSON|ajax)|\.open|navigator\.sendBeacon)\s*\(` + OPEN_ARG, 'i') },
+];
+
+// Funciones cuyos argumentos son valores que se guardan (Salesforce o Data Extensions): una URL
+// ahí es un dato, no una llamada.
+const REF_VALUE_RE = /\b(\w*SalesforceObjects?|(?:Insert|Update|Upsert|Delete)(?:Data|DE))\s*\((?:[^()]|\([^()]*\))*$/i;
+
+/**
+ * Indica si una posición está dentro de un literal de texto que contiene código AMPscript
+ * ("%%=...") que se está construyendo como texto, por ejemplo dentro de un Concat: lo que hay
+ * ahí no se ejecuta en ese punto. Los valores de atributos HTML no cuentan: el AMPscript que
+ * llevan sí se ejecuta al pintar la página.
+ * @param {string} text
+ * @param {number} index
+ * @returns {boolean}
+ */
+function insideBuiltAmpText(text, index) {
+    const lineStart = text.lastIndexOf('\n', index - 1) + 1;
+    let quote = null;
+    let isAttribute = false;
+    let content = '';
+    for (let i = lineStart; i < index; i++) {
+        const ch = text[i];
+        if (quote) {
+            if (ch === quote && text[i - 1] !== '\\') { quote = null; content = ''; }
+            else content += ch;
+        } else if (ch === '"' || ch === "'") {
+            quote = ch;
+            content = '';
+            isAttribute = /<[a-z][^<>]*\b[\w-]+\s*=\s*$/i.test(text.slice(Math.max(0, i - 300), i));
+        }
+    }
+    return !!quote && !isAttribute && content.includes('%%=');
+}
+
+/**
+ * Clasifica una referencia a una Cloud Page según el código que la rodea: llamada o navegación
+ * (redirección, formulario, enlace, iframe, recurso o llamada HTTP) o solo una mención (la URL
+ * aparece como dato, en un texto construido o en un comentario).
+ * @param {string} text - Código de la página.
+ * @param {number} index - Posición de la referencia.
+ * @returns {{kind:'call'|'mention', label:string}}
+ */
+export function classifyReferenceContext(text, index) {
+    const lineStart = text.lastIndexOf('\n', index - 1) + 1;
+    const linePrefix = text.slice(lineStart, index);
+    if (/^\s*(\/\*|\*|<!--)/.test(linePrefix) || /(^|[^:])\/\//.test(linePrefix)) return { kind: 'mention', label: 'Comentario' };
+    if (insideBuiltAmpText(text, index)) return { kind: 'mention', label: 'Texto construido (no se ejecuta)' };
+
+    const before = text.slice(Math.max(0, index - 300), index);
+    for (const c of REF_CALL_CONTEXTS) {
+        if (c.re.test(before)) return { kind: 'call', label: c.label };
+    }
+    // Las llamadas que guardan datos pueden tener muchos argumentos: se mira un tramo más largo.
+    const value = REF_VALUE_RE.exec(text.slice(Math.max(0, index - 3000), index));
+    if (value) return { kind: 'mention', label: `Valor en ${value[1]}` };
+    return { kind: 'mention', label: 'Texto' };
+}
+
 /**
  * Busca en el código de una página las referencias a otras Cloud Pages: por su URL completa,
- * por su ruta relativa en el mismo dominio o por su id en CloudPagesURL/MicrositeURL.
+ * por su ruta relativa en el mismo dominio o por su id en CloudPagesURL/MicrositeURL. Cada
+ * aparición se clasifica como llamada o mención según su contexto; además se añaden como llamada
+ * las peticiones HTTP y formularios que apuntan a otra página aunque la URL venga en una variable.
  * @param {object} page - Página origen.
  * @param {Array<object>} pages - Todas las páginas.
- * @returns {{refs: Array<{target:object, via:string, line:number}>, selfRefs:string[], unresolvedIds:string[]}}
+ * @param {Map<string,object>} [pagesByUrl] - Índice de buildPagesByUrl (se calcula si no se pasa).
+ * @returns {{refs: Array<{target:object, via:string, kind:'call'|'mention', label:string, line:number}>, selfRefs:string[], unresolvedIds:string[]}}
  */
-export function detectPageReferences(page, pages) {
+export function detectPageReferences(page, pages, pagesByUrl) {
     const text = String(page?.content || '');
     const lower = text.toLowerCase();
     const self = parsePageUrl(page.url);
@@ -950,12 +1025,18 @@ export function detectPageReferences(page, pages) {
     const selfRefs = new Set();
     const unresolvedIds = new Set();
     const added = new Set();
-    const addRef = (target, via, index) => {
-        if (target.id === page.id) { selfRefs.add(via); return; }
-        const key = `${target.id}|${via}`;
+    const addRef = (target, via, ctx, index) => {
+        const label = `${via} · ${ctx.label}`;
+        // Las autorreferencias solo interesan si la página se llama o navega a sí misma.
+        if (target.id === page.id) { if (ctx.kind === 'call') selfRefs.add(label); return; }
+        const key = `${target.id}|${label}`;
         if (added.has(key)) return;
         added.add(key);
-        refs.push({ target, via, line: lineAt(text, index) });
+        refs.push({ target, via, kind: ctx.kind, label, line: lineAt(text, index) });
+    };
+    const eachMatch = (re, fn) => {
+        let m;
+        while ((m = re.exec(lower))) fn(m.index);
     };
 
     if (text) {
@@ -963,16 +1044,21 @@ export function detectPageReferences(page, pages) {
             const parsed = parsePageUrl(other.url);
             if (!parsed || parsed.path.length < 2) continue;
             const full = `${parsed.host}${parsed.path}`;
-            const re = new RegExp(`${escapeRegExp(full)}(?![\\w\\-/.])`, 'i');
-            let idx = lower.search(re);
-            if (idx !== -1) { addRef(other, 'URL', idx); continue; }
+            let found = false;
+            eachMatch(new RegExp(`${escapeRegExp(full)}(?![\\w\\-/.])`, 'gi'), (idx) => {
+                found = true;
+                // El contexto se mira desde el inicio de la URL, incluido el protocolo.
+                const proto = lower.lastIndexOf('http', idx);
+                const startIdx = proto >= 0 && proto >= idx - 8 ? proto : idx;
+                addRef(other, 'URL', classifyReferenceContext(text, startIdx), idx);
+            });
+            if (found) continue;
 
             // Ruta relativa: solo en el mismo dominio y entre comillas o paréntesis, para no
             // confundir rutas cortas con texto normal.
             if (self && self.host === parsed.host && parsed.path.length >= 4) {
-                const relRe = new RegExp(`["'(\\x60]${escapeRegExp(parsed.path)}(?:[?#"'\\x60)]|/?["'\\x60])`, 'i');
-                idx = lower.search(relRe);
-                if (idx !== -1) addRef(other, 'Ruta relativa', idx);
+                const relRe = new RegExp(`["'(\\x60]${escapeRegExp(parsed.path)}(?:[?#"'\\x60)]|/?["'\\x60])`, 'gi');
+                eachMatch(relRe, (idx) => addRef(other, 'Ruta relativa', classifyReferenceContext(text, idx + 1), idx));
             }
         }
 
@@ -981,8 +1067,18 @@ export function detectPageReferences(page, pages) {
         while ((m = idRe.exec(text))) {
             const id = m[2];
             const target = pages.find(p => String(p.pageId) === id) || pages.find(p => String(p.id) === id);
-            if (target) addRef(target, `${m[1]}(${id})`, m.index);
+            if (target) addRef(target, `${m[1]}(${id})`, classifyReferenceContext(text, m.index), m.index);
             else unresolvedIds.add(`${m[1]}(${id})`);
+        }
+
+        // Llamadas HTTP y formularios cuyo destino es otra Cloud Page, resolviendo variables.
+        const index = pagesByUrl || buildPagesByUrl(pages);
+        const lineOffsets = [0];
+        for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) === 10) lineOffsets.push(i + 1);
+        for (const call of detectHttpCalls(page, index)) {
+            if (!call.targetPage) continue;
+            const pos = lineOffsets[Math.max(0, call.line - 1)] || 0;
+            addRef(call.targetPage, call.fn, { kind: 'call', label: call.fn === 'form action' ? 'Formulario' : 'Llamada HTTP' }, pos);
         }
     }
 
@@ -990,43 +1086,28 @@ export function detectPageReferences(page, pages) {
 }
 
 /**
- * Devuelve los content blocks que referencia una página con ContentBlockById/Key/Name y valor
- * literal (los Reference Content de los slots también se guardan así). Cada bloque una sola vez.
- * @param {string} content - Código de la página con sus slots/bloques colocados.
- * @returns {Array<{by:'Id'|'Key'|'Name', value:string}>}
- */
-export function detectBlockReferences(content) {
-    const seen = new Map();
-    const re = /ContentBlockBy(Id|Key|Name)\s*\(\s*(?:"([^"]+)"|'([^']+)'|(\d+))\s*[,)]/gi;
-    for (const m of String(content || '').matchAll(re)) {
-        const by = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
-        const value = (m[2] ?? m[3] ?? m[4] ?? '').trim();
-        if (!value || (by === 'Id' && !/^\d+$/.test(value))) continue;
-        const key = `${by}:${value.toLowerCase()}`;
-        if (!seen.has(key)) seen.set(key, { by, value });
-    }
-    return [...seen.values()];
-}
-
-/**
  * Construye el grafo de referencias entre todas las Cloud Pages: una arista por par
  * origen→destino con las formas en que se referencian, más las autorreferencias y los ids sin
- * resolver. Lo usan la auditoría y el botón de mapa de la vista de Cloud Pages.
+ * resolver. La arista es de tipo llamada si alguna de sus referencias lo es; si todas son
+ * menciones, de tipo mención. Lo usan la auditoría y el mapa de la vista de Cloud Pages.
  * @param {Array<object>} pages - Cloud Pages con contenido.
- * @returns {{edges: Array<{from:object,to:object,vias:string[],line:number}>, selfRefs: Map<object,string[]>, unresolved: Map<object,string[]>}}
+ * @returns {{edges: Array<{from:object,to:object,vias:string[],kind:'call'|'mention',line:number}>, selfRefs: Map<object,string[]>, unresolved: Map<object,string[]>}}
  */
 export function buildReferenceGraph(pages) {
     const edgeMap = new Map();
     const selfRefs = new Map();
     const unresolved = new Map();
+    const pagesByUrl = buildPagesByUrl(pages);
     for (const p of pages) {
         const content = p.content || '';
         if (!content.trim() || content.trim().startsWith('{')) continue;
-        const refs = detectPageReferences(p, pages);
+        const refs = detectPageReferences(p, pages, pagesByUrl);
         for (const r of refs.refs) {
             const key = `${p.id}|${r.target.id}`;
-            if (!edgeMap.has(key)) edgeMap.set(key, { from: p, to: r.target, vias: new Set(), line: r.line });
-            edgeMap.get(key).vias.add(r.via);
+            if (!edgeMap.has(key)) edgeMap.set(key, { from: p, to: r.target, vias: new Set(), kind: 'mention', line: r.line });
+            const edge = edgeMap.get(key);
+            edge.vias.add(r.label);
+            if (r.kind === 'call' && edge.kind !== 'call') { edge.kind = 'call'; edge.line = r.line; }
         }
         if (refs.selfRefs.length) selfRefs.set(p, refs.selfRefs);
         if (refs.unresolvedIds.length) unresolved.set(p, refs.unresolvedIds);

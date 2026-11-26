@@ -10,7 +10,7 @@ import { escapeHtml, formatDate } from '../ui/format-utils.js';
 import { createTableSorter, createPaginator } from '../ui/table-utils.js';
 import { getRowsPerPage } from './settings.js';
 import { fetchCloudPagesWithContent, loadCloudPagesCache, withSlotContent } from './cloudpages-cache.js';
-import { buildReferenceGraph, countMissingPageIds, isCodeResource, detectBlockReferences } from './audit/cloudpages-security.js';
+import { buildReferenceGraph, countMissingPageIds, isCodeResource, detectBlockReferences, detectPageReferences } from './audit/cloudpages-security.js';
 import { buildCloudPagesMap, handleCpMapClick, enableCpMapDrag, fitCpMaps } from './audit/cloudpages-map.js';
 
 
@@ -22,6 +22,8 @@ let currentFilteredList = [];
 const blockInfoCache = new Map();
 // Si el mapa de referencias muestra los content blocks.
 let mapShowBlocks = false;
+// Si el mapa muestra las referencias que solo son menciones (la URL aparece como dato o texto).
+let mapShowMentions = true;
 
 // Controladores reutilizables de ordenación y paginación (WP-4/WP-5), instanciados en
 // init(). La ordenación inicial se mantiene: 'modifiedDate' (fecha) descendente.
@@ -55,8 +57,13 @@ export function init(dependencies) {
     });
     elements.cloudPagesMapBody.addEventListener('click', handleCpMapClick);
     enableCpMapDrag(elements.cloudPagesMapBody);
-    // El botón de content blocks se pinta dentro del mapa, así que se escucha por delegación.
+    // Los botones de content blocks y menciones se pintan dentro del mapa: se escuchan por delegación.
     elements.cloudPagesMapBody.addEventListener('click', (e) => {
+        if (e.target.closest('.cpmap-mentions-toggle')) {
+            mapShowMentions = !mapShowMentions;
+            renderReferenceMap(mapShowBlocks);
+            return;
+        }
         if (!e.target.closest('.cpmap-blocks-toggle')) return;
         mapShowBlocks = !mapShowBlocks;
         renderReferenceMap(mapShowBlocks);
@@ -378,7 +385,8 @@ function toggleContentRow(cloudpageId) {
     elements.cpDetailTitle.textContent = page.name || 'Cloud Page';
  
     // 1. Dependencias: se analizan el código y los slots/bloques colocados
-    elements.cpDetailDeps.innerHTML = buildDependenciesGrid(withSlotContent(page).content, page.name, page.slotBlocks);
+    const analysisPage = withSlotContent(page);
+    elements.cpDetailDeps.innerHTML = buildDependenciesGrid(analysisPage.content, page.name, page.slotBlocks, analysisPage);
 
     // 2. Código fuente: solo el de la página, como el Code View de Marketing Cloud
     elements.cpDetailCode.innerHTML = buildCodeViewer(page.content);
@@ -487,15 +495,23 @@ function showReferenceMap() {
         return;
     }
     mapShowBlocks = false;
+    mapShowMentions = true;
     renderReferenceMap(false);
     ui.showModal(elements.cloudPagesMapModal);
 }
 
-/** HTML del botón que muestra u oculta los content blocks, según el estado actual del mapa. */
-function mapBlocksButtonHtml() {
+/**
+ * HTML de los botones propios del mapa en la vista: mostrar u ocultar los content blocks y las
+ * referencias que solo son menciones, según el estado actual.
+ * @returns {string}
+ */
+function mapActionButtonsHtml() {
     return `<button type="button" class="action-button cpmap-blocks-toggle${mapShowBlocks ? ' is-active' : ''}" ` +
         `title="Añade los bloques que usa cada página: ContentBlockBy* y Reference Content colocados en slots">` +
-        `${mapShowBlocks ? 'Ocultar content blocks' : 'Mostrar content blocks'}</button>`;
+        `${mapShowBlocks ? 'Ocultar content blocks' : 'Mostrar content blocks'}</button>` +
+        `<button type="button" class="action-button cpmap-mentions-toggle${mapShowMentions ? '' : ' is-active'}" ` +
+        `title="Menciones: la URL de otra página aparece como dato (p. ej. un campo de Salesforce), en un texto o en un comentario, sin llamarla ni navegar a ella">` +
+        `${mapShowMentions ? 'Ocultar menciones' : 'Mostrar menciones'}</button>`;
 }
 
 /**
@@ -514,7 +530,9 @@ async function renderReferenceMap(withBlocks) {
     const inFilter = (p) => !isFiltered || filteredIds.has(String(p.id));
     const scopePages = analysisPages.filter(inFilter);
 
-    const pageEdges = graph.edges.filter(e => inFilter(e.from) || inFilter(e.to));
+    const scopeEdges = graph.edges.filter(e => inFilter(e.from) || inFilter(e.to));
+    const mentionCount = scopeEdges.filter(e => e.kind === 'mention').length;
+    const pageEdges = mapShowMentions ? scopeEdges : scopeEdges.filter(e => e.kind !== 'mention');
     const selfRefPages = [...graph.selfRefs.keys()].filter(inFilter);
     const unresolvedCount = [...graph.unresolved.keys()].filter(inFilter).length;
     const selfRefIds = new Set(selfRefPages.map(p => String(p.id)));
@@ -544,14 +562,14 @@ async function renderReferenceMap(withBlocks) {
         ? `Filtro aplicado: ${scopePages.length} de ${fullCloudPageList.length} Cloud Pages` +
           (outsideIds.size > 0 ? ` (${outsideIds.size} páginas fuera del filtro, atenuadas, por estar conectadas)` : '') + ' · '
         : '';
-    let summary = `${scopeText}${pageEdges.length} referencias entre ${scopePages.length} Cloud Pages · ` +
+    let summary = `${scopeText}${scopeEdges.length - mentionCount} llamadas y ${mentionCount} menciones${mapShowMentions ? '' : ' (ocultas)'} entre ${scopePages.length} Cloud Pages · ` +
         `${selfRefPages.length} páginas se referencian a sí mismas · ` +
         `${unresolvedCount} páginas usan ids que no se han podido asociar.${blockSummary}`;
     if (missing > 0) {
         summary += ` ${missing} de ${total} Landing Pages no tienen Page ID: usa "Recuperar IDs" para resolver las referencias por CloudPagesURL(id).`;
     }
     elements.cloudPagesMapSummary.textContent = summary;
-    elements.cloudPagesMapBody.innerHTML = buildCloudPagesMap(nodes, edges, selfRefIds, isCodeResource, { outsideIds, leftActionsHtml: mapBlocksButtonHtml() });
+    elements.cloudPagesMapBody.innerHTML = buildCloudPagesMap(nodes, edges, selfRefIds, isCodeResource, { outsideIds, leftActionsHtml: mapActionButtonsHtml() });
     // Se ajusta cuando el modal ya está visible y el recuadro tiene tamaño.
     requestAnimationFrame(() => fitCpMaps(elements.cloudPagesMapBody));
 }
@@ -675,9 +693,11 @@ function updateCloudPageCount() {
  * @param {string} pageName - Nombre de la página para contexto.
  * @param {Array<{slot:string, block:string|null, content:string}>} [slotBlocks] - Slots y bloques
  *        colocados; los que no incluyen un ContentBlockBy* se listan como bloque de slot.
+ * @param {object} [page] - Cloud Page (con el contenido de sus slots) para clasificar sus
+ *        referencias a otras Cloud Pages como llamada o mención.
  * @returns {string} HTML con bloques de dependencias en columnas.
  */
-function buildDependenciesGrid(content, pageName, slotBlocks = []) {
+function buildDependenciesGrid(content, pageName, slotBlocks = [], page = null) {
     if (!content) return '<div class="cp-detail-no-deps">Sin contenido disponible</div>';
 
     // Alias local del helper compartido de escape (sustituye a la copia que había aquí)
@@ -777,20 +797,26 @@ function buildDependenciesGrid(content, pageName, slotBlocks = []) {
         sections.push({ title: 'HTTP.Post URLs', items: [...httpUrls].map(u => esc(u)) });
     }
  
-    // --- 7. Redirecciones ---
-    const redirects = [];
-    for (const m of content.matchAll(/CloudPagesURL\s*\(\s*(\d+)\s*\)/gi)) {
-        const id = m[1];
-        const resolved = fullCloudPageList.find(p => String(p.id) === id || String(p.pageId) === id);
-        redirects.push(resolved ? `CloudPagesURL(${id}) → "${esc(resolved.name)}"` : `CloudPagesURL(${id})`);
+    // --- 7. Redirecciones y referencias a Cloud Pages ---
+    // Mismo análisis que el mapa: cada referencia se clasifica como llamada (redirección,
+    // formulario, enlace, petición HTTP...) o mención (la URL solo aparece como dato o texto).
+    const redirects = new Set();
+    if (page) {
+        const refs = detectPageReferences(page, fullCloudPageList.map(withSlotContent));
+        const badge = (kind) => `<span class="cp-dep-badge ${kind === 'call' ? 'ref-call' : 'ref-mention'}">${kind === 'call' ? 'Llamada' : 'Mención'}</span>`;
+        [...refs.refs].sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'call' ? -1 : 1))
+            .forEach(r => redirects.add(`${badge(r.kind)} "${esc(r.target.name)}" <span class="dep-item-fns">— ${esc(r.label)}</span>`));
+        refs.selfRefs.forEach(l => redirects.add(`${badge('call')} Propia página <span class="dep-item-fns">— ${esc(l)}</span>`));
+        refs.unresolvedIds.forEach(id => redirects.add(`${esc(id)} <span class="dep-item-fns">— id sin resolver (importa los Page IDs)</span>`));
     }
-    for (const m of content.matchAll(/(?:Redirect|RedirectTo)\s*\(\s*["']([^"']+)["']\s*\)/gi)) redirects.push(esc(m[1]));
-    for (const m of content.matchAll(/(https:\/\/cloud\.[^\s"'<)]+)/gi)) {
-        const matched = fullCloudPageList.find(p => p.url === m[1]);
-        redirects.push(matched ? `${esc(m[1])} → "${esc(matched.name)}"` : esc(m[1]));
+    // Redirecciones a URLs que no son Cloud Pages de esta BU.
+    for (const m of content.matchAll(/(?:Redirect|RedirectTo)\s*\(\s*["']([^"']+)["']\s*\)/gi)) {
+        if (!fullCloudPageList.some(p => p.url && m[1].toLowerCase().startsWith(p.url.toLowerCase()))) {
+            redirects.add(`Redirección a ${esc(m[1])}`);
+        }
     }
-    if (redirects.length > 0) {
-        sections.push({ title: 'Redirecciones / Cloud Pages', items: redirects });
+    if (redirects.size > 0) {
+        sections.push({ title: 'Redirecciones / Cloud Pages', items: [...redirects] });
     }
  
     // --- 8. Objetos Salesforce ---

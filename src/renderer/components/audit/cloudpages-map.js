@@ -306,7 +306,7 @@ export function buildCloudPagesMap(pages, edges, selfRefIds, isCodeResource, { o
     const edgesSvg = edges.map(e => {
         const d = edgePath(positions.get(String(e.from.id)), positions.get(String(e.to.id)));
         const title = `${e.from.name} → ${e.to.name} (${e.vias.join(', ')})`;
-        return `<path class="cpmap-edge" data-from="${escapeHtml(String(e.from.id))}" data-to="${escapeHtml(String(e.to.id))}" d="${d}"><title>${escapeHtml(title)}</title></path>`;
+        return `<path class="cpmap-edge${e.kind === 'mention' ? ' is-mention' : ''}" data-from="${escapeHtml(String(e.from.id))}" data-to="${escapeHtml(String(e.to.id))}" d="${d}"><title>${escapeHtml(title)}</title></path>`;
     }).join('');
 
     const nodesSvg = ids.map(id => {
@@ -331,6 +331,7 @@ export function buildCloudPagesMap(pages, edges, selfRefIds, isCodeResource, { o
         <span class="cpmap-legend-item"><span class="cpmap-swatch is-self"></span>Se referencia a sí misma</span>
         ${pages.some(p => p.isContentBlock) ? '<span class="cpmap-legend-item"><span class="cpmap-swatch is-cb"></span>Content block</span>' : ''}
         ${outsideIds.size ? '<span class="cpmap-legend-item"><span class="cpmap-swatch is-outside"></span>Fuera del filtro (conectada)</span>' : ''}
+        ${edges.some(e => e.kind === 'mention') ? '<span class="cpmap-legend-item"><span class="cpmap-line is-mention"></span>Solo mención (la URL aparece como dato o texto)</span>' : ''}
         <span class="cpmap-legend-hint">La flecha va de la página que referencia a la referenciada. Pulsa una página para resaltar sus conexiones; arrástrala para moverla.</span>
     </div>
     <div class="cpmap-actions">

@@ -79,6 +79,7 @@ const INFO = {
         'Resuelve variables (var/let/const, SET @var, Concat, propiedades de objetos y %%=v(@var)=%%) y clasifica el destino. "No determinado" son destinos que solo se conocen al ejecutarse. Se ignoran las llamadas dentro de comentarios.',
     hosts: 'Dominios fuera de Marketing Cloud y Salesforce a los que llaman las páginas, de más a menos llamadas.',
     map: 'Una página referencia a otra si en su código aparece la URL completa de la otra, su ruta relativa en el mismo dominio o su id en CloudPagesURL(id) / MicrositeURL(id).\n' +
+        'Es una llamada si la usa para navegar o pedirla: redirección, formulario, enlace, iframe o petición HTTP (aunque la URL venga en una variable). Es una mención si la URL solo aparece como dato (p. ej. un campo de Salesforce), en un texto que se construye o en un comentario.\n' +
         'Los ids solo se resuelven si se han importado los Page IDs en la vista de Cloud Pages (Recuperar IDs).',
 };
 
@@ -430,10 +431,14 @@ export async function auditCloudPages(apiConfig, clientName, { onProgress } = {}
 
     // ---------- Referencias entre páginas (mapa) ----------
     const graph = buildReferenceGraph(pages);
-    registerDrill('cp_refs',            'Referencias entre Cloud Pages', ['Origen', 'Origen publicada', 'Destino', 'Destino publicada', 'Referencia', 'Línea']);
+    registerDrill('cp_refs',            'Referencias entre Cloud Pages', ['Origen', 'Origen publicada', 'Destino', 'Destino publicada', 'Tipo', 'Referencia', 'Línea']);
     registerDrill('cp_refs_unresolved', 'Referencias por id sin resolver', ['Página', 'Publicada', 'Referencia']);
     registerDrill('cp_selfref',         'Páginas que se referencian a sí mismas', ['Página', 'Publicada', 'Cómo']);
-    graph.edges.forEach(e => addDrillRow('cp_refs', esc([e.from.name, pubLabel(e.from), e.to.name, pubLabel(e.to), e.vias.join(', '), e.line])));
+    // Las llamadas van antes que las menciones (la URL solo aparece como dato o texto).
+    const refCalls = graph.edges.filter(e => e.kind === 'call').length;
+    const refMentions = graph.edges.length - refCalls;
+    [...graph.edges].sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'call' ? -1 : 1))
+        .forEach(e => addDrillRow('cp_refs', esc([e.from.name, pubLabel(e.from), e.to.name, pubLabel(e.to), e.kind === 'call' ? 'Llamada' : 'Mención', e.vias.join(', '), e.line])));
     graph.selfRefs.forEach((vias, p) => addDrillRow('cp_selfref', esc([p.name, pubLabel(p), vias.join(', ')])));
     graph.unresolved.forEach((ids, p) => addDrillRow('cp_refs_unresolved', esc([p.name, pubLabel(p), ids.join(', ')])));
 
@@ -465,7 +470,7 @@ export async function auditCloudPages(apiConfig, clientName, { onProgress } = {}
         { value: remote.exec,      label: 'Ejecutan contenido descargado', color: remote.exec > 0 ? AUDIT_PALETTE.red : AUDIT_PALETTE.gray, drillKey: 'cp_remote_exec' },
         { value: withoutScript,    label: 'Publicadas sin control de crawlers', color: withoutScript > 0 ? AUDIT_PALETTE.orange : AUDIT_PALETTE.green, drillKey: 'cp_sec_none_all' },
         { value: externalCalls,    label: 'Llamadas a endpoints externos', color: externalCalls > 0 ? AUDIT_PALETTE.teal : AUDIT_PALETTE.gray, drillKey: 'cp_calls_kind_Externo' },
-        { value: graph.edges.length, label: 'Referencias entre Cloud Pages', color: AUDIT_PALETTE.teal, drillKey: 'cp_refs' },
+        { value: refCalls, label: 'Llamadas entre Cloud Pages', color: AUDIT_PALETTE.teal, drillKey: 'cp_refs' },
     ];
 
     const callouts = [];
@@ -596,7 +601,7 @@ export async function auditCloudPages(apiConfig, clientName, { onProgress } = {}
     const mapCard = `<div class="audit-metric-card cpmap-card">
         <div class="audit-metric-title">Referencias entre Cloud Pages${buildInfoIcon(INFO.map)}</div>
         <div class="audit-metric-help">Páginas que enlazan, llaman, envían formularios o redirigen a otras.
-            <span class="cpmap-drill-link" data-drill="cp_refs" title="Ver detalle">Ver todas las referencias (${graph.edges.length})</span>
+            <span class="cpmap-drill-link" data-drill="cp_refs" title="Ver detalle">Ver todas las referencias (${refCalls} llamadas, ${refMentions} menciones)</span>
             · <span class="cpmap-drill-link" data-drill="cp_selfref" title="Ver detalle">Autorreferencias (${graph.selfRefs.size})</span>
             · <span class="cpmap-drill-link" data-drill="cp_refs_unresolved" title="Ver detalle">Ids sin resolver (${graph.unresolved.size})</span>
         </div>

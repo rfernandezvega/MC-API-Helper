@@ -147,3 +147,19 @@
 .cpmap-node { cursor: grab; }
 .cpmap-svg.is-dragging, .cpmap-svg.is-dragging .cpmap-node { cursor: grabbing; }
 .cpmap-svg.is-dragging .cpmap-edge { transition: none; }
+
+/* Referencias que solo son menciones: la URL aparece como dato o texto, sin llamar a la página. */
+.cpmap-edge.is-mention { stroke-dasharray: 5 4; opacity: 0.55; }
+.cpmap-line {
+    display: inline-block;
+    width: 18px;
+    height: 0;
+    border-top: 2px solid var(--sf-text-muted);
+}
+.cpmap-line.is-mention { border-top-style: dashed; opacity: 0.7; }
+/* Botón de menciones pulsado (menciones ocultas). */
+.cpmap-mentions-toggle.is-active {
+    background: var(--audit-gray);
+    border-color: var(--audit-gray);
+    color: #fff;
+}
